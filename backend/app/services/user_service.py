@@ -21,7 +21,12 @@ class UserService:
         self,
         full_name: str,
         email: str,
+        phone_number: str,
         password: str,
+        company_name: str,
+        company_address: str,
+        reference: str,
+        role: UserRole,
     ):
         email = email.lower().strip()
 
@@ -33,13 +38,31 @@ class UserService:
                 409,
             )
 
+        allowed_registration_roles = {
+            UserRole.MANAGER,
+            UserRole.TEAM_LEAD,
+            UserRole.EMPLOYEE,
+            UserRole.RECRUITER,
+            UserRole.PAYROLL_ADMIN,
+        }
+
+        if role not in allowed_registration_roles:
+            raise AppException(
+                "This role cannot be selected during public registration",
+                403,
+            )
+
         now = datetime.utcnow()
 
         user_data = {
             "full_name": full_name.strip(),
             "email": email,
+            "phone_number": phone_number.strip(),
             "password_hash": hash_password(password),
-            "role": UserRole.EMPLOYEE.value,
+            "company_name": company_name.strip(),
+            "company_address": company_address.strip(),
+            "reference": reference.strip(),
+            "role": role.value,
             "is_active": True,
             "is_locked": False,
             "failed_login_attempts": 0,

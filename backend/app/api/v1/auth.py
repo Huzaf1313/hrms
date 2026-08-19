@@ -28,7 +28,12 @@ async def register(user_data: UserCreate):
     user = await service.register_user(
         full_name=user_data.full_name,
         email=user_data.email,
+        phone_number=user_data.phone_number,
         password=user_data.password,
+        company_name=user_data.company_name,
+        company_address=user_data.company_address,
+        reference=user_data.reference,
+        role=user_data.role,
     )
 
     user["id"] = str(user["_id"])
