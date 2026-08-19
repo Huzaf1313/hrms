@@ -1,26 +1,15 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { useState } from "react";
+
 import DashboardLayout from "./layouts/DashboardLayout";
-import Login from "./pages/login";
 
 function App() {
+  const [activePage, setActivePage] = useState("Dashboard");
+
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-
-        <Route path="/dashboard" element={<DashboardLayout />} />
-
-        <Route
-          path="/"
-          element={<Navigate to="/login" replace />}
-        />
-
-        <Route
-          path="*"
-          element={<Navigate to="/login" replace />}
-        />
-      </Routes>
-    </BrowserRouter>
+    <DashboardLayout
+      activePage={activePage}
+      onNavigate={setActivePage}
+    />
   );
 }
 

@@ -1,66 +1,57 @@
-const celebrations = [
-  {
-    name: "Alex Mercer",
-    event: "Birthday Today",
-    initials: "AM",
-  },
-  {
-    name: "Maya Lin",
-    event: "3 Year Anniversary",
-    initials: "ML",
-  },
-  {
-    name: "James Doe",
-    event: "Birthday Tomorrow",
-    initials: "JD",
-  },
-];
+interface Celebration {
+  name: string;
+  type: string;
+  message?: string;
+}
 
-function Celebrations() {
+interface CelebrationsProps {
+  celebrations: Celebration[];
+}
+
+function Celebrations({ celebrations }: CelebrationsProps) {
   return (
-    <section className="rounded-[28px] bg-white p-7 shadow-sm">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-50">
-          <span className="text-xl">♨</span>
-        </div>
-
-        <h2 className="text-2xl font-semibold text-[#171b1d]">
+    <div className="h-full rounded-3xl bg-white p-6 shadow-sm">
+      <div className="mb-6">
+        <h2 className="text-xl font-semibold text-gray-800">
           Celebrations
         </h2>
+
+        <p className="mt-1 text-sm text-gray-500">
+          Birthdays and work anniversaries
+        </p>
       </div>
 
-      {/* People */}
-      <div className="mt-7 space-y-4">
-        {celebrations.map((person) => (
-          <div
-            key={person.name}
-            className="flex items-center gap-4 rounded-2xl bg-[#f7f9f8] p-4"
-          >
-            {/* Avatar */}
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#dce5df] text-sm font-semibold text-[#456b54]">
-              {person.initials}
-            </div>
-
-            {/* Information */}
-            <div>
-              <p className="font-semibold text-[#171b1d]">
-                {person.name}
+      {celebrations.length === 0 ? (
+        <div className="flex min-h-[180px] items-center justify-center">
+          <p className="text-sm text-gray-500">
+            No celebrations today
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {celebrations.map((celebration, index) => (
+            <div
+              key={`${celebration.name}-${index}`}
+              className="rounded-2xl bg-gray-50 p-4"
+            >
+              <p className="font-semibold text-gray-800">
+                {celebration.name}
               </p>
 
-              <p className="mt-1 text-sm text-gray-600">
-                {person.event}
+              <p className="mt-1 text-sm text-gray-500">
+                {celebration.type}
               </p>
-            </div>
-          </div>
-        ))}
-      </div>
 
-      {/* View all */}
-      <button className="mt-7 w-full rounded-xl border border-gray-300 py-3 text-sm font-medium text-gray-700 transition hover:bg-gray-50">
-        View All
-      </button>
-    </section>
+              {celebration.message && (
+                <p className="mt-1 text-sm text-gray-600">
+                  {celebration.message}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

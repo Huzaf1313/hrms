@@ -10,7 +10,9 @@ from app.services.department_service import DepartmentService
 from app.utils.pagination import PaginationParams
 
 
-router = APIRouter()
+router = APIRouter(
+    tags=["Departments"]
+)
 
 service = DepartmentService()
 

@@ -1,43 +1,83 @@
-const hiringStages = [
-  "Applied",
-  "Screened",
-  "Interview",
-  "Offered",
-];
+interface HiringPipelineData {
+  applied: number;
+  screened: number;
+  interview: number;
+  offered: number;
+}
 
-function HiringPipeline() {
+interface HiringPipelineProps {
+  pipeline: HiringPipelineData;
+}
+
+function HiringPipeline({ pipeline }: HiringPipelineProps) {
+  const stages = [
+    {
+      label: "Applied",
+      value: pipeline.applied,
+    },
+    {
+      label: "Screened",
+      value: pipeline.screened,
+    },
+    {
+      label: "Interview",
+      value: pipeline.interview,
+    },
+    {
+      label: "Offered",
+      value: pipeline.offered,
+    },
+  ];
+
+  const maxValue = Math.max(
+    ...stages.map((stage) => stage.value),
+    1,
+  );
+
   return (
-    <section className="h-[280px] rounded-[28px] bg-white p-7 shadow-sm">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-50">
-            <span className="text-xl text-[#456b54]">♙</span>
-          </div>
+    <div className="rounded-3xl bg-white p-6 shadow-sm">
+      <div className="mb-6">
+        <h2 className="text-xl font-semibold text-gray-800">
+          Hiring Pipeline
+        </h2>
 
-          <h2 className="text-2xl font-semibold text-[#171b1d]">
-            Hiring Pipeline
-          </h2>
-        </div>
-
-        <button className="flex items-center gap-3 rounded-xl bg-[#f7f9f8] px-4 py-3 text-sm font-medium text-gray-700">
-          Q3 2024
-          <span>⌄</span>
-        </button>
+        <p className="mt-1 text-sm text-gray-500">
+          Current recruitment progress
+        </p>
       </div>
 
-      {/* Pipeline stages */}
-      <div className="mt-[155px] grid grid-cols-4">
-        {hiringStages.map((stage) => (
-          <p
-            key={stage}
-            className="text-center text-sm font-medium text-gray-700"
-          >
-            {stage}
-          </p>
-        ))}
+      <div className="space-y-5">
+        {stages.map((stage) => {
+          const width =
+            stage.value === 0
+              ? 0
+              : (stage.value / maxValue) * 100;
+
+          return (
+            <div key={stage.label}>
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-700">
+                  {stage.label}
+                </span>
+
+                <span className="text-sm font-semibold text-gray-800">
+                  {stage.value}
+                </span>
+              </div>
+
+              <div className="h-3 overflow-hidden rounded-full bg-gray-200">
+                <div
+                  className="h-full rounded-full bg-[#5f806b]"
+                  style={{
+                    width: `${width}%`,
+                  }}
+                />
+              </div>
+            </div>
+          );
+        })}
       </div>
-    </section>
+    </div>
   );
 }
 

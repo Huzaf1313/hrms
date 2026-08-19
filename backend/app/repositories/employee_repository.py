@@ -26,6 +26,11 @@ class EmployeeRepository:
             {"employee_id": employee_id}
         )
 
+    async def get_by_email(self, email: str):
+        return await self.collection.find_one(
+            {"email": email}
+        )
+
     async def get_all(
         self,
         filters: dict,
@@ -73,6 +78,9 @@ class EmployeeRepository:
         )
 
         return await self.get_by_id(employee_id)
+
+    async def count_employees(self):
+        return await self.collection.count_documents({})
 
     async def delete(self, employee_id: str):
         if not ObjectId.is_valid(employee_id):

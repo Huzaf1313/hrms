@@ -3,7 +3,9 @@ from fastapi import APIRouter
 from app.db.database import client
 
 
-router = APIRouter()
+router = APIRouter(
+    tags=["Health"]
+)
 
 
 @router.get("/health")
