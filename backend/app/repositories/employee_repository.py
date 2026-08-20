@@ -79,9 +79,6 @@ class EmployeeRepository:
 
         return await self.get_by_id(employee_id)
 
-    async def count_employees(self):
-        return await self.collection.count_documents({})
-
     async def delete(self, employee_id: str):
         if not ObjectId.is_valid(employee_id):
             return False

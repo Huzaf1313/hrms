@@ -3,6 +3,7 @@ const API_BASE_URL: string =
   "http://localhost:8000/api/v1";
 
 const TOKEN_KEY = "hrms_access_token";
+const REFRESH_TOKEN_KEY = "hrms_refresh_token";
 
 export function getAccessToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
@@ -14,6 +15,23 @@ export function setAccessToken(token: string | null): void {
   } else {
     localStorage.removeItem(TOKEN_KEY);
   }
+}
+
+export function getRefreshToken(): string | null {
+  return localStorage.getItem(REFRESH_TOKEN_KEY);
+}
+
+export function setRefreshToken(token: string | null): void {
+  if (token) {
+    localStorage.setItem(REFRESH_TOKEN_KEY, token);
+  } else {
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
+  }
+}
+
+export function clearSession(): void {
+  setAccessToken(null);
+  setRefreshToken(null);
 }
 
 export interface ApiEnvelope<T> {
@@ -119,3 +137,53 @@ export const api = {
   delete: <T>(path: string) =>
     request<T>(path, { method: "DELETE" }),
 };
+
+// The /auth/* endpoints return their payload directly (no {success, message,
+// data} envelope), unlike every other router in this API. requestRaw skips
+// the envelope-unwrapping step that `request` above does.
+async function requestRaw<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const { method = "GET", body } = options;
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+
+  const token = getAccessToken();
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  let response: Response;
+
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      method,
+      headers,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  } catch {
+    throw new ApiError(
+      "Could not reach the server. Check your connection and that the backend is running.",
+      0,
+    );
+  }
+
+  const payload = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    const message =
+      (payload && typeof payload === "object" && "message" in payload
+        ? String((payload as { message?: unknown }).message)
+        : undefined) ?? `Request failed with status ${response.status}`;
+    throw new ApiError(message, response.status);
+  }
+
+  return payload as T;
+}
+
+export const apiRaw = {
+  post: <T>(path: string, body?: unknown) =>
+    requestRaw<T>(path, { method: "POST", body }),
+};
+

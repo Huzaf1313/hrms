@@ -1,4 +1,5 @@
 from datetime import date
+
 from pydantic import BaseModel, EmailStr, Field
 
 
@@ -41,6 +42,9 @@ class EmployeeCreate(BaseModel):
     email: EmailStr
     phone: str = Field(min_length=10)
 
+    # Employee Avatar / Photo
+    avatar_url: str | None = None
+
     date_of_birth: date | None = None
     gender: str | None = None
     address: str | None = None
@@ -65,6 +69,9 @@ class EmployeeUpdate(BaseModel):
 
     email: EmailStr | None = None
     phone: str | None = None
+
+    # Employee Avatar / Photo
+    avatar_url: str | None = None
 
     date_of_birth: date | None = None
     gender: str | None = None
@@ -92,6 +99,9 @@ class EmployeeResponse(BaseModel):
 
     email: EmailStr
     phone: str
+
+    # Employee Avatar / Photo
+    avatar_url: str | None = None
 
     date_of_birth: date | None = None
     gender: str | None = None

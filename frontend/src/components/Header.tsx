@@ -1,4 +1,8 @@
-function Header() {
+interface HeaderProps {
+  onLogout: () => void;
+}
+
+function Header({ onLogout }: HeaderProps) {
   return (
     <header className="flex items-center justify-between px-10 py-7">
       {/* Greeting */}
@@ -28,6 +32,14 @@ function Header() {
           <span className="text-sm font-semibold text-[#456b54]">
             S
           </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={onLogout}
+          className="rounded-full border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100"
+        >
+          Log out
         </button>
       </div>
     </header>

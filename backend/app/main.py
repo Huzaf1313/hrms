@@ -8,7 +8,6 @@ from app.api.v1.auth import router as auth_router
 from app.api.v1.departments import router as departments_router
 from app.api.v1.employees import router as employees_router
 from app.api.v1.health import router as health_router
-from app.api.v1.dashboard import router as dashboard_router
 from app.core.config import settings
 from app.core.exceptions import AppException
 from app.db.database import connect_to_database, close_database_connection

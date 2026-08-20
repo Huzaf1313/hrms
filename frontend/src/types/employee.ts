@@ -1,3 +1,15 @@
+export type EmployeeStatus =
+  | "active"
+  | "inactive"
+  | "on_leave"
+  | "terminated";
+
+export type EmploymentType =
+  | "full_time"
+  | "part_time"
+  | "contract"
+  | "intern";
+
 export interface EmergencyContact {
   name: string;
   relationship: string;
@@ -35,7 +47,6 @@ export interface Employee {
   employee_id: string;
   first_name: string;
   last_name: string;
-
   email: string;
   phone: string;
 
@@ -47,8 +58,7 @@ export interface Employee {
   department_id: string;
   designation: string;
   joining_date: string;
-
-  employment_type: string;
+  employment_type: EmploymentType;
   work_location?: string;
   reporting_manager?: string;
 
@@ -56,15 +66,18 @@ export interface Employee {
   emergency_contact?: EmergencyContact;
   bank_information?: BankInformation;
 
+  // History
+  transfer_history?: TransferHistory[];
+  promotion_history?: PromotionHistory[];
+
   // Status
-  status: string;
+  status: EmployeeStatus;
 }
 
 export interface EmployeeCreate {
   employee_id: string;
   first_name: string;
   last_name: string;
-
   email: string;
   phone: string;
 
@@ -75,8 +88,28 @@ export interface EmployeeCreate {
   department_id: string;
   designation: string;
   joining_date: string;
+  employment_type: EmploymentType;
+  work_location?: string;
+  reporting_manager?: string;
 
-  employment_type: string;
+  emergency_contact?: EmergencyContact;
+  bank_information?: BankInformation;
+}
+
+export interface EmployeeUpdate {
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  phone?: string;
+
+  date_of_birth?: string;
+  gender?: string;
+  address?: string;
+
+  department_id?: string;
+  designation?: string;
+  joining_date?: string;
+  employment_type?: EmploymentType;
   work_location?: string;
   reporting_manager?: string;
 

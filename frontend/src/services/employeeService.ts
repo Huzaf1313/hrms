@@ -32,10 +32,6 @@ export const employeeService = {
     return api.patch<Employee>(`/employees/${employeeId}/deactivate`);
   },
 
-  terminate(employeeId: string) {
-    return api.patch<Employee>(`/employees/${employeeId}/terminate`);
-  },
-
   remove(employeeId: string) {
     return api.delete<null>(`/employees/${employeeId}`);
   },
