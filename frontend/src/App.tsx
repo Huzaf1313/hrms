@@ -1,10 +1,17 @@
 import { useState } from "react";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import {
+  BrowserRouter,
+  Navigate,
+  Route,
+  Routes,
+} from "react-router-dom";
 
 import Login from "./pages/login";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Registration from "./pages/Registration";
 import DashboardLayout from "./layouts/DashboardLayout";
+import EmployeeDashboard from "./pages/EmployeeDashboard";
+import EmployeeProfile from "./pages/EmployeeProfile";
 
 import { clearSession, getRefreshToken } from "./services/api";
 import { authService } from "./services/authService";
@@ -20,6 +27,8 @@ function App() {
     } else {
       clearSession();
     }
+
+    window.location.href = "/login";
   }
 
   return (
@@ -40,6 +49,18 @@ function App() {
             }
           />
         </Route>
+
+        <Route element={<ProtectedRoute />}>
+          <Route
+            path="/employee/dashboard"
+            element={<EmployeeDashboard onLogout={handleLogout} />}
+          />
+        </Route>
+
+        <Route
+          path="/employee/profile"
+          element={<EmployeeProfile />}
+        />
 
         <Route
           path="/"

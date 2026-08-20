@@ -100,7 +100,11 @@ function Login() {
         localStorage.removeItem("remember_me");
       }
 
-      navigate("/dashboard");
+      if (user.role === "employee") {
+        navigate("/employee/dashboard");
+      } else {
+        navigate("/dashboard");
+      }
     } catch (error: any) {
       setAccessToken(null);
 
