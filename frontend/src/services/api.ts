@@ -94,18 +94,35 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     );
   }
 
-  const payload = (await response.json().catch(() => null)) as ApiEnvelope<T> | null;
+  const payload = await response.json().catch(() => null);
 
-  if (!response.ok) {
-    const message = payload?.message ?? `Request failed with status ${response.status}`;
-    throw new ApiError(message, response.status);
-  }
+if (!response.ok) {
+  const message =
+    payload?.detail ??
+    payload?.message ??
+    `Request failed with status ${response.status}`;
 
-  if (!payload) {
-    throw new ApiError("Received an empty response from the server.", response.status);
-  }
+  throw new ApiError(message, response.status);
+}
 
-  return payload.data;
+if (!payload) {
+  throw new ApiError(
+    "Received an empty response from the server.",
+    response.status,
+  );
+}
+
+// Support both API envelope responses and direct FastAPI responses.
+if (
+  typeof payload === "object" &&
+  payload !== null &&
+  "data" in payload &&
+  "success" in payload
+) {
+  return payload.data as T;
+}
+
+return payload as T;
 }
 
 export const api = {

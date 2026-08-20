@@ -11,6 +11,7 @@ from app.api.v1.health import router as health_router
 from app.core.config import settings
 from app.core.exceptions import AppException
 from app.db.database import connect_to_database, close_database_connection
+from app.api.v1.users import router as users_router
 
 
 @asynccontextmanager
@@ -70,5 +71,15 @@ app.include_router(
 
 app.include_router(
     employees_router,
+    prefix="/api/v1",
+)
+
+app.include_router(
+    users_router,
+    prefix="/api/v1",
+)
+
+app.include_router(
+    dashboard_router,
     prefix="/api/v1",
 )
