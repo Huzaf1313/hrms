@@ -1,13 +1,23 @@
+import { useState } from "react";
+
+import type { Department } from "../../types/department";
 import type { Employee } from "../../types/employee";
 
 interface EmployeeTableProps {
   employees: Employee[];
+  departments: Department[];
+  onView: (employee: Employee) => void;
+  onEdit: (employee: Employee) => void;
+  onDeactivate: (employee: Employee) => void;
+  onDelete: (employee: Employee) => void;
 }
 
 function statusBadgeClass(status: string): string {
   switch (status) {
     case "active":
       return "bg-green-100 text-green-700";
+    case "on_leave":
+      return "bg-orange-100 text-orange-700";
     case "inactive":
       return "bg-stone-100 text-stone-700";
     case "terminated":
@@ -17,7 +27,36 @@ function statusBadgeClass(status: string): string {
   }
 }
 
-function EmployeeTable({ employees }: EmployeeTableProps) {
+function statusLabel(status: string): string {
+  if (status === "on_leave") {
+    return "On Leave";
+  }
+  return status.charAt(0).toUpperCase() + status.slice(1);
+}
+
+function initialsFor(employee: Employee): string {
+  const first = employee.first_name?.charAt(0) ?? "";
+  const last = employee.last_name?.charAt(0) ?? "";
+  return `${first}${last}`.toUpperCase() || "?";
+}
+
+function EmployeeTable({
+  employees,
+  departments,
+  onView,
+  onEdit,
+  onDeactivate,
+  onDelete,
+}: EmployeeTableProps) {
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+
+  function departmentName(departmentId: string): string {
+    return (
+      departments.find((department) => department.id === departmentId)?.name ??
+      "—"
+    );
+  }
+
   if (employees.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-gray-200 p-10 text-center text-gray-500">
@@ -27,42 +66,116 @@ function EmployeeTable({ employees }: EmployeeTableProps) {
   }
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-gray-100">
-      <table className="w-full text-left text-sm">
-        <thead className="bg-gray-50 text-xs uppercase text-gray-500">
-          <tr>
-            <th className="px-4 py-3">Employee ID</th>
-            <th className="px-4 py-3">Name</th>
-            <th className="px-4 py-3">Email</th>
-            <th className="px-4 py-3">Designation</th>
-            <th className="px-4 py-3">Department</th>
-            <th className="px-4 py-3">Status</th>
-          </tr>
-        </thead>
+    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      {employees.map((employee) => (
+        <div
+          key={employee.id}
+          className="relative rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"
+        >
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#dce8df] text-sm font-semibold text-[#456b54]">
+                {initialsFor(employee)}
+              </div>
 
-        <tbody>
-          {employees.map((employee) => (
-            <tr key={employee.id} className="border-t border-gray-100">
-              <td className="px-4 py-3 font-medium text-gray-700">
-                {employee.employee_id}
-              </td>
-              <td className="px-4 py-3 text-gray-700">
-                {employee.first_name} {employee.last_name}
-              </td>
-              <td className="px-4 py-3 text-gray-500">{employee.email}</td>
-              <td className="px-4 py-3 text-gray-500">{employee.designation}</td>
-              <td className="px-4 py-3 text-gray-500">{employee.department_id}</td>
-              <td className="px-4 py-3">
-                <span
-                  className={`rounded-full px-3 py-1 text-xs font-medium ${statusBadgeClass(employee.status)}`}
-                >
-                  {employee.status}
-                </span>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+              <div>
+                <p className="font-semibold text-gray-800">
+                  {employee.first_name} {employee.last_name}
+                </p>
+                <p className="text-xs text-gray-500">
+                  ID: {employee.employee_id}
+                </p>
+              </div>
+            </div>
+
+            <div className="relative">
+              <button
+                type="button"
+                aria-label="More actions"
+                onClick={() =>
+                  setOpenMenuId((current) =>
+                    current === employee.id ? null : employee.id,
+                  )
+                }
+                className="flex h-8 w-8 items-center justify-center rounded-full text-gray-400 hover:bg-gray-50 hover:text-gray-600"
+              >
+                ⋮
+              </button>
+
+              {openMenuId === employee.id && (
+                <div className="absolute right-0 top-9 z-10 w-40 overflow-hidden rounded-xl border border-gray-100 bg-white text-sm shadow-lg">
+                  {employee.status === "active" && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpenMenuId(null);
+                        onDeactivate(employee);
+                      }}
+                      className="block w-full px-4 py-2 text-left text-stone-600 hover:bg-gray-50"
+                    >
+                      Deactivate
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenMenuId(null);
+                      onDelete(employee);
+                    }}
+                    className="block w-full px-4 py-2 text-left text-red-600 hover:bg-gray-50"
+                  >
+                    Delete
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-4 space-y-2 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-gray-500">Role</span>
+              <span className="font-medium text-gray-800">
+                {employee.designation}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="text-gray-500">Department</span>
+              <span className="font-medium text-gray-800">
+                {departmentName(employee.department_id)}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="text-gray-500">Status</span>
+              <span
+                className={`rounded-full px-3 py-1 text-xs font-medium ${statusBadgeClass(employee.status)}`}
+              >
+                {statusLabel(employee.status)}
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-5 flex gap-2">
+            <button
+              type="button"
+              onClick={() => onView(employee)}
+              className="flex-1 rounded-full border border-gray-200 px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50"
+            >
+              👁 View
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onEdit(employee)}
+              className="flex-1 rounded-full border border-gray-200 px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50"
+            >
+              ✎ Edit
+            </button>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

@@ -178,26 +178,6 @@ class EmployeeService:
             },
         )
 
-    async def terminate_employee(
-        self,
-        employee_id: str,
-    ):
-        employee = await self.repository.get_by_id(employee_id)
-
-        if not employee:
-            raise AppException(
-                "Employee not found",
-                404,
-            )
-
-        return await self.repository.update_status(
-            employee_id=employee_id,
-            status="terminated",
-            update_data={
-                "terminated_at": datetime.utcnow(),
-            },
-        )
-
     async def delete_employee(
         self,
         employee_id: str,
