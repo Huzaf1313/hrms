@@ -10,8 +10,9 @@ import Login from "./pages/login";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Registration from "./pages/Registration";
 import DashboardLayout from "./layouts/DashboardLayout";
-import EmployeeDashboard from "./pages/EmployeeDashboard";
-import EmployeeProfile from "./pages/EmployeeProfile";
+import EmployeeDashboard from "./pages/employee/EmployeeDashboard";
+import EmployeeProfile from "./pages/employee/EmployeeProfile";
+import EmployeeAttendance from "./pages/employee/EmployeeAttendance";
 
 import { clearSession, getRefreshToken } from "./services/api";
 import { authService } from "./services/authService";
@@ -61,6 +62,15 @@ function App() {
           path="/employee/profile"
           element={<EmployeeProfile />}
         />
+
+        <Route
+          element={<ProtectedRoute />}
+        >
+          <Route
+            path="/employee/attendance"
+            element={<EmployeeAttendance onLogout={handleLogout} />}
+          />
+        </Route>
 
         <Route
           path="/"

@@ -5,7 +5,7 @@ import Header from "../components/Header";
 import KpiCard from "../components/KpiCard";
 import HiringPipeline from "../components/HiringPipeline";
 import Celebrations from "../components/Celebrations";
-import Employees from "../pages/Employees";
+import Employees from "../pages/employee/Employees";
 import { getDashboardData, type DashboardData } from "../services/dashboardService";
 
 interface DashboardLayoutProps {

@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 
-import EmployeeDetailsPage from "../components/employees/EmployeeDetailsPage";
-import EmployeeForm from "../components/employees/EmployeeForm";
-import EmployeeTable from "../components/employees/EmployeeTable";
-import { ApiError } from "../services/api";
-import { departmentService } from "../services/departmentService";
-import { employeeService } from "../services/employeeService";
-import type { Department } from "../types/department";
-import type { Employee, EmployeeCreate } from "../types/employee";
+import EmployeeDetailsPage from "../../components/employees/EmployeeDetailsPage";
+import EmployeeForm from "../../components/employees/EmployeeForm";
+import EmployeeTable from "../../components/employees/EmployeeTable";
+import { ApiError } from "../../services/api";
+import { departmentService } from "../../services/departmentService";
+import { employeeService } from "../../services/employeeService";
+import type { Department } from "../../types/department";
+import type { Employee, EmployeeCreate } from "../../types/employee";
 
 const PAGE_SIZE = 10;
 
