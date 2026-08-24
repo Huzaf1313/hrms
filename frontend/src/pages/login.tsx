@@ -120,18 +120,18 @@ function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f8faff] via-white to-[#eef2ff] px-6 py-8">
-      <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-7xl items-center justify-center">
+    <div className="min-h-screen bg-gradient-to-br from-[#f8faff] via-white to-[#eef2ff] px-4 py-4 sm:px-6">
+      <div className="mx-auto flex min-h-[calc(100vh-2rem)] max-w-6xl items-center justify-center">
         
-        <div className="grid w-full overflow-hidden rounded-3xl bg-white shadow-2xl lg:grid-cols-2">
+        <div className="grid w-full overflow-hidden rounded-2xl bg-white shadow-2xl lg:grid-cols-2">
 
           {/* Left Section */}
-          <div className="hidden bg-gradient-to-br from-[#f5f3ff] via-[#eef2ff] to-[#e0e7ff] p-12 lg:block">
+          <div className="hidden bg-gradient-to-br from-[#f5f3ff] via-[#eef2ff] to-[#e0e7ff] p-8 lg:block">
             <div className="flex h-full flex-col justify-center">
 
               {/* Logo */}
-              <div className="mb-12">
-                <h1 className="text-3xl font-bold text-[#17213a]">
+              <div className="mb-8">
+                <h1 className="text-2xl font-bold text-[#17213a]">
                   HRMS
                 </h1>
 
@@ -141,7 +141,7 @@ function Login() {
               </div>
 
               {/* Heading */}
-              <h2 className="max-w-xl text-5xl font-bold leading-tight text-[#14213d]">
+              <h2 className="max-w-xl text-4xl font-bold leading-tight text-[#14213d]">
                 Smarter{" "}
                 <span className="text-[#5b2dde]">People.</span>
                 <br />
@@ -149,28 +149,24 @@ function Login() {
                 <span className="text-[#5b2dde]">Business.</span>
               </h2>
 
-              <p className="mt-6 max-w-xl text-lg leading-8 text-[#52607a]">
+              <p className="mt-4 max-w-xl text-base leading-7 text-[#52607a]">
                 A complete HRMS to manage your workforce, automate HR
                 operations and build a productive, happy workplace.
               </p>
 
               {/* Features */}
-              <div className="mt-10 grid grid-cols-2 gap-4">
+              <div className="mt-6 grid grid-cols-2 gap-3">
                 {[
                   "Employee Management",
                   "Attendance & Leave",
-                  "Payroll & Payslip",
-                  "Recruitment",
-                  "Performance & Goals",
-                  "Documents & Assets",
-                  "Training & Development",
                   "Reports & Analytics",
+                  "Performance & Goals",
                 ].map((feature) => (
                   <div
                     key={feature}
-                    className="rounded-2xl bg-white/80 p-5 shadow-sm"
+                    className="rounded-xl bg-white/80 p-3 shadow-sm"
                   >
-                    <p className="font-semibold text-[#17213a]">
+                    <p className="text-sm font-semibold text-[#17213a]">
                       {feature}
                     </p>
                   </div>
@@ -181,12 +177,12 @@ function Login() {
           </div>
 
           {/* Right Section */}
-          <div className="flex items-center justify-center p-8 sm:p-12 lg:p-14">
-            <div className="w-full max-w-xl">
+          <div className="flex items-center justify-center p-6 sm:p-8 lg:p-10">
+            <div className="w-full max-w-lg">
 
               {/* Logo */}
               <div className="text-center">
-                <h1 className="text-3xl font-bold text-[#17213a]">
+                <h1 className="text-2xl font-bold text-[#17213a]">
                   HRMS
                 </h1>
 
@@ -194,7 +190,7 @@ function Login() {
                   Human Resource Management System
                 </p>
 
-                <h2 className="mt-10 text-3xl font-bold text-[#14213d]">
+                <h2 className="mt-6 text-2xl font-bold text-[#14213d]">
                   Welcome Back!
                 </h2>
 
@@ -204,7 +200,7 @@ function Login() {
               </div>
 
               {/* Role Selector */}
-              <div className="mt-8 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {roles.map((role) => (
                   <button
                     key={role}
@@ -213,7 +209,7 @@ function Login() {
                       setSelectedRole(role);
                       setError("");
                     }}
-                    className={`rounded-xl px-3 py-3 text-sm font-medium transition ${
+                    className={`rounded-xl px-3 py-2 text-xs font-medium transition ${
                       selectedRole === role
                         ? "bg-[#5b2dde] text-white shadow-md"
                         : "bg-[#f3f4f8] text-[#52607a] hover:bg-[#e9eaf0]"
@@ -225,8 +221,8 @@ function Login() {
               </div>
 
               {/* Selected Role */}
-              <div className="mt-8">
-                <h3 className="text-xl font-semibold text-[#17213a]">
+              <div className="mt-5">
+                <h3 className="text-lg font-semibold text-[#17213a]">
                   {selectedRole} Sign In
                 </h3>
 
@@ -237,13 +233,13 @@ function Login() {
 
               {/* Error Message */}
               {error && (
-                <div className="mt-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
                   {error}
                 </div>
               )}
 
               {/* Email */}
-              <div className="mt-6">
+              <div className="mt-4">
                 <label
                   htmlFor="email"
                   className="mb-2 block text-sm font-semibold text-[#17213a]"
@@ -257,12 +253,12 @@ function Login() {
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                   placeholder="Enter your work email"
-                  className="w-full rounded-xl border border-[#d6dbe6] px-4 py-4 text-[#17213a] outline-none transition placeholder:text-[#8993a7] focus:border-[#5b2dde] focus:ring-2 focus:ring-[#5b2dde]/20"
+                  className="w-full rounded-xl border border-[#d6dbe6] px-4 py-3 text-[#17213a] outline-none transition placeholder:text-[#8993a7] focus:border-[#5b2dde] focus:ring-2 focus:ring-[#5b2dde]/20"
                 />
               </div>
 
              {/* Password */}
-            <div className="mt-5">
+            <div className="mt-4">
               <label
                 htmlFor="password"
                 className="mb-2 block text-sm font-semibold text-[#17213a]"
@@ -277,7 +273,7 @@ function Login() {
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   placeholder="Enter your password"
-                  className="w-full rounded-xl border border-[#d6dbe6] px-4 py-4 pr-12 text-[#17213a] outline-none transition placeholder:text-[#8993a7] focus:border-[#5b2dde] focus:ring-2 focus:ring-[#5b2dde]/20"
+                  className="w-full rounded-xl border border-[#d6dbe6] px-4 py-3 pr-12 text-[#17213a] outline-none transition placeholder:text-[#8993a7] focus:border-[#5b2dde] focus:ring-2 focus:ring-[#5b2dde]/20"
                 />
 
                 <button
@@ -296,7 +292,7 @@ function Login() {
             </div>
 
               {/* Remember / Forgot */}
-              <div className="mt-5 flex items-center justify-between">
+              <div className="mt-4 flex items-center justify-between">
                 <label className="flex items-center gap-2 text-sm text-[#52607a]">
                   <input
                     type="checkbox"
@@ -322,13 +318,13 @@ function Login() {
                 type="button"
                 onClick={handleLogin}
                 disabled={isLoading}
-                className="mt-7 w-full rounded-xl bg-[#5b2dde] py-4 text-lg font-semibold text-white shadow-lg transition hover:bg-[#4c24bd] disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-5 w-full rounded-xl bg-[#5b2dde] py-3 text-base font-semibold text-white shadow-lg transition hover:bg-[#4c24bd] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isLoading ? "Signing In..." : "Sign In"}
               </button>
 
               {/* Divider */}
-              <div className="my-7 flex items-center gap-4">
+              <div className="my-5 flex items-center gap-4">
                 <div className="h-px flex-1 bg-[#e0e3ea]" />
                 <span className="text-sm text-[#7a8498]">
                   or continue with
@@ -354,7 +350,7 @@ function Login() {
               </div>
 
               {/* Signup */}
-              <p className="mt-8 text-center text-sm text-[#52607a]">
+              <p className="mt-5 text-center text-sm text-[#52607a]">
                 Don't have an account?{" "}
                 <button
                   type="button"
@@ -366,9 +362,9 @@ function Login() {
               </p>
 
               {/* Security */}
-              <div className="mt-8 rounded-xl bg-[#f6f8fc] p-4 text-center text-xs text-[#68758e]">
-                256-bit SSL Encrypted&nbsp;&nbsp; ΓÇó &nbsp;&nbsp;
-                Your data is always secure&nbsp;&nbsp; ΓÇó &nbsp;&nbsp;
+              <div className="mt-5 rounded-xl bg-[#f6f8fc] p-3 text-center text-xs text-[#68758e]">
+                256-bit SSL Encrypted&nbsp;&nbsp; | &nbsp;&nbsp;
+                Your data is always secure&nbsp;&nbsp; | &nbsp;&nbsp;
                 Enterprise Grade Security
               </div>
 

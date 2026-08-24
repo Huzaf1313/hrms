@@ -239,7 +239,7 @@ function Registration() {
             updateField(field, event.target.value)
           }
           placeholder={placeholder}
-          className={`w-full rounded-xl border border-[#d6dbe6] px-4 py-4 text-[#17213a] outline-none transition placeholder:text-[#8993a7] focus:border-[#5b2dde] focus:ring-2 focus:ring-[#5b2dde]/20 ${
+          className={`w-full rounded-xl border border-[#d6dbe6] px-4 py-3 text-[#17213a] outline-none transition placeholder:text-[#8993a7] focus:border-[#5b2dde] focus:ring-2 focus:ring-[#5b2dde]/20 ${
             isPasswordField ? "pr-12" : ""
           }`}
         />
@@ -268,17 +268,17 @@ function Registration() {
 };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f8faff] via-white to-[#eef2ff] px-6 py-8">
-      <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-7xl items-center justify-center">
+    <div className="min-h-screen bg-gradient-to-br from-[#f8faff] via-white to-[#eef2ff] px-4 py-4 sm:px-6">
+      <div className="mx-auto flex min-h-[calc(100vh-2rem)] max-w-6xl items-center justify-center">
 
-        <div className="grid w-full overflow-hidden rounded-3xl bg-white shadow-2xl lg:grid-cols-2">
+        <div className="grid w-full overflow-hidden rounded-2xl bg-white shadow-2xl lg:grid-cols-2">
 
           {/* Left Section */}
-          <div className="hidden bg-gradient-to-br from-[#f5f3ff] via-[#eef2ff] to-[#e0e7ff] p-12 lg:block">
+          <div className="hidden bg-gradient-to-br from-[#f5f3ff] via-[#eef2ff] to-[#e0e7ff] p-8 lg:block">
             <div className="flex h-full flex-col justify-center">
 
-              <div className="mb-12">
-                <h1 className="text-3xl font-bold text-[#17213a]">
+              <div className="mb-8">
+                <h1 className="text-2xl font-bold text-[#17213a]">
                   HRMS
                 </h1>
 
@@ -287,34 +287,30 @@ function Registration() {
                 </p>
               </div>
 
-              <h2 className="max-w-xl text-5xl font-bold leading-tight text-[#14213d]">
+              <h2 className="max-w-xl text-4xl font-bold leading-tight text-[#14213d]">
                 Build a{" "}
                 <span className="text-[#5b2dde]">
                   Better Workplace.
                 </span>
               </h2>
 
-              <p className="mt-6 max-w-xl text-lg leading-8 text-[#52607a]">
+              <p className="mt-4 max-w-xl text-base leading-7 text-[#52607a]">
                 Create your HRMS account and get started with
                 smarter workforce management.
               </p>
 
-              <div className="mt-10 grid grid-cols-2 gap-4">
+              <div className="mt-6 grid grid-cols-2 gap-3">
                 {[
                   "Employee Management",
                   "Attendance & Leave",
-                  "Payroll & Payslip",
-                  "Recruitment",
-                  "Performance & Goals",
-                  "Documents & Assets",
-                  "Training & Development",
                   "Reports & Analytics",
+                  "Performance & Goals",
                 ].map((feature) => (
                   <div
                     key={feature}
-                    className="rounded-2xl bg-white/80 p-5 shadow-sm"
+                    className="rounded-xl bg-white/80 p-3 shadow-sm"
                   >
-                    <p className="font-semibold text-[#17213a]">
+                    <p className="text-sm font-semibold text-[#17213a]">
                       {feature}
                     </p>
                   </div>
@@ -325,12 +321,12 @@ function Registration() {
           </div>
 
           {/* Right Section */}
-          <div className="flex items-center justify-center p-8 sm:p-12 lg:p-14">
-            <div className="w-full max-w-xl">
+          <div className="flex items-center justify-center p-6 sm:p-8 lg:p-10">
+            <div className="w-full max-w-lg">
 
               {/* Header */}
               <div className="text-center">
-                <h1 className="text-3xl font-bold text-[#17213a]">
+                <h1 className="text-2xl font-bold text-[#17213a]">
                   HRMS
                 </h1>
 
@@ -338,7 +334,7 @@ function Registration() {
                   Human Resource Management System
                 </p>
 
-                <h2 className="mt-8 text-3xl font-bold text-[#14213d]">
+                <h2 className="mt-5 text-2xl font-bold text-[#14213d]">
                   Create Your Account
                 </h2>
 
@@ -348,14 +344,14 @@ function Registration() {
               </div>
 
               {/* Step Indicator */}
-              <div className="mt-8 flex items-center justify-center">
+              <div className="mt-5 flex items-center justify-center">
                 {[1, 2, 3].map((item) => (
                   <div
                     key={item}
                     className="flex items-center"
                   >
                     <div
-                      className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold ${
+                      className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold ${
                         step >= item
                           ? "bg-[#5b2dde] text-white"
                           : "bg-[#eef0f5] text-[#8993a7]"
@@ -366,7 +362,7 @@ function Registration() {
 
                     {item < 3 && (
                       <div
-                        className={`h-1 w-12 sm:w-20 ${
+                        className={`h-1 w-10 sm:w-16 ${
                           step > item
                             ? "bg-[#5b2dde]"
                             : "bg-[#e2e5ec]"
@@ -378,8 +374,8 @@ function Registration() {
               </div>
 
               {/* Step Title */}
-              <div className="mt-8">
-                <h3 className="text-xl font-semibold text-[#17213a]">
+              <div className="mt-5">
+                <h3 className="text-lg font-semibold text-[#17213a]">
                   {step === 1 && "Personal Details"}
                   {step === 2 && "Organization Details"}
                   {step === 3 && "Role Details"}
@@ -399,21 +395,21 @@ function Registration() {
 
               {/* Error */}
               {error && (
-                <div className="mt-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
                   {error}
                 </div>
               )}
 
               {/* Success */}
               {success && (
-                <div className="mt-5 rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-700">
+                <div className="mt-4 rounded-xl border border-green-200 bg-green-50 p-3 text-sm text-green-700">
                   {success}
                 </div>
               )}
 
               {/* Step 1 */}
               {step === 1 && (
-                <div className="mt-6 space-y-5">
+                <div className="mt-4 space-y-4">
                   {renderInput(
                     "Full Name",
                     "full_name",
@@ -453,7 +449,7 @@ function Registration() {
 
               {/* Step 2 */}
               {step === 2 && (
-                <div className="mt-6 space-y-5">
+                <div className="mt-4 space-y-4">
                   {renderInput(
                     "Company Name",
                     "company_name",
@@ -479,8 +475,8 @@ function Registration() {
                         )
                       }
                       placeholder="Enter your company address"
-                      rows={4}
-                      className="w-full resize-none rounded-xl border border-[#d6dbe6] px-4 py-4 text-[#17213a] outline-none transition placeholder:text-[#8993a7] focus:border-[#5b2dde] focus:ring-2 focus:ring-[#5b2dde]/20"
+                      rows={3}
+                      className="w-full resize-none rounded-xl border border-[#d6dbe6] px-4 py-3 text-[#17213a] outline-none transition placeholder:text-[#8993a7] focus:border-[#5b2dde] focus:ring-2 focus:ring-[#5b2dde]/20"
                     />
                   </div>
 
@@ -501,7 +497,7 @@ function Registration() {
                           event.target.value,
                         )
                       }
-                      className="w-full rounded-xl border border-[#d6dbe6] bg-white px-4 py-4 text-[#17213a] outline-none transition focus:border-[#5b2dde] focus:ring-2 focus:ring-[#5b2dde]/20"
+                      className="w-full rounded-xl border border-[#d6dbe6] bg-white px-4 py-3 text-[#17213a] outline-none transition focus:border-[#5b2dde] focus:ring-2 focus:ring-[#5b2dde]/20"
                     >
                       <option value="">
                         Select a reference
@@ -522,7 +518,7 @@ function Registration() {
 
               {/* Step 3 */}
               {step === 3 && (
-                <div className="mt-6">
+                <div className="mt-4">
                   <label
                     htmlFor="role"
                     className="mb-2 block text-sm font-semibold text-[#17213a]"
@@ -536,7 +532,7 @@ function Registration() {
                     onChange={(event) =>
                       updateField("role", event.target.value)
                     }
-                    className="w-full rounded-xl border border-[#d6dbe6] bg-white px-4 py-4 text-[#17213a] outline-none transition focus:border-[#5b2dde] focus:ring-2 focus:ring-[#5b2dde]/20"
+                    className="w-full rounded-xl border border-[#d6dbe6] bg-white px-4 py-3 text-[#17213a] outline-none transition focus:border-[#5b2dde] focus:ring-2 focus:ring-[#5b2dde]/20"
                   >
                     <option value="">
                       Select the position you are registering for
@@ -555,13 +551,13 @@ function Registration() {
               )}
 
               {/* Navigation */}
-              <div className="mt-8 flex gap-4">
+              <div className="mt-6 flex gap-3">
                 {step > 1 && (
                   <button
                     type="button"
                     onClick={handleBack}
                     disabled={isLoading}
-                    className="w-1/3 rounded-xl border border-[#d6dbe6] py-4 font-semibold text-[#52607a] transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="w-1/3 rounded-xl border border-[#d6dbe6] py-3 font-semibold text-[#52607a] transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     Back
                   </button>
@@ -571,7 +567,7 @@ function Registration() {
                   <button
                     type="button"
                     onClick={handleNext}
-                    className={`rounded-xl bg-[#5b2dde] py-4 text-lg font-semibold text-white shadow-lg transition hover:bg-[#4c24bd] ${
+                    className={`rounded-xl bg-[#5b2dde] py-3 text-base font-semibold text-white shadow-lg transition hover:bg-[#4c24bd] ${
                       step === 1 ? "w-full" : "w-2/3"
                     }`}
                   >
@@ -582,7 +578,7 @@ function Registration() {
                     type="button"
                     onClick={handleRegistration}
                     disabled={isLoading}
-                    className="w-2/3 rounded-xl bg-[#5b2dde] py-4 text-lg font-semibold text-white shadow-lg transition hover:bg-[#4c24bd] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="w-2/3 rounded-xl bg-[#5b2dde] py-3 text-base font-semibold text-white shadow-lg transition hover:bg-[#4c24bd] disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {isLoading
                       ? "Creating Account..."
@@ -592,7 +588,7 @@ function Registration() {
               </div>
 
               {/* Login */}
-              <p className="mt-8 text-center text-sm text-[#52607a]">
+              <p className="mt-6 text-center text-sm text-[#52607a]">
                 Already have an account?{" "}
                 <button
                   type="button"
@@ -604,7 +600,7 @@ function Registration() {
               </p>
 
               {/* Security */}
-              <div className="mt-8 rounded-xl bg-[#f6f8fc] p-4 text-center text-xs text-[#68758e]">
+              <div className="mt-6 rounded-xl bg-[#f6f8fc] p-3 text-center text-xs text-[#68758e]">
                 256-bit SSL Encrypted&nbsp;&nbsp; • &nbsp;&nbsp;
                 Your data is always secure&nbsp;&nbsp; • &nbsp;&nbsp;
                 Enterprise Grade Security

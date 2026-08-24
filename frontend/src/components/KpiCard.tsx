@@ -1,8 +1,8 @@
 type KpiCardProps = {
   title: string;
   value: string;
-  description?: string;
-  icon: string;
+  description?: React.ReactNode;
+  icon: React.ReactNode;
   iconBg: string;
   children?: React.ReactNode;
 };
@@ -26,7 +26,7 @@ function KpiCard({
       <div
         className={`absolute right-7 top-7 flex h-12 w-12 items-center justify-center rounded-full ${iconBg}`}
       >
-        <span className="text-xl">{icon}</span>
+        {icon}
       </div>
 
       {/* Value */}
@@ -37,9 +37,9 @@ function KpiCard({
       {/* Bottom content */}
       <div className="mt-6">
         {description && (
-          <p className="text-sm font-medium text-[#456b54]">
+          <div className="text-sm font-medium text-[#456b54]">
             {description}
-          </p>
+          </div>
         )}
 
         {children}

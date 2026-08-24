@@ -48,10 +48,13 @@ async def create_department(data: DepartmentCreate):
 )
 async def get_departments(
     name: str | None = Query(default=None),
-    pagination: PaginationParams = None,
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=10, ge=1),
 ):
-    if pagination is None:
-        pagination = PaginationParams()
+    pagination = PaginationParams(
+        page=page,
+        limit=limit,
+    )
 
     departments = await service.get_departments(
         name=name,

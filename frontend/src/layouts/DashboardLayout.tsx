@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { CalendarMinus2, Check, TrendingUp, Users } from "lucide-react";
 
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
@@ -6,6 +7,7 @@ import KpiCard from "../components/KpiCard";
 import HiringPipeline from "../components/HiringPipeline";
 import Celebrations from "../components/Celebrations";
 import Employees from "../pages/Employees";
+import Attendance from "../pages/Attendance";
 import { getDashboardData, type DashboardData } from "../services/dashboardService";
 
 interface DashboardLayoutProps {
@@ -20,6 +22,9 @@ function DashboardLayout({
   onLogout,
 }: DashboardLayoutProps) {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+
+  const storedUser = localStorage.getItem("user");
+  const user = storedUser ? JSON.parse(storedUser) : null;
 
   useEffect(() => {
     let isMounted = true;
@@ -47,19 +52,26 @@ function DashboardLayout({
       />
 
       <main className="min-w-0 flex-1">
-        <Header onLogout={onLogout} />
+        <Header user={user} onLogout={onLogout} />
 
         {activePage === "Employees" ? (
           <Employees />
+        ) : activePage === "Attendance" ? (
+          <Attendance />
         ) : (
           <div className="px-10 pb-10 pt-8">
             <div className="grid grid-cols-4 gap-6">
 
               <KpiCard
                 title="TOTAL HEADCOUNT"
-                value={dashboardData ? String(dashboardData.total_headcount) : "—"}
-                description="↗ +12 this month"
-                icon="♟"
+                value={dashboardData ? String(dashboardData.total_headcount) : "-"}
+                description={(
+                  <span className="inline-flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4" />
+                    +12 this month
+                  </span>
+                )}
+                icon={<Users className="h-6 w-6 text-emerald-700" />}
                 iconBg="bg-green-100"
               />
 
@@ -68,9 +80,9 @@ function DashboardLayout({
                 value={
                   dashboardData?.attendance_rate != null
                     ? `${dashboardData.attendance_rate}%`
-                    : "—"
+                    : "-"
                 }
-                icon="✓"
+                icon={<Check className="h-6 w-6 text-amber-700" />}
                 iconBg="bg-orange-100"
               >
                 <div className="h-3 w-full overflow-hidden rounded-full bg-gray-200">
@@ -83,9 +95,9 @@ function DashboardLayout({
 
               <KpiCard
                 title="ON LEAVE TODAY"
-                value={dashboardData ? String(dashboardData.on_leave_today) : "—"}
-                description="View details →"
-                icon="▣"
+                value={dashboardData ? String(dashboardData.on_leave_today) : "-"}
+                description="View details"
+                icon={<CalendarMinus2 className="h-6 w-6 text-slate-700" />}
                 iconBg="bg-stone-100"
               />
 
