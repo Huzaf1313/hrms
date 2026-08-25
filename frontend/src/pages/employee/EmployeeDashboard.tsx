@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import EmployeeSidebar from "./EmployeeSidebar";
 
 interface User {
   id: string;
@@ -10,6 +10,16 @@ interface User {
   is_locked: boolean;
   created_at: string;
   updated_at: string;
+}
+
+function getInitials(name: string) {
+  return name
+    .trim()
+    .split(/\s+/)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 }
 
 const leaveRequests = [
@@ -66,21 +76,11 @@ const holidays = [
   },
 ];
 
-function getInitials(name: string) {
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part.charAt(0).toUpperCase())
-    .join("");
-}
-
 interface EmployeeDashboardProps {
   onLogout: () => void;
 }
 
 function EmployeeDashboard({ onLogout }: EmployeeDashboardProps) {
-    const navigate = useNavigate();
     const user = useMemo<User | null>(() => {
     const storedUser = localStorage.getItem("user");
 
@@ -96,7 +96,8 @@ function EmployeeDashboard({ onLogout }: EmployeeDashboardProps) {
   }, []);
 
   const employeeName = user?.full_name || "Employee";
-  const initials = getInitials(employeeName);
+
+  const firstName = employeeName.split(" ")[0];
 
   const currentDate = new Date();
 
@@ -107,158 +108,52 @@ function EmployeeDashboard({ onLogout }: EmployeeDashboardProps) {
     year: "numeric",
   });
 
-  const firstName = employeeName.split(" ")[0];
+  const initials = getInitials(employeeName);
 
   return (
-    <div className="min-h-screen bg-[#f7f9f8] text-[#17213a]">
+  <div className="flex min-h-screen bg-[#f7f9f8] text-[#17213a]">
+    <EmployeeSidebar onLogout={onLogout} />
 
-      {/* =========================================================
-          TOP NAVIGATION
-      ========================================================= */}
-      <header className="sticky top-0 z-20 flex h-[76px] items-center justify-between border-b border-gray-200 bg-white px-6 lg:px-8">
-
-        <div className="flex items-center gap-4">
-
-          {/* Menu */}
-          <button
-            type="button"
-            className="flex h-10 w-10 items-center justify-center rounded-xl text-gray-600 transition hover:bg-gray-100"
-            aria-label="Toggle menu"
-          >
-            <span className="text-2xl">☰</span>
-          </button>
-
-          {/* Search */}
-          <button
-            type="button"
-            className="flex h-10 w-10 items-center justify-center rounded-xl text-gray-600 transition hover:bg-gray-100"
-            aria-label="Search"
-          >
-            <span className="text-xl">⌕</span>
-          </button>
-        </div>
-
-        <div className="flex items-center gap-4">
-
-          {/* Notifications */}
-          <button
-            type="button"
-            className="relative flex h-10 w-10 items-center justify-center rounded-xl text-gray-600 transition hover:bg-gray-100"
-            aria-label="Notifications"
-          >
-            <span className="text-xl">♧</span>
-
-            <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />
-          </button>
-
-          {/* Date */}
-          <div className="hidden rounded-xl border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-medium text-gray-600 sm:block">
-            {formattedDate}
-          </div>
-
-          {/* User */}
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#dce5df] text-sm font-bold text-[#456b54]">
-            {initials || "E"}
-          </div>
-        </div>
-      </header>
-
-      <div className="flex">
-
-        {/* =========================================================
-            SIDEBAR
-        ========================================================= */}
-        <aside className="hidden min-h-[calc(100vh-76px)] w-[250px] shrink-0 border-r border-gray-200 bg-white px-4 py-6 lg:flex lg:flex-col">
-
-          {/* Branding */}
-          <div className="mb-8 px-3">
-            <h1 className="text-2xl font-bold text-[#456b54]">
-              HRMS
-            </h1>
-
-            <p className="mt-1 text-xs font-medium uppercase tracking-wider text-gray-500">
-              Employee Portal
-            </p>
-          </div>
-
-          {/* Navigation */}
-          <nav className="flex flex-col gap-1">
-
-            <button
-              type="button"
-              className="flex h-11 items-center gap-3 rounded-xl bg-[#5f806b] px-4 text-left text-sm font-semibold text-white"
-            >
-              <span className="w-5 text-center text-lg">▦</span>
-              Dashboard
-            </button>
-
-            {[
-              ["My Profile", "♙"],
-              ["Attendance", "✓"],
-              ["Leave", "◷"],
-              ["Payroll", "▣"],
-              ["My Documents", "▤"],
-              ["My Assets", "▥"],
-              ["Performance", "⌁"],
-              ["Training", "◇"],
-              ["Announcements", "◉"],
-              ["Help & Support", "?"],
-            ].map(([label, icon]) => (
-             <button
-                key={label}
-                type="button"
-                onClick={() => {
-                    if (label === "My Profile") {
-                    navigate("/employee/profile");
-                    }
-                }}
-                className="flex h-11 items-center gap-3 rounded-xl px-4 text-left text-sm font-medium text-gray-700 transition hover:bg-gray-100"
-                >
-                <span className="w-5 text-center text-lg">{icon}</span>
-                {label}
-              </button>
-            ))}
-          </nav>
-
-          {/* Employee Profile */}
-            <div className="mt-auto border-t border-gray-100 pt-5">
-
-            <div className="flex items-center gap-3 rounded-xl bg-gray-50 p-3">
-
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#dce5df] text-sm font-bold text-[#456b54]">
-                {initials || "E"}
-                </div>
-
-                <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-gray-800">
-                    {employeeName}
-                </p>
-
-                <p className="truncate text-xs text-gray-500">
-                    Employee
-                </p>
-                </div>
-            </div>
-
-            <button
-                type="button"
-                onClick={onLogout}
-                className="mt-3 flex h-11 w-full items-center gap-3 rounded-xl px-4 text-left text-sm font-medium text-gray-600 transition hover:bg-red-50 hover:text-red-600"
-            >
-                <span className="w-5 text-center text-lg">
-                ↪
-                </span>
-
-                Logout
-            </button>
-
-            </div>
-        </aside>
+      <div className="min-w-0 flex-1">
 
         {/* =========================================================
             MAIN CONTENT
         ========================================================= */}
         <main className="min-w-0 flex-1 px-5 py-7 sm:px-7 lg:px-10">
+
+          <div className="mb-6 flex items-center justify-end gap-4">
+            {/* Date */}
+            <div className="hidden rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 shadow-sm sm:block">
+              {formattedDate}
+            </div>
+
+            {/* Notifications */}
+            <button
+              type="button"
+              className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-600 shadow-sm transition hover:bg-gray-50"
+              aria-label="Notifications"
+            >
+              <span className="text-lg">🔔</span>
+
+              <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />
+            </button>
+
+            {/* Profile */}
+            <div className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-3 py-2 shadow-sm">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#dce5df] text-sm font-bold text-[#456b54]">
+                {initials || "E"}
+              </div>
+
+              <div className="hidden text-left sm:block">
+                <p className="text-sm font-semibold text-gray-800">
+                  {employeeName}
+                </p>
+                <p className="text-xs text-gray-500">
+                  Employee
+                </p>
+              </div>
+            </div>
+          </div>
 
           {/* Greeting */}
           <section className="mb-7">
