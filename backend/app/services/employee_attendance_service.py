@@ -15,7 +15,7 @@ class EmployeeAttendanceService:
     async def create_attendance(self, attendance_data: dict):
         employee_id = attendance_data["employee_id"]
 
-        employee = await self.employee_repository.get_by_id(
+        employee = await self.employee_repository.get_by_employee_id(
             employee_id
         )
 
@@ -79,7 +79,7 @@ class EmployeeAttendanceService:
         skip: int = 0,
         limit: int = 100,
     ):
-        employee = await self.employee_repository.get_by_id(
+        employee = await self.employee_repository.get_by_employee_id(
             employee_id
         )
 

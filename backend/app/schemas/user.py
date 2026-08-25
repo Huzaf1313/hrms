@@ -24,6 +24,7 @@ class UserCreate(BaseModel):
 
 class UserResponse(BaseModel):
     id: str
+    employee_id: str | None = None
     full_name: str
     email: EmailStr
     role: UserRole
@@ -31,7 +32,6 @@ class UserResponse(BaseModel):
     is_locked: bool
     created_at: datetime
     updated_at: datetime
-
 
 class LoginRequest(BaseModel):
     email: EmailStr

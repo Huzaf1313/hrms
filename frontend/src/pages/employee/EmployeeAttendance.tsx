@@ -4,6 +4,7 @@ import { api, ApiError } from "../../services/api";
 
 interface User {
   id: string;
+  employee_id: string;
   full_name: string;
   email: string;
   role: string;
@@ -83,53 +84,39 @@ function EmployeeAttendance({
   const [isLoading, setIsLoading] = useState(true);
 
   const [error, setError] = useState<string | null>(null);
+  const [isActionLoading, setIsActionLoading] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [employeeId, setEmployeeId] = useState<string | null>(null);
 
 useEffect(() => {
   async function loadAttendance() {
-    if (!user?.email) {
-      setIsLoading(false);
-      return;
+    if (!user?.employee_id) {
+        setIsLoading(false);
+        setError("Employee ID could not be found for the logged-in user.");
+        return;
     }
 
     try {
       setIsLoading(true);
       setError(null);
 
-      // Find the employee record belonging to the logged-in user.
-      const employees = await api.get<
-        Array<{
-          id: string;
-          employee_id: string;
-          first_name: string;
-          last_name: string;
-          email: string;
-        }>
-      >("/employees", {
-        page: 1,
-        limit: 100,
-      });
+if (!user.employee_id) {
+  setEmployeeId(null);
+  setError(
+    "Employee ID could not be found for the logged-in user.",
+  );
+  return;
+}
 
-      const employee = employees.find(
-        (item) =>
-          item.email.toLowerCase() ===
-          user.email.toLowerCase(),
-      );
+setEmployeeId(user.employee_id);
 
-      if (!employee) {
-        setError(
-          "Employee profile could not be found for the logged-in user.",
-        );
-        return;
-      }
-
-      // Use the MongoDB employee document ID for attendance.
-      const records = await api.get<AttendanceRecord[]>(
-        `/employees/${employee.id}/attendance`,
-        {
-          page: 1,
-          limit: 100,
-        },
-      );
+const records = await api.get<AttendanceRecord[]>(
+  `/employees/${user.employee_id}/attendance`,
+  {
+    page: 1,
+    limit: 100,
+  },
+);
 
       setAttendanceRecords(records);
     } catch (err) {
@@ -144,7 +131,8 @@ useEffect(() => {
   }
 
   loadAttendance();
-}, [user?.email]);
+}, [user?.employee_id]);
+
 
   const currentMonth = new Date();
 
@@ -196,15 +184,20 @@ useEffect(() => {
     });
 
     function formatTime(value: string | null) {
-    if (!value) {
-        return "--";
-    }
+        if (!value) {
+            return "--";
+        }
 
-    return new Date(value).toLocaleTimeString("en-IN", {
-        hour: "2-digit",
-        minute: "2-digit",
-    });
-    }
+        const utcValue = value.endsWith("Z")
+            ? value
+            : `${value}Z`;
+
+        return new Date(utcValue).toLocaleTimeString("en-IN", {
+            timeZone: "Asia/Kolkata",
+            hour: "2-digit",
+            minute: "2-digit",
+        });
+        }
 
     const todayStatus = todayRecord?.status || "Not Marked";
 
@@ -212,7 +205,112 @@ useEffect(() => {
     Boolean(todayRecord?.check_in) &&
     !todayRecord?.check_out;
 
+    const handleCheckIn = async () => {
+        if (!employeeId) {
+            setActionError("Employee profile could not be found.");
+            return;
+        }
 
+        if (todayRecord) {
+            setActionError("Attendance has already been marked for today.");
+            return;
+        }
+
+        try {
+            setIsActionLoading(true);
+            setActionError(null);
+
+            const now = new Date();
+
+            const attendance = await api.post<AttendanceRecord>(
+            "/attendance",
+            {
+                employee_id: employeeId,
+                date: now.toISOString().split("T")[0],
+                check_in: now.toISOString(),
+                check_out: null,
+                status: "Present",
+                total_hours: null,
+            },
+            );
+
+            setAttendanceRecords((records) => [
+            attendance,
+            ...records,
+            ]);
+        } catch (err) {
+            if (err instanceof ApiError) {
+            setActionError(err.message);
+            } else {
+            setActionError(
+                "Unable to check in. Please try again.",
+            );
+            }
+        } finally {
+            setIsActionLoading(false);
+        }
+        };
+
+        const handleCheckOut = async () => {
+            if (!todayRecord) {
+                setActionError(
+                "You need to check in before checking out.",
+                );
+                return;
+            }
+
+            if (!todayRecord.check_in) {
+                setActionError(
+                "Check-in time is missing for today's attendance.",
+                );
+                return;
+            }
+
+            if (todayRecord.check_out) {
+                setActionError(
+                "You have already checked out for today.",
+                );
+                return;
+            }
+
+            try {
+                setIsActionLoading(true);
+                setActionError(null);
+
+                const checkOutTime = new Date();
+                const checkInTime = new Date(todayRecord.check_in);
+
+                const totalHours =
+                (checkOutTime.getTime() - checkInTime.getTime()) /
+                (1000 * 60 * 60);
+
+                const attendance = await api.put<AttendanceRecord>(
+                `/attendance/${todayRecord.id}`,
+                {
+                    check_out: checkOutTime.toISOString(),
+                    total_hours: Number(totalHours.toFixed(2)),
+                },
+                );
+
+                setAttendanceRecords((records) =>
+                records.map((record) =>
+                    record.id === attendance.id
+                    ? attendance
+                    : record,
+                ),
+                );
+            } catch (err) {
+                if (err instanceof ApiError) {
+                setActionError(err.message);
+                } else {
+                setActionError(
+                    "Unable to check out. Please try again.",
+                );
+                }
+            } finally {
+                setIsActionLoading(false);
+            }
+            };
 
   return (
     <div className="min-h-screen bg-[#f7f9f8] text-[#17213a]">
@@ -658,6 +756,14 @@ useEffect(() => {
 
             </div>
 
+            {actionError && (
+                <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3">
+                    <p className="text-sm font-medium text-red-700">
+                    {actionError}
+                    </p>
+                </div>
+                )}
+
             {/* Work Status */}
             <div className="mt-4 flex items-center justify-between rounded-xl border border-gray-100 p-4">
 
@@ -696,6 +802,38 @@ useEffect(() => {
             </span>
 
             </div>
+
+                {/* Attendance Actions */}
+                    <div className="mt-4">
+                        {!todayRecord ? (
+                             <button
+                            type="button"
+                             onClick={handleCheckIn}
+                             disabled={isActionLoading}
+                             className="w-full rounded-xl bg-[#456b54] px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#385b46] disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                {isActionLoading ? "Checking In..." : "Check In"}
+                                </button>
+                            ) : !todayRecord.check_out ? (
+                                <button
+                                type="button"
+                                onClick={handleCheckOut}
+                                disabled={isActionLoading}
+                                className="w-full rounded-xl bg-[#456b54] px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#385b46] disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                {isActionLoading ? "Checking Out..." : "Check Out"}
+                                </button>
+                            ) : (
+                                <div className="rounded-xl bg-[#eef3ef] px-4 py-3 text-center">
+                                <p className="text-sm font-semibold text-[#456b54]">
+                                    Attendance Completed
+                                </p>
+                                <p className="mt-1 text-xs text-gray-500">
+                                    You have checked in and checked out for today.
+                                </p>
+                                </div>
+                            )}
+                            </div>
 
         </div>
 

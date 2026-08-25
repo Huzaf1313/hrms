@@ -4,7 +4,7 @@ from app.db.database import database
 
 
 class EmployeeRepository:
-    collection = database["employees"]
+    collection = database["users"]
 
     async def create(self, employee_data: dict):
         result = await self.collection.insert_one(employee_data)

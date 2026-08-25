@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { api } from "../../services/api";
 
 interface UserResponse {
   id: string;
+  employee_id: string | null;
   full_name: string;
   email: string;
   role: string;
@@ -41,6 +43,7 @@ function EmployeeProfile() {
   const [user, setUser] = useState<UserResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const navigate = useNavigate();
 
   useEffect(() => {
     let isMounted = true;
@@ -113,6 +116,15 @@ function EmployeeProfile() {
 
         {/* Page Header */}
         <div className="mb-7">
+
+          <button
+            type="button"
+            onClick={() => navigate("/employee/dashboard")}
+            className="mb-4 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50"
+          >
+            ← Back to Dashboard
+          </button>
+
           <p className="text-sm font-medium text-[#5f806b]">
             Employee Portal
           </p>
@@ -234,7 +246,7 @@ function EmployeeProfile() {
               </p>
 
               <p className="mt-2 break-all text-sm font-semibold text-gray-800">
-                {user.id}
+                {user.employee_id || "Not assigned"}
               </p>
             </div>
           </div>
