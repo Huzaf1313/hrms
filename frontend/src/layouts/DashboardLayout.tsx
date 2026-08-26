@@ -8,6 +8,7 @@ import HiringPipeline from "../components/HiringPipeline";
 import Celebrations from "../components/Celebrations";
 import Employees from "../pages/Employees";
 import Attendance from "../pages/Attendance";
+import Leave from "../pages/leave";
 import { getDashboardData, type DashboardData } from "../services/dashboardService";
 
 interface DashboardLayoutProps {
@@ -58,6 +59,8 @@ function DashboardLayout({
           <Employees />
         ) : activePage === "Attendance" ? (
           <Attendance />
+        ) : activePage === "Leave" ? (
+          <Leave />
         ) : (
           <div className="px-10 pb-10 pt-8">
             <div className="grid grid-cols-4 gap-6">

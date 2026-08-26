@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Users,
   UserCheck,
@@ -27,10 +27,6 @@ import type {
   AttendanceSummary,
 } from "../types/attendance";
 import type { Department } from "../types/department";
-
-// TODO: replace with real services/attendanceService.ts + types/attendance.ts
-// once the backend Attendance API is available (see EMP001-style pattern
-// used in employeeService).
 
 const tabs = [
   { label: "All Employees", status: undefined as string | undefined },
@@ -70,6 +66,87 @@ const quickActions = [
   { label: "Attendance Settings", icon: Settings, iconBg: "bg-gray-100", iconColor: "text-gray-600" },
 ];
 
+// --- Sorting -----------------------------------------------------------
+
+type SortKey =
+  | "employee"
+  | "employee_id"
+  | "department"
+  | "shift"
+  | "in_time"
+  | "out_time"
+  | "working_hours"
+  | "status";
+
+type SortDirection = "asc" | "desc";
+
+const columns: { key: SortKey; label: string }[] = [
+  { key: "employee", label: "Employee" },
+  { key: "employee_id", label: "Employee ID" },
+  { key: "department", label: "Department" },
+  { key: "shift", label: "Shift" },
+  { key: "in_time", label: "In Time" },
+  { key: "out_time", label: "Out Time" },
+  { key: "working_hours", label: "Working Hours" },
+  { key: "status", label: "Status" },
+];
+
+/** "09:18 AM" -> minutes since midnight, for correctly ordering times.
+ * Anything unparseable (missing punch, "--", etc.) sorts to the end. */
+function timeToMinutes(value: string | null | undefined): number {
+  if (!value) return Number.POSITIVE_INFINITY;
+
+  const match = value.trim().match(/^(\d{1,2}):(\d{2})\s*([AP]M)$/i);
+  if (!match) return Number.POSITIVE_INFINITY;
+
+  let hours = parseInt(match[1], 10) % 12;
+  const minutes = parseInt(match[2], 10);
+  if (match[3].toUpperCase() === "PM") hours += 12;
+
+  return hours * 60 + minutes;
+}
+
+/** "9h 14m" / "9h" / numeric hours -> total minutes, for numeric ordering. */
+function workingHoursToMinutes(value: number | string | null | undefined): number {
+  if (value === null || value === undefined || value === "") {
+    return Number.NEGATIVE_INFINITY;
+  }
+  if (typeof value === "number") return value * 60;
+
+  const match = value.match(/(\d+)h(?:\s*(\d+)m)?/);
+  if (!match) return Number.NEGATIVE_INFINITY;
+
+  const hours = parseInt(match[1], 10);
+  const minutes = match[2] ? parseInt(match[2], 10) : 0;
+
+  return hours * 60 + minutes;
+}
+
+function getSortValue(row: AttendanceRecord, key: SortKey): string | number {
+  switch (key) {
+    case "employee":
+      return `${row.employee.first_name} ${row.employee.last_name}`.toLowerCase();
+    case "employee_id":
+      return row.employee.employee_code?.toLowerCase() ?? "";
+    case "department":
+      return row.employee.department_name?.toLowerCase() ?? "";
+    case "shift":
+      return row.shift?.toLowerCase() ?? "";
+    case "in_time":
+      return timeToMinutes(row.in_time ?? row.check_in);
+    case "out_time":
+      return timeToMinutes(row.out_time ?? row.check_out);
+    case "working_hours":
+      return workingHoursToMinutes(row.working_hours ?? row.total_hours);
+    case "status":
+      return row.status;
+    default:
+      return "";
+  }
+}
+
+// -------------------------------------------------------------------------
+
 function AttendanceDonut({ summary }: { summary: AttendanceSummary | null }) {
   const present = summary?.present_percentage ?? 0;
   const late = summary?.late_percentage ?? 0;
@@ -96,10 +173,40 @@ function AttendanceDonut({ summary }: { summary: AttendanceSummary | null }) {
   );
 }
 
+function getToday(): string {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function displayPunchTime(value: string | null | undefined): string {
+  if (!value) return "--";
+
+  if (value.includes("T")) {
+    const parsed = new Date(value);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    }
+  }
+
+  return value;
+}
+
+function displayWorkingHours(value: number | string | null | undefined): string {
+  if (value === null || value === undefined || value === "") return "--";
+  return typeof value === "number" ? `${value}h` : value;
+}
+
 function Attendance() {
   const [activeTab, setActiveTab] = useState(0);
   const [search, setSearch] = useState("");
-  const [date, setDate] = useState("2026-08-21");
+  const [date, setDate] = useState(getToday);
   const [departmentId, setDepartmentId] = useState("");
   const [status, setStatus] = useState("");
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
@@ -107,6 +214,8 @@ function Attendance() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
   useEffect(() => {
     let isCurrent = true;
@@ -147,6 +256,30 @@ function Attendance() {
       isCurrent = false;
     };
   }, [date, departmentId, search, status]);
+
+  function handleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDirection((current) => (current === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDirection("asc");
+    }
+  }
+
+  const sortedRecords = useMemo(() => {
+    if (!sortKey) return records;
+
+    const sorted = [...records].sort((a, b) => {
+      const valueA = getSortValue(a, sortKey);
+      const valueB = getSortValue(b, sortKey);
+
+      if (valueA < valueB) return -1;
+      if (valueA > valueB) return 1;
+      return 0;
+    });
+
+    return sortDirection === "asc" ? sorted : sorted.reverse();
+  }, [records, sortKey, sortDirection]);
 
   const summaryCards = [
     { label: "Total Employees", value: summary?.total_employees ?? "-", sub: null, subColor: "", icon: Users, iconBg: "bg-blue-50", iconColor: "text-blue-600" },
@@ -340,30 +473,35 @@ function Attendance() {
                   <th className="w-8 pb-3">
                     <input type="checkbox" className="rounded border-gray-300" />
                   </th>
-                  {[
-                    "Employee",
-                    "Employee ID",
-                    "Department",
-                    "Shift",
-                    "In Time",
-                    "Out Time",
-                    "Working Hours",
-                    "Status",
-                  ].map((heading) => (
-                    <th key={heading} className="pb-3 font-bold">
-                      <button
-                        type="button"
-                        className="inline-flex items-center gap-1 font-bold uppercase tracking-wide text-gray-600 hover:text-[#456b54]"
-                        aria-label={`Sort by ${heading}`}
-                      >
-                        {heading}
-                        <span className="inline-flex flex-col leading-[7px]">
-                          <ArrowUp className="h-2.5 w-2.5" />
-                          <ArrowDown className="h-2.5 w-2.5" />
-                        </span>
-                      </button>
-                    </th>
-                  ))}
+                  {columns.map((column) => {
+                    const isActive = sortKey === column.key;
+                    return (
+                      <th key={column.key} className="pb-3 font-bold">
+                        <button
+                          type="button"
+                          onClick={() => handleSort(column.key)}
+                          className={`inline-flex items-center gap-1 font-bold uppercase tracking-wide transition ${
+                            isActive ? "text-[#456b54]" : "text-gray-600 hover:text-[#456b54]"
+                          }`}
+                          aria-label={`Sort by ${column.label}`}
+                        >
+                          {column.label}
+                          <span className="inline-flex flex-col leading-[7px]">
+                            <ArrowUp
+                              className={`h-2.5 w-2.5 ${
+                                isActive && sortDirection === "asc" ? "text-[#456b54]" : "text-gray-300"
+                              }`}
+                            />
+                            <ArrowDown
+                              className={`h-2.5 w-2.5 ${
+                                isActive && sortDirection === "desc" ? "text-[#456b54]" : "text-gray-300"
+                              }`}
+                            />
+                          </span>
+                        </button>
+                      </th>
+                    );
+                  })}
                 </tr>
               </thead>
               <tbody>
@@ -371,9 +509,9 @@ function Attendance() {
                   <tr><td colSpan={9} className="py-10 text-center text-gray-500">Loading attendance...</td></tr>
                 ) : error ? (
                   <tr><td colSpan={9} className="py-10 text-center text-rose-600">{error}</td></tr>
-                ) : records.length === 0 ? (
+                ) : sortedRecords.length === 0 ? (
                   <tr><td colSpan={9} className="py-10 text-center text-gray-500">No attendance records found.</td></tr>
-                ) : records.map((row) => (
+                ) : sortedRecords.map((row) => (
                   <tr key={row.id} className="border-b border-gray-50 last:border-0">
                     <td className="py-4">
                       <input type="checkbox" className="rounded border-gray-300" />
@@ -394,9 +532,9 @@ function Attendance() {
                       <div className="text-gray-700">{row.shift}</div>
                       <div className="text-xs text-gray-400">{row.shift_start} - {row.shift_end}</div>
                     </td>
-                    <td className="py-4 text-gray-600">{row.in_time ?? "--"}</td>
-                    <td className="py-4 text-gray-600">{row.out_time ?? "--"}</td>
-                    <td className="py-4 text-gray-600">{row.working_hours ?? "--"}</td>
+                    <td className="py-4 text-gray-600">{displayPunchTime(row.in_time ?? row.check_in)}</td>
+                    <td className="py-4 text-gray-600">{displayPunchTime(row.out_time ?? row.check_out)}</td>
+                    <td className="py-4 text-gray-600">{displayWorkingHours(row.working_hours ?? row.total_hours)}</td>
                     <td className="py-4">
                       <span
                         className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${statusStyles[row.status]}`}

@@ -1,0 +1,167 @@
+from datetime import datetime
+
+from bson import ObjectId
+
+from app.db.database import database
+
+
+class LeaveRepository:
+    collection = database["leave_requests"]
+
+    async def create(self, leave_data: dict):
+        result = await self.collection.insert_one(leave_data)
+
+        return await self.collection.find_one(
+            {"_id": result.inserted_id}
+        )
+
+    async def get_by_id(self, leave_id: str):
+        if not ObjectId.is_valid(leave_id):
+            return None
+
+        return await self.collection.find_one(
+            {"_id": ObjectId(leave_id)}
+        )
+
+    async def get_all(
+        self,
+        filters: dict,
+        skip: int,
+        limit: int,
+    ):
+        cursor = (
+            self.collection
+            .find(filters)
+            .sort("created_at", -1)
+            .skip(skip)
+            .limit(limit)
+        )
+
+        return await cursor.to_list(length=limit)
+
+    async def count(self, filters: dict):
+        return await self.collection.count_documents(filters)
+
+    async def update(
+        self,
+        leave_id: str,
+        update_data: dict,
+    ):
+        if not ObjectId.is_valid(leave_id):
+            return None
+
+        await self.collection.update_one(
+            {"_id": ObjectId(leave_id)},
+            {"$set": update_data},
+        )
+
+        return await self.get_by_id(leave_id)
+
+    async def delete(self, leave_id: str):
+        if not ObjectId.is_valid(leave_id):
+            return False
+
+        result = await self.collection.delete_one(
+            {"_id": ObjectId(leave_id)}
+        )
+
+        return result.deleted_count > 0
+
+    async def find_overlap(
+        self,
+        employee_id: str,
+        start_date: datetime,
+        end_date: datetime,
+    ):
+        return await self.collection.find_one(
+            {
+                "employee_id": employee_id,
+                "status": {
+                    "$in": ["pending", "approved"]
+                },
+                "start_date": {
+                    "$lte": end_date
+                },
+                "end_date": {
+                    "$gte": start_date
+                },
+            }
+        )
+
+    async def get_summary_counts(
+        self,
+        month_start: datetime,
+        month_end: datetime,
+        today_start: datetime,
+        tomorrow_start: datetime,
+        upcoming_end: datetime,
+    ):
+        total = await self.collection.count_documents(
+            {
+                "created_at": {
+                    "$gte": month_start,
+                    "$lt": month_end,
+                }
+            }
+        )
+
+        pending = await self.collection.count_documents(
+            {
+                "created_at": {
+                    "$gte": month_start,
+                    "$lt": month_end,
+                },
+                "status": "pending",
+            }
+        )
+
+        approved = await self.collection.count_documents(
+            {
+                "created_at": {
+                    "$gte": month_start,
+                    "$lt": month_end,
+                },
+                "status": "approved",
+            }
+        )
+
+        rejected = await self.collection.count_documents(
+            {
+                "created_at": {
+                    "$gte": month_start,
+                    "$lt": month_end,
+                },
+                "status": "rejected",
+            }
+        )
+
+        on_leave_today = await self.collection.count_documents(
+            {
+                "status": "approved",
+                "start_date": {
+                    "$lte": today_start
+                },
+                "end_date": {
+                    "$gte": today_start
+                },
+            }
+        )
+
+        upcoming_leaves = await self.collection.count_documents(
+            {
+                "status": "approved",
+                "start_date": {
+                    "$gte": tomorrow_start,
+                    "$lt": upcoming_end,
+                },
+            }
+        )
+
+        return {
+            "total_leave_requests": total,
+            "pending_requests": pending,
+            "approved_requests": approved,
+            "rejected_requests": rejected,
+            "on_leave_today": on_leave_today,
+            "upcoming_leaves": upcoming_leaves,
+        }

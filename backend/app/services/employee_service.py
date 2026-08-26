@@ -1,6 +1,8 @@
 from datetime import datetime
 
 from app.core.exceptions import AppException
+from app.core.roles import UserRole
+from app.core.security import hash_password
 from app.repositories.department_repository import DepartmentRepository
 from app.repositories.employee_repository import EmployeeRepository
 from app.utils.filtering import build_filter
@@ -44,6 +46,17 @@ class EmployeeService:
             )
 
         employee_data["status"] = "active"
+        employee_data["full_name"] = (
+            f'{employee_data["first_name"]} {employee_data["last_name"]}'
+        ).strip()
+        employee_data["phone_number"] = employee_data["phone"]
+        employee_data["password_hash"] = hash_password(
+            employee_data.pop("password")
+        )
+        employee_data["role"] = UserRole.EMPLOYEE.value
+        employee_data["is_active"] = True
+        employee_data["is_locked"] = False
+        employee_data["failed_login_attempts"] = 0
         employee_data["created_at"] = datetime.utcnow()
         employee_data["updated_at"] = datetime.utcnow()
 
@@ -128,6 +141,24 @@ class EmployeeService:
             for key, value in update_data.items()
             if value is not None
         }
+
+        if "password" in update_data:
+            update_data["password_hash"] = hash_password(
+                update_data.pop("password")
+            )
+            update_data["full_name"] = (
+                f'{employee["first_name"]} {employee["last_name"]}'
+            ).strip()
+            update_data["phone_number"] = employee.get("phone")
+            update_data["role"] = UserRole.EMPLOYEE.value
+            update_data["is_active"] = True
+            update_data["is_locked"] = False
+            update_data["failed_login_attempts"] = 0
+
+        if "first_name" in update_data or "last_name" in update_data:
+            first_name = update_data.get("first_name", employee["first_name"])
+            last_name = update_data.get("last_name", employee["last_name"])
+            update_data["full_name"] = f"{first_name} {last_name}".strip()
 
         if "email" in update_data and update_data["email"] != employee.get("email"):
             existing_email = await self.repository.get_by_email(

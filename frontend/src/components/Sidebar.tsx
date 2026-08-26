@@ -2,6 +2,7 @@ import {
   LayoutDashboard,
   Users,
   Clock3,
+  CalendarDays,
   Wallet,
   Briefcase,
   TrendingUp,
@@ -18,6 +19,7 @@ const menuItems = [
   { label: "Dashboard", icon: LayoutDashboard },
   { label: "Employees", icon: Users },
   { label: "Attendance", icon: Clock3 },
+  { label: "Leave", icon: CalendarDays },
   { label: "Payroll", icon: Wallet },
   { label: "Recruitment", icon: Briefcase },
   { label: "Performance", icon: TrendingUp },
@@ -28,7 +30,7 @@ function Sidebar({ activePage, onNavigate }: SidebarProps) {
     <aside className="flex h-screen w-[240px] shrink-0 flex-col border-r border-gray-200 bg-white px-2 py-7">
       {/* Logo */}
       <div className="mb-9 px-4">
-        <h1 className="text-2xl font-bold text-[#456b54]">Bento HR</h1>
+        <h1 className="text-2xl font-bold text-[#456b54]">HRMS</h1>
         <p className="mt-1 text-sm font-medium tracking-wide text-gray-600">
           Enterprise Portal
         </p>

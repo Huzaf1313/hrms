@@ -49,6 +49,7 @@ export interface Employee {
   last_name: string;
   email: string;
   phone: string;
+  password?: string;
 
   date_of_birth?: string;
   gender?: string;
@@ -80,6 +81,7 @@ export interface EmployeeCreate {
   last_name: string;
   email: string;
   phone: string;
+  password?: string;
 
   date_of_birth?: string;
   gender?: string;

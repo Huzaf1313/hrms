@@ -27,6 +27,9 @@ export interface AttendanceRecord {
   in_time?: string | null;
   out_time?: string | null;
   working_hours?: string | null;
+  check_in?: string | null;
+  check_out?: string | null;
+  total_hours?: number | string | null;
   status: AttendanceStatus;
   is_regularized: boolean;
   notes?: string | null;

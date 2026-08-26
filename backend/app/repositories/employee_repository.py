@@ -4,7 +4,7 @@ from app.db.database import database
 
 
 class EmployeeRepository:
-    collection = database["employees"]
+    collection = database["users"]
 
     async def create(self, employee_data: dict):
         result = await self.collection.insert_one(employee_data)
@@ -18,17 +18,25 @@ class EmployeeRepository:
             return None
 
         return await self.collection.find_one(
-            {"_id": ObjectId(employee_id)}
+            {
+                "_id": ObjectId(employee_id),
+                "employee_id": {"$exists": True},
+            }
         )
 
     async def get_by_employee_id(self, employee_id: str):
         return await self.collection.find_one(
-            {"employee_id": employee_id}
+            {
+                "employee_id": employee_id,
+            }
         )
 
     async def get_by_email(self, email: str):
         return await self.collection.find_one(
-            {"email": email}
+            {
+                "email": email,
+                "employee_id": {"$exists": True},
+            }
         )
 
     async def get_all(
@@ -37,6 +45,11 @@ class EmployeeRepository:
         skip: int,
         limit: int,
     ):
+        filters = {
+            "employee_id": {"$exists": True},
+            **filters,
+        }
+
         cursor = (
             self.collection
             .find(filters)
@@ -45,6 +58,11 @@ class EmployeeRepository:
         )
 
         return await cursor.to_list(length=limit)
+
+    async def count_employees(self):
+        return await self.collection.count_documents(
+            {"employee_id": {"$exists": True}}
+        )
 
     async def update(
         self,
@@ -55,7 +73,10 @@ class EmployeeRepository:
             return None
 
         await self.collection.update_one(
-            {"_id": ObjectId(employee_id)},
+            {
+                "_id": ObjectId(employee_id),
+                "employee_id": {"$exists": True},
+            },
             {"$set": update_data},
         )
 
@@ -73,7 +94,10 @@ class EmployeeRepository:
         update_data["status"] = status
 
         await self.collection.update_one(
-            {"_id": ObjectId(employee_id)},
+            {
+                "_id": ObjectId(employee_id),
+                "employee_id": {"$exists": True},
+            },
             {"$set": update_data},
         )
 
@@ -84,7 +108,10 @@ class EmployeeRepository:
             return False
 
         result = await self.collection.delete_one(
-            {"_id": ObjectId(employee_id)}
+            {
+                "_id": ObjectId(employee_id),
+                "employee_id": {"$exists": True},
+            }
         )
 
         return result.deleted_count > 0

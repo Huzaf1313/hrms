@@ -41,6 +41,7 @@ class EmployeeCreate(BaseModel):
 
     email: EmailStr
     phone: str = Field(min_length=10)
+    password: str = Field(min_length=8, max_length=128)
 
     # Employee Avatar / Photo
     avatar_url: str | None = None
@@ -69,6 +70,7 @@ class EmployeeUpdate(BaseModel):
 
     email: EmailStr | None = None
     phone: str | None = None
+    password: str | None = Field(default=None, min_length=8, max_length=128)
 
     # Employee Avatar / Photo
     avatar_url: str | None = None

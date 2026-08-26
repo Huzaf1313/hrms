@@ -2,14 +2,17 @@ from datetime import date
 
 from fastapi import APIRouter, Depends, Query
 
-from app.api.deps import require_permission
+from app.api.deps import get_current_user, require_permission
+from app.core.exceptions import AppException
 from app.core.roles import Permission
+from app.repositories.employee_repository import EmployeeRepository
 from app.schemas.attendance import (
     AttendanceListResponse,
     AttendanceMark,
     AttendanceResponse,
     AttendanceSummaryResponse,
     AttendanceUpdate,
+    MyAttendanceStatus,
 )
 from app.schemas.common import APIResponse
 from app.services.attendance_service import AttendanceService
@@ -19,6 +22,7 @@ from app.utils.pagination import PaginationParams
 router = APIRouter()
 
 service = AttendanceService()
+employee_repository = EmployeeRepository()
 
 # TODO: set back to True once the frontend login flow + role handling is
 # fully wired up. Mirrors the same toggle in app/api/v1/employees.py.
@@ -58,6 +62,36 @@ async def mark_attendance(
         success=True,
         message="Attendance marked successfully",
         data=attendance,
+    )
+
+
+@router.get(
+    "/attendance/me",
+    response_model=APIResponse[MyAttendanceStatus],
+)
+async def get_my_attendance_status(
+    attendance_date: date = Query(default_factory=date.today, alias="date"),
+    current_user: dict = Depends(get_current_user),
+):
+    """Employee self-service - status/in-time/out-time for the logged-in
+    user. Users and employees are matched by email (the email used to log
+    in is the same email stored on the employee's record). This route is
+    registered before /attendance/{attendance_id} so "me" is never matched
+    as an attendance_id path param."""
+    employee = await employee_repository.get_by_email(current_user["email"])
+
+    if not employee:
+        raise AppException("No employee record found for this account", 404)
+
+    status = await service.get_my_status(
+        employee_id=employee["employee_id"],
+        attendance_date=attendance_date,
+    )
+
+    return APIResponse(
+        success=True,
+        message="Attendance status retrieved successfully",
+        data=status,
     )
 
 

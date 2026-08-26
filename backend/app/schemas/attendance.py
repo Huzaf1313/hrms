@@ -108,3 +108,16 @@ class AttendanceSummaryResponse(BaseModel):
     missing_punch_count: int
 
     department_presence: list[DepartmentPresence]
+
+
+class MyAttendanceStatus(BaseModel):
+    """Employee self-service: just their own status/in-time/out-time for
+    one date. status=None (with everything else blank) means nothing has
+    been marked yet for that date - a normal "not clocked in" state, not
+    an error."""
+
+    date: date
+    status: str | None = None
+    in_time: str | None = None
+    out_time: str | None = None
+    working_hours: str | None = None

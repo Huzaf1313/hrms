@@ -4,6 +4,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from app.api.v1.leaves import router as leaves_router
 from app.api.v1.attendance import router as attendance_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.dashboard import router as dashboard_router
@@ -96,4 +97,9 @@ app.include_router(
     dashboard_router,
     prefix="/api/v1",
     tags=["Dashboard"],
+)
+app.include_router(
+    leaves_router,
+    prefix="/api/v1",
+    tags=["Leave"],
 )
