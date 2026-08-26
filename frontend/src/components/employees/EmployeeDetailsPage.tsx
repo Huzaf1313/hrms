@@ -121,7 +121,7 @@ function EmployeeDetailsPage({
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[280px_1fr]">
         {/* LEFT COLUMN */}
         <div className="rounded-3xl bg-white p-6 shadow-sm">
-          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[#dce8df] text-3xl font-semibold text-[#456b54]">
+          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[#dce8df] text-3xl font-semibold text-[#2563eb]">
             {initials}
           </div>
 
@@ -169,7 +169,7 @@ function EmployeeDetailsPage({
                 <p className="text-sm text-gray-500">Reporting Manager</p>
                 {employee.reporting_manager ? (
                   <p className="mt-1 flex items-center gap-2 font-semibold text-gray-800">
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#dce8df] text-[10px] font-semibold text-[#456b54]">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#dce8df] text-[10px] font-semibold text-[#2563eb]">
                       {initialFor(employee.reporting_manager)}
                     </span>
                     {employee.reporting_manager}
@@ -246,7 +246,7 @@ function EmployeeDetailsPage({
                 <button
                   type="button"
                   onClick={() => setShowBankDetails((current) => !current)}
-                  className="text-sm font-medium text-[#456b54] hover:underline"
+                  className="text-sm font-medium text-[#2563eb] hover:underline"
                 >
                   {showBankDetails ? "Hide Details" : "Show Details"}
                 </button>
@@ -293,7 +293,7 @@ function EmployeeDetailsPage({
                 onClick={() => setHistoryTab("promotion")}
                 className={`pb-3 text-sm font-medium ${
                   historyTab === "promotion"
-                    ? "border-b-2 border-[#456b54] text-[#456b54]"
+                    ? "border-b-2 border-[#2563eb] text-[#2563eb]"
                     : "text-gray-500"
                 }`}
               >
@@ -305,7 +305,7 @@ function EmployeeDetailsPage({
                 onClick={() => setHistoryTab("transfer")}
                 className={`pb-3 text-sm font-medium ${
                   historyTab === "transfer"
-                    ? "border-b-2 border-[#456b54] text-[#456b54]"
+                    ? "border-b-2 border-[#2563eb] text-[#2563eb]"
                     : "text-gray-500"
                 }`}
               >
@@ -323,7 +323,7 @@ function EmployeeDetailsPage({
                         key={`${entry.promotion_date}-${index}`}
                         className="flex gap-4 rounded-2xl bg-gray-50 p-4"
                       >
-                        <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-[#456b54]" />
+                        <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-[#2563eb]" />
                         <div>
                           <p className="text-xs text-gray-500">
                             {formatDate(entry.promotion_date)}
@@ -343,7 +343,7 @@ function EmployeeDetailsPage({
                         key={`${entry.transfer_date}-${index}`}
                         className="flex gap-4 rounded-2xl bg-gray-50 p-4"
                       >
-                        <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-[#456b54]" />
+                        <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-[#2563eb]" />
                         <div>
                           <p className="text-xs text-gray-500">
                             {formatDate(entry.transfer_date)}
@@ -368,3 +368,4 @@ function EmployeeDetailsPage({
 }
 
 export default EmployeeDetailsPage;
+

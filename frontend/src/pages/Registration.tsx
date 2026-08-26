@@ -1,24 +1,14 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { api } from "../services/api";
+import { api, ApiError } from "../services/api";
 import { Eye, EyeOff } from "lucide-react";
 
-type Step = 1 | 2 | 3;
-
-const references = [
-  "Social Media",
-  "Employee Reference",
-  "LinkedIn",
-  "Advertisement",
-  "Other",
-];
+type Step = 1 | 2;
 
 const roles = [
   { label: "Manager", value: "manager" },
-  { label: "Team Lead", value: "team_lead" },
+  { label: "HR", value: "hr_admin" },
   { label: "Employee", value: "employee" },
-  { label: "Recruiter", value: "recruiter" },
-  { label: "Payroll Admin", value: "payroll_admin" },
 ];
 
 interface RegistrationForm {
@@ -27,9 +17,6 @@ interface RegistrationForm {
   phone_number: string;
   password: string;
   confirm_password: string;
-  company_name: string;
-  company_address: string;
-  reference: string;
   role: string;
 }
 
@@ -49,9 +36,6 @@ function Registration() {
     phone_number: "",
     password: "",
     confirm_password: "",
-    company_name: "",
-    company_address: "",
-    reference: "",
     role: "",
   });
 
@@ -113,23 +97,6 @@ function Registration() {
     }
 
     if (step === 2) {
-      if (!form.company_name.trim()) {
-        setError("Please enter your company name.");
-        return false;
-      }
-
-      if (!form.company_address.trim()) {
-        setError("Please enter your company address.");
-        return false;
-      }
-
-      if (!form.reference) {
-        setError("Please select how you heard about us.");
-        return false;
-      }
-    }
-
-    if (step === 3) {
       if (!form.role) {
         setError("Please select the position you are registering for.");
         return false;
@@ -167,9 +134,6 @@ function Registration() {
         email: form.email.trim(),
         phone_number: form.phone_number.trim(),
         password: form.password,
-        company_name: form.company_name.trim(),
-        company_address: form.company_address.trim(),
-        reference: form.reference,
         role: form.role,
       });
 
@@ -180,16 +144,12 @@ function Registration() {
       setTimeout(() => {
         navigate("/login");
       }, 1500);
-    } catch (error: any) {
-      if (error?.response?.data?.detail) {
-        setError(error.response.data.detail);
-      } else if (error?.message) {
-        setError(error.message);
-      } else {
-        setError(
-          "Unable to complete registration. Please try again.",
-        );
-      }
+    } catch (error: unknown) {
+      setError(
+        error instanceof ApiError
+          ? error.message
+          : "Unable to complete registration. Please try again.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -239,7 +199,7 @@ function Registration() {
             updateField(field, event.target.value)
           }
           placeholder={placeholder}
-          className={`w-full rounded-xl border border-[#d6dbe6] px-4 py-4 text-[#17213a] outline-none transition placeholder:text-[#8993a7] focus:border-[#5b2dde] focus:ring-2 focus:ring-[#5b2dde]/20 ${
+          className={`w-full rounded-xl border border-[#d6dbe6] px-4 py-4 text-[#17213a] outline-none transition placeholder:text-[#8993a7] focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/20 ${
             isPasswordField ? "pr-12" : ""
           }`}
         />
@@ -248,7 +208,7 @@ function Registration() {
           <button
             type="button"
             onClick={togglePasswordVisibility}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-[#68758e] transition hover:text-[#5b2dde]"
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-[#68758e] transition hover:text-[#2563eb]"
             aria-label={
               isPasswordVisible
                 ? `Hide ${label.toLowerCase()}`
@@ -289,7 +249,7 @@ function Registration() {
 
               <h2 className="max-w-xl text-5xl font-bold leading-tight text-[#14213d]">
                 Build a{" "}
-                <span className="text-[#5b2dde]">
+                <span className="text-[#2563eb]">
                   Better Workplace.
                 </span>
               </h2>
@@ -349,7 +309,7 @@ function Registration() {
 
               {/* Step Indicator */}
               <div className="mt-8 flex items-center justify-center">
-                {[1, 2, 3].map((item) => (
+                {[1, 2].map((item) => (
                   <div
                     key={item}
                     className="flex items-center"
@@ -357,18 +317,18 @@ function Registration() {
                     <div
                       className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold ${
                         step >= item
-                          ? "bg-[#5b2dde] text-white"
+                          ? "bg-[#2563eb] text-white"
                           : "bg-[#eef0f5] text-[#8993a7]"
                       }`}
                     >
                       {item}
                     </div>
 
-                    {item < 3 && (
+                    {item < 2 && (
                       <div
                         className={`h-1 w-12 sm:w-20 ${
                           step > item
-                            ? "bg-[#5b2dde]"
+                            ? "bg-[#2563eb]"
                             : "bg-[#e2e5ec]"
                         }`}
                       />
@@ -381,8 +341,7 @@ function Registration() {
               <div className="mt-8">
                 <h3 className="text-xl font-semibold text-[#17213a]">
                   {step === 1 && "Personal Details"}
-                  {step === 2 && "Organization Details"}
-                  {step === 3 && "Role Details"}
+                  {step === 2 && "Role Details"}
                 </h3>
 
                 <p className="mt-1 text-sm text-[#68758e]">
@@ -390,9 +349,6 @@ function Registration() {
                     "Enter your personal information to get started."}
 
                   {step === 2 &&
-                    "Tell us about the organization you belong to."}
-
-                  {step === 3 &&
                     "Select the position you are registering for."}
                 </p>
               </div>
@@ -453,75 +409,6 @@ function Registration() {
 
               {/* Step 2 */}
               {step === 2 && (
-                <div className="mt-6 space-y-5">
-                  {renderInput(
-                    "Company Name",
-                    "company_name",
-                    "text",
-                    "Enter your company name",
-                  )}
-
-                  <div>
-                    <label
-                      htmlFor="company_address"
-                      className="mb-2 block text-sm font-semibold text-[#17213a]"
-                    >
-                      Company Address
-                    </label>
-
-                    <textarea
-                      id="company_address"
-                      value={form.company_address}
-                      onChange={(event) =>
-                        updateField(
-                          "company_address",
-                          event.target.value,
-                        )
-                      }
-                      placeholder="Enter your company address"
-                      rows={4}
-                      className="w-full resize-none rounded-xl border border-[#d6dbe6] px-4 py-4 text-[#17213a] outline-none transition placeholder:text-[#8993a7] focus:border-[#5b2dde] focus:ring-2 focus:ring-[#5b2dde]/20"
-                    />
-                  </div>
-
-                  <div>
-                    <label
-                      htmlFor="reference"
-                      className="mb-2 block text-sm font-semibold text-[#17213a]"
-                    >
-                      How did you hear about us?
-                    </label>
-
-                    <select
-                      id="reference"
-                      value={form.reference}
-                      onChange={(event) =>
-                        updateField(
-                          "reference",
-                          event.target.value,
-                        )
-                      }
-                      className="w-full rounded-xl border border-[#d6dbe6] bg-white px-4 py-4 text-[#17213a] outline-none transition focus:border-[#5b2dde] focus:ring-2 focus:ring-[#5b2dde]/20"
-                    >
-                      <option value="">
-                        Select a reference
-                      </option>
-
-                      {references.map((reference) => (
-                        <option
-                          key={reference}
-                          value={reference}
-                        >
-                          {reference}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              )}
-
-              {/* Step 3 */}
-              {step === 3 && (
                 <div className="mt-6">
                   <label
                     htmlFor="role"
@@ -536,7 +423,7 @@ function Registration() {
                     onChange={(event) =>
                       updateField("role", event.target.value)
                     }
-                    className="w-full rounded-xl border border-[#d6dbe6] bg-white px-4 py-4 text-[#17213a] outline-none transition focus:border-[#5b2dde] focus:ring-2 focus:ring-[#5b2dde]/20"
+                    className="w-full rounded-xl border border-[#d6dbe6] bg-white px-4 py-4 text-[#17213a] outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/20"
                   >
                     <option value="">
                       Select the position you are registering for
@@ -567,13 +454,11 @@ function Registration() {
                   </button>
                 )}
 
-                {step < 3 ? (
+                {step < 2 ? (
                   <button
                     type="button"
                     onClick={handleNext}
-                    className={`rounded-xl bg-[#5b2dde] py-4 text-lg font-semibold text-white shadow-lg transition hover:bg-[#4c24bd] ${
-                      step === 1 ? "w-full" : "w-2/3"
-                    }`}
+                    className="w-full rounded-xl bg-[#2563eb] py-4 text-lg font-semibold text-white shadow-lg transition hover:bg-[#1d4ed8]"
                   >
                     Continue
                   </button>
@@ -582,7 +467,7 @@ function Registration() {
                     type="button"
                     onClick={handleRegistration}
                     disabled={isLoading}
-                    className="w-2/3 rounded-xl bg-[#5b2dde] py-4 text-lg font-semibold text-white shadow-lg transition hover:bg-[#4c24bd] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="w-2/3 rounded-xl bg-[#2563eb] py-4 text-lg font-semibold text-white shadow-lg transition hover:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {isLoading
                       ? "Creating Account..."
@@ -597,7 +482,7 @@ function Registration() {
                 <button
                   type="button"
                   onClick={() => navigate("/login")}
-                  className="font-semibold text-[#5b2dde] hover:underline"
+                  className="font-semibold text-[#2563eb] hover:underline"
                 >
                   Sign In
                 </button>

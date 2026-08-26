@@ -313,7 +313,7 @@ const records = await api.get<AttendanceRecord[]>(
             };
 
   return (
-    <div className="min-h-screen bg-[#f7f9f8] text-[#17213a]">
+    <div className="min-h-screen bg-[#f5f7fb] text-[#17213a]">
 
       {/* =========================================================
           TOP NAVIGATION
@@ -358,7 +358,7 @@ const records = await api.get<AttendanceRecord[]>(
           {/* User */}
           <div className="hidden items-center gap-3 sm:flex">
 
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#dce5df] text-sm font-bold text-[#456b54]">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#dce5df] text-sm font-bold text-[#2563eb]">
               {initials || "E"}
             </div>
 
@@ -385,7 +385,7 @@ const records = await api.get<AttendanceRecord[]>(
 
           {/* Branding */}
           <div className="mb-8 px-3">
-            <h1 className="text-2xl font-bold text-[#456b54]">
+            <h1 className="text-2xl font-bold text-[#2563eb]">
               HRMS
             </h1>
 
@@ -433,7 +433,7 @@ const records = await api.get<AttendanceRecord[]>(
                 onClick={() =>
                     navigate("/employee/attendance")
                 }
-                className="flex h-11 items-center gap-3 rounded-xl bg-[#5f806b] px-4 text-left text-sm font-semibold text-white"
+                className="flex h-11 items-center gap-3 rounded-xl bg-[#2563eb] px-4 text-left text-sm font-semibold text-white"
                 >
                 <span className="w-5 text-center text-lg">
                     ✓
@@ -472,7 +472,7 @@ const records = await api.get<AttendanceRecord[]>(
 
             <div className="flex items-center gap-3 rounded-xl bg-gray-50 p-3">
 
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#dce5df] text-sm font-bold text-[#456b54]">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#dce5df] text-sm font-bold text-[#2563eb]">
                 {initials || "E"}
               </div>
 
@@ -525,14 +525,14 @@ const records = await api.get<AttendanceRecord[]>(
 
               <button
                 type="button"
-                className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition hover:border-[#5f806b] hover:bg-[#f5f8f5]"
+                className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition hover:border-[#2563eb] hover:bg-[#f5f8f5]"
               >
                 Attendance Calendar
               </button>
 
               <button
                 type="button"
-                className="rounded-xl bg-[#456b54] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#385b46]"
+                className="rounded-xl bg-[#2563eb] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1d4ed8]"
               >
                 Download Report
               </button>
@@ -590,7 +590,7 @@ const records = await api.get<AttendanceRecord[]>(
                   <div className="mt-4 h-2 overflow-hidden rounded-full bg-gray-100">
 
                     <div
-                      className="h-full rounded-full bg-[#5f806b]"
+                      className="h-full rounded-full bg-[#2563eb]"
                       style={{
                         width: `${Math.min(
                           (presentDays /
@@ -715,7 +715,7 @@ const records = await api.get<AttendanceRecord[]>(
                 isCurrentlyAtWork
                     ? "bg-green-100 text-green-700"
                     : todayRecord
-                    ? "bg-[#eef3ef] text-[#456b54]"
+                    ? "bg-[#eef3ef] text-[#2563eb]"
                     : "bg-gray-100 text-gray-500"
                 }`}
             >
@@ -729,7 +729,7 @@ const records = await api.get<AttendanceRecord[]>(
             <div className="mt-6 grid grid-cols-2 gap-4">
 
             {/* Check In */}
-            <div className="rounded-xl bg-[#f7f9f8] p-4">
+            <div className="rounded-xl bg-[#f5f7fb] p-4">
 
                 <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
                 Check In
@@ -742,7 +742,7 @@ const records = await api.get<AttendanceRecord[]>(
             </div>
 
             {/* Check Out */}
-            <div className="rounded-xl bg-[#f7f9f8] p-4">
+            <div className="rounded-xl bg-[#f5f7fb] p-4">
 
                 <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
                 Check Out
@@ -797,7 +797,7 @@ const records = await api.get<AttendanceRecord[]>(
 
             </div>
 
-            <span className="rounded-lg bg-[#eef3ef] px-3 py-1 text-xs font-semibold text-[#456b54]">
+            <span className="rounded-lg bg-[#eef3ef] px-3 py-1 text-xs font-semibold text-[#2563eb]">
                 Office
             </span>
 
@@ -810,7 +810,7 @@ const records = await api.get<AttendanceRecord[]>(
                             type="button"
                              onClick={handleCheckIn}
                              disabled={isActionLoading}
-                             className="w-full rounded-xl bg-[#456b54] px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#385b46] disabled:cursor-not-allowed disabled:opacity-60"
+                             className="w-full rounded-xl bg-[#2563eb] px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:opacity-60"
                             >
                                 {isActionLoading ? "Checking In..." : "Check In"}
                                 </button>
@@ -819,13 +819,13 @@ const records = await api.get<AttendanceRecord[]>(
                                 type="button"
                                 onClick={handleCheckOut}
                                 disabled={isActionLoading}
-                                className="w-full rounded-xl bg-[#456b54] px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#385b46] disabled:cursor-not-allowed disabled:opacity-60"
+                                className="w-full rounded-xl bg-[#2563eb] px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:opacity-60"
                                 >
                                 {isActionLoading ? "Checking Out..." : "Check Out"}
                                 </button>
                             ) : (
                                 <div className="rounded-xl bg-[#eef3ef] px-4 py-3 text-center">
-                                <p className="text-sm font-semibold text-[#456b54]">
+                                <p className="text-sm font-semibold text-[#2563eb]">
                                     Attendance Completed
                                 </p>
                                 <p className="mt-1 text-xs text-gray-500">
@@ -854,7 +854,7 @@ const records = await api.get<AttendanceRecord[]>(
 
             <button
                 type="button"
-                className="text-sm font-semibold text-[#456b54] hover:underline"
+                className="text-sm font-semibold text-[#2563eb] hover:underline"
             >
                 View All
             </button>

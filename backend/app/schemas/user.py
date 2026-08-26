@@ -14,11 +14,11 @@ class UserCreate(BaseModel):
 
     password: str = Field(min_length=8, max_length=128)
 
-    company_name: str = Field(min_length=2, max_length=150)
+    company_name: str = Field(default="", max_length=150)
 
-    company_address: str = Field(min_length=5, max_length=300)
+    company_address: str = Field(default="", max_length=300)
 
-    reference: str = Field(min_length=2, max_length=100)
+    reference: str = Field(default="", max_length=100)
 
     role: UserRole
 

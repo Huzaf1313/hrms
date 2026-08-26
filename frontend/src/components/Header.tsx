@@ -1,46 +1,139 @@
+import { useMemo, useState } from "react";
+import { Bell, CalendarDays, ChevronDown, Menu, Search } from "lucide-react";
+
 interface HeaderProps {
   onLogout: () => void;
+  onToggleSidebar?: () => void;
+  pageTitle?: string;
 }
 
-function Header({ onLogout }: HeaderProps) {
+function formatToday(): string {
+  return new Date().toLocaleDateString("en-GB", {
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function readUser() {
+  try {
+    const raw = localStorage.getItem("user");
+
+    return raw ? (JSON.parse(raw) as { full_name?: string; role?: string }) : null;
+  } catch {
+    return null;
+  }
+}
+
+function roleLabel(role?: string): string {
+  if (!role) return "";
+
+  if (role === "hr_admin") return "HR Admin";
+  if (role === "super_admin") return "Super Admin";
+
+  return role.charAt(0).toUpperCase() + role.slice(1);
+}
+
+function Header({ onLogout, onToggleSidebar, pageTitle = "Dashboard" }: HeaderProps) {
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+
+  const user = useMemo(() => readUser(), []);
+  const today = useMemo(() => formatToday(), []);
+
+  const fullName = user?.full_name ?? "Admin";
+  const initials = fullName
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
   return (
-    <header className="flex items-center justify-between px-10 py-7">
-      {/* Greeting */}
-      <div>
-        <h1 className="text-4xl font-bold tracking-tight text-[#171b1d]">
-          Good Morning, Sarah
-        </h1>
+    <header className="flex h-[72px] items-center justify-between gap-4 border-b border-gray-200 bg-white px-6">
+      {/* Left: menu + breadcrumb */}
+      <div className="flex min-w-0 items-center gap-4">
+        <button
+          type="button"
+          onClick={onToggleSidebar}
+          className="flex h-10 w-10 items-center justify-center rounded-lg text-gray-600 transition hover:bg-gray-100"
+          aria-label="Toggle menu"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+
+        <p className="truncate text-sm text-gray-500">
+          Dashboard <span className="mx-1.5 text-gray-300">/</span>
+          <span className="font-semibold text-gray-900">{pageTitle}</span>
+        </p>
       </div>
 
-      {/* Right side */}
-      <div className="flex items-center gap-6">
-        {/* Notification */}
-        <button
-          className="relative flex h-11 w-11 items-center justify-center rounded-full hover:bg-gray-100"
-          aria-label="Notifications"
-        >
-          <span className="text-2xl text-gray-700">♧</span>
+      {/* Right: search, bell, date, profile */}
+      <div className="flex items-center gap-3">
+        <div className="relative hidden lg:block">
+          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
 
-          <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-[#99543f]" />
-        </button>
-
-        {/* Profile */}
-        <button
-          className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-[#dce5df]"
-          aria-label="Profile"
-        >
-          <span className="text-sm font-semibold text-[#456b54]">
-            S
-          </span>
-        </button>
+          <input
+            type="text"
+            placeholder="Search employees..."
+            className="w-64 rounded-full border border-gray-200 bg-[#f5f7fb] py-2.5 pl-10 pr-4 text-sm outline-none transition placeholder:text-gray-400 focus:border-[#2563eb] focus:bg-white focus:ring-2 focus:ring-[#2563eb]/15"
+          />
+        </div>
 
         <button
           type="button"
-          onClick={onLogout}
-          className="rounded-full border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100"
+          className="relative flex h-10 w-10 items-center justify-center rounded-full text-gray-600 transition hover:bg-gray-100"
+          aria-label="Notifications"
         >
-          Log out
+          <Bell className="h-5 w-5" />
+
+          <span className="absolute -right-0.5 -top-0.5 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-[#ef4444] px-1 text-[9px] font-bold text-white">
+            12
+          </span>
         </button>
+
+        <div className="hidden items-center gap-2 rounded-full border border-gray-200 px-3.5 py-2 md:flex">
+          <CalendarDays className="h-4 w-4 text-gray-500" />
+          <span className="text-sm font-medium text-gray-700">{today}</span>
+        </div>
+
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setShowProfileMenu((previous) => !previous)}
+            className="flex items-center gap-2.5 rounded-full py-1 pl-1 pr-2 transition hover:bg-gray-100"
+          >
+            <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-[#2563eb] text-xs font-bold text-white">
+              {initials}
+            </span>
+
+            <span className="hidden text-left sm:block">
+              <span className="block text-sm font-semibold leading-tight text-gray-900">
+                {fullName}
+              </span>
+              <span className="block text-[11px] leading-tight text-gray-500">
+                {roleLabel(user?.role)}
+              </span>
+            </span>
+
+            <ChevronDown className="h-4 w-4 text-gray-400" />
+          </button>
+
+          {showProfileMenu && (
+            <div className="absolute right-0 top-12 z-50 w-44 overflow-hidden rounded-xl border border-gray-100 bg-white py-1 shadow-xl">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowProfileMenu(false);
+                  onLogout();
+                }}
+                className="w-full px-4 py-2.5 text-left text-sm font-medium text-gray-700 transition hover:bg-red-50 hover:text-red-600"
+              >
+                Log out
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );

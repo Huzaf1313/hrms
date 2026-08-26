@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 
 import type { Department } from "../../types/department";
@@ -74,10 +74,15 @@ function EmployeeForm({
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  useEffect(() => {
+  const [lastInitialEmployee, setLastInitialEmployee] = useState(
+    initialEmployee,
+  );
+
+  if (lastInitialEmployee !== initialEmployee) {
+    setLastInitialEmployee(initialEmployee);
     setForm(toFormState(initialEmployee));
     setPhotoPreview(null);
-  }, [initialEmployee]);
+  }
 
   const isEditMode = Boolean(initialEmployee);
 
@@ -189,7 +194,7 @@ function EmployeeForm({
                   className="h-24 w-24 rounded-full object-cover ring-4 ring-gray-100"
                 />
               ) : (
-                <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[#dce8df] text-2xl font-semibold text-[#456b54] ring-4 ring-gray-100">
+                <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[#dce8df] text-2xl font-semibold text-[#2563eb] ring-4 ring-gray-100">
                   {initials || "?"}
                 </div>
               )}
@@ -226,7 +231,7 @@ function EmployeeForm({
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="rounded-full border border-[#456b54] px-4 py-2 text-sm font-medium text-[#456b54] transition hover:bg-[#456b54] hover:text-white"
+                className="rounded-full border border-[#2563eb] px-4 py-2 text-sm font-medium text-[#2563eb] transition hover:bg-[#2563eb] hover:text-white"
               >
                 {photoPreview ? "Change Photo" : "Upload Photo"}
               </button>
@@ -247,7 +252,7 @@ function EmployeeForm({
                 updateField("employee_id", event.target.value)
               }
               placeholder="EMP001"
-              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#456b54] focus:ring-2 focus:ring-[#456b54]/10 disabled:bg-gray-50 disabled:text-gray-400"
+              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10 disabled:bg-gray-50 disabled:text-gray-400"
             />
           </div>
 
@@ -265,7 +270,7 @@ function EmployeeForm({
                   event.target.value as EmployeeCreate["employment_type"],
                 );
               }}
-              className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#456b54] focus:ring-2 focus:ring-[#456b54]/10"
+              className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
             >
               {EMPLOYMENT_TYPES.map((type) => (
                 <option key={type.value} value={type.value}>
@@ -288,7 +293,7 @@ function EmployeeForm({
                 updateField("first_name", event.target.value)
               }
               placeholder="First name"
-              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#456b54] focus:ring-2 focus:ring-[#456b54]/10"
+              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
             />
           </div>
 
@@ -305,7 +310,7 @@ function EmployeeForm({
                 updateField("last_name", event.target.value)
               }
               placeholder="Last name"
-              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#456b54] focus:ring-2 focus:ring-[#456b54]/10"
+              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
             />
           </div>
 
@@ -323,7 +328,7 @@ function EmployeeForm({
                 updateField("email", event.target.value)
               }
               placeholder="employee@company.com"
-              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#456b54] focus:ring-2 focus:ring-[#456b54]/10"
+              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
             />
           </div>
 
@@ -341,7 +346,7 @@ function EmployeeForm({
                 updateField("phone", event.target.value)
               }
               placeholder="Phone number"
-              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#456b54] focus:ring-2 focus:ring-[#456b54]/10"
+              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
             />
           </div>
 
@@ -357,7 +362,7 @@ function EmployeeForm({
               onChange={(event) =>
                 updateField("department_id", event.target.value)
               }
-              className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#456b54] focus:ring-2 focus:ring-[#456b54]/10"
+              className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
             >
               <option value="">Select department</option>
 
@@ -385,7 +390,7 @@ function EmployeeForm({
                 updateField("designation", event.target.value)
               }
               placeholder="e.g. Software Engineer"
-              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#456b54] focus:ring-2 focus:ring-[#456b54]/10"
+              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
             />
           </div>
 
@@ -402,7 +407,7 @@ function EmployeeForm({
               onChange={(event) =>
                 updateField("joining_date", event.target.value)
               }
-              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#456b54] focus:ring-2 focus:ring-[#456b54]/10"
+              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
             />
           </div>
 
@@ -418,7 +423,7 @@ function EmployeeForm({
               onChange={(event) =>
                 updateField("date_of_birth", event.target.value)
               }
-              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#456b54] focus:ring-2 focus:ring-[#456b54]/10"
+              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
             />
           </div>
 
@@ -433,7 +438,7 @@ function EmployeeForm({
               onChange={(event) =>
                 updateField("gender", event.target.value)
               }
-              className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#456b54] focus:ring-2 focus:ring-[#456b54]/10"
+              className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
             >
               <option value="">Select gender</option>
               <option value="Male">Male</option>
@@ -454,7 +459,7 @@ function EmployeeForm({
                 updateField("work_location", event.target.value)
               }
               placeholder="e.g. Mumbai Office"
-              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#456b54] focus:ring-2 focus:ring-[#456b54]/10"
+              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
             />
           </div>
 
@@ -470,7 +475,7 @@ function EmployeeForm({
                 updateField("reporting_manager", event.target.value)
               }
               placeholder="Manager name"
-              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#456b54] focus:ring-2 focus:ring-[#456b54]/10"
+              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
             />
           </div>
 
@@ -487,7 +492,7 @@ function EmployeeForm({
               }
               rows={3}
               placeholder="Employee address"
-              className="w-full resize-none rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#456b54] focus:ring-2 focus:ring-[#456b54]/10"
+              className="w-full resize-none rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
             />
           </div>
 
@@ -512,7 +517,7 @@ function EmployeeForm({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="rounded-full bg-[#456b54] px-7 py-3 text-sm font-semibold text-white transition hover:bg-[#385b45] disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-full bg-[#2563eb] px-7 py-3 text-sm font-semibold text-white transition hover:bg-[#385b45] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isSubmitting
                 ? "Saving…"
@@ -528,3 +533,4 @@ function EmployeeForm({
 }
 
 export default EmployeeForm;
+

@@ -17,6 +17,8 @@ from app.repositories.employee_attendance_repository import (
 )
 from app.api.v1.users import router as users_router
 from app.api.v1.employee_attendance import router as employee_attendance_router
+from app.api.v1.leaves import router as leaves_router
+from app.api.v1.attendance import router as attendance_router
 
 
 @asynccontextmanager
@@ -84,6 +86,16 @@ app.include_router(
 
 app.include_router(
     employee_attendance_router,
+    prefix="/api/v1",
+)
+
+app.include_router(
+    leaves_router,
+    prefix="/api/v1",
+)
+
+app.include_router(
+    attendance_router,
     prefix="/api/v1",
 )
 

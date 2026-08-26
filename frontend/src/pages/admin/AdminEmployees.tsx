@@ -11,7 +11,7 @@ import type { Employee, EmployeeCreate } from "../../types/employee";
 
 const PAGE_SIZE = 10;
 
-function Employees() {
+function AdminEmployees() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [search, setSearch] = useState("");
@@ -182,7 +182,7 @@ function Employees() {
     <div className="px-10 pb-10 pt-8">
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-5xl font-bold text-[#456b54]">Employees</h1>
+          <h1 className="text-5xl font-bold text-[#2563eb]">Employees</h1>
           <p className="mt-2 text-lg text-gray-600">
             Manage and view your team.
           </p>
@@ -191,7 +191,7 @@ function Employees() {
         <button
           type="button"
           onClick={openCreateForm}
-          className="rounded-full bg-[#456b54] px-5 py-2.5 text-sm font-semibold text-white"
+          className="rounded-full bg-[#2563eb] px-5 py-2.5 text-sm font-semibold text-white"
         >
           + Add Employee
         </button>
@@ -207,7 +207,7 @@ function Employees() {
               setSearch(event.target.value);
             }}
             placeholder="Search employees…"
-            className="min-w-[220px] flex-1 rounded-full border border-gray-200 px-4 py-2.5 text-sm focus:border-[#456b54] focus:outline-none"
+            className="min-w-[220px] flex-1 rounded-full border border-gray-200 px-4 py-2.5 text-sm focus:border-[#2563eb] focus:outline-none"
           />
 
           <select
@@ -216,7 +216,7 @@ function Employees() {
               setPage(1);
               setDepartmentFilter(event.target.value);
             }}
-            className="rounded-full border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-600 focus:border-[#456b54] focus:outline-none"
+            className="rounded-full border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-600 focus:border-[#2563eb] focus:outline-none"
           >
             <option value="">All Departments</option>
             {departments.map((department) => (
@@ -232,7 +232,7 @@ function Employees() {
               setPage(1);
               setStatusFilter(event.target.value);
             }}
-            className="rounded-full border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-600 focus:border-[#456b54] focus:outline-none"
+            className="rounded-full border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-600 focus:border-[#2563eb] focus:outline-none"
           >
             <option value="">All Statuses</option>
             <option value="active">Active</option>
@@ -342,4 +342,5 @@ function Employees() {
   );
 }
 
-export default Employees;
+export default AdminEmployees;
+

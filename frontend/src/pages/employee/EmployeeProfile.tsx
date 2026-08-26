@@ -81,7 +81,7 @@ function EmployeeProfile() {
 
   if (isLoading) {
     return (
-      <div className="min-h-full bg-[#f7f9f8] px-5 py-7 sm:px-7 lg:px-10">
+      <div className="min-h-full bg-[#f5f7fb] px-5 py-7 sm:px-7 lg:px-10">
         <div className="mx-auto max-w-6xl">
           <div className="rounded-2xl border border-gray-200 bg-white p-10 text-center shadow-sm">
             <p className="text-sm text-gray-500">
@@ -95,7 +95,7 @@ function EmployeeProfile() {
 
   if (error || !user) {
     return (
-      <div className="min-h-full bg-[#f7f9f8] px-5 py-7 sm:px-7 lg:px-10">
+      <div className="min-h-full bg-[#f5f7fb] px-5 py-7 sm:px-7 lg:px-10">
         <div className="mx-auto max-w-6xl">
           <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
             <p className="text-sm font-medium text-red-700">
@@ -110,7 +110,7 @@ function EmployeeProfile() {
   const initials = getInitials(user.full_name);
 
   return (
-    <div className="min-h-full bg-[#f7f9f8] px-5 py-7 sm:px-7 lg:px-10">
+    <div className="min-h-full bg-[#f5f7fb] px-5 py-7 sm:px-7 lg:px-10">
 
       <div className="mx-auto max-w-6xl">
 
@@ -125,7 +125,7 @@ function EmployeeProfile() {
             ← Back to Dashboard
           </button>
 
-          <p className="text-sm font-medium text-[#5f806b]">
+          <p className="text-sm font-medium text-[#2563eb]">
             Employee Portal
           </p>
 
@@ -141,7 +141,7 @@ function EmployeeProfile() {
         {/* Profile Header Card */}
         <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
 
-          <div className="h-32 bg-gradient-to-r from-[#456b54] to-[#789681]" />
+          <div className="h-32 bg-gradient-to-r from-[#2563eb] to-[#789681]" />
 
           <div className="px-6 pb-6 sm:px-8">
 
@@ -150,7 +150,7 @@ function EmployeeProfile() {
               <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
 
                 {/* Avatar */}
-                <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl border-4 border-white bg-[#dce5df] text-2xl font-bold text-[#456b54] shadow-md">
+                <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl border-4 border-white bg-[#dce5df] text-2xl font-bold text-[#2563eb] shadow-md">
                   {initials || "E"}
                 </div>
 
@@ -234,7 +234,7 @@ function EmployeeProfile() {
                 Role
               </p>
 
-              <span className="mt-2 inline-flex rounded-full bg-[#eef3ef] px-3 py-1 text-xs font-semibold capitalize text-[#456b54]">
+              <span className="mt-2 inline-flex rounded-full bg-[#eef3ef] px-3 py-1 text-xs font-semibold capitalize text-[#2563eb]">
                 {user.role.replace(/_/g, " ")}
               </span>
             </div>

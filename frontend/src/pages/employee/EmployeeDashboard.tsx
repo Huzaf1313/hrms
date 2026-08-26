@@ -111,7 +111,7 @@ function EmployeeDashboard({ onLogout }: EmployeeDashboardProps) {
   const initials = getInitials(employeeName);
 
   return (
-  <div className="flex min-h-screen bg-[#f7f9f8] text-[#17213a]">
+  <div className="flex min-h-screen bg-[#f5f7fb] text-[#17213a]">
     <EmployeeSidebar onLogout={onLogout} />
 
       <div className="min-w-0 flex-1">
@@ -140,7 +140,7 @@ function EmployeeDashboard({ onLogout }: EmployeeDashboardProps) {
 
             {/* Profile */}
             <div className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-3 py-2 shadow-sm">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#dce5df] text-sm font-bold text-[#456b54]">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#dce5df] text-sm font-bold text-[#2563eb]">
                 {initials || "E"}
               </div>
 
@@ -157,7 +157,7 @@ function EmployeeDashboard({ onLogout }: EmployeeDashboardProps) {
 
           {/* Greeting */}
           <section className="mb-7">
-            <p className="text-sm font-medium text-[#5f806b]">
+            <p className="text-sm font-medium text-[#2563eb]">
               Employee Portal
             </p>
 
@@ -210,7 +210,7 @@ function EmployeeDashboard({ onLogout }: EmployeeDashboardProps) {
                 </div>
               </div>
 
-              <button className="mt-4 text-sm font-semibold text-[#5f806b] hover:underline">
+              <button className="mt-4 text-sm font-semibold text-[#2563eb] hover:underline">
                 View Details →
               </button>
             </div>
@@ -252,7 +252,7 @@ function EmployeeDashboard({ onLogout }: EmployeeDashboardProps) {
                 </div>
               </div>
 
-              <button className="mt-4 text-sm font-semibold text-[#5f806b] hover:underline">
+              <button className="mt-4 text-sm font-semibold text-[#2563eb] hover:underline">
                 Apply Leave →
               </button>
             </div>
@@ -280,7 +280,7 @@ function EmployeeDashboard({ onLogout }: EmployeeDashboardProps) {
                 July 2026 · Take-home salary
               </p>
 
-              <button className="mt-4 text-sm font-semibold text-[#5f806b] hover:underline">
+              <button className="mt-4 text-sm font-semibold text-[#2563eb] hover:underline">
                 View Payslip →
               </button>
             </div>
@@ -384,7 +384,7 @@ function EmployeeDashboard({ onLogout }: EmployeeDashboardProps) {
                         className="flex h-full flex-1 items-end justify-center gap-1"
                       >
                         <div
-                          className="w-2 rounded-t-full bg-[#5f806b]"
+                          className="w-2 rounded-t-full bg-[#2563eb]"
                           style={{ height: `${item.present}%` }}
                         />
 
@@ -416,7 +416,7 @@ function EmployeeDashboard({ onLogout }: EmployeeDashboardProps) {
                 {/* Legend */}
                 <div className="mt-5 flex gap-5 text-xs text-gray-500">
                   <span className="flex items-center gap-2">
-                    <span className="h-2.5 w-2.5 rounded-full bg-[#5f806b]" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-[#2563eb]" />
                     Present
                   </span>
 
@@ -447,7 +447,7 @@ function EmployeeDashboard({ onLogout }: EmployeeDashboardProps) {
                   </p>
                 </div>
 
-                <button className="text-sm font-semibold text-[#5f806b]">
+                <button className="text-sm font-semibold text-[#2563eb]">
                   View All
                 </button>
               </div>
@@ -496,7 +496,7 @@ function EmployeeDashboard({ onLogout }: EmployeeDashboardProps) {
                   </p>
                 </div>
 
-                <button className="rounded-lg bg-[#5f806b] px-4 py-2 text-sm font-semibold text-white hover:bg-[#4d6d59]">
+                <button className="rounded-lg bg-[#2563eb] px-4 py-2 text-sm font-semibold text-white hover:bg-[#4d6d59]">
                   Apply Leave
                 </button>
               </div>
@@ -562,11 +562,11 @@ function EmployeeDashboard({ onLogout }: EmployeeDashboardProps) {
                     className="flex items-center gap-4"
                   >
                     <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl bg-[#eef3ef]">
-                      <span className="text-[10px] font-bold text-[#5f806b]">
+                      <span className="text-[10px] font-bold text-[#2563eb]">
                         {holiday.month}
                       </span>
 
-                      <span className="text-lg font-bold text-[#456b54]">
+                      <span className="text-lg font-bold text-[#2563eb]">
                         {holiday.date}
                       </span>
                     </div>
@@ -612,9 +612,9 @@ function EmployeeDashboard({ onLogout }: EmployeeDashboardProps) {
                 <button
                   key={label}
                   type="button"
-                  className="flex items-center gap-3 rounded-xl border border-gray-200 p-4 text-left transition hover:border-[#5f806b] hover:bg-[#f5f8f5]"
+                  className="flex items-center gap-3 rounded-xl border border-gray-200 p-4 text-left transition hover:border-[#2563eb] hover:bg-[#f5f8f5]"
                 >
-                  <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#eef3ef] text-lg font-semibold text-[#456b54]">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#eef3ef] text-lg font-semibold text-[#2563eb]">
                     {icon}
                   </span>
 
@@ -637,3 +637,4 @@ function EmployeeDashboard({ onLogout }: EmployeeDashboardProps) {
 }
 
 export default EmployeeDashboard;
+
