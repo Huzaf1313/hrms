@@ -1,8 +1,33 @@
+import re
 from datetime import datetime
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from app.core.roles import UserRole
+
+NAME_PATTERN = re.compile(r"^[A-Za-z][A-Za-z .'-]{1,99}$")
+PHONE_PATTERN = re.compile(r"^\+?[0-9]{10,15}$")
+
+
+def validate_password_strength(value: str) -> str:
+    if len(value) < 8:
+        raise ValueError("Password must be at least 8 characters long")
+
+    if not re.search(r"[A-Z]", value):
+        raise ValueError("Password must contain at least one uppercase letter")
+
+    if not re.search(r"[a-z]", value):
+        raise ValueError("Password must contain at least one lowercase letter")
+
+    if not re.search(r"[0-9]", value):
+        raise ValueError("Password must contain at least one number")
+
+    if not re.search(r"[^A-Za-z0-9]", value):
+        raise ValueError(
+            "Password must contain at least one special character"
+        )
+
+    return value
 
 
 class UserCreate(BaseModel):
@@ -22,6 +47,36 @@ class UserCreate(BaseModel):
 
     role: UserRole
 
+    @field_validator("full_name")
+    @classmethod
+    def validate_full_name(cls, value: str) -> str:
+        value = value.strip()
+
+        if not NAME_PATTERN.match(value):
+            raise ValueError(
+                "Full name must contain only letters, spaces, dots, apostrophes or hyphens"
+            )
+
+        return value
+
+    @field_validator("phone_number")
+    @classmethod
+    def validate_phone_number(cls, value: str) -> str:
+        value = value.strip().replace(" ", "").replace("-", "")
+
+        if not PHONE_PATTERN.match(value):
+            raise ValueError(
+                "Phone number must be 10 to 15 digits with an optional + prefix"
+            )
+
+        return value
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, value: str) -> str:
+        return validate_password_strength(value)
+
+
 class UserResponse(BaseModel):
     id: str
     employee_id: str | None = None
@@ -35,7 +90,7 @@ class UserResponse(BaseModel):
 
 class LoginRequest(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(min_length=1, max_length=128)
 
 
 class TokenResponse(BaseModel):
@@ -44,4 +99,4 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
 
 class RefreshTokenRequest(BaseModel):
-    refresh_token: str
+    refresh_token: str = Field(min_length=1)

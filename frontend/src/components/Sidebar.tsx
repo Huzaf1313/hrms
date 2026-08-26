@@ -64,7 +64,7 @@ function Sidebar({ activePage, onNavigate }: SidebarProps) {
   const navigate = useNavigate();
 
   return (
-    <aside className="flex h-screen w-[250px] shrink-0 flex-col bg-[#0d1e3e] px-4 py-6">
+    <aside className="sticky top-0 flex h-screen w-[250px] shrink-0 flex-col overflow-hidden bg-[#0d1e3e] px-4 py-6">
       {/* Logo */}
       <button
         type="button"

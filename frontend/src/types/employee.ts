@@ -40,6 +40,11 @@ export interface PromotionHistory {
   reason?: string;
 }
 
+export interface EmployeeCredentials {
+  email: string;
+  temporary_password: string;
+}
+
 export interface Employee {
   id: string;
 
@@ -73,6 +78,9 @@ export interface Employee {
 
   // Status
   status: EmployeeStatus;
+
+  // Only returned right after creation
+  credentials?: EmployeeCredentials;
 }
 
 export interface EmployeeCreate {
@@ -96,6 +104,9 @@ export interface EmployeeCreate {
 
   emergency_contact?: EmergencyContact;
   bank_information?: BankInformation;
+
+  // Optional custom login password (auto-generated when omitted)
+  password?: string;
 }
 
 export interface EmployeeUpdate {

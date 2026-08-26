@@ -20,6 +20,79 @@ interface RegistrationForm {
   role: string;
 }
 
+type FieldErrors = Partial<Record<keyof RegistrationForm, string>>;
+
+const NAME_PATTERN = /^[A-Za-z][A-Za-z .'-]{1,99}$/;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const PHONE_PATTERN = /^\+?[0-9]{10,15}$/;
+
+const passwordRules = [
+  { label: "At least 8 characters", test: (value: string) => value.length >= 8 },
+  { label: "One uppercase letter", test: (value: string) => /[A-Z]/.test(value) },
+  { label: "One lowercase letter", test: (value: string) => /[a-z]/.test(value) },
+  { label: "One number", test: (value: string) => /[0-9]/.test(value) },
+  {
+    label: "One special character",
+    test: (value: string) => /[^A-Za-z0-9]/.test(value),
+  },
+];
+
+function validateRegistrationForm(
+  form: RegistrationForm,
+  step: Step,
+): FieldErrors {
+  const errors: FieldErrors = {};
+
+  if (step === 1) {
+    const name = form.full_name.trim();
+
+    if (!name) {
+      errors.full_name = "Please enter your full name.";
+    } else if (!NAME_PATTERN.test(name)) {
+      errors.full_name =
+        "Name can only contain letters, spaces, dots, apostrophes and hyphens.";
+    }
+
+    const email = form.email.trim();
+
+    if (!email) {
+      errors.email = "Please enter your email address.";
+    } else if (!EMAIL_PATTERN.test(email)) {
+      errors.email = "Please enter a valid email address.";
+    }
+
+    const phone = form.phone_number.trim().replace(/[\s-]/g, "");
+
+    if (!phone) {
+      errors.phone_number = "Please enter your phone number.";
+    } else if (!PHONE_PATTERN.test(phone)) {
+      errors.phone_number = "Enter 10 to 15 digits (optional + prefix).";
+    }
+
+    if (!form.password) {
+      errors.password = "Please enter a password.";
+    } else {
+      const failedRule = passwordRules.find((rule) => !rule.test(form.password));
+
+      if (failedRule) {
+        errors.password = `Password needs ${failedRule.label.toLowerCase()}.`;
+      }
+    }
+
+    if (!form.confirm_password) {
+      errors.confirm_password = "Please confirm your password.";
+    } else if (form.password !== form.confirm_password) {
+      errors.confirm_password = "Passwords do not match.";
+    }
+  }
+
+  if (step === 2 && !form.role) {
+    errors.role = "Please select the position you are registering for.";
+  }
+
+  return errors;
+}
+
 function Registration() {
   const navigate = useNavigate();
 
@@ -27,6 +100,7 @@ function Registration() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -49,61 +123,20 @@ function Registration() {
     }));
 
     setError("");
+    setFieldErrors((previous) => ({
+      ...previous,
+      [field]: undefined,
+    }));
   };
 
   const validateStep = () => {
     setError("");
 
-    if (step === 1) {
-      if (!form.full_name.trim()) {
-        setError("Please enter your full name.");
-        return false;
-      }
+    const errors = validateRegistrationForm(form, step);
 
-      if (!form.email.trim()) {
-        setError("Please enter your email address.");
-        return false;
-      }
+    setFieldErrors(errors);
 
-      if (!form.phone_number.trim()) {
-        setError("Please enter your phone number.");
-        return false;
-      }
-
-      if (!/^\d{10,15}$/.test(form.phone_number.trim())) {
-        setError("Please enter a valid phone number.");
-        return false;
-      }
-
-      if (!form.password) {
-        setError("Please enter a password.");
-        return false;
-      }
-
-      if (form.password.length < 8) {
-        setError("Password must be at least 8 characters long.");
-        return false;
-      }
-
-      if (!form.confirm_password) {
-        setError("Please confirm your password.");
-        return false;
-      }
-
-      if (form.password !== form.confirm_password) {
-        setError("Passwords do not match.");
-        return false;
-      }
-    }
-
-    if (step === 2) {
-      if (!form.role) {
-        setError("Please select the position you are registering for.");
-        return false;
-      }
-    }
-
-    return true;
+    return Object.keys(errors).length === 0;
   };
 
   const handleNext = () => {
@@ -199,9 +232,12 @@ function Registration() {
             updateField(field, event.target.value)
           }
           placeholder={placeholder}
-          className={`w-full rounded-xl border border-[#d6dbe6] px-4 py-4 text-[#17213a] outline-none transition placeholder:text-[#8993a7] focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/20 ${
-            isPasswordField ? "pr-12" : ""
-          }`}
+          aria-invalid={Boolean(fieldErrors[field])}
+          className={`w-full rounded-xl border px-4 py-4 text-[#17213a] outline-none transition placeholder:text-[#8993a7] focus:ring-2 ${
+            fieldErrors[field]
+              ? "border-red-400 focus:border-red-400 focus:ring-red-400/20"
+              : "border-[#d6dbe6] focus:border-[#2563eb] focus:ring-[#2563eb]/20"
+          } ${isPasswordField ? "pr-12" : ""}`}
         />
 
         {isPasswordField && (
@@ -223,6 +259,32 @@ function Registration() {
           </button>
         )}
       </div>
+
+      {fieldErrors[field] && (
+        <p className="mt-1.5 text-xs font-medium text-red-600">
+          {fieldErrors[field]}
+        </p>
+      )}
+
+      {field === "password" && form.password.length > 0 && (
+        <ul className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1">
+          {passwordRules.map((rule) => {
+            const passed = rule.test(form.password);
+
+            return (
+              <li
+                key={rule.label}
+                className={`flex items-center gap-1.5 text-[11px] font-medium ${
+                  passed ? "text-emerald-600" : "text-gray-400"
+                }`}
+              >
+                <span>{passed ? "✓" : "○"}</span>
+                {rule.label}
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 };
@@ -434,6 +496,12 @@ function Registration() {
                       </option>
                     ))}
                   </select>
+
+                  {fieldErrors.role && (
+                    <p className="mt-1.5 text-xs font-medium text-red-600">
+                      {fieldErrors.role}
+                    </p>
+                  )}
                 </div>
               )}
 

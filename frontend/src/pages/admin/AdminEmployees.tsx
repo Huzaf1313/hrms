@@ -1,15 +1,107 @@
 import { useEffect, useState } from "react";
 
-import EmployeeDetailsPage from "../../components/employees/EmployeeDetailsPage";
-import EmployeeForm from "../../components/employees/EmployeeForm";
-import EmployeeTable from "../../components/employees/EmployeeTable";
+import AdminEmployeeDetailsPage from "../../components/admin/AdminEmployeeDetailsPage";
+import AdminEmployeeForm from "../../components/admin/AdminEmployeeForm";
+import AdminEmployeeTable from "../../components/admin/AdminEmployeeTable";
 import { ApiError } from "../../services/api";
 import { departmentService } from "../../services/departmentService";
 import { employeeService } from "../../services/employeeService";
 import type { Department } from "../../types/department";
-import type { Employee, EmployeeCreate } from "../../types/employee";
+import type {
+  Employee,
+  EmployeeCreate,
+  EmployeeCredentials,
+} from "../../types/employee";
 
 const PAGE_SIZE = 10;
+
+function CredentialsModal({
+  credentials,
+  employeeName,
+  onClose,
+}: {
+  credentials: EmployeeCredentials;
+  employeeName: string;
+  onClose: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  async function copyCredentials() {
+    const text = `Email: ${credentials.email}\nPassword: ${credentials.temporary_password}`;
+
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+    }
+
+    setCopied(true);
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+      <div className="w-full max-w-md rounded-3xl bg-white p-8 shadow-xl">
+        <div className="mb-1 flex items-center gap-2">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+            ✓
+          </span>
+          <h3 className="text-lg font-bold text-gray-900">
+            Employee Created
+          </h3>
+        </div>
+
+        <p className="mt-2 text-sm text-gray-500">
+          Share these login credentials with{" "}
+          <span className="font-semibold text-gray-800">{employeeName}</span>.
+          The password won't be shown again.
+        </p>
+
+        <div className="mt-5 space-y-3 rounded-2xl bg-[#f5f7fb] p-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              Email
+            </p>
+            <p className="mt-0.5 font-mono text-sm text-gray-900">
+              {credentials.email}
+            </p>
+          </div>
+
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              Temporary Password
+            </p>
+            <p className="mt-0.5 font-mono text-sm text-gray-900">
+              {credentials.temporary_password}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-6 flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={copyCredentials}
+            className="rounded-full border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+          >
+            {copied ? "Copied ✓" : "Copy Credentials"}
+          </button>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full bg-[#2563eb] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1d4ed8]"
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function AdminEmployees() {
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -26,6 +118,10 @@ function AdminEmployees() {
   const [viewingEmployee, setViewingEmployee] = useState<Employee | undefined>(undefined);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [sharedCredentials, setSharedCredentials] = useState<{
+    name: string;
+    credentials: EmployeeCredentials;
+  } | null>(null);
 
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
@@ -110,7 +206,14 @@ function AdminEmployees() {
           current?.id === editingEmployee.id ? updated : current,
         );
       } else {
-        await employeeService.create(data);
+        const created = await employeeService.create(data);
+
+        if (created.credentials) {
+          setSharedCredentials({
+            name: `${created.first_name} ${created.last_name}`,
+            credentials: created.credentials,
+          });
+        }
       }
 
       closeForm();
@@ -156,7 +259,7 @@ function AdminEmployees() {
   if (viewingEmployee) {
     return (
       <>
-        <EmployeeDetailsPage
+        <AdminEmployeeDetailsPage
           employee={viewingEmployee}
           departments={departments}
           onBack={() => setViewingEmployee(undefined)}
@@ -165,7 +268,7 @@ function AdminEmployees() {
         />
 
         {isFormOpen && (
-          <EmployeeForm
+          <AdminEmployeeForm
             departments={departments}
             initialEmployee={editingEmployee}
             isSubmitting={isSubmitting}
@@ -180,10 +283,10 @@ function AdminEmployees() {
 
   return (
     <div className="px-10 pb-10 pt-8">
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-5xl font-bold text-[#2563eb]">Employees</h1>
-          <p className="mt-2 text-lg text-gray-600">
+          <h1 className="text-4xl font-bold text-gray-900">Employees</h1>
+          <p className="mt-1 text-gray-500">
             Manage and view your team.
           </p>
         </div>
@@ -191,7 +294,7 @@ function AdminEmployees() {
         <button
           type="button"
           onClick={openCreateForm}
-          className="rounded-full bg-[#2563eb] px-5 py-2.5 text-sm font-semibold text-white"
+          className="rounded-full bg-[#2563eb] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1d4ed8]"
         >
           + Add Employee
         </button>
@@ -263,7 +366,7 @@ function AdminEmployees() {
 
         {!isLoading && !error && (
           <>
-            <EmployeeTable
+            <AdminEmployeeTable
               employees={employees}
               departments={departments}
               onView={setViewingEmployee}
@@ -300,13 +403,21 @@ function AdminEmployees() {
       </div>
 
       {isFormOpen && (
-        <EmployeeForm
+        <AdminEmployeeForm
           departments={departments}
           initialEmployee={editingEmployee}
           isSubmitting={isSubmitting}
           errorMessage={formError}
           onSubmit={handleFormSubmit}
           onCancel={closeForm}
+        />
+      )}
+
+      {sharedCredentials && (
+        <CredentialsModal
+          credentials={sharedCredentials.credentials}
+          employeeName={sharedCredentials.name}
+          onClose={() => setSharedCredentials(null)}
         />
       )}
 
@@ -343,4 +454,5 @@ function AdminEmployees() {
 }
 
 export default AdminEmployees;
+
 

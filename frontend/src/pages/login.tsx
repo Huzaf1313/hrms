@@ -47,8 +47,15 @@ function Login() {
   const handleLogin = async () => {
     setError("");
 
-    if (!email.trim() || !password) {
+    const trimmedEmail = email.trim();
+
+    if (!trimmedEmail || !password) {
       setError("Please enter your email address and password.");
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(trimmedEmail)) {
+      setError("Please enter a valid email address.");
       return;
     }
 
@@ -56,7 +63,7 @@ function Login() {
 
     try {
       const loginResponse = await api.post("/auth/login", {
-        email: email.trim(),
+        email: trimmedEmail,
         password,
       });
 

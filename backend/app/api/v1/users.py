@@ -15,6 +15,22 @@ router = APIRouter(
 user_service = UserService()
 
 
+def resolve_full_name(user: dict) -> str:
+    """Login accounts store full_name; employee records store
+    first_name/last_name - support both shapes."""
+    if user.get("full_name"):
+        return user["full_name"]
+
+    return " ".join(
+        part
+        for part in [
+            user.get("first_name", ""),
+            user.get("last_name", ""),
+        ]
+        if part
+    ).strip()
+
+
 @router.get(
     "/me",
     response_model=UserResponse,
@@ -25,11 +41,11 @@ async def get_my_profile(
     return UserResponse(
         id=str(current_user["_id"]),
         employee_id=current_user.get("employee_id"),
-        full_name=current_user["full_name"],
+        full_name=resolve_full_name(current_user),
         email=current_user["email"],
         role=current_user["role"],
-        is_active=current_user["is_active"],
-        is_locked=current_user["is_locked"],
+        is_active=current_user.get("is_active", True),
+        is_locked=current_user.get("is_locked", False),
         created_at=current_user["created_at"],
         updated_at=current_user["updated_at"],
     )

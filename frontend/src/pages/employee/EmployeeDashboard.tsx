@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import EmployeeSidebar from "./EmployeeSidebar";
 
 interface User {
   id: string;
@@ -10,16 +9,6 @@ interface User {
   is_locked: boolean;
   created_at: string;
   updated_at: string;
-}
-
-function getInitials(name: string) {
-  return name
-    .trim()
-    .split(/\s+/)
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
 }
 
 const leaveRequests = [
@@ -76,11 +65,7 @@ const holidays = [
   },
 ];
 
-interface EmployeeDashboardProps {
-  onLogout: () => void;
-}
-
-function EmployeeDashboard({ onLogout }: EmployeeDashboardProps) {
+function EmployeeDashboard() {
     const user = useMemo<User | null>(() => {
     const storedUser = localStorage.getItem("user");
 
@@ -99,80 +84,27 @@ function EmployeeDashboard({ onLogout }: EmployeeDashboardProps) {
 
   const firstName = employeeName.split(" ")[0];
 
-  const currentDate = new Date();
-
-  const formattedDate = currentDate.toLocaleDateString("en-IN", {
-    weekday: "short",
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-
-  const initials = getInitials(employeeName);
-
   return (
-  <div className="flex min-h-screen bg-[#f5f7fb] text-[#17213a]">
-    <EmployeeSidebar onLogout={onLogout} />
+  <main className="min-w-0 flex-1 px-6 pb-10 pt-8 lg:px-8">
 
-      <div className="min-w-0 flex-1">
+    {/* Greeting */}
+    <section className="mb-7">
+      <p className="text-sm font-medium text-[#2563eb]">
+        Employee Portal
+      </p>
 
-        {/* =========================================================
-            MAIN CONTENT
-        ========================================================= */}
-        <main className="min-w-0 flex-1 px-5 py-7 sm:px-7 lg:px-10">
+      <h1 className="mt-1 text-3xl font-bold tracking-tight text-[#171b1d] sm:text-4xl">
+        Good Morning, {firstName} 👋
+      </h1>
 
-          <div className="mb-6 flex items-center justify-end gap-4">
-            {/* Date */}
-            <div className="hidden rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 shadow-sm sm:block">
-              {formattedDate}
-            </div>
+      <p className="mt-2 text-sm text-gray-500">
+        Here's what's happening with your work today.
+      </p>
+    </section>
 
-            {/* Notifications */}
-            <button
-              type="button"
-              className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-600 shadow-sm transition hover:bg-gray-50"
-              aria-label="Notifications"
-            >
-              <span className="text-lg">🔔</span>
-
-              <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />
-            </button>
-
-            {/* Profile */}
-            <div className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-3 py-2 shadow-sm">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#dce5df] text-sm font-bold text-[#2563eb]">
-                {initials || "E"}
-              </div>
-
-              <div className="hidden text-left sm:block">
-                <p className="text-sm font-semibold text-gray-800">
-                  {employeeName}
-                </p>
-                <p className="text-xs text-gray-500">
-                  Employee
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Greeting */}
-          <section className="mb-7">
-            <p className="text-sm font-medium text-[#2563eb]">
-              Employee Portal
-            </p>
-
-            <h1 className="mt-1 text-3xl font-bold tracking-tight text-[#171b1d] sm:text-4xl">
-              Good Morning, {firstName} 👋
-            </h1>
-
-            <p className="mt-2 text-sm text-gray-500">
-              Here's what's happening with your work today.
-            </p>
-          </section>
-
-          {/* =======================================================
-              KPI CARDS
-          ======================================================= */}
+    {/* =======================================================
+        KPI CARDS
+    ======================================================= */}
           <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
 
             {/* Attendance */}
@@ -628,11 +560,9 @@ function EmployeeDashboard({ onLogout }: EmployeeDashboardProps) {
 
           {/* Footer */}
           <footer className="mt-8 border-t border-gray-200 py-6 text-center text-xs text-gray-400">
-            © 2026 HRMS. All rights reserved. · Employee Portal
+            Ac 2026 HRMS. All rights reserved. A� Employee Portal
           </footer>
         </main>
-      </div>
-    </div>
   );
 }
 

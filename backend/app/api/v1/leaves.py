@@ -1,5 +1,7 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 
+from app.api.deps import require_permission
+from app.core.roles import Permission
 from app.schemas.leave import (
     LeaveCreate,
     LeaveStatusUpdate,
@@ -15,7 +17,9 @@ service = LeaveService()
 
 
 @router.get("/summary")
-async def get_leave_summary():
+async def get_leave_summary(
+    current_user: dict = Depends(require_permission(Permission.LEAVE_READ)),
+):
     return {
         "success": True,
         "message": "Leave summary fetched successfully",
@@ -25,6 +29,7 @@ async def get_leave_summary():
 
 @router.get("")
 async def get_leaves(
+    current_user: dict = Depends(require_permission(Permission.LEAVE_READ)),
     page: int = Query(
         default=1,
         ge=1,
@@ -56,6 +61,7 @@ async def get_leaves(
 @router.get("/{leave_id}")
 async def get_leave(
     leave_id: str,
+    current_user: dict = Depends(require_permission(Permission.LEAVE_READ)),
 ):
     return {
         "success": True,
@@ -67,6 +73,7 @@ async def get_leave(
 @router.post("")
 async def create_leave(
     payload: LeaveCreate,
+    current_user: dict = Depends(require_permission(Permission.LEAVE_CREATE)),
 ):
     data = await service.create_leave(
         payload.model_dump()
@@ -83,12 +90,13 @@ async def create_leave(
 async def update_leave_status(
     leave_id: str,
     payload: LeaveStatusUpdate,
+    current_user: dict = Depends(require_permission(Permission.LEAVE_APPROVE)),
 ):
     data = await service.update_status(
         leave_id=leave_id,
         status=payload.status,
         admin_note=payload.admin_note,
-        admin_user_id=None,
+        admin_user_id=str(current_user["_id"]),
     )
 
     return {
@@ -101,6 +109,7 @@ async def update_leave_status(
 @router.delete("/{leave_id}")
 async def delete_leave(
     leave_id: str,
+    current_user: dict = Depends(require_permission(Permission.LEAVE_UPDATE)),
 ):
     await service.delete_leave(leave_id)
 

@@ -56,6 +56,35 @@ interface RequestOptions {
   params?: Record<string, string | number | boolean | undefined>;
 }
 
+/** FastAPI returns validation errors as {detail: [{loc, msg}, ...]} while
+ * app errors use {detail: string} or {message: string} - normalize all. */
+function extractErrorMessage(
+  payload: unknown,
+  status: number,
+): string {
+  if (payload && typeof payload === "object") {
+    const record = payload as Record<string, unknown>;
+
+    if (typeof record.detail === "string") {
+      return record.detail;
+    }
+
+    if (Array.isArray(record.detail) && record.detail.length > 0) {
+      const first = record.detail[0] as { msg?: unknown };
+
+      if (typeof first?.msg === "string") {
+        return first.msg.replace(/^Value error,\s*/, "");
+      }
+    }
+
+    if (typeof record.message === "string") {
+      return record.message;
+    }
+  }
+
+  return `Request failed with status ${status}`;
+}
+
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { method = "GET", body, params } = options;
 
@@ -96,21 +125,16 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 
   const payload = await response.json().catch(() => null);
 
-if (!response.ok) {
-  const message =
-    payload?.detail ??
-    payload?.message ??
-    `Request failed with status ${response.status}`;
+  if (!response.ok) {
+    throw new ApiError(extractErrorMessage(payload, response.status), response.status);
+  }
 
-  throw new ApiError(message, response.status);
-}
-
-if (!payload) {
-  throw new ApiError(
-    "Received an empty response from the server.",
-    response.status,
-  );
-}
+  if (!payload) {
+    throw new ApiError(
+      "Received an empty response from the server.",
+      response.status,
+    );
+  }
 
 // Support both API envelope responses and direct FastAPI responses.
 if (
@@ -172,11 +196,7 @@ async function requestRaw<T>(path: string, options: RequestOptions = {}): Promis
   const payload = await response.json().catch(() => null);
 
   if (!response.ok) {
-    const message =
-      (payload && typeof payload === "object" && "message" in payload
-        ? String((payload as { message?: unknown }).message)
-        : undefined) ?? `Request failed with status ${response.status}`;
-    throw new ApiError(message, response.status);
+    throw new ApiError(extractErrorMessage(payload, response.status), response.status);
   }
 
   return payload as T;

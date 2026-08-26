@@ -81,7 +81,7 @@ function EmployeeProfile() {
 
   if (isLoading) {
     return (
-      <div className="min-h-full bg-[#f5f7fb] px-5 py-7 sm:px-7 lg:px-10">
+      <div className="min-h-full bg-[#f5f7fb] px-6 pb-10 pt-8 lg:px-8">
         <div className="mx-auto max-w-6xl">
           <div className="rounded-2xl border border-gray-200 bg-white p-10 text-center shadow-sm">
             <p className="text-sm text-gray-500">
@@ -95,7 +95,7 @@ function EmployeeProfile() {
 
   if (error || !user) {
     return (
-      <div className="min-h-full bg-[#f5f7fb] px-5 py-7 sm:px-7 lg:px-10">
+      <div className="min-h-full bg-[#f5f7fb] px-6 pb-10 pt-8 lg:px-8">
         <div className="mx-auto max-w-6xl">
           <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
             <p className="text-sm font-medium text-red-700">
@@ -110,7 +110,7 @@ function EmployeeProfile() {
   const initials = getInitials(user.full_name);
 
   return (
-    <div className="min-h-full bg-[#f5f7fb] px-5 py-7 sm:px-7 lg:px-10">
+    <div className="min-h-full bg-[#f5f7fb] px-6 pb-10 pt-8 lg:px-8">
 
       <div className="mx-auto max-w-6xl">
 

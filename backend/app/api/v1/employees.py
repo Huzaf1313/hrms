@@ -7,6 +7,7 @@ from app.core.roles import Permission
 from app.schemas.common import APIResponse
 from app.schemas.employee import (
     EmployeeCreate,
+    EmployeeCredentials,
     EmployeeResponse,
     EmployeeUpdate,
 )
@@ -17,22 +18,6 @@ from app.utils.pagination import PaginationParams
 router = APIRouter()
 
 service = EmployeeService()
-
-# TODO: set back to True once the frontend login flow + role handling is
-# fully wired up. While False, every /employees endpoint skips permission
-# checks entirely (still requires nothing, not even a logged-in user).
-AUTH_ENABLED = False
-
-
-def require_permission_toggle(permission: Permission):
-    if AUTH_ENABLED:
-        return require_permission(permission)
-
-    async def bypass_auth() -> None:
-        return None
-
-    return bypass_auth
-
 
 def to_datetime(value: date | None) -> datetime | None:
     """Mongo/BSON only stores datetime, not bare date - convert before saving."""
@@ -45,17 +30,17 @@ def to_datetime(value: date | None) -> datetime | None:
 def serialize_employee(employee: dict) -> EmployeeResponse:
     return EmployeeResponse(
         id=str(employee["_id"]),
-        employee_id=employee["employee_id"],
-        first_name=employee["first_name"],
-        last_name=employee["last_name"],
-        email=employee["email"],
-        phone=employee["phone"],
+        employee_id=employee.get("employee_id", ""),
+        first_name=employee.get("first_name", ""),
+        last_name=employee.get("last_name", ""),
+        email=employee.get("email"),
+        phone=employee.get("phone", ""),
         date_of_birth=employee.get("date_of_birth"),
         gender=employee.get("gender"),
         address=employee.get("address"),
-        department_id=employee["department_id"],
-        designation=employee["designation"],
-        joining_date=employee["joining_date"],
+        department_id=employee.get("department_id", ""),
+        designation=employee.get("designation", ""),
+        joining_date=employee.get("joining_date"),
         employment_type=employee.get("employment_type", "Full-time"),
         work_location=employee.get("work_location"),
         reporting_manager=employee.get("reporting_manager"),
@@ -71,18 +56,24 @@ def serialize_employee(employee: dict) -> EmployeeResponse:
 )
 async def create_employee(
     data: EmployeeCreate,
-    current_user: dict | None = Depends(require_permission_toggle(Permission.EMPLOYEES_CREATE)),
+    current_user: dict = Depends(require_permission(Permission.EMPLOYEES_CREATE)),
 ):
     employee_data = data.model_dump()
     employee_data["date_of_birth"] = to_datetime(employee_data.get("date_of_birth"))
     employee_data["joining_date"] = to_datetime(employee_data["joining_date"])
 
-    employee = await service.create_employee(employee_data)
+    employee, temporary_password = await service.create_employee(employee_data)
+
+    response = serialize_employee(employee)
+    response.credentials = EmployeeCredentials(
+        email=response.email,
+        temporary_password=temporary_password,
+    )
 
     return APIResponse(
         success=True,
         message="Employee created successfully",
-        data=serialize_employee(employee),
+        data=response,
     )
 
 
@@ -96,7 +87,7 @@ async def get_employees(
     status: str | None = Query(default=None),
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=10, ge=1, le=100),
-    current_user: dict | None = Depends(require_permission_toggle(Permission.EMPLOYEES_READ)),
+    current_user: dict = Depends(require_permission(Permission.EMPLOYEES_READ)),
 ):
     pagination = PaginationParams(page=page, limit=limit)
 
@@ -120,7 +111,7 @@ async def get_employees(
 )
 async def get_employee(
     employee_id: str,
-    current_user: dict | None = Depends(require_permission_toggle(Permission.EMPLOYEES_READ)),
+    current_user: dict = Depends(require_permission(Permission.EMPLOYEES_READ)),
 ):
     employee = await service.get_employee(employee_id)
 
@@ -138,7 +129,7 @@ async def get_employee(
 async def update_employee(
     employee_id: str,
     data: EmployeeUpdate,
-    current_user: dict | None = Depends(require_permission_toggle(Permission.EMPLOYEES_UPDATE)),
+    current_user: dict = Depends(require_permission(Permission.EMPLOYEES_UPDATE)),
 ):
     update_data = data.model_dump()
     update_data["date_of_birth"] = to_datetime(update_data.get("date_of_birth"))
@@ -162,7 +153,7 @@ async def update_employee(
 )
 async def deactivate_employee(
     employee_id: str,
-    current_user: dict | None = Depends(require_permission_toggle(Permission.EMPLOYEES_UPDATE)),
+    current_user: dict = Depends(require_permission(Permission.EMPLOYEES_UPDATE)),
 ):
     employee = await service.deactivate_employee(employee_id)
 
@@ -179,7 +170,7 @@ async def deactivate_employee(
 )
 async def delete_employee(
     employee_id: str,
-    current_user: dict | None = Depends(require_permission_toggle(Permission.EMPLOYEES_DELETE)),
+    current_user: dict = Depends(require_permission(Permission.EMPLOYEES_DELETE)),
 ):
     await service.delete_employee(employee_id)
 
@@ -188,3 +179,5 @@ async def delete_employee(
         message="Employee deleted successfully",
         data=None,
     )
+
+
