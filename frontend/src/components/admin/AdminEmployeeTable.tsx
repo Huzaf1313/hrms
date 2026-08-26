@@ -3,7 +3,7 @@ import { useState } from "react";
 import type { Department } from "../../types/department";
 import type { Employee } from "../../types/employee";
 
-interface EmployeeTableProps {
+interface AdminEmployeeTableProps {
   employees: Employee[];
   departments: Department[];
   onView: (employee: Employee) => void;
@@ -40,14 +40,14 @@ function initialsFor(employee: Employee): string {
   return `${first}${last}`.toUpperCase() || "?";
 }
 
-function EmployeeTable({
+function AdminEmployeeTable({
   employees,
   departments,
   onView,
   onEdit,
   onDeactivate,
   onDelete,
-}: EmployeeTableProps) {
+}: AdminEmployeeTableProps) {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   function departmentName(departmentId: string): string {
@@ -180,4 +180,6 @@ function EmployeeTable({
   );
 }
 
-export default EmployeeTable;
+export default AdminEmployeeTable;
+
+

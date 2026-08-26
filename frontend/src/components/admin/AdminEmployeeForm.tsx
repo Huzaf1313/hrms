@@ -4,7 +4,7 @@ import type { ChangeEvent, FormEvent } from "react";
 import type { Department } from "../../types/department";
 import type { Employee, EmployeeCreate } from "../../types/employee";
 
-interface EmployeeFormProps {
+interface AdminEmployeeFormProps {
   departments: Department[];
   initialEmployee?: Employee;
   isSubmitting: boolean;
@@ -58,14 +58,14 @@ function toFormState(employee?: Employee): EmployeeCreate {
   };
 }
 
-function EmployeeForm({
+function AdminEmployeeForm({
   departments,
   initialEmployee,
   isSubmitting,
   errorMessage,
   onSubmit,
   onCancel,
-}: EmployeeFormProps) {
+}: AdminEmployeeFormProps) {
   const [form, setForm] = useState<EmployeeCreate>(() =>
     toFormState(initialEmployee),
   );
@@ -532,5 +532,7 @@ function EmployeeForm({
   );
 }
 
-export default EmployeeForm;
+export default AdminEmployeeForm;
+
+
 

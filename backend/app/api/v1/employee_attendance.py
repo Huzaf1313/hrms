@@ -3,7 +3,8 @@ from datetime import date
 from fastapi import APIRouter, Depends, Query
 
 from app.api.deps import require_permission
-from app.core.roles import Permission
+from app.core.exceptions import AppException
+from app.core.roles import Permission, UserRole
 from app.schemas.common import APIResponse
 from app.schemas.employee_attendance import (
     AttendanceCreate,
@@ -19,18 +20,17 @@ router = APIRouter()
 
 service = EmployeeAttendanceService()
 
-# Keep this consistent with the current employee API setup.
-AUTH_ENABLED = False
 
+def enforce_ownership(current_user: dict, attendance: dict):
+    """Employees may only modify their own attendance records."""
+    if current_user.get("role") != UserRole.EMPLOYEE.value:
+        return
 
-def require_permission_toggle(permission: Permission):
-    if AUTH_ENABLED:
-        return require_permission(permission)
-
-    async def bypass_auth() -> None:
-        return None
-
-    return bypass_auth
+    if current_user.get("employee_id") != attendance.get("employee_id"):
+        raise AppException(
+            "You can only modify your own attendance records",
+            403,
+        )
 
 
 def serialize_attendance(
@@ -56,11 +56,7 @@ def serialize_attendance(
 )
 async def create_attendance(
     data: AttendanceCreate,
-    current_user: dict | None = Depends(
-        require_permission_toggle(
-            Permission.ATTENDANCE_CREATE
-        )
-    ),
+    current_user: dict = Depends(require_permission(Permission.ATTENDANCE_CREATE)),
 ):
     attendance_data = data.model_dump()
 
@@ -83,11 +79,7 @@ async def get_attendance_by_date_range(
     end_date: date = Query(...),
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=100, ge=1, le=100),
-    current_user: dict | None = Depends(
-        require_permission_toggle(
-            Permission.ATTENDANCE_READ
-        )
-    ),
+    current_user: dict = Depends(require_permission(Permission.ATTENDANCE_READ)),
 ):
     skip = (page - 1) * limit
 
@@ -114,11 +106,7 @@ async def get_attendance_by_date_range(
 )
 async def get_attendance(
     attendance_id: str,
-    current_user: dict | None = Depends(
-        require_permission_toggle(
-            Permission.ATTENDANCE_READ
-        )
-    ),
+    current_user: dict = Depends(require_permission(Permission.ATTENDANCE_READ)),
 ):
     attendance = await service.get_attendance(
         attendance_id
@@ -139,11 +127,7 @@ async def get_employee_attendance(
     employee_id: str,
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=100, ge=1, le=100),
-    current_user: dict | None = Depends(
-        require_permission_toggle(
-            Permission.ATTENDANCE_READ
-        )
-    ),
+    current_user: dict = Depends(require_permission(Permission.ATTENDANCE_READ)),
 ):
     skip = (page - 1) * limit
 
@@ -171,11 +155,7 @@ async def get_attendance_by_date(
     attendance_date: date = Query(..., alias="date"),
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=100, ge=1, le=100),
-    current_user: dict | None = Depends(
-        require_permission_toggle(
-            Permission.ATTENDANCE_READ
-        )
-    ),
+    current_user: dict = Depends(require_permission(Permission.ATTENDANCE_READ)),
 ):
     skip = (page - 1) * limit
 
@@ -203,12 +183,14 @@ async def get_attendance_by_date(
 async def update_attendance(
     attendance_id: str,
     data: AttendanceUpdate,
-    current_user: dict | None = Depends(
-        require_permission_toggle(
-            Permission.ATTENDANCE_UPDATE
-        )
-    ),
+    current_user: dict = Depends(require_permission(Permission.ATTENDANCE_CREATE)),
 ):
+    # Punch in/out is self-service: employees use ATTENDANCE_CREATE, but may
+    # only ever touch their own record. Admins (ATTENDANCE_UPDATE holders)
+    # can edit any record.
+    existing = await service.get_attendance(attendance_id)
+    enforce_ownership(current_user, existing)
+
     update_data = data.model_dump()
 
     attendance = await service.update_attendance(
@@ -229,11 +211,7 @@ async def update_attendance(
 )
 async def delete_attendance(
     attendance_id: str,
-    current_user: dict | None = Depends(
-        require_permission_toggle(
-            Permission.ATTENDANCE_UPDATE
-        )
-    ),
+    current_user: dict = Depends(require_permission(Permission.ATTENDANCE_UPDATE)),
 ):
     await service.delete_attendance(
         attendance_id

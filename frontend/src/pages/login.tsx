@@ -47,8 +47,15 @@ function Login() {
   const handleLogin = async () => {
     setError("");
 
-    if (!email.trim() || !password) {
+    const trimmedEmail = email.trim();
+
+    if (!trimmedEmail || !password) {
       setError("Please enter your email address and password.");
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(trimmedEmail)) {
+      setError("Please enter a valid email address.");
       return;
     }
 
@@ -56,7 +63,7 @@ function Login() {
 
     try {
       const loginResponse = await api.post("/auth/login", {
-        email: email.trim(),
+        email: trimmedEmail,
         password,
       });
 
@@ -367,8 +374,8 @@ function Login() {
 
               {/* Security */}
               <div className="mt-8 rounded-xl bg-[#f6f8fc] p-4 text-center text-xs text-[#68758e]">
-                256-bit SSL Encrypted&nbsp;&nbsp; GÇó &nbsp;&nbsp;
-                Your data is always secure&nbsp;&nbsp; GÇó &nbsp;&nbsp;
+                256-bit SSL Encrypted&nbsp;&nbsp; Gï¿½ï¿½ &nbsp;&nbsp;
+                Your data is always secure&nbsp;&nbsp; Gï¿½ï¿½ &nbsp;&nbsp;
                 Enterprise Grade Security
               </div>
 

@@ -10,6 +10,7 @@ import Login from "./pages/login";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Registration from "./pages/Registration";
 import DashboardLayout from "./layouts/DashboardLayout";
+import EmployeeLayout from "./layouts/EmployeeLayout";
 import EmployeeDashboard from "./pages/employee/EmployeeDashboard";
 import EmployeeProfile from "./pages/employee/EmployeeProfile";
 import EmployeeAttendance from "./pages/employee/EmployeeAttendance";
@@ -53,23 +54,14 @@ function App() {
 
         <Route element={<ProtectedRoute />}>
           <Route
-            path="/employee/dashboard"
-            element={<EmployeeDashboard onLogout={handleLogout} />}
-          />
-        </Route>
-
-        <Route
-          path="/employee/profile"
-          element={<EmployeeProfile />}
-        />
-
-        <Route
-          element={<ProtectedRoute />}
-        >
-          <Route
-            path="/employee/attendance"
-            element={<EmployeeAttendance onLogout={handleLogout} />}
-          />
+            path="/employee"
+            element={<EmployeeLayout onLogout={handleLogout} />}
+          >
+            <Route index element={<EmployeeDashboard />} />
+            <Route path="dashboard" element={<EmployeeDashboard />} />
+            <Route path="profile" element={<EmployeeProfile />} />
+            <Route path="attendance" element={<EmployeeAttendance />} />
+          </Route>
         </Route>
 
         <Route

@@ -1,6 +1,12 @@
 from datetime import date
+import re
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
+
+from app.schemas.user import validate_password_strength
+
+EMPLOYEE_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,19}$")
+PHONE_PATTERN = re.compile(r"^\+?[0-9]{10,15}$")
 
 
 class EmergencyContact(BaseModel):
@@ -62,6 +68,51 @@ class EmployeeCreate(BaseModel):
     emergency_contact: EmergencyContact | None = None
     bank_information: BankInformation | None = None
 
+    # Login credentials (auto-generated when omitted)
+    password: str | None = Field(default=None, min_length=8, max_length=128)
+
+    @field_validator("employee_id")
+    @classmethod
+    def validate_employee_id(cls, value: str) -> str:
+        value = value.strip()
+
+        if not EMPLOYEE_ID_PATTERN.match(value):
+            raise ValueError(
+                "Employee ID may only contain letters, numbers, hyphens and underscores"
+            )
+
+        return value
+
+    @field_validator("first_name", "last_name")
+    @classmethod
+    def validate_name_part(cls, value: str) -> str:
+        value = value.strip()
+
+        if len(value) < 1:
+            raise ValueError("Name cannot be empty")
+
+        return value
+
+    @field_validator("phone")
+    @classmethod
+    def validate_phone(cls, value: str) -> str:
+        value = value.strip().replace(" ", "").replace("-", "")
+
+        if not PHONE_PATTERN.match(value):
+            raise ValueError(
+                "Phone number must be 10 to 15 digits with an optional + prefix"
+            )
+
+        return value
+
+    @field_validator("password")
+    @classmethod
+    def validate_login_password(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+
+        return validate_password_strength(value)
+
 
 class EmployeeUpdate(BaseModel):
     first_name: str | None = None
@@ -87,6 +138,14 @@ class EmployeeUpdate(BaseModel):
 
     emergency_contact: EmergencyContact | None = None
     bank_information: BankInformation | None = None
+
+
+class EmployeeCredentials(BaseModel):
+    """Login credentials for the employee account - only returned once,
+    right after the employee is created, so the admin can share them."""
+
+    email: EmailStr
+    temporary_password: str
 
 
 class EmployeeResponse(BaseModel):
@@ -122,3 +181,6 @@ class EmployeeResponse(BaseModel):
 
     # Status
     status: str
+
+    # Only populated on create
+    credentials: EmployeeCredentials | None = None

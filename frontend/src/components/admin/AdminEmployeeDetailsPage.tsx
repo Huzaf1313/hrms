@@ -3,7 +3,7 @@ import { useState } from "react";
 import type { Department } from "../../types/department";
 import type { Employee } from "../../types/employee";
 
-interface EmployeeDetailsPageProps {
+interface AdminEmployeeDetailsPageProps {
   employee: Employee;
   departments: Department[];
   onBack: () => void;
@@ -62,13 +62,13 @@ function DetailField({ label, value }: { label: string; value?: string | null })
   );
 }
 
-function EmployeeDetailsPage({
+function AdminEmployeeDetailsPage({
   employee,
   departments,
   onBack,
   onEdit,
   onDeactivate,
-}: EmployeeDetailsPageProps) {
+}: AdminEmployeeDetailsPageProps) {
   const [historyTab, setHistoryTab] = useState<"promotion" | "transfer">(
     "promotion",
   );
@@ -367,5 +367,7 @@ function EmployeeDetailsPage({
   );
 }
 
-export default EmployeeDetailsPage;
+export default AdminEmployeeDetailsPage;
+
+
 

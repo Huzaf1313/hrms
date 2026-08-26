@@ -2,14 +2,12 @@ from enum import Enum
 
 
 class UserRole(str, Enum):
-    SUPER_ADMIN = "super_admin"
-    HR_ADMIN = "hr_admin"
-    HR_EXECUTIVE = "hr_executive"
-    MANAGER = "manager"
-    TEAM_LEAD = "team_lead"
+    # Admin-level roles
+    HR_ADMIN = "hr_admin"      # Admin • HR
+    MANAGER = "manager"        # Admin • Manager
+
+    # Regular employee
     EMPLOYEE = "employee"
-    RECRUITER = "recruiter"
-    PAYROLL_ADMIN = "payroll_admin"
 
 
 class Permission(str, Enum):
@@ -109,278 +107,48 @@ class Permission(str, Enum):
     PAYSLIPS_READ = "payslips.read"
 
 
-ROLE_PERMISSIONS: dict[UserRole, set[Permission]] = {
-    # ============================================================
-    # SUPER ADMIN
-    # ============================================================
-    UserRole.SUPER_ADMIN: set(Permission),
+# Full admin access - HR and Manager both act as admins.
+ADMIN_PERMISSIONS = set(Permission)
 
-    # ============================================================
-    # HR ADMIN
-    # ============================================================
-    UserRole.HR_ADMIN: {
-        # Users
-        Permission.USERS_READ,
-        Permission.USERS_CREATE,
-        Permission.USERS_UPDATE,
+EMPLOYEE_PERMISSIONS = {
+    # Attendance
+    Permission.ATTENDANCE_READ,
+    Permission.ATTENDANCE_CREATE,
 
-        # Departments
-        Permission.DEPARTMENT_READ,
-        Permission.DEPARTMENT_CREATE,
-        Permission.DEPARTMENT_UPDATE,
-        Permission.DEPARTMENT_DELETE,
+    # Leave
+    Permission.LEAVE_READ,
+    Permission.LEAVE_CREATE,
+    Permission.LEAVE_UPDATE,
 
-        # Employees
-        Permission.EMPLOYEES_READ,
-        Permission.EMPLOYEES_CREATE,
-        Permission.EMPLOYEES_UPDATE,
-        Permission.EMPLOYEES_DELETE,
+    # Documents
+    Permission.DOCUMENTS_READ,
 
-        # Attendance
-        Permission.ATTENDANCE_READ,
-        Permission.ATTENDANCE_CREATE,
-        Permission.ATTENDANCE_UPDATE,
-        Permission.ATTENDANCE_APPROVE,
+    # Expenses
+    Permission.EXPENSES_READ,
+    Permission.EXPENSES_CREATE,
+    Permission.EXPENSES_UPDATE,
 
-        # Leave
-        Permission.LEAVE_READ,
-        Permission.LEAVE_CREATE,
-        Permission.LEAVE_UPDATE,
-        Permission.LEAVE_APPROVE,
+    # Training
+    Permission.TRAINING_READ,
 
-        # Payroll
-        Permission.PAYROLL_READ,
-        Permission.PAYROLL_CREATE,
-        Permission.PAYROLL_UPDATE,
-        Permission.PAYROLL_PROCESS,
-        Permission.PAYROLL_REPORTS,
+    # Performance
+    Permission.PERFORMANCE_READ,
 
-        # Documents
-        Permission.DOCUMENTS_READ,
-        Permission.DOCUMENTS_CREATE,
-        Permission.DOCUMENTS_UPDATE,
-        Permission.DOCUMENTS_DELETE,
+    # Payslips
+    Permission.PAYSLIPS_READ,
 
-        # Recruitment
-        Permission.RECRUITMENT_READ,
-        Permission.RECRUITMENT_CREATE,
-        Permission.RECRUITMENT_UPDATE,
-        Permission.RECRUITMENT_DELETE,
-
-        # Performance
-        Permission.PERFORMANCE_READ,
-        Permission.PERFORMANCE_CREATE,
-        Permission.PERFORMANCE_UPDATE,
-        Permission.PERFORMANCE_REVIEW,
-
-        # Goals
-        Permission.GOALS_READ,
-        Permission.GOALS_CREATE,
-        Permission.GOALS_UPDATE,
-        Permission.GOALS_APPROVE,
-
-        # Expenses
-        Permission.EXPENSES_READ,
-        Permission.EXPENSES_CREATE,
-        Permission.EXPENSES_UPDATE,
-        Permission.EXPENSES_APPROVE,
-
-        # Training
-        Permission.TRAINING_READ,
-        Permission.TRAINING_CREATE,
-        Permission.TRAINING_UPDATE,
-
-        # Reports
-        Permission.REPORTS_READ,
-        Permission.REPORTS_CREATE,
-
-        # Settings
-        Permission.SETTINGS_READ,
-    },
-
-    # ============================================================
-    # HR EXECUTIVE
-    # ============================================================
-    UserRole.HR_EXECUTIVE: {
-        # Users
-        Permission.USERS_READ,
-
-        # Departments
-        Permission.DEPARTMENT_READ,
-
-        # Employees
-        Permission.EMPLOYEES_READ,
-        Permission.EMPLOYEES_CREATE,
-        Permission.EMPLOYEES_UPDATE,
-
-        # Attendance
-        Permission.ATTENDANCE_READ,
-        Permission.ATTENDANCE_CREATE,
-        Permission.ATTENDANCE_UPDATE,
-
-        # Leave
-        Permission.LEAVE_READ,
-        Permission.LEAVE_CREATE,
-        Permission.LEAVE_UPDATE,
-
-        # Documents
-        Permission.DOCUMENTS_READ,
-        Permission.DOCUMENTS_CREATE,
-        Permission.DOCUMENTS_UPDATE,
-
-        # Recruitment
-        Permission.RECRUITMENT_READ,
-        Permission.RECRUITMENT_CREATE,
-        Permission.RECRUITMENT_UPDATE,
-
-        # Performance
-        Permission.PERFORMANCE_READ,
-        Permission.PERFORMANCE_CREATE,
-        Permission.PERFORMANCE_UPDATE,
-
-        # Training
-        Permission.TRAINING_READ,
-        Permission.TRAINING_CREATE,
-        Permission.TRAINING_UPDATE,
-
-        # Expenses
-        Permission.EXPENSES_READ,
-        Permission.EXPENSES_CREATE,
-        Permission.EXPENSES_UPDATE,
-
-        # Reports
-        Permission.REPORTS_READ,
-    },
-
-    # ============================================================
-    # MANAGER
-    # ============================================================
-    UserRole.MANAGER: {
-        # Employees
-        Permission.EMPLOYEES_READ,
-
-        # Attendance
-        Permission.ATTENDANCE_READ,
-
-        # Leave
-        Permission.LEAVE_READ,
-        Permission.LEAVE_APPROVE,
-
-        # Goals
-        Permission.GOALS_READ,
-        Permission.GOALS_CREATE,
-        Permission.GOALS_UPDATE,
-        Permission.GOALS_APPROVE,
-
-        # Performance
-        Permission.PERFORMANCE_READ,
-        Permission.PERFORMANCE_CREATE,
-        Permission.PERFORMANCE_UPDATE,
-        Permission.PERFORMANCE_REVIEW,
-    },
-
-    # ============================================================
-    # TEAM LEAD
-    # ============================================================
-    UserRole.TEAM_LEAD: {
-        # Employees
-        Permission.EMPLOYEES_READ,
-
-        # Attendance
-        Permission.ATTENDANCE_READ,
-
-        # Leave
-        Permission.LEAVE_READ,
-        Permission.LEAVE_APPROVE,
-
-        # Goals
-        Permission.GOALS_READ,
-        Permission.GOALS_CREATE,
-        Permission.GOALS_UPDATE,
-
-        # Performance
-        Permission.PERFORMANCE_READ,
-        Permission.PERFORMANCE_CREATE,
-        Permission.PERFORMANCE_UPDATE,
-    },
-
-    # ============================================================
-    # EMPLOYEE
-    # ============================================================
-    UserRole.EMPLOYEE: {
-        # Attendance
-        Permission.ATTENDANCE_READ,
-        Permission.ATTENDANCE_CREATE,
-
-        # Leave
-        Permission.LEAVE_READ,
-        Permission.LEAVE_CREATE,
-        Permission.LEAVE_UPDATE,
-
-        # Documents
-        Permission.DOCUMENTS_READ,
-
-        # Expenses
-        Permission.EXPENSES_READ,
-        Permission.EXPENSES_CREATE,
-        Permission.EXPENSES_UPDATE,
-
-        # Training
-        Permission.TRAINING_READ,
-
-        # Performance
-        Permission.PERFORMANCE_READ,
-
-        # Payslips
-        Permission.PAYSLIPS_READ,
-
-        # Own Profile
-        Permission.SELF_PROFILE_READ,
-        Permission.SELF_PROFILE_UPDATE,
-    },
-
-    # ============================================================
-    # RECRUITER
-    # ============================================================
-    UserRole.RECRUITER: {
-        # Employees
-        Permission.EMPLOYEES_READ,
-
-        # Recruitment
-        Permission.RECRUITMENT_READ,
-        Permission.RECRUITMENT_CREATE,
-        Permission.RECRUITMENT_UPDATE,
-        Permission.RECRUITMENT_DELETE,
-
-        # Documents
-        Permission.DOCUMENTS_READ,
-
-        # Reports
-        Permission.REPORTS_READ,
-    },
-
-    # ============================================================
-    # PAYROLL ADMIN
-    # ============================================================
-    UserRole.PAYROLL_ADMIN: {
-        # Employees
-        Permission.EMPLOYEES_READ,
-
-        # Payroll
-        Permission.PAYROLL_READ,
-        Permission.PAYROLL_CREATE,
-        Permission.PAYROLL_UPDATE,
-        Permission.PAYROLL_PROCESS,
-        Permission.PAYROLL_REPORTS,
-
-        # Payslips
-        Permission.PAYSLIPS_READ,
-
-        # Reports
-        Permission.REPORTS_READ,
-        Permission.REPORTS_CREATE,
-    },
+    # Own Profile
+    Permission.SELF_PROFILE_READ,
+    Permission.SELF_PROFILE_UPDATE,
 }
+
+
+ROLE_PERMISSIONS: dict[UserRole, set[Permission]] = {
+    UserRole.HR_ADMIN: ADMIN_PERMISSIONS,
+    UserRole.MANAGER: ADMIN_PERMISSIONS,
+    UserRole.EMPLOYEE: EMPLOYEE_PERMISSIONS,
+}
+
 
 def has_permission(
     role: UserRole,

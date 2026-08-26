@@ -26,13 +26,19 @@ function readUser() {
   }
 }
 
-function roleLabel(role?: string): string {
-  if (!role) return "";
-
-  if (role === "hr_admin") return "HR Admin";
-  if (role === "super_admin") return "Super Admin";
-
-  return role.charAt(0).toUpperCase() + role.slice(1);
+/** HR and Manager accounts are admin-level: display role "Admin" plus
+ * their designation. Everyone else shows their own role. */
+function roleDisplay(role?: string): string {
+  switch (role) {
+    case "hr_admin":
+      return "Admin • HR";
+    case "manager":
+      return "Admin • Manager";
+    case "employee":
+      return "Employee";
+    default:
+      return role ? role.charAt(0).toUpperCase() + role.slice(1) : "";
+  }
 }
 
 function Header({ onLogout, onToggleSidebar, pageTitle = "Dashboard" }: HeaderProps) {
@@ -50,7 +56,7 @@ function Header({ onLogout, onToggleSidebar, pageTitle = "Dashboard" }: HeaderPr
     .toUpperCase();
 
   return (
-    <header className="flex h-[72px] items-center justify-between gap-4 border-b border-gray-200 bg-white px-6">
+    <header className="sticky top-0 z-30 flex h-[72px] items-center justify-between gap-4 border-b border-gray-200 bg-white px-6">
       {/* Left: menu + breadcrumb */}
       <div className="flex min-w-0 items-center gap-4">
         <button
@@ -62,10 +68,16 @@ function Header({ onLogout, onToggleSidebar, pageTitle = "Dashboard" }: HeaderPr
           <Menu className="h-5 w-5" />
         </button>
 
-        <p className="truncate text-sm text-gray-500">
-          Dashboard <span className="mx-1.5 text-gray-300">/</span>
-          <span className="font-semibold text-gray-900">{pageTitle}</span>
-        </p>
+        {pageTitle === "Dashboard" ? (
+          <p className="truncate text-sm font-semibold text-gray-900">
+            Dashboard
+          </p>
+        ) : (
+          <p className="truncate text-sm text-gray-500">
+            Dashboard <span className="mx-1.5 text-gray-300">/</span>
+            <span className="font-semibold text-gray-900">{pageTitle}</span>
+          </p>
+        )}
       </div>
 
       {/* Right: search, bell, date, profile */}
@@ -112,7 +124,7 @@ function Header({ onLogout, onToggleSidebar, pageTitle = "Dashboard" }: HeaderPr
                 {fullName}
               </span>
               <span className="block text-[11px] leading-tight text-gray-500">
-                {roleLabel(user?.role)}
+                {roleDisplay(user?.role)}
               </span>
             </span>
 

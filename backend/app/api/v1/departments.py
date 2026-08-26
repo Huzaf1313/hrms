@@ -1,5 +1,7 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 
+from app.api.deps import require_permission
+from app.core.roles import Permission
 from app.schemas.common import APIResponse
 from app.schemas.department import (
     DepartmentCreate,
@@ -29,7 +31,10 @@ def serialize_department(department: dict) -> DepartmentResponse:
     "/departments",
     response_model=APIResponse[DepartmentResponse],
 )
-async def create_department(data: DepartmentCreate):
+async def create_department(
+    data: DepartmentCreate,
+    current_user: dict = Depends(require_permission(Permission.DEPARTMENT_CREATE)),
+):
     department = await service.create_department(
         name=data.name,
         description=data.description,
@@ -48,6 +53,7 @@ async def create_department(data: DepartmentCreate):
 )
 async def get_departments(
     name: str | None = Query(default=None),
+    current_user: dict = Depends(require_permission(Permission.DEPARTMENT_READ)),
     pagination: PaginationParams = None,
 ):
     if pagination is None:
@@ -69,7 +75,10 @@ async def get_departments(
     "/departments/{department_id}",
     response_model=APIResponse[DepartmentResponse],
 )
-async def get_department(department_id: str):
+async def get_department(
+    department_id: str,
+    current_user: dict = Depends(require_permission(Permission.DEPARTMENT_READ)),
+):
     department = await service.get_department(department_id)
 
     return APIResponse(
@@ -86,6 +95,7 @@ async def get_department(department_id: str):
 async def update_department(
     department_id: str,
     data: DepartmentUpdate,
+    current_user: dict = Depends(require_permission(Permission.DEPARTMENT_UPDATE)),
 ):
     department = await service.update_department(
         department_id=department_id,
@@ -104,7 +114,10 @@ async def update_department(
     "/departments/{department_id}",
     response_model=APIResponse[None],
 )
-async def delete_department(department_id: str):
+async def delete_department(
+    department_id: str,
+    current_user: dict = Depends(require_permission(Permission.DEPARTMENT_DELETE)),
+):
     await service.delete_department(department_id)
 
     return APIResponse(
