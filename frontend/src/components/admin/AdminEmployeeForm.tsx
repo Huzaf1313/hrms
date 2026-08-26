@@ -72,6 +72,9 @@ function AdminEmployeeForm({
 
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
+  const [showPassword, setShowPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [lastInitialEmployee, setLastInitialEmployee] = useState(
@@ -133,8 +136,31 @@ function AdminEmployeeForm({
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    const password = form.password?.trim() ?? "";
+
+    if (!isEditMode && password) {
+      const failedRule = [
+        { label: "at least 8 characters", ok: password.length >= 8 },
+        { label: "an uppercase letter", ok: /[A-Z]/.test(password) },
+        { label: "a lowercase letter", ok: /[a-z]/.test(password) },
+        { label: "a number", ok: /[0-9]/.test(password) },
+        {
+          label: "a special character",
+          ok: /[^A-Za-z0-9]/.test(password),
+        },
+      ].find((rule) => !rule.ok);
+
+      if (failedRule) {
+        setPasswordError(`Password needs ${failedRule.label}.`);
+        return;
+      }
+    }
+
+    setPasswordError(null);
+
     const payload: EmployeeCreate = {
       ...form,
+      password: !isEditMode && password ? password : undefined,
       date_of_birth: form.date_of_birth || undefined,
       gender: form.gender || undefined,
       address: form.address || undefined,
@@ -349,6 +375,59 @@ function AdminEmployeeForm({
               className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
             />
           </div>
+
+          {/* LOGIN CREDENTIALS - create mode only */}
+          {!isEditMode && (
+            <div className="md:col-span-2">
+              <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
+                Temporary Password{" "}
+                <span className="font-normal text-gray-400">
+                  (optional — leave empty to auto-generate)
+                </span>
+              </label>
+
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={form.password ?? ""}
+                  onChange={(event) => {
+                    setPasswordError(null);
+                    updateField("password", event.target.value);
+                  }}
+                  placeholder="Employee login password"
+                  autoComplete="new-password"
+                  className={`w-full rounded-xl border px-4 py-3 pr-12 text-sm outline-none transition focus:ring-2 ${
+                    passwordError
+                      ? "border-red-400 focus:border-red-400 focus:ring-red-400/10"
+                      : "border-gray-200 focus:border-[#2563eb] focus:ring-[#2563eb]/10"
+                  }`}
+                />
+
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((previous) => !previous)}
+                  aria-label={
+                    showPassword ? "Hide password" : "Show password"
+                  }
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold text-[#2563eb] hover:underline"
+                >
+                  {showPassword ? "Hide" : "Show"}
+                </button>
+              </div>
+
+              {passwordError ? (
+                <p className="mt-1.5 text-xs font-medium text-red-600">
+                  {passwordError}
+                </p>
+              ) : (
+                <p className="mt-1.5 text-xs text-gray-400">
+                  Min 8 characters with an uppercase letter, lowercase letter,
+                  number &amp; special character. Shown once after creation so
+                  you can share it with the employee.
+                </p>
+              )}
+            </div>
+          )}
 
           {/* DEPARTMENT */}
           <div>
