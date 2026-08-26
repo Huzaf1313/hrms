@@ -38,10 +38,11 @@ class UserService:
                 409,
             )
 
+        # Employees are created by admins (with shared credentials) - public
+        # signup is for admin-level accounts only.
         allowed_registration_roles = {
             UserRole.HR_ADMIN,
             UserRole.MANAGER,
-            UserRole.EMPLOYEE,
         }
 
         if role not in allowed_registration_roles:

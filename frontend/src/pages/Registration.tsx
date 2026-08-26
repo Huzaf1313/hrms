@@ -8,7 +8,6 @@ type Step = 1 | 2;
 const roles = [
   { label: "Manager", value: "manager" },
   { label: "HR", value: "hr_admin" },
-  { label: "Employee", value: "employee" },
 ];
 
 interface RegistrationForm {
