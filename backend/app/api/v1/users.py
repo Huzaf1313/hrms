@@ -24,6 +24,7 @@ async def get_my_profile(
 ):
     return UserResponse(
         id=str(current_user["_id"]),
+        employee_id=current_user.get("employee_id"),
         full_name=current_user["full_name"],
         email=current_user["email"],
         role=current_user["role"],
@@ -54,6 +55,7 @@ async def create_user(
 
     return UserResponse(
         id=str(user["_id"]),
+        employee_id=current_user.get("employee_id"),
         full_name=user["full_name"],
         email=user["email"],
         role=user["role"],

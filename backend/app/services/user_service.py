@@ -23,10 +23,10 @@ class UserService:
         email: str,
         phone_number: str,
         password: str,
-        company_name: str,
-        company_address: str,
-        reference: str,
         role: UserRole,
+        company_name: str = "",
+        company_address: str = "",
+        reference: str = "",
     ):
         email = email.lower().strip()
 
@@ -39,11 +39,9 @@ class UserService:
             )
 
         allowed_registration_roles = {
+            UserRole.HR_ADMIN,
             UserRole.MANAGER,
-            UserRole.TEAM_LEAD,
             UserRole.EMPLOYEE,
-            UserRole.RECRUITER,
-            UserRole.PAYROLL_ADMIN,
         }
 
         if role not in allowed_registration_roles:

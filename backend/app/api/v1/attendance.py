@@ -40,7 +40,7 @@ def require_permission_toggle(permission: Permission):
 
 
 @router.post(
-    "/attendance",
+    "/admin/attendance",
     response_model=APIResponse[AttendanceResponse],
 )
 async def mark_attendance(
@@ -66,7 +66,7 @@ async def mark_attendance(
 
 
 @router.get(
-    "/attendance/me",
+    "/admin/attendance/me",
     response_model=APIResponse[MyAttendanceStatus],
 )
 async def get_my_attendance_status(
@@ -96,7 +96,7 @@ async def get_my_attendance_status(
 
 
 @router.get(
-    "/attendance",
+    "/admin/attendance",
     response_model=APIResponse[AttendanceListResponse],
 )
 async def get_attendance_list(
@@ -128,7 +128,7 @@ async def get_attendance_list(
 
 
 @router.get(
-    "/attendance/summary",
+    "/admin/attendance/summary",
     response_model=APIResponse[AttendanceSummaryResponse],
 )
 async def get_attendance_summary(
@@ -151,7 +151,7 @@ async def get_attendance_summary(
 
 
 @router.get(
-    "/attendance/{attendance_id}",
+    "/admin/attendance/{attendance_id}",
     response_model=APIResponse[AttendanceResponse],
 )
 async def get_attendance(
@@ -170,7 +170,7 @@ async def get_attendance(
 
 
 @router.put(
-    "/attendance/{attendance_id}",
+    "/admin/attendance/{attendance_id}",
     response_model=APIResponse[AttendanceResponse],
 )
 async def update_attendance(
@@ -193,7 +193,7 @@ async def update_attendance(
 
 
 @router.patch(
-    "/attendance/{attendance_id}/approve",
+    "/admin/attendance/{attendance_id}/approve",
     response_model=APIResponse[AttendanceResponse],
 )
 async def approve_regularization(

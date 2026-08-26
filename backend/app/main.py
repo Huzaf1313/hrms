@@ -11,15 +11,25 @@ from app.api.v1.dashboard import router as dashboard_router
 from app.api.v1.departments import router as departments_router
 from app.api.v1.employees import router as employees_router
 from app.api.v1.health import router as health_router
+from app.api.v1.dashboard import router as dashboard_router
 from app.core.config import settings
 from app.core.exceptions import AppException
 from app.db.database import connect_to_database, close_database_connection
+from app.repositories.employee_attendance_repository import (
+    EmployeeAttendanceRepository,
+)
 from app.api.v1.users import router as users_router
+from app.api.v1.employee_attendance import router as employee_attendance_router
+from app.api.v1.leaves import router as leaves_router
+from app.api.v1.attendance import router as attendance_router
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await connect_to_database()
+
+    attendance_repository = EmployeeAttendanceRepository()
+    await attendance_repository.ensure_indexes()
 
     yield
 
@@ -85,6 +95,21 @@ app.include_router(
     attendance_router,
     prefix="/api/v1",
     tags=["Attendance"],
+)
+
+app.include_router(
+    employee_attendance_router,
+    prefix="/api/v1",
+)
+
+app.include_router(
+    leaves_router,
+    prefix="/api/v1",
+)
+
+app.include_router(
+    attendance_router,
+    prefix="/api/v1",
 )
 
 app.include_router(

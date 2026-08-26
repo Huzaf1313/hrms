@@ -84,8 +84,7 @@ function EmployeeTable({
           {/* Employee Header */}
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
-              {/* Avatar */}
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#dce8df] text-sm font-semibold text-[#456b54]">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#dce8df] text-sm font-semibold text-[#2563eb]">
                 {initialsFor(employee)}
               </div>
 

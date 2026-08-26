@@ -1,12 +1,15 @@
+import { useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
-  Clock3,
+  Building2,
+  CalendarCheck,
   CalendarDays,
   Wallet,
   Briefcase,
   TrendingUp,
-  CircleHelp,
+  BarChart3,
+  Settings,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -15,74 +18,126 @@ interface SidebarProps {
   onLogout?: () => void; // Added optional onLogout prop just in case you want to use it here later
 }
 
-const menuItems = [
-  { label: "Dashboard", icon: LayoutDashboard },
-  { label: "Employees", icon: Users },
-  { label: "Attendance", icon: Clock3 },
-  { label: "Leave", icon: CalendarDays },
-  { label: "Payroll", icon: Wallet },
-  { label: "Recruitment", icon: Briefcase },
-  { label: "Performance", icon: TrendingUp },
+interface NavItem {
+  label: string;
+  icon: typeof LayoutDashboard;
+  page?: string;
+}
+
+interface NavSection {
+  title: string;
+  items: NavItem[];
+}
+
+const sections: NavSection[] = [
+  {
+    title: "Main",
+    items: [{ label: "Dashboard", icon: LayoutDashboard, page: "Dashboard" }],
+  },
+  {
+    title: "Organization",
+    items: [
+      { label: "Employees", icon: Users, page: "Employees" },
+      { label: "Departments", icon: Building2 },
+    ],
+  },
+  {
+    title: "Attendance",
+    items: [
+      { label: "Attendance", icon: CalendarCheck, page: "Attendance" },
+      { label: "Leave", icon: CalendarDays, page: "Leave" },
+    ],
+  },
+  {
+    title: "Management",
+    items: [
+      { label: "Payroll", icon: Wallet },
+      { label: "Recruitment", icon: Briefcase },
+      { label: "Performance", icon: TrendingUp },
+      { label: "Reports", icon: BarChart3 },
+      { label: "Settings", icon: Settings },
+    ],
+  },
 ];
 
 function Sidebar({ activePage, onNavigate }: SidebarProps) {
+  const navigate = useNavigate();
+
   return (
-    <aside className="flex h-screen w-[240px] shrink-0 flex-col border-r border-gray-200 bg-white px-2 py-7">
+    <aside className="flex h-screen w-[250px] shrink-0 flex-col bg-[#0d1e3e] px-4 py-6">
       {/* Logo */}
-      <div className="mb-9 px-4">
-        <h1 className="text-2xl font-bold text-[#456b54]">HRMS</h1>
-        <p className="mt-1 text-sm font-medium tracking-wide text-gray-600">
-          Enterprise Portal
-        </p>
-      </div>
+      <button
+        type="button"
+        onClick={() => {
+          onNavigate("Dashboard");
+          navigate("/dashboard");
+        }}
+        className="mb-8 flex items-center gap-3 px-2 text-left"
+      >
+        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#2563eb]">
+          <Users className="h-5 w-5 text-white" />
+        </span>
+
+        <span>
+          <span className="block text-xl font-bold text-white">HRMS</span>
+          <span className="block text-xs text-slate-400">Admin Portal</span>
+        </span>
+      </button>
 
       {/* Navigation */}
-      <nav className="flex flex-col gap-1">
-        {menuItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = activePage === item.label;
+      <nav className="flex-1 overflow-y-auto">
+        {sections.map((section) => (
+          <div key={section.title} className="mb-5">
+            <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-widest text-slate-500">
+              {section.title}
+            </p>
 
-          return (
-            <button
-              key={item.label}
-              onClick={() => onNavigate(item.label)}
-              className={`flex h-[54px] items-center gap-3 rounded-xl px-4 text-left font-medium transition ${
-                isActive
-                  ? "bg-[#5f806b] text-white"
-                  : "text-gray-700 hover:bg-gray-100"
-              }`}
-            >
-              <Icon
-                className={`h-5 w-5 ${isActive ? "text-white" : "text-gray-500"}`}
-              />
-              <span className="text-[16px]">{item.label}</span>
-            </button>
-          );
-        })}
+            <div className="flex flex-col gap-1">
+              {section.items.map((item) => {
+                const Icon = item.icon;
+                const isActive = Boolean(item.page) && activePage === item.page;
+                const isDisabled = !item.page;
+
+                return (
+                  <button
+                    key={item.label}
+                    type="button"
+                    disabled={isDisabled}
+                    onClick={() => {
+                      if (!item.page) return;
+                      onNavigate(item.page);
+                      if (item.page === "Dashboard") navigate("/dashboard");
+                    }}
+                    className={`flex h-[46px] items-center gap-3 rounded-xl px-3 text-left text-[15px] transition ${
+                      isActive
+                        ? "bg-[#2563eb] font-semibold text-white shadow-lg shadow-blue-900/30"
+                        : isDisabled
+                          ? "cursor-not-allowed text-slate-600"
+                          : "text-slate-300 hover:bg-white/10 hover:text-white"
+                    }`}
+                  >
+                    <Icon
+                      className={`h-5 w-5 shrink-0 ${
+                        isActive
+                          ? "text-white"
+                          : isDisabled
+                            ? "text-slate-700"
+                            : "text-slate-400"
+                      }`}
+                    />
+
+                    <span>{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
-      {/* New Request */}
-      {/* <button className="mt-auto flex h-[54px] items-center justify-center gap-2 rounded-xl bg-[#456b54] text-base font-semibold text-white transition hover:bg-[#385b46]">
-        <Plus className="h-5 w-5" />
-        New Request
-      </button> */}
-
-      {/* Bottom Links */}
-      <div className="mt-9 flex flex-col gap-1">
-        <button className="flex h-12 items-center gap-3 rounded-xl px-4 font-medium text-gray-700 hover:bg-gray-100">
-          <CircleHelp className="h-5 w-5 text-gray-500" />
-          Help
-        </button>
-
-      {/* <button 
-        onClick={onLogout} 
-        className="flex h-12 items-center gap-3 rounded-xl px-4 font-medium text-gray-700 hover:bg-gray-100"
-      >
-        <LogOut className="h-5 w-5 text-gray-500" />
-        Logout
-      </button> */}
-    </div>
-  </aside>
+      {/* Footer */}
+      <p className="px-3 pt-4 text-[11px] text-slate-600">v1.0 • HRMS</p>
+    </aside>
   );
 }
 

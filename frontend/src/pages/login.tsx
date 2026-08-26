@@ -1,19 +1,17 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
-import { api, setAccessToken } from "../services/api";
+import { api, setAccessToken, ApiError } from "../services/api";
 
 const roles = [
-  "Super Admin",
-  "HR Admin",
-  "HR Executive",
+  "Manager",
+  "HR",
   "Employee",
 ];
 
 const roleMap: Record<string, string> = {
-  "Super Admin": "super_admin",
-  "HR Admin": "hr_admin",
-  "HR Executive": "hr_executive",
+  Manager: "manager",
+  HR: "hr_admin",
   Employee: "employee",
 };
 
@@ -100,20 +98,22 @@ function Login() {
         localStorage.removeItem("remember_me");
       }
 
-      navigate("/dashboard");
-    } catch (error: any) {
+      if (user.role === "employee") {
+        navigate("/employee/dashboard");
+      } else {
+        navigate("/dashboard");
+      }
+    } catch (error: unknown) {
       setAccessToken(null);
 
       localStorage.removeItem("refresh_token");
       localStorage.removeItem("token_type");
 
-      if (error.response?.data?.detail) {
-        setError(error.response.data.detail);
-      } else {
-        setError(
-          "Unable to sign in. Please check your email and password and try again."
-        );
-      }
+      setError(
+        error instanceof ApiError
+          ? error.message
+          : "Unable to sign in. Please check your email and password and try again."
+      );
     } finally {
       setIsLoading(false);
     }
@@ -143,10 +143,10 @@ function Login() {
               {/* Heading */}
               <h2 className="max-w-xl text-4xl font-bold leading-tight text-[#14213d]">
                 Smarter{" "}
-                <span className="text-[#5b2dde]">People.</span>
+                <span className="text-[#2563eb]">People.</span>
                 <br />
                 Stronger{" "}
-                <span className="text-[#5b2dde]">Business.</span>
+                <span className="text-[#2563eb]">Business.</span>
               </h2>
 
               <p className="mt-4 max-w-xl text-base leading-7 text-[#52607a]">
@@ -200,7 +200,7 @@ function Login() {
               </div>
 
               {/* Role Selector */}
-              <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <div className="mt-8 grid grid-cols-3 gap-2">
                 {roles.map((role) => (
                   <button
                     key={role}
@@ -211,7 +211,7 @@ function Login() {
                     }}
                     className={`rounded-xl px-3 py-2 text-xs font-medium transition ${
                       selectedRole === role
-                        ? "bg-[#5b2dde] text-white shadow-md"
+                        ? "bg-[#2563eb] text-white shadow-md"
                         : "bg-[#f3f4f8] text-[#52607a] hover:bg-[#e9eaf0]"
                     }`}
                   >
@@ -253,7 +253,7 @@ function Login() {
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                   placeholder="Enter your work email"
-                  className="w-full rounded-xl border border-[#d6dbe6] px-4 py-3 text-[#17213a] outline-none transition placeholder:text-[#8993a7] focus:border-[#5b2dde] focus:ring-2 focus:ring-[#5b2dde]/20"
+                  className="w-full rounded-xl border border-[#d6dbe6] px-4 py-4 text-[#17213a] outline-none transition placeholder:text-[#8993a7] focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/20"
                 />
               </div>
 
@@ -273,13 +273,13 @@ function Login() {
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   placeholder="Enter your password"
-                  className="w-full rounded-xl border border-[#d6dbe6] px-4 py-3 pr-12 text-[#17213a] outline-none transition placeholder:text-[#8993a7] focus:border-[#5b2dde] focus:ring-2 focus:ring-[#5b2dde]/20"
+                  className="w-full rounded-xl border border-[#d6dbe6] px-4 py-4 pr-12 text-[#17213a] outline-none transition placeholder:text-[#8993a7] focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/20"
                 />
 
                 <button
                   type="button"
                   onClick={() => setShowPassword((previous) => !previous)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[#68758e] transition hover:text-[#5b2dde]"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[#68758e] transition hover:text-[#2563eb]"
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword ? (
@@ -300,14 +300,14 @@ function Login() {
                     onChange={(event) =>
                       setRememberMe(event.target.checked)
                     }
-                    className="h-4 w-4 rounded border-gray-300 accent-[#5b2dde]"
+                    className="h-4 w-4 rounded border-gray-300 accent-[#2563eb]"
                   />
                   Remember me
                 </label>
 
                 <button
                   type="button"
-                  className="text-sm font-semibold text-[#5b2dde] hover:underline"
+                  className="text-sm font-semibold text-[#2563eb] hover:underline"
                 >
                   Forgot Password?
                 </button>
@@ -318,7 +318,7 @@ function Login() {
                 type="button"
                 onClick={handleLogin}
                 disabled={isLoading}
-                className="mt-5 w-full rounded-xl bg-[#5b2dde] py-3 text-base font-semibold text-white shadow-lg transition hover:bg-[#4c24bd] disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-7 w-full rounded-xl bg-[#2563eb] py-4 text-lg font-semibold text-white shadow-lg transition hover:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isLoading ? "Signing In..." : "Sign In"}
               </button>
@@ -355,16 +355,16 @@ function Login() {
                 <button
                   type="button"
                   onClick={() => navigate("/register")}
-                  className="font-semibold text-[#5b2dde] hover:underline"
+                  className="font-semibold text-[#2563eb] hover:underline"
                 >
                   Sign up
                 </button>
               </p>
 
               {/* Security */}
-              <div className="mt-5 rounded-xl bg-[#f6f8fc] p-3 text-center text-xs text-[#68758e]">
-                256-bit SSL Encrypted&nbsp;&nbsp; | &nbsp;&nbsp;
-                Your data is always secure&nbsp;&nbsp; | &nbsp;&nbsp;
+              <div className="mt-8 rounded-xl bg-[#f6f8fc] p-4 text-center text-xs text-[#68758e]">
+                256-bit SSL Encrypted&nbsp;&nbsp; G�� &nbsp;&nbsp;
+                Your data is always secure&nbsp;&nbsp; G�� &nbsp;&nbsp;
                 Enterprise Grade Security
               </div>
 
@@ -378,3 +378,4 @@ function Login() {
 }
 
 export default Login;
+

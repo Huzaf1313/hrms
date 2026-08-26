@@ -67,7 +67,7 @@ function HiringPipeline({ pipeline }: HiringPipelineProps) {
 
               <div className="h-3 overflow-hidden rounded-full bg-gray-200">
                 <div
-                  className="h-full rounded-full bg-[#5f806b]"
+                  className="h-full rounded-full bg-[#2563eb]"
                   style={{
                     width: `${width}%`,
                   }}
