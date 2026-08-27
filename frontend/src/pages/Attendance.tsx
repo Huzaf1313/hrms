@@ -219,9 +219,6 @@ function Attendance() {
 
   useEffect(() => {
     let isCurrent = true;
-    setIsLoading(true);
-    setError("");
-
     Promise.all([
       attendanceService.list({
         date,

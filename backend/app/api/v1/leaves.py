@@ -42,6 +42,7 @@ async def get_leaves(
     status: str | None = None,
     employee_id: str | None = None,
     leave_type: str | None = None,
+    department_id: str | None = None,
 ):
     data = await service.get_leaves(
         page=page,
@@ -49,6 +50,7 @@ async def get_leaves(
         status=status,
         employee_id=employee_id,
         leave_type=leave_type,
+        department_id=department_id,
     )
 
     return {

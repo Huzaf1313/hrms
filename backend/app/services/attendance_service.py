@@ -1,4 +1,5 @@
-from datetime import date, datetime
+from datetime import date, datetime, timezone, timedelta
+IST = timezone(timedelta(hours=5, minutes=30))
 
 from app.core.exceptions import AppException
 from app.repositories.attendance_repository import AttendanceRepository
@@ -65,7 +66,10 @@ def format_punch_time(value) -> str | None:
         return None
 
     if isinstance(value, datetime):
-        return value.strftime("%I:%M %p")
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        ist_value = value.astimezone(IST)
+        return ist_value.strftime("%I:%M %p")
 
     return str(value)
 
@@ -188,6 +192,7 @@ class AttendanceService:
             "status": data["status"],
             "notes": data.get("notes"),
             "updated_at": datetime.utcnow(),
+            "status": data["status"],
         }
 
         if existing:
@@ -401,20 +406,46 @@ class AttendanceService:
             employee_filters
         )
 
-        attendance_filters = build_filter({"department_id": department_id})
-        attendance_filters["date"] = to_datetime(attendance_date)
-        attendance_filters["employee_id"] = {"$in": employee_ids}
-
-        status_counts = await self.repository.get_status_counts(attendance_filters)
-
-        marked_employee_ids = await self.repository.get_distinct_employee_ids(
-            attendance_filters
+        # Single source of truth: fetch attendance records ONCE,
+        # use this same data for both KPI cards and department breakdown.
+        attendance_records = await self.repository.get_all(
+            filters={
+                "date": to_datetime(attendance_date),
+                "employee_id": {"$in": employee_ids},
+            },
+            skip=0,
+            limit=10000,
         )
+
+        employees_by_id = {
+            employee["employee_id"]: employee for employee in employees
+        }
+
+        status_counts: dict[str, int] = {}
+        marked_employee_ids: set[str] = set()
+        present_by_department: dict[str, int] = {}
+
+        for record in attendance_records:
+            status = (record.get("status") or "").lower()
+            status_counts[status] = status_counts.get(status, 0) + 1
+            marked_employee_ids.add(record["employee_id"])
+
+            employee = employees_by_id.get(record["employee_id"])
+            dept_id = record.get("department_id") or (
+                employee.get("department_id") if employee else None
+            )
+            if dept_id and status in PRESENT_LIKE_STATUSES:
+                present_by_department[dept_id] = (
+                    present_by_department.get(dept_id, 0) + 1
+                )
 
         # Employees with no record for the date default to "absent".
         unmarked_count = max(total_employees - len(marked_employee_ids), 0)
 
-        present_count = status_counts.get("present", 0)
+        present_count = sum(
+            status_counts.get(status, 0)
+            for status in ("present", "working", "overtime")
+        )
         late_count = status_counts.get("late", 0)
         on_leave_count = status_counts.get("on_leave", 0)
         missing_punch_count = status_counts.get("missing_punch", 0)
@@ -425,32 +456,8 @@ class AttendanceService:
                 return 0.0
             return round((count / total_employees) * 100, 1)
 
-        # Department-wise presence
-        present_by_department: dict[str, int] = {}
-        attendance_records = await self.repository.get_all(
-            filters={
-                "date": to_datetime(attendance_date),
-                "employee_id": {"$in": employee_ids},
-            },
-            skip=0,
-            limit=10000,
-        )
-        employees_by_id = {
-            employee["employee_id"]: employee for employee in employees
-        }
-        for record in attendance_records:
-            employee = employees_by_id.get(record["employee_id"])
-            dept_id = record.get("department_id") or (
-                employee.get("department_id") if employee else None
-            )
-            status = (record.get("status") or "").lower()
-            if dept_id and status in PRESENT_LIKE_STATUSES:
-                present_by_department[dept_id] = (
-                    present_by_department.get(dept_id, 0) + 1
-                )
-
         departments = await self.department_repository.get_all(
-            filters={},
+            filters=build_filter({"_id": department_id}) if department_id else {},
             skip=0,
             limit=1000,
         ) if hasattr(self.department_repository, "get_all") else []

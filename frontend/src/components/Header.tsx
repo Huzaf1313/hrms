@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { Bell, CalendarDays, ChevronDown, Menu, Search } from "lucide-react";
 
 interface HeaderProps {
-  user: User | null;
   onLogout: () => void;
   onToggleSidebar?: () => void;
   pageTitle?: string;

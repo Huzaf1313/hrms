@@ -7,7 +7,6 @@ from fastapi.responses import JSONResponse
 from app.api.v1.leaves import router as leaves_router
 from app.api.v1.attendance import router as attendance_router
 from app.api.v1.auth import router as auth_router
-from app.api.v1.dashboard import router as dashboard_router
 from app.api.v1.departments import router as departments_router
 from app.api.v1.employees import router as employees_router
 from app.api.v1.health import router as health_router
@@ -20,8 +19,6 @@ from app.repositories.employee_attendance_repository import (
 )
 from app.api.v1.users import router as users_router
 from app.api.v1.employee_attendance import router as employee_attendance_router
-from app.api.v1.leaves import router as leaves_router
-from app.api.v1.attendance import router as attendance_router
 
 
 @asynccontextmanager
@@ -92,12 +89,6 @@ app.include_router(
 )
 
 app.include_router(
-    attendance_router,
-    prefix="/api/v1",
-    tags=["Attendance"],
-)
-
-app.include_router(
     employee_attendance_router,
     prefix="/api/v1",
 )
@@ -122,9 +113,4 @@ app.include_router(
     dashboard_router,
     prefix="/api/v1",
     tags=["Dashboard"],
-)
-app.include_router(
-    leaves_router,
-    prefix="/api/v1",
-    tags=["Leave"],
 )

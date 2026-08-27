@@ -195,7 +195,7 @@ const records = await api.get<AttendanceRecord[]>(
                 date: now.toISOString().split("T")[0],
                 check_in: now.toISOString(),
                 check_out: null,
-                status: "Present",
+                status: "present",
                 total_hours: null,
             },
             );
@@ -244,7 +244,10 @@ const records = await api.get<AttendanceRecord[]>(
                 setActionError(null);
 
                 const checkOutTime = new Date();
-                const checkInTime = new Date(todayRecord.check_in);
+                const checkInRaw = todayRecord.check_in.endsWith("Z")
+                  ? todayRecord.check_in
+                  : `${todayRecord.check_in}Z`;
+                const checkInTime = new Date(checkInRaw);
 
                 const totalHours =
                 (checkOutTime.getTime() - checkInTime.getTime()) /

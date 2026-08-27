@@ -209,6 +209,8 @@ function AdminAttendance() {
   const [date, setDate] = useState(getToday);
   const [departmentId, setDepartmentId] = useState("");
   const [status, setStatus] = useState("");
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [summary, setSummary] = useState<AttendanceSummary | null>(null);
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -229,8 +231,8 @@ function AdminAttendance() {
               department_id: departmentId || undefined,
               status: status || undefined,
               search: search || undefined,
-              page: 1,
-              limit: 10,
+              page,
+              limit,
             }),
             attendanceService.summary(date, departmentId || undefined),
             departmentService.list(),
@@ -257,7 +259,7 @@ function AdminAttendance() {
     return () => {
       isCurrent = false;
     };
-  }, [date, departmentId, search, status]);
+  }, [date, departmentId, limit, page, search, status]);
 
   function handleSort(key: SortKey) {
     if (sortKey === key) {
@@ -371,7 +373,7 @@ function AdminAttendance() {
           <label className="mb-1 block text-xs font-medium text-gray-500">Department</label>
           <select
             value={departmentId}
-            onChange={(event) => setDepartmentId(event.target.value)}
+            onChange={(event) => { setDepartmentId(event.target.value); setPage(1); }}
             className="w-full rounded-full border border-gray-200 bg-white px-4 py-2 text-sm text-gray-600 focus:border-[#2563eb] focus:outline-none"
           >
             <option value="">All Departments</option>
@@ -397,7 +399,7 @@ function AdminAttendance() {
           <label className="mb-1 block text-xs font-medium text-gray-500">Status</label>
           <select
             value={status}
-            onChange={(event) => { setStatus(event.target.value); setActiveTab(0); }}
+            onChange={(event) => { setStatus(event.target.value); setPage(1); setActiveTab(0); }}
             className="w-full rounded-full border border-gray-200 bg-white px-4 py-2 text-sm text-gray-600 focus:border-[#2563eb] focus:outline-none"
           >
             <option value="">All Status</option>
@@ -411,13 +413,14 @@ function AdminAttendance() {
         <div className="flex items-end gap-2">
           <button
             type="button"
-            onClick={() => { setDepartmentId(""); setStatus(""); setSearch(""); setActiveTab(0); }}
+            onClick={() => setPage(1)}
             className="flex-1 rounded-full bg-[#2563eb] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1d4ed8]"
           >
             Apply Filter
           </button>
           <button
             type="button"
+            onClick={() => { setPage(1); setDepartmentId(""); setStatus(""); setSearch(""); setActiveTab(0); }}
             className="flex-1 rounded-full border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
           >
             Reset
@@ -430,7 +433,7 @@ function AdminAttendance() {
         {tabs.map((tab, index) => (
           <button
             key={tab.label}
-            onClick={() => { setActiveTab(index); setStatus(tab.status ?? ""); }}
+            onClick={() => { setPage(1); setActiveTab(index); setStatus(tab.status ?? ""); }}
             className={`whitespace-nowrap border-b-2 pb-3 text-sm font-medium transition ${
               activeTab === index
                 ? "border-[#2563eb] text-[#2563eb]"
@@ -452,17 +455,17 @@ function AdminAttendance() {
               <input
                 type="text"
                 value={search}
-                onChange={(event) => setSearch(event.target.value)}
+                onChange={(event) => { setSearch(event.target.value); setPage(1); }}
                 placeholder="Search by name, employee ID..."
                 className="w-72 rounded-full border border-gray-200 py-2.5 pl-10 pr-4 text-sm focus:border-[#2563eb] focus:outline-none"
               />
             </div>
             <div className="flex items-center gap-2 text-sm text-gray-500">
               Show
-              <select className="rounded-lg border border-gray-200 px-2 py-1 text-sm text-gray-700 focus:outline-none">
-                <option>10</option>
-                <option>25</option>
-                <option>50</option>
+              <select value={limit} onChange={(event) => { setLimit(Number(event.target.value)); setPage(1); }} className="rounded-lg border border-gray-200 px-2 py-1 text-sm text-gray-700 focus:outline-none">
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
               </select>
               entries
             </div>
@@ -553,25 +556,13 @@ function AdminAttendance() {
 
           {/* Pagination */}
           <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-sm text-gray-500">
-            <span>Showing 1 to {records.length} of {summary?.total_employees ?? 0} entries</span>
+            <span>Showing {records.length ? (page - 1) * limit + 1 : 0} to {Math.min(page * limit, records.length + (page - 1) * limit)} entries</span>
             <div className="flex items-center gap-1.5">
-              <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50">
+              <button type="button" disabled={page === 1} onClick={() => setPage((current) => current - 1)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 disabled:opacity-40">
                 <ChevronLeft className="h-4 w-4" />
               </button>
-              <button className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#2563eb] font-semibold text-white">
-                1
-              </button>
-              <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">
-                2
-              </button>
-              <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">
-                3
-              </button>
-              <span className="px-1 text-gray-400">...</span>
-              <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">
-                25
-              </button>
-              <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50">
+              <span className="px-2 font-semibold text-gray-700">{page}</span>
+              <button type="button" disabled={records.length < limit} onClick={() => setPage((current) => current + 1)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 disabled:opacity-40">
                 <ChevronRight className="h-4 w-4" />
               </button>
             </div>

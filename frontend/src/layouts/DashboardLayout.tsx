@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CalendarMinus2, Check, TrendingUp, Users } from "lucide-react";
+import { CalendarMinus2, Users } from "lucide-react";
 
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
@@ -22,9 +22,6 @@ function DashboardLayout({
   onLogout,
 }: DashboardLayoutProps) {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
-
-  const storedUser = localStorage.getItem("user");
-  const user = storedUser ? JSON.parse(storedUser) : null;
 
   useEffect(() => {
     let isMounted = true;
@@ -74,7 +71,7 @@ function DashboardLayout({
             <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div className="flex items-center gap-4 rounded-2xl bg-[#eff6ff] p-5">
                 <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white text-[#2563eb] shadow-sm">
-                  ♟
+                  <Users className="h-6 w-6" />
                 </span>
                 <div>
                   <p className="text-sm text-gray-600">Total Headcount</p>
@@ -106,7 +103,7 @@ function DashboardLayout({
 
               <div className="flex items-center gap-4 rounded-2xl bg-[#f5f3ff] p-5">
                 <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white text-[#7c3aed] shadow-sm">
-                  ▣
+                  <CalendarMinus2 className="h-6 w-6" />
                 </span>
                 <div>
                   <p className="text-sm text-gray-600">On Leave Today</p>
