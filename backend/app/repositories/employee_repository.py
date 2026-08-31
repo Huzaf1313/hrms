@@ -45,28 +45,23 @@ class EmployeeRepository:
         skip: int,
         limit: int,
     ):
-        # The users collection holds both login accounts (HR/Manager) and
-        # employee records - only documents with a business employee_id are
-        # actual employees.
-        employee_filters = {
-            "employee_id": {"$exists": True, "$ne": None},
+        filters = {
+            "employee_id": {"$exists": True},
             **filters,
         }
 
         cursor = (
             self.collection
-            .find(employee_filters)
+            .find(filters)
             .skip(skip)
             .limit(limit)
         )
 
         return await cursor.to_list(length=limit)
 
-    async def count_employees(self) -> int:
-        """Headcount = documents that are actual employees (have a business
-        employee_id), excluding plain login accounts."""
+    async def count_employees(self):
         return await self.collection.count_documents(
-            {"employee_id": {"$exists": True, "$ne": None}}
+            {"employee_id": {"$exists": True}}
         )
 
     async def update(

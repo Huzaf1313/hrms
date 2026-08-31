@@ -15,11 +15,11 @@ export interface GetAttendanceParams {
 
 export const attendanceService = {
   list(params: GetAttendanceParams = {}) {
-    return api.get<AttendanceListResponse>("/admin/attendance", { ...params });
+    return api.get<AttendanceListResponse>("/attendance", { ...params });
   },
 
   summary(date: string, departmentId?: string) {
-    return api.get<AttendanceSummary>("/admin/attendance/summary", {
+    return api.get<AttendanceSummary>("/attendance/summary", {
       date,
       department_id: departmentId,
     });

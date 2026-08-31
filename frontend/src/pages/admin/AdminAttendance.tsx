@@ -223,35 +223,51 @@ function AdminAttendance() {
     let isCurrent = true;
 
     async function loadAttendance() {
-      try {
-        const [attendance, attendanceSummary, departmentList] =
-          await Promise.all([
-            attendanceService.list({
-              date,
-              department_id: departmentId || undefined,
-              status: status || undefined,
-              search: search || undefined,
-              page,
-              limit,
-            }),
-            attendanceService.summary(date, departmentId || undefined),
-            departmentService.list(),
-          ]);
+      setError("");
+      const [attendanceResult, summaryResult, departmentsResult] =
+        await Promise.allSettled([
+          attendanceService.list({
+            date,
+            department_id: departmentId || undefined,
+            status: status || undefined,
+            search: search || undefined,
+            page,
+            limit,
+          }),
+          attendanceService.summary(date, departmentId || undefined),
+          departmentService.list(),
+        ]);
 
-        if (!isCurrent) return;
-        setRecords(attendance.items);
-        setSummary(attendanceSummary);
-        setDepartments(departmentList);
-      } catch (requestError: unknown) {
-        if (!isCurrent) return;
+      if (!isCurrent) return;
+
+      if (attendanceResult.status === "fulfilled") {
+        const attendance = attendanceResult.value;
+        if (Array.isArray(attendance.items)) {
+          setRecords(attendance.items);
+        } else {
+          setRecords([]);
+          setError("Attendance API returned an invalid response.");
+        }
+      } else {
+        const requestError = attendanceResult.reason;
         setError(
           requestError instanceof ApiError
             ? requestError.message
             : "Failed to load attendance data.",
         );
-      } finally {
-        if (isCurrent) setIsLoading(false);
       }
+
+      if (summaryResult.status === "fulfilled") {
+        setSummary(summaryResult.value);
+      } else {
+        setSummary(null);
+      }
+
+      if (departmentsResult.status === "fulfilled") {
+        setDepartments(departmentsResult.value);
+      }
+
+      setIsLoading(false);
     }
 
     loadAttendance();
@@ -534,8 +550,7 @@ function AdminAttendance() {
                     <td className="py-4 text-gray-600">{row.employee.employee_code}</td>
                     <td className="py-4 text-gray-600">{row.employee.department_name ?? "-"}</td>
                     <td className="py-4">
-                      <div className="text-gray-700">{row.shift}</div>
-                      <div className="text-xs text-gray-400">{row.shift_start} - {row.shift_end}</div>
+                    <div className="text-gray-700">{row.shift}</div>
                     </td>
                     <td className="py-4 text-gray-600">{displayPunchTime(row.in_time ?? row.check_in)}</td>
                     <td className="py-4 text-gray-600">{displayPunchTime(row.out_time ?? row.check_out)}</td>

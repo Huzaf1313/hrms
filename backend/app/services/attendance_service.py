@@ -1,3 +1,4 @@
+import re
 from datetime import date, datetime, timezone, timedelta
 IST = timezone(timedelta(hours=5, minutes=30))
 
@@ -44,10 +45,33 @@ def calculate_working_hours(in_time: str | None, out_time: str | None) -> str | 
     if not in_time or not out_time:
         return None
 
-    try:
-        start = datetime.strptime(in_time, "%I:%M %p")
-        end = datetime.strptime(out_time, "%I:%M %p")
-    except ValueError:
+    def parse_time(value: str | datetime) -> datetime | None:
+        if isinstance(value, datetime):
+            if value.tzinfo is not None:
+                return value.astimezone(timezone.utc).replace(tzinfo=None)
+            return value
+
+        text = value.strip()
+
+        for time_format in ("%I:%M %p", "%H:%M"):
+            try:
+                return datetime.strptime(text, time_format)
+            except ValueError:
+                pass
+
+        try:
+            iso_text = text if text.endswith("Z") or "+" in text else f"{text}Z"
+            parsed = datetime.fromisoformat(iso_text.replace("Z", "+00:00"))
+            if parsed.tzinfo is not None:
+                return parsed.astimezone(timezone.utc).replace(tzinfo=None)
+            return parsed
+        except ValueError:
+            return None
+
+    start = parse_time(in_time)
+    end = parse_time(out_time)
+
+    if not start or not end:
         return None
 
     delta = end - start
@@ -60,7 +84,6 @@ def calculate_working_hours(in_time: str | None, out_time: str | None) -> str | 
 
     return f"{hours}h {minutes}m"
 
-
 def format_punch_time(value) -> str | None:
     if value is None:
         return None
@@ -71,6 +94,31 @@ def format_punch_time(value) -> str | None:
         ist_value = value.astimezone(IST)
         return ist_value.strftime("%I:%M %p")
 
+    if isinstance(value, str):
+        text = value.strip()
+
+        # Already in "hh:mm AM/PM" format — leave as-is.
+        if re.match(r"^\d{1,2}:\d{2}\s*[AP]M$", text, re.IGNORECASE):
+            return text
+
+        # Plain 24-hour "HH:MM" string — convert to 12-hour AM/PM.
+        try:
+            parsed = datetime.strptime(text, "%H:%M")
+            return parsed.strftime("%I:%M %p")
+        except ValueError:
+            pass
+
+        # ISO datetime string (with or without "Z") — convert UTC to IST.
+        try:
+            iso_text = text if text.endswith("Z") or "+" in text else f"{text}Z"
+            parsed_dt = datetime.fromisoformat(iso_text.replace("Z", "+00:00"))
+            parsed_dt = parsed_dt.astimezone(IST)
+            return parsed_dt.strftime("%I:%M %p")
+        except ValueError:
+            pass
+
+        return text
+
     return str(value)
 
 
@@ -79,7 +127,11 @@ def format_total_hours(value) -> str | None:
         return None
 
     if isinstance(value, (int, float)):
-        return f"{value:g}h"
+        total_minutes = round(value * 60)
+        hours = total_minutes // 60
+        minutes = total_minutes % 60
+
+        return f"{hours}hr {minutes}min"
 
     return str(value)
 
@@ -130,6 +182,14 @@ class AttendanceService:
         employee: dict | None,
         department: dict | None,
     ) -> AttendanceResponse:
+        in_time = attendance.get("in_time") or attendance.get("check_in")
+        out_time = attendance.get("out_time") or attendance.get("check_out")
+        working_hours = attendance.get("working_hours")
+        if working_hours is None:
+            working_hours = attendance.get("total_hours")
+        if working_hours is None:
+            working_hours = calculate_working_hours(in_time, out_time)
+
         employee_summary = EmployeeSummary(
             id=str(employee["_id"]) if employee else attendance["employee_id"],
             employee_code=employee.get("employee_id", "-") if employee else "-",
@@ -148,14 +208,12 @@ class AttendanceService:
             shift_start=attendance.get("shift_start"),
             shift_end=attendance.get("shift_end"),
             in_time=format_punch_time(
-                attendance.get("in_time") or attendance.get("check_in")
+                in_time
             ),
             out_time=format_punch_time(
-                attendance.get("out_time") or attendance.get("check_out")
+                out_time
             ),
-            working_hours=format_total_hours(
-                attendance.get("working_hours") or attendance.get("total_hours")
-            ),
+            working_hours=format_total_hours(working_hours),
             status=attendance.get("status") or "present",
             is_regularized=attendance.get("is_regularized", False),
             notes=attendance.get("notes"),
@@ -192,7 +250,6 @@ class AttendanceService:
             "status": data["status"],
             "notes": data.get("notes"),
             "updated_at": datetime.utcnow(),
-            "status": data["status"],
         }
 
         if existing:
@@ -350,6 +407,28 @@ class AttendanceService:
             limit=pagination.limit,
         )
 
+    async def get_employee_attendance(
+        self,
+        employee_id: str,
+        pagination: PaginationParams,
+    ) -> list[AttendanceResponse]:
+        records = await self.repository.get_all(
+            filters={"employee_id": employee_id},
+            skip=pagination.skip,
+            limit=pagination.limit,
+        )
+        employee = await self._get_employee(employee_id)
+        department = (
+            await self.department_repository.get_by_id(employee["department_id"])
+            if employee and employee.get("department_id")
+            else None
+        )
+
+        return [
+            self._serialize(record, employee, department)
+            for record in records
+        ]
+
     async def update_attendance(
         self,
         attendance_id: str,
@@ -406,46 +485,20 @@ class AttendanceService:
             employee_filters
         )
 
-        # Single source of truth: fetch attendance records ONCE,
-        # use this same data for both KPI cards and department breakdown.
-        attendance_records = await self.repository.get_all(
-            filters={
-                "date": to_datetime(attendance_date),
-                "employee_id": {"$in": employee_ids},
-            },
-            skip=0,
-            limit=10000,
+        attendance_filters = build_filter({"department_id": department_id})
+        attendance_filters["date"] = to_datetime(attendance_date)
+        attendance_filters["employee_id"] = {"$in": employee_ids}
+
+        status_counts = await self.repository.get_status_counts(attendance_filters)
+
+        marked_employee_ids = await self.repository.get_distinct_employee_ids(
+            attendance_filters
         )
-
-        employees_by_id = {
-            employee["employee_id"]: employee for employee in employees
-        }
-
-        status_counts: dict[str, int] = {}
-        marked_employee_ids: set[str] = set()
-        present_by_department: dict[str, int] = {}
-
-        for record in attendance_records:
-            status = (record.get("status") or "").lower()
-            status_counts[status] = status_counts.get(status, 0) + 1
-            marked_employee_ids.add(record["employee_id"])
-
-            employee = employees_by_id.get(record["employee_id"])
-            dept_id = record.get("department_id") or (
-                employee.get("department_id") if employee else None
-            )
-            if dept_id and status in PRESENT_LIKE_STATUSES:
-                present_by_department[dept_id] = (
-                    present_by_department.get(dept_id, 0) + 1
-                )
 
         # Employees with no record for the date default to "absent".
         unmarked_count = max(total_employees - len(marked_employee_ids), 0)
 
-        present_count = sum(
-            status_counts.get(status, 0)
-            for status in ("present", "working", "overtime")
-        )
+        present_count = status_counts.get("present", 0)
         late_count = status_counts.get("late", 0)
         on_leave_count = status_counts.get("on_leave", 0)
         missing_punch_count = status_counts.get("missing_punch", 0)
@@ -456,8 +509,32 @@ class AttendanceService:
                 return 0.0
             return round((count / total_employees) * 100, 1)
 
+        # Department-wise presence
+        present_by_department: dict[str, int] = {}
+        attendance_records = await self.repository.get_all(
+            filters={
+                "date": to_datetime(attendance_date),
+                "employee_id": {"$in": employee_ids},
+            },
+            skip=0,
+            limit=10000,
+        )
+        employees_by_id = {
+            employee["employee_id"]: employee for employee in employees
+        }
+        for record in attendance_records:
+            employee = employees_by_id.get(record["employee_id"])
+            dept_id = record.get("department_id") or (
+                employee.get("department_id") if employee else None
+            )
+            status = (record.get("status") or "").lower()
+            if dept_id and status in PRESENT_LIKE_STATUSES:
+                present_by_department[dept_id] = (
+                    present_by_department.get(dept_id, 0) + 1
+                )
+
         departments = await self.department_repository.get_all(
-            filters=build_filter({"_id": department_id}) if department_id else {},
+            filters={},
             skip=0,
             limit=1000,
         ) if hasattr(self.department_repository, "get_all") else []

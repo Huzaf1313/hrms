@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { CalendarMinus2, Users } from "lucide-react";
 
+import CelebrationTicker from "../components/CelebrationTicker";
+
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
 import HiringPipeline from "../components/HiringPipeline";
@@ -59,6 +61,8 @@ function DashboardLayout({
           <AdminLeave />
         ) : (
           <div className="px-8 pb-10 pt-8">
+            {/* Scrolling Celebration Announcement */}
+           <CelebrationTicker />
             {/* Page heading */}
             <div className="mb-6">
               <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
