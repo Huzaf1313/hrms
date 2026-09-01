@@ -15,11 +15,16 @@ from app.db.database import connect_to_database, close_database_connection
 from app.repositories.employee_attendance_repository import (
     EmployeeAttendanceRepository,
 )
+from app.repositories.employee_attendance_regularization_repository import (
+    EmployeeAttendanceRegularizationRepository,
+)
 from app.api.v1.users import router as users_router
 from app.api.v1.employee_attendance import router as employee_attendance_router
+from app.api.v1.employee_attendance_regularization import (
+    router as employee_attendance_regularization_router
+)
 from app.api.v1.leaves import router as leaves_router
 from app.api.v1.attendance import router as attendance_router
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -28,10 +33,14 @@ async def lifespan(app: FastAPI):
     attendance_repository = EmployeeAttendanceRepository()
     await attendance_repository.ensure_indexes()
 
+    regularization_repository = (
+        EmployeeAttendanceRegularizationRepository()
+    )
+    await regularization_repository.ensure_indexes()
+
     yield
 
     close_database_connection()
-
 
 async def app_exception_handler(
     request: Request,
@@ -86,6 +95,11 @@ app.include_router(
 
 app.include_router(
     employee_attendance_router,
+    prefix="/api/v1",
+)
+
+app.include_router(
+    employee_attendance_regularization_router,
     prefix="/api/v1",
 )
 

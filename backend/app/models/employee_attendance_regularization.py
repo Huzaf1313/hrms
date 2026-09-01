@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, Field
 
@@ -9,7 +9,7 @@ class AttendanceRegularizationModel(BaseModel):
     employee_id: str
     attendance_id: str
 
-    date: str
+    date: date
 
     issue_type: str
 
