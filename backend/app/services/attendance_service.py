@@ -1,4 +1,6 @@
-from datetime import date, datetime
+import re
+from datetime import date, datetime, timezone, timedelta
+IST = timezone(timedelta(hours=5, minutes=30))
 
 from app.core.exceptions import AppException
 from app.repositories.attendance_repository import AttendanceRepository
@@ -43,10 +45,33 @@ def calculate_working_hours(in_time: str | None, out_time: str | None) -> str | 
     if not in_time or not out_time:
         return None
 
-    try:
-        start = datetime.strptime(in_time, "%I:%M %p")
-        end = datetime.strptime(out_time, "%I:%M %p")
-    except ValueError:
+    def parse_time(value: str | datetime) -> datetime | None:
+        if isinstance(value, datetime):
+            if value.tzinfo is not None:
+                return value.astimezone(timezone.utc).replace(tzinfo=None)
+            return value
+
+        text = value.strip()
+
+        for time_format in ("%I:%M %p", "%H:%M"):
+            try:
+                return datetime.strptime(text, time_format)
+            except ValueError:
+                pass
+
+        try:
+            iso_text = text if text.endswith("Z") or "+" in text else f"{text}Z"
+            parsed = datetime.fromisoformat(iso_text.replace("Z", "+00:00"))
+            if parsed.tzinfo is not None:
+                return parsed.astimezone(timezone.utc).replace(tzinfo=None)
+            return parsed
+        except ValueError:
+            return None
+
+    start = parse_time(in_time)
+    end = parse_time(out_time)
+
+    if not start or not end:
         return None
 
     delta = end - start
@@ -59,13 +84,40 @@ def calculate_working_hours(in_time: str | None, out_time: str | None) -> str | 
 
     return f"{hours}h {minutes}m"
 
-
 def format_punch_time(value) -> str | None:
     if value is None:
         return None
 
     if isinstance(value, datetime):
-        return value.strftime("%I:%M %p")
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        ist_value = value.astimezone(IST)
+        return ist_value.strftime("%I:%M %p")
+
+    if isinstance(value, str):
+        text = value.strip()
+
+        # Already in "hh:mm AM/PM" format — leave as-is.
+        if re.match(r"^\d{1,2}:\d{2}\s*[AP]M$", text, re.IGNORECASE):
+            return text
+
+        # Plain 24-hour "HH:MM" string — convert to 12-hour AM/PM.
+        try:
+            parsed = datetime.strptime(text, "%H:%M")
+            return parsed.strftime("%I:%M %p")
+        except ValueError:
+            pass
+
+        # ISO datetime string (with or without "Z") — convert UTC to IST.
+        try:
+            iso_text = text if text.endswith("Z") or "+" in text else f"{text}Z"
+            parsed_dt = datetime.fromisoformat(iso_text.replace("Z", "+00:00"))
+            parsed_dt = parsed_dt.astimezone(IST)
+            return parsed_dt.strftime("%I:%M %p")
+        except ValueError:
+            pass
+
+        return text
 
     return str(value)
 
@@ -75,7 +127,11 @@ def format_total_hours(value) -> str | None:
         return None
 
     if isinstance(value, (int, float)):
-        return f"{value:g}h"
+        total_minutes = round(value * 60)
+        hours = total_minutes // 60
+        minutes = total_minutes % 60
+
+        return f"{hours}hr {minutes}min"
 
     return str(value)
 
@@ -126,6 +182,14 @@ class AttendanceService:
         employee: dict | None,
         department: dict | None,
     ) -> AttendanceResponse:
+        in_time = attendance.get("in_time") or attendance.get("check_in")
+        out_time = attendance.get("out_time") or attendance.get("check_out")
+        working_hours = attendance.get("working_hours")
+        if working_hours is None:
+            working_hours = attendance.get("total_hours")
+        if working_hours is None:
+            working_hours = calculate_working_hours(in_time, out_time)
+
         employee_summary = EmployeeSummary(
             id=str(employee["_id"]) if employee else attendance["employee_id"],
             employee_code=employee.get("employee_id", "-") if employee else "-",
@@ -144,14 +208,12 @@ class AttendanceService:
             shift_start=attendance.get("shift_start"),
             shift_end=attendance.get("shift_end"),
             in_time=format_punch_time(
-                attendance.get("in_time") or attendance.get("check_in")
+                in_time
             ),
             out_time=format_punch_time(
-                attendance.get("out_time") or attendance.get("check_out")
+                out_time
             ),
-            working_hours=format_total_hours(
-                attendance.get("working_hours") or attendance.get("total_hours")
-            ),
+            working_hours=format_total_hours(working_hours),
             status=attendance.get("status") or "present",
             is_regularized=attendance.get("is_regularized", False),
             notes=attendance.get("notes"),
@@ -344,6 +406,28 @@ class AttendanceService:
             page=pagination.page,
             limit=pagination.limit,
         )
+
+    async def get_employee_attendance(
+        self,
+        employee_id: str,
+        pagination: PaginationParams,
+    ) -> list[AttendanceResponse]:
+        records = await self.repository.get_all(
+            filters={"employee_id": employee_id},
+            skip=pagination.skip,
+            limit=pagination.limit,
+        )
+        employee = await self._get_employee(employee_id)
+        department = (
+            await self.department_repository.get_by_id(employee["department_id"])
+            if employee and employee.get("department_id")
+            else None
+        )
+
+        return [
+            self._serialize(record, employee, department)
+            for record in records
+        ]
 
     async def update_attendance(
         self,

@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
+import { Eye, EyeOff } from "lucide-react";
 
 import type { Department } from "../../types/department";
 import type { Employee, EmployeeCreate } from "../../types/employee";
@@ -28,6 +29,7 @@ function toFormState(employee?: Employee): EmployeeCreate {
       last_name: "",
       email: "",
       phone: "",
+      password: "Temp@1234",
       date_of_birth: "",
       gender: "",
       address: "",
@@ -46,6 +48,7 @@ function toFormState(employee?: Employee): EmployeeCreate {
     last_name: employee.last_name,
     email: employee.email,
     phone: employee.phone,
+    password: "",
     date_of_birth: employee.date_of_birth ?? "",
     gender: employee.gender ?? "",
     address: employee.address ?? "",
@@ -71,6 +74,7 @@ function AdminEmployeeForm({
   );
 
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
   const [showPassword, setShowPassword] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
@@ -167,6 +171,10 @@ function AdminEmployeeForm({
       work_location: form.work_location || undefined,
       reporting_manager: form.reporting_manager || undefined,
     };
+
+    if (isEditMode && !form.password) {
+      payload.password = undefined;
+    }
 
     onSubmit(payload);
   }
@@ -556,6 +564,40 @@ function AdminEmployeeForm({
               placeholder="Manager name"
               className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
             />
+          </div>
+
+          {/* PASSWORD */}
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
+              Temporary Password
+            </label>
+
+            <div className="relative">
+              <input
+                required={!isEditMode}
+                type={isPasswordVisible ? "text" : "password"}
+                value={form.password ?? ""}
+                onChange={(event) =>
+                  updateField("password", event.target.value)
+                }
+                placeholder={isEditMode ? "Leave blank to keep current" : "Temp@1234"}
+                minLength={8}
+                className="w-full rounded-xl border border-gray-200 px-4 py-3 pr-12 text-sm outline-none transition focus:border-[#456b54] focus:ring-2 focus:ring-[#456b54]/10"
+              />
+              <button
+                type="button"
+                onClick={() => setIsPasswordVisible((visible) => !visible)}
+                aria-label={isPasswordVisible ? "Hide password" : "Show password"}
+                title={isPasswordVisible ? "Hide password" : "Show password"}
+                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-gray-500 transition hover:bg-gray-100 hover:text-[#456b54]"
+              >
+                {isPasswordVisible ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </button>
+            </div>
           </div>
 
           {/* ADDRESS */}

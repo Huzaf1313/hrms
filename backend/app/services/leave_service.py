@@ -3,6 +3,8 @@ from datetime import date, datetime, time, timedelta, timezone
 from bson import ObjectId
 
 from app.core.exceptions import AppException
+from app.repositories.department_repository import DepartmentRepository
+from app.repositories.employee_repository import EmployeeRepository
 from app.repositories.leave_repository import LeaveRepository
 
 
@@ -10,6 +12,8 @@ class LeaveService:
 
     def __init__(self):
         self.repository = LeaveRepository()
+        self.employee_repository = EmployeeRepository()
+        self.department_repository = DepartmentRepository()
 
     async def create_leave(
         self,
@@ -63,7 +67,7 @@ class LeaveService:
 
         result = await self.repository.create(document)
 
-        return self._serialize(result)
+        return await self._serialize(result)
 
     async def get_leave(self, leave_id: str):
         leave = await self.repository.get_by_id(leave_id)
@@ -74,7 +78,7 @@ class LeaveService:
                 404,
             )
 
-        return self._serialize(leave)
+        return await self._serialize(leave)
 
     async def get_leaves(
         self,
@@ -83,6 +87,7 @@ class LeaveService:
         status: str | None = None,
         employee_id: str | None = None,
         leave_type: str | None = None,
+        department_id: str | None = None,
     ):
         filters = {}
 
@@ -94,6 +99,15 @@ class LeaveService:
 
         if leave_type:
             filters["leave_type"] = leave_type
+
+        if department_id:
+            employees = await self.employee_repository.get_all(
+                filters={"department_id": department_id},
+                skip=0,
+                limit=10000,
+            )
+            employee_ids = [employee["employee_id"] for employee in employees]
+            filters["employee_id"] = {"$in": employee_ids}
 
         skip = (page - 1) * limit
 
@@ -107,7 +121,7 @@ class LeaveService:
 
         return {
             "items": [
-                self._serialize(record)
+                await self._serialize(record)
                 for record in records
             ],
             "total": total,
@@ -159,7 +173,7 @@ class LeaveService:
             update_data,
         )
 
-        return self._serialize(updated)
+        return await self._serialize(updated)
 
     async def delete_leave(self, leave_id: str):
         leave = await self.repository.get_by_id(leave_id)
@@ -233,14 +247,30 @@ class LeaveService:
             upcoming_end=upcoming_end,
         )
 
-    @staticmethod
-    def _serialize(document: dict):
+    async def _serialize(self, document: dict):
         if not document:
             return None
+
+        employee = await self.employee_repository.get_by_employee_id(
+            document["employee_id"]
+        )
+        department_id = employee.get("department_id") if employee else None
+        department = (
+            await self.department_repository.get_by_id(department_id)
+            if department_id
+            else None
+        )
 
         return {
             "id": str(document["_id"]),
             "employee_id": document["employee_id"],
+            "employee_name": (
+                f"{employee.get('first_name', '')} {employee.get('last_name', '')}".strip()
+                if employee
+                else None
+            ),
+            "department_id": department_id,
+            "department_name": department.get("name") if department else None,
             "leave_type": document["leave_type"],
             "start_date": document["start_date"].date(),
             "end_date": document["end_date"].date(),

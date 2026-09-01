@@ -1,6 +1,4 @@
 from datetime import datetime
-import secrets
-import string
 
 from app.core.exceptions import AppException
 from app.core.roles import UserRole
@@ -9,15 +7,6 @@ from app.repositories.department_repository import DepartmentRepository
 from app.repositories.employee_repository import EmployeeRepository
 from app.utils.filtering import build_filter
 from app.utils.pagination import PaginationParams
-
-
-def generate_temporary_password() -> str:
-    """Readable temp password guaranteed to satisfy complexity rules:
-    'Hrms@' + 4 letters + 3 digits, e.g. Hrms@kQxT482."""
-    letters = "".join(secrets.choice(string.ascii_letters) for _ in range(4))
-    digits = "".join(secrets.choice(string.digits) for _ in range(3))
-
-    return f"Hrms@{letters}{digits}"
 
 
 class EmployeeService:
@@ -56,23 +45,21 @@ class EmployeeService:
                 400,
             )
 
-        temporary_password = (
-            employee_data.pop("password", None)
-            or generate_temporary_password()
+        employee_data["status"] = "active"
+        employee_data["full_name"] = (
+            f'{employee_data["first_name"]} {employee_data["last_name"]}'
+        ).strip()
+        employee_data["phone_number"] = employee_data["phone"]
+        temporary_password = employee_data["password"]
+        employee_data["password_hash"] = hash_password(
+            employee_data.pop("password")
         )
-
-        now = datetime.utcnow()
-
-        # Employees live in the same collection as login accounts - add
-        # auth fields so the employee can sign in with these credentials.
-        employee_data["password_hash"] = hash_password(temporary_password)
         employee_data["role"] = UserRole.EMPLOYEE.value
         employee_data["is_active"] = True
         employee_data["is_locked"] = False
         employee_data["failed_login_attempts"] = 0
-        employee_data["status"] = "active"
-        employee_data["created_at"] = now
-        employee_data["updated_at"] = now
+        employee_data["created_at"] = datetime.utcnow()
+        employee_data["updated_at"] = datetime.utcnow()
 
         employee = await self.repository.create(employee_data)
 
@@ -155,6 +142,24 @@ class EmployeeService:
             for key, value in update_data.items()
             if value is not None
         }
+
+        if "password" in update_data:
+            update_data["password_hash"] = hash_password(
+                update_data.pop("password")
+            )
+            update_data["full_name"] = (
+                f'{employee["first_name"]} {employee["last_name"]}'
+            ).strip()
+            update_data["phone_number"] = employee.get("phone")
+            update_data["role"] = UserRole.EMPLOYEE.value
+            update_data["is_active"] = True
+            update_data["is_locked"] = False
+            update_data["failed_login_attempts"] = 0
+
+        if "first_name" in update_data or "last_name" in update_data:
+            first_name = update_data.get("first_name", employee["first_name"])
+            last_name = update_data.get("last_name", employee["last_name"])
+            update_data["full_name"] = f"{first_name} {last_name}".strip()
 
         if "email" in update_data and update_data["email"] != employee.get("email"):
             existing_email = await self.repository.get_by_email(

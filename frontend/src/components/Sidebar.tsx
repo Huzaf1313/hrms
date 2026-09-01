@@ -15,6 +15,7 @@ import {
 interface SidebarProps {
   activePage: string;
   onNavigate: (page: string) => void;
+  onLogout?: () => void; // Added optional onLogout prop just in case you want to use it here later
 }
 
 interface NavItem {

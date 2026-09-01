@@ -4,6 +4,8 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from app.api.v1.leaves import router as leaves_router
+from app.api.v1.attendance import router as attendance_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.departments import router as departments_router
 from app.api.v1.employees import router as employees_router
@@ -16,9 +18,6 @@ from app.repositories.employee_attendance_repository import (
     EmployeeAttendanceRepository,
 )
 from app.api.v1.users import router as users_router
-from app.api.v1.employee_attendance import router as employee_attendance_router
-from app.api.v1.leaves import router as leaves_router
-from app.api.v1.attendance import router as attendance_router
 
 
 @asynccontextmanager
@@ -30,7 +29,7 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    close_database_connection()
+    await close_database_connection()
 
 
 async def app_exception_handler(
@@ -67,26 +66,25 @@ app.add_middleware(
 app.include_router(
     health_router,
     prefix="/api/v1",
+    tags=["Health"],
 )
 
 app.include_router(
     auth_router,
     prefix="/api/v1",
+    tags=["Authentication"],
 )
 
 app.include_router(
     departments_router,
     prefix="/api/v1",
+    tags=["Departments"],
 )
 
 app.include_router(
     employees_router,
     prefix="/api/v1",
-)
-
-app.include_router(
-    employee_attendance_router,
-    prefix="/api/v1",
+    tags=["Employees"],
 )
 
 app.include_router(
@@ -102,9 +100,11 @@ app.include_router(
 app.include_router(
     users_router,
     prefix="/api/v1",
+    tags=["Users"],
 )
 
 app.include_router(
     dashboard_router,
     prefix="/api/v1",
+    tags=["Dashboard"],
 )

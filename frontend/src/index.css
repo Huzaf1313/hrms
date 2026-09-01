@@ -5,3 +5,34 @@ body {
   font-family: "Outfit", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
     sans-serif;
 }
+
+/* =========================================
+   Celebration Scrolling Announcement
+========================================= */
+
+.celebration-marquee {
+  animation: celebration-scroll 35s linear infinite;
+  will-change: transform;
+}
+
+/* Pause when user hovers over the celebration bar */
+.celebration-marquee:hover {
+  animation-play-state: paused;
+}
+
+@keyframes celebration-scroll {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* Respect users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .celebration-marquee {
+    animation: none;
+  }
+}

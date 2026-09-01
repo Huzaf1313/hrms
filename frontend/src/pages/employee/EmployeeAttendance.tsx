@@ -20,11 +20,24 @@ interface AttendanceRecord {
   date: string;
   check_in: string | null;
   check_out: string | null;
+  in_time?: string | null;
+  out_time?: string | null;
   status: string;
   total_hours: number | null;
+  working_hours?: string | null;
   remarks: string | null;
   created_at: string | null;
   updated_at: string | null;
+}
+
+function normalizeAttendance(record: AttendanceRecord): AttendanceRecord {
+  return {
+    ...record,
+    employee_id: record.employee_id || "",
+    check_in: record.check_in ?? record.in_time ?? null,
+    check_out: record.check_out ?? record.out_time ?? null,
+    total_hours: record.total_hours ?? null,
+  };
 }
 
 function EmployeeAttendance() {
@@ -84,7 +97,7 @@ const records = await api.get<AttendanceRecord[]>(
   },
 );
 
-      setAttendanceRecords(records);
+  setAttendanceRecords(records.map(normalizeAttendance));
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);
@@ -154,11 +167,22 @@ const records = await api.get<AttendanceRecord[]>(
             return "--";
         }
 
-        const utcValue = value.endsWith("Z")
-            ? value
-            : `${value}Z`;
+      const text = value.trim();
 
-        return new Date(utcValue).toLocaleTimeString("en-IN", {
+      if (/^\d{1,2}:\d{2}\s*[AP]M$/i.test(text)) {
+        return text;
+      }
+
+      const utcValue = text.endsWith("Z") || text.includes("+")
+        ? text
+        : `${text}Z`;
+      const parsed = new Date(utcValue);
+
+      if (Number.isNaN(parsed.getTime())) {
+        return "--";
+      }
+
+      return parsed.toLocaleTimeString("en-IN", {
             timeZone: "Asia/Kolkata",
             hour: "2-digit",
             minute: "2-digit",
@@ -177,7 +201,7 @@ const records = await api.get<AttendanceRecord[]>(
             return;
         }
 
-        if (todayRecord) {
+        if (todayRecord?.check_in) {
             setActionError("Attendance has already been marked for today.");
             return;
         }
@@ -193,15 +217,15 @@ const records = await api.get<AttendanceRecord[]>(
             {
                 employee_id: employeeId,
                 date: now.toISOString().split("T")[0],
-                check_in: now.toISOString(),
-                check_out: null,
-                status: "Present",
-                total_hours: null,
+                in_time: now.toISOString(),
+                out_time: null,
+                status: "present",
+                working_hours: null,
             },
             );
 
             setAttendanceRecords((records) => [
-            attendance,
+              normalizeAttendance(attendance),
             ...records,
             ]);
         } catch (err) {
@@ -244,24 +268,18 @@ const records = await api.get<AttendanceRecord[]>(
                 setActionError(null);
 
                 const checkOutTime = new Date();
-                const checkInTime = new Date(todayRecord.check_in);
-
-                const totalHours =
-                (checkOutTime.getTime() - checkInTime.getTime()) /
-                (1000 * 60 * 60);
 
                 const attendance = await api.put<AttendanceRecord>(
                 `/attendance/${todayRecord.id}`,
                 {
-                    check_out: checkOutTime.toISOString(),
-                    total_hours: Number(totalHours.toFixed(2)),
+                    out_time: checkOutTime.toISOString(),
                 },
                 );
 
                 setAttendanceRecords((records) =>
                 records.map((record) =>
                     record.id === attendance.id
-                    ? attendance
+                    ? normalizeAttendance(attendance)
                     : record,
                 ),
                 );
@@ -579,7 +597,7 @@ const records = await api.get<AttendanceRecord[]>(
 
                 {/* Attendance Actions */}
                     <div className="mt-4">
-                        {!todayRecord ? (
+                            {!todayRecord?.check_in ? (
                              <button
                             type="button"
                              onClick={handleCheckIn}

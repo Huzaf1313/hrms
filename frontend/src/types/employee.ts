@@ -54,6 +54,9 @@ export interface Employee {
   last_name: string;
   email: string;
   phone: string;
+  password?: string;
+  avatar_url?: string;
+  credentials?: EmployeeCredentials;
 
   date_of_birth?: string;
   gender?: string;
@@ -77,9 +80,6 @@ export interface Employee {
 
   // Status
   status: EmployeeStatus;
-
-  // Only returned right after creation
-  credentials?: EmployeeCredentials;
 }
 
 export interface EmployeeCreate {
@@ -88,6 +88,7 @@ export interface EmployeeCreate {
   last_name: string;
   email: string;
   phone: string;
+  password?: string;
 
   date_of_birth?: string;
   gender?: string;
@@ -102,9 +103,6 @@ export interface EmployeeCreate {
 
   emergency_contact?: EmergencyContact;
   bank_information?: BankInformation;
-
-  // Optional custom login password (auto-generated when omitted)
-  password?: string;
 }
 
 export interface EmployeeUpdate {

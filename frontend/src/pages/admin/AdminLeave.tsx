@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   CalendarDays,
   Clock,
@@ -19,72 +19,9 @@ import {
   ChevronRight,
   ChevronDown,
 } from "lucide-react";
-
-// TODO: replace all mock data below with real API calls once the backend
-// Leave module exists - follow the same repository/service/router pattern
-// used for Attendance (app/repositories/leave_repository.py,
-// app/services/leave_service.py, app/api/v1/leave.py).
-
-type LeaveStatus = "pending" | "approved" | "rejected";
-
-interface LeaveRequest {
-  id: string;
-  name: string;
-  employeeCode: string;
-  department: string;
-  leaveType: string;
-  leaveTypeColor: string;
-  fromDate: string;
-  toDate: string;
-  days: number;
-  status: LeaveStatus;
-  appliedOn: string;
-}
-
-const statCards = [
-  {
-    label: "Total Leave Requests",
-    value: "128",
-    sub: "This Month",
-    icon: CalendarDays,
-    iconBg: "bg-blue-500",
-  },
-  {
-    label: "Pending Requests",
-    value: "28",
-    sub: "Awaiting Approval",
-    icon: Clock,
-    iconBg: "bg-orange-500",
-  },
-  {
-    label: "Approved Requests",
-    value: "86",
-    sub: "This Month",
-    icon: CheckCircle2,
-    iconBg: "bg-emerald-500",
-  },
-  {
-    label: "Rejected Requests",
-    value: "14",
-    sub: "This Month",
-    icon: XCircle,
-    iconBg: "bg-rose-500",
-  },
-  {
-    label: "On Leave Today",
-    value: "18",
-    sub: "Employees",
-    icon: UserRound,
-    iconBg: "bg-violet-500",
-  },
-  {
-    label: "Upcoming Leaves",
-    value: "32",
-    sub: "Next 7 Days",
-    icon: CalendarClock,
-    iconBg: "bg-teal-500",
-  },
-];
+import { departmentService } from "../../services/departmentService";
+import { leaveService, type LeaveRequest, type LeaveStatus, type LeaveSummary } from "../../services/leaveService";
+import type { Department } from "../../types/department";
 
 const leaveBalances = [
   {
@@ -128,103 +65,18 @@ const leaveTypeColors: Record<string, string> = {
   "Comp Off": "bg-violet-50 text-violet-600",
 };
 
-const leaveRequests: LeaveRequest[] = [
-  {
-    id: "1",
-    name: "Sneha Patil",
-    employeeCode: "EMP004",
-    department: "Engineering",
-    leaveType: "Casual Leave",
-    leaveTypeColor: leaveTypeColors["Casual Leave"],
-    fromDate: "24 May 2024",
-    toDate: "25 May 2024",
-    days: 2,
-    status: "pending",
-    appliedOn: "22 May 2024",
-  },
-  {
-    id: "2",
-    name: "Rahul Sharma",
-    employeeCode: "EMP001",
-    department: "Engineering",
-    leaveType: "Sick Leave",
-    leaveTypeColor: leaveTypeColors["Sick Leave"],
-    fromDate: "23 May 2024",
-    toDate: "23 May 2024",
-    days: 1,
-    status: "pending",
-    appliedOn: "22 May 2024",
-  },
-  {
-    id: "3",
-    name: "Priya Singh",
-    employeeCode: "EMP002",
-    department: "HR",
-    leaveType: "Earned Leave",
-    leaveTypeColor: leaveTypeColors["Earned Leave"],
-    fromDate: "20 May 2024",
-    toDate: "20 May 2024",
-    days: 3,
-    status: "approved",
-    appliedOn: "18 May 2024",
-  },
-  {
-    id: "4",
-    name: "Amit Kumar",
-    employeeCode: "EMP003",
-    department: "Sales",
-    leaveType: "Casual Leave",
-    leaveTypeColor: leaveTypeColors["Casual Leave"],
-    fromDate: "17 May 2024",
-    toDate: "17 May 2024",
-    days: 1,
-    status: "rejected",
-    appliedOn: "16 May 2024",
-  },
-  {
-    id: "5",
-    name: "Vikram Joshi",
-    employeeCode: "EMP005",
-    department: "Marketing",
-    leaveType: "Comp Off",
-    leaveTypeColor: leaveTypeColors["Comp Off"],
-    fromDate: "27 May 2024",
-    toDate: "27 May 2024",
-    days: 1,
-    status: "approved",
-    appliedOn: "21 May 2024",
-  },
-];
-
-const upcomingLeaves = [
-  {
-    name: "Rahul Sharma",
-    employeeCode: "EMP001",
-    leaveType: "Casual Leave",
-    leaveTypeColor: leaveTypeColors["Casual Leave"],
-    range: "24 May 2024 - 25 May 2024",
-    days: "2 Days",
-  },
-  {
-    name: "Priya Singh",
-    employeeCode: "EMP002",
-    leaveType: "Earned Leave",
-    leaveTypeColor: leaveTypeColors["Earned Leave"],
-    range: "26 May 2024 - 28 May 2024",
-    days: "3 Days",
-  },
-];
-
 const statusStyles: Record<LeaveStatus, string> = {
   pending: "bg-orange-50 text-orange-500",
   approved: "bg-emerald-50 text-emerald-600",
   rejected: "bg-rose-50 text-rose-600",
+  cancelled: "bg-gray-50 text-gray-500",
 };
 
 const statusLabel: Record<LeaveStatus, string> = {
   pending: "Pending",
   approved: "Approved",
   rejected: "Rejected",
+  cancelled: "Cancelled",
 };
 
 // --- Line chart (pure SVG, no external chart library required) --------
@@ -382,6 +234,57 @@ function LeaveCalendar() {
 
 function AdminLeave() {
   const [departmentFilter, setDepartmentFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState<LeaveStatus | "">("");
+  const [leaveTypeFilter, setLeaveTypeFilter] = useState("");
+  const [requests, setRequests] = useState<LeaveRequest[]>([]);
+  const [summary, setSummary] = useState<LeaveSummary | null>(null);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([
+      leaveService.list({ page, limit: 10, status: statusFilter || undefined, leave_type: leaveTypeFilter || undefined, department_id: departmentFilter || undefined }),
+      leaveService.summary(),
+      departmentService.list(),
+    ]).then(([list, leaveSummary, departmentList]) => {
+      if (cancelled) return;
+      setRequests(list.items);
+      setPages(list.pages);
+      setTotal(list.total);
+      setSummary(leaveSummary);
+      setDepartments(departmentList);
+      setError("");
+    }).catch(() => {
+      if (!cancelled) setError("Failed to load leave data.");
+    }).finally(() => {
+      if (!cancelled) setIsLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [departmentFilter, leaveTypeFilter, page, statusFilter]);
+
+  const statCards = [
+    { label: "Total Leave Requests", value: summary?.total_leave_requests ?? "-", sub: "This Month", icon: CalendarDays, iconBg: "bg-blue-500" },
+    { label: "Pending Requests", value: summary?.pending_requests ?? "-", sub: "Awaiting Approval", icon: Clock, iconBg: "bg-orange-500" },
+    { label: "Approved Requests", value: summary?.approved_requests ?? "-", sub: "This Month", icon: CheckCircle2, iconBg: "bg-emerald-500" },
+    { label: "Rejected Requests", value: summary?.rejected_requests ?? "-", sub: "This Month", icon: XCircle, iconBg: "bg-rose-500" },
+    { label: "On Leave Today", value: summary?.on_leave_today ?? "-", sub: "Employees", icon: UserRound, iconBg: "bg-violet-500" },
+    { label: "Upcoming Leaves", value: summary?.upcoming_leaves ?? "-", sub: "Next 7 Days", icon: CalendarClock, iconBg: "bg-teal-500" },
+  ];
+
+  async function updateRequestStatus(request: LeaveRequest, nextStatus: "approved" | "rejected") {
+    try {
+      await leaveService.updateStatus(request.id, nextStatus);
+      setRequests((current) => current.map((item) => item.id === request.id ? { ...item, status: nextStatus } : item));
+      setSummary(await leaveService.summary());
+    } catch {
+      setError("Unable to update this leave request.");
+    }
+  }
 
   return (
     <div className="px-10 pb-10 pt-8">
@@ -476,12 +379,21 @@ function AdminLeave() {
               className="rounded-full border border-gray-200 bg-white px-4 py-2 text-sm text-gray-600 focus:border-[#2563eb] focus:outline-none"
             >
               <option value="">All Departments</option>
-              <option value="Engineering">Engineering</option>
-              <option value="HR">HR</option>
-              <option value="Sales">Sales</option>
-              <option value="Marketing">Marketing</option>
+              {departments.map((department) => (
+                <option key={department.id} value={department.id}>{department.name}</option>
+              ))}
             </select>
-            <button className="flex items-center gap-1.5 rounded-full border border-gray-200 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+            <select value={statusFilter} onChange={(event) => { setPage(1); setStatusFilter(event.target.value as LeaveStatus | ""); }} className="rounded-full border border-gray-200 bg-white px-4 py-2 text-sm text-gray-600 focus:border-[#2563eb] focus:outline-none">
+              <option value="">All Statuses</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+            </select>
+            <select value={leaveTypeFilter} onChange={(event) => { setPage(1); setLeaveTypeFilter(event.target.value); }} className="rounded-full border border-gray-200 bg-white px-4 py-2 text-sm text-gray-600 focus:border-[#2563eb] focus:outline-none">
+              <option value="">All Leave Types</option>
+              {Object.keys(leaveTypeColors).map((leaveType) => <option key={leaveType} value={leaveType}>{leaveType}</option>)}
+            </select>
+            <button type="button" onClick={() => { setPage(1); setDepartmentFilter(""); setStatusFilter(""); setLeaveTypeFilter(""); }} className="flex items-center gap-1.5 rounded-full border border-gray-200 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
               <Filter className="h-3.5 w-3.5" />
               Filters
             </button>
@@ -508,34 +420,45 @@ function AdminLeave() {
               </tr>
             </thead>
             <tbody>
-              {leaveRequests.map((request) => (
+              {isLoading ? (
+                <tr><td colSpan={9} className="py-10 text-center text-gray-500">Loading leave requests...</td></tr>
+              ) : error ? (
+                <tr><td colSpan={9} className="py-10 text-center text-rose-600">{error}</td></tr>
+              ) : requests.length === 0 ? (
+                <tr><td colSpan={9} className="py-10 text-center text-gray-500">No leave requests found.</td></tr>
+              ) : requests.map((request) => {
+                const name = request.employee_name || request.employee_id;
+                const fromDate = new Date(request.start_date).toLocaleDateString();
+                const toDate = new Date(request.end_date).toLocaleDateString();
+                const days = Math.max(1, Math.round((new Date(request.end_date).getTime() - new Date(request.start_date).getTime()) / 86400000) + 1);
+                return (
                 <tr key={request.id} className="border-b border-gray-50 last:border-0">
                   <td className="py-4">
                     <div className="flex items-center gap-3">
                       <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100 text-xs font-semibold text-blue-700">
-                        {request.name.split(" ").map((part) => part[0]).join("")}
+                        {name.split(" ").map((part) => part[0]).join("")}
                       </div>
                       <div>
-                        <div className="font-semibold text-gray-900">{request.name}</div>
-                        <div className="text-xs text-gray-400">{request.employeeCode}</div>
+                        <div className="font-semibold text-gray-900">{name}</div>
+                        <div className="text-xs text-gray-400">{request.employee_id}</div>
                       </div>
                     </div>
                   </td>
-                  <td className="py-4 text-gray-600">{request.department}</td>
+                  <td className="py-4 text-gray-600">{request.department_name || "-"}</td>
                   <td className="py-4">
-                    <span className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${request.leaveTypeColor}`}>
-                      {request.leaveType}
+                    <span className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${leaveTypeColors[request.leave_type] || "bg-gray-50 text-gray-600"}`}>
+                      {request.leave_type}
                     </span>
                   </td>
-                  <td className="py-4 text-gray-600">{request.fromDate}</td>
-                  <td className="py-4 text-gray-600">{request.toDate}</td>
-                  <td className="py-4 text-gray-600">{request.days}</td>
+                  <td className="py-4 text-gray-600">{fromDate}</td>
+                  <td className="py-4 text-gray-600">{toDate}</td>
+                  <td className="py-4 text-gray-600">{days}</td>
                   <td className="py-4">
                     <span className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${statusStyles[request.status]}`}>
                       {statusLabel[request.status]}
                     </span>
                   </td>
-                  <td className="py-4 text-gray-600">{request.appliedOn}</td>
+                  <td className="py-4 text-gray-600">{new Date(request.created_at).toLocaleDateString()}</td>
                   <td className="py-4">
                     <div className="flex items-center justify-end gap-2">
                       <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50">
@@ -543,10 +466,10 @@ function AdminLeave() {
                       </button>
                       {request.status === "pending" && (
                         <>
-                          <button className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500 text-white hover:bg-emerald-600">
+                          <button type="button" onClick={() => updateRequestStatus(request, "approved")} className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500 text-white hover:bg-emerald-600">
                             <Check className="h-3.5 w-3.5" />
                           </button>
-                          <button className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-500 text-white hover:bg-rose-600">
+                          <button type="button" onClick={() => updateRequestStatus(request, "rejected")} className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-500 text-white hover:bg-rose-600">
                             <X className="h-3.5 w-3.5" />
                           </button>
                         </>
@@ -554,32 +477,21 @@ function AdminLeave() {
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
 
         {/* Pagination */}
         <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-sm text-gray-500">
-          <span>Showing 1 to {leaveRequests.length} of 128 entries</span>
+          <span>Showing {total === 0 ? 0 : (page - 1) * 10 + 1} to {Math.min(page * 10, total)} of {total} entries</span>
           <div className="flex items-center gap-1.5">
-            <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50">
+            <button type="button" disabled={page === 1} onClick={() => setPage((current) => current - 1)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 disabled:opacity-40">
               <ChevronLeft className="h-4 w-4" />
             </button>
-            <button className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#2563eb] font-semibold text-white">
-              1
-            </button>
-            <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">
-              2
-            </button>
-            <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">
-              3
-            </button>
-            <span className="px-1 text-gray-400">...</span>
-            <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">
-              26
-            </button>
-            <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50">
+            <span className="px-2 font-semibold text-gray-700">{page} / {pages}</span>
+            <button type="button" disabled={page >= pages} onClick={() => setPage((current) => current + 1)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 disabled:opacity-40">
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>
@@ -606,26 +518,28 @@ function AdminLeave() {
             </button>
           </div>
           <div className="flex flex-col gap-4">
-            {upcomingLeaves.map((leave) => (
-              <div key={leave.employeeCode} className="flex items-center justify-between">
+            {requests.filter((request) => request.status === "approved").slice(0, 3).map((leave) => {
+              const name = leave.employee_name || leave.employee_id;
+              return <div key={leave.id} className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100 text-xs font-semibold text-blue-700">
-                    {leave.name.split(" ").map((part) => part[0]).join("")}
+                    {name.split(" ").map((part) => part[0]).join("")}
                   </div>
                   <div>
-                    <div className="text-sm font-semibold text-gray-900">{leave.name}</div>
-                    <div className="text-xs text-gray-400">{leave.employeeCode}</div>
-                    <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${leave.leaveTypeColor}`}>
-                      {leave.leaveType}
+                    <div className="text-sm font-semibold text-gray-900">{name}</div>
+                    <div className="text-xs text-gray-400">{leave.employee_id}</div>
+                    <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${leaveTypeColors[leave.leave_type] || "bg-gray-50 text-gray-600"}`}>
+                      {leave.leave_type}
                     </span>
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-xs text-gray-500">{leave.range}</div>
-                  <div className="text-xs font-semibold text-gray-700">{leave.days}</div>
+                  <div className="text-xs text-gray-500">{leave.start_date} - {leave.end_date}</div>
+                  <div className="text-xs font-semibold text-gray-700">Approved</div>
                 </div>
               </div>
-            ))}
+              ;
+            })}
           </div>
         </div>
       </div>

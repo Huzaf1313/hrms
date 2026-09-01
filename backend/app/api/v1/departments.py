@@ -53,11 +53,13 @@ async def create_department(
 )
 async def get_departments(
     name: str | None = Query(default=None),
-    current_user: dict = Depends(require_permission(Permission.DEPARTMENT_READ)),
-    pagination: PaginationParams = None,
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=10, ge=1, le=100),
 ):
-    if pagination is None:
-        pagination = PaginationParams()
+    pagination = PaginationParams(
+        page=page,
+        limit=limit,
+    )
 
     departments = await service.get_departments(
         name=name,
