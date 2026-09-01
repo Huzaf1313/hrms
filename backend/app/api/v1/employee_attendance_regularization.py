@@ -2,6 +2,7 @@ from datetime import date
 
 from fastapi import APIRouter, Depends, Query
 
+from app.api.deps import get_current_user
 from app.api.deps import require_permission
 from app.core.roles import Permission
 from app.schemas.common import APIResponse
@@ -12,11 +13,13 @@ from app.schemas.employee_attendance_regularization import (
 from app.services.employee_attendance_regularization_service import (
     EmployeeAttendanceRegularizationService,
 )
-
+from app.core.exceptions import AppException
+from app.repositories.employee_repository import EmployeeRepository
 
 router = APIRouter()
 
 service = EmployeeAttendanceRegularizationService()
+employee_repository = EmployeeRepository()
 
 # Keep this consistent with the current employee API setup.
 AUTH_ENABLED = False
@@ -65,15 +68,25 @@ def serialize_regularization(
 )
 async def create_regularization_request(
     data: AttendanceRegularizationCreate,
-    employee_id: str = Query(...),
-    current_user: dict | None = Depends(
+    current_user: dict = Depends(get_current_user),
+    _permission: dict | None = Depends(
         require_permission_toggle(
             Permission.ATTENDANCE_CREATE
         )
     ),
 ):
+    employee = await employee_repository.get_by_email(
+        current_user["email"]
+    )
+
+    if not employee:
+        raise AppException(
+            "No employee record found for this account",
+            404,
+        )
+
     regularization = await service.create_request(
-        employee_id=employee_id,
+        employee_id=employee["employee_id"],
         attendance_id=data.attendance_id,
         attendance_date=data.date,
         issue_type=data.issue_type,
@@ -87,7 +100,6 @@ async def create_regularization_request(
         message="Regularization request submitted successfully",
         data=serialize_regularization(regularization),
     )
-
 
 @router.get(
     "/employees/{employee_id}/attendance/regularization",
