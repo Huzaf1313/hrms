@@ -1,0 +1,454 @@
+import { useEffect, useState } from "react";
+
+interface AttendanceRecord {
+  id: string;
+  employee_id: string;
+  date: string;
+  check_in: string | null;
+  check_out: string | null;
+  status: string;
+  total_hours: number | null;
+  remarks: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+interface EmployeeAttendanceRegularizationModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  attendanceRecords: AttendanceRecord[];
+}
+
+function EmployeeAttendanceRegularizationModal({
+  isOpen,
+  onClose,
+  attendanceRecords,
+}: EmployeeAttendanceRegularizationModalProps) {
+  const [selectedDate, setSelectedDate] = useState("");
+  const [issueType, setIssueType] = useState("Missing Check-Out");
+  const [requestedTime, setRequestedTime] = useState("");
+  const [reason, setReason] = useState("");
+  const [attachment, setAttachment] = useState<File | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedDate("");
+      setIssueType("Missing Check-Out");
+      setRequestedTime("");
+      setReason("");
+      setAttachment(null);
+      setFormError(null);
+    }
+  }, [isOpen]);
+
+  if (!isOpen) {
+    return null;
+  }
+
+  const selectedAttendance = attendanceRecords.find(
+    (record) => record.date === selectedDate,
+  );
+
+  const formatTime = (value: string | null) => {
+    if (!value) {
+      return "--:--";
+    }
+
+    const utcValue = value.endsWith("Z") ? value : `${value}Z`;
+
+    return new Date(utcValue).toLocaleTimeString("en-IN", {
+      timeZone: "Asia/Kolkata",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const formatDate = (value: string) => {
+    if (!value) {
+      return "--";
+    }
+
+    const date = new Date(`${value}T00:00:00`);
+
+    return date.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      weekday: "long",
+    });
+  };
+
+  const handleAttachmentChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0] ?? null;
+
+    if (!file) {
+      return;
+    }
+
+    const allowedTypes = [
+      "image/jpeg",
+      "image/png",
+      "application/pdf",
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+      setFormError("Only JPG, PNG, and PDF files are allowed.");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setFormError("File size must be 5MB or less.");
+      return;
+    }
+
+    setFormError(null);
+    setAttachment(file);
+  };
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+
+    setFormError(null);
+
+    if (!selectedDate) {
+        setFormError("Please select an attendance date.");
+        return;
+    }
+
+    if (!selectedAttendance) {
+        setFormError("The selected attendance record could not be found.");
+        return;
+    }
+
+    if (!issueType) {
+        setFormError("Please select an issue type.");
+        return;
+    }
+
+    if (!requestedTime) {
+        setFormError("Please provide the requested time.");
+        return;
+    }
+
+    if (!reason.trim()) {
+        setFormError("Please provide a reason for the request.");
+        return;
+    }
+
+    if (reason.trim().length > 300) {
+        setFormError("Reason cannot exceed 300 characters.");
+        return;
+    }
+
+    // Backend submission will be added later.
+    console.log({
+        selectedDate,
+        issueType,
+        requestedTime,
+        reason: reason.trim(),
+        attachment,
+    });
+    };
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
+      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-xl">
+
+        {/* Header */}
+        <div className="flex items-start justify-between border-b border-gray-100 px-6 py-5">
+          <div>
+            <h2 className="text-xl font-bold text-[#17213a]">
+              Regularization Request
+            </h2>
+
+            <p className="mt-1 text-sm text-gray-500">
+              Request a correction for an attendance punch.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-xl text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
+            aria-label="Close"
+          >
+            ×
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+
+          {/* Select Date & Issue */}
+          <section className="border-b border-gray-100 px-6 py-6">
+
+            <h3 className="text-base font-bold text-[#17213a]">
+              1. Select Date & Issue
+            </h3>
+
+            <div className="mt-5 grid gap-5 sm:grid-cols-2">
+
+              {/* Attendance Date */}
+              <div>
+                <label className="text-sm font-semibold text-gray-700">
+                  Attendance Date <span className="text-red-500">*</span>
+                </label>
+
+                <select
+                    value={selectedDate}
+                    onChange={(event) => {
+                        const date = event.target.value;
+
+                        setSelectedDate(date);
+                        setRequestedTime("");
+
+                        const record = attendanceRecords.find(
+                            (item) => item.date === date,
+                        );
+
+                        if (!record) {
+                            setIssueType("");
+                            return;
+                        }
+
+                        if (!record.check_in && record.check_out) {
+                            setIssueType("Missing Check-In");
+                        } else if (record.check_in && !record.check_out) {
+                            setIssueType("Missing Check-Out");
+                        } else {
+                            setIssueType("");
+                        }
+                    }}
+                  className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm text-gray-700 outline-none transition focus:border-[#2563eb]"
+                  required
+                >
+                  <option value="">Select attendance date</option>
+
+                 {attendanceRecords
+                    .filter(
+                        (record) =>
+                        (!record.check_in && record.check_out) ||
+                        (record.check_in && !record.check_out),
+                    )
+                    .map((record) => (
+                        <option key={record.id} value={record.date}>
+                        {formatDate(record.date)}
+                        </option>
+                    ))}
+                </select>
+              </div>
+
+              {/* Issue Type */}
+              <div>
+                <label className="text-sm font-semibold text-gray-700">
+                  Issue Type <span className="text-red-500">*</span>
+                </label>
+
+                <select
+                    value={issueType}
+                    onChange={(event) =>
+                        setIssueType(event.target.value)
+                    }
+                    className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm text-gray-700 outline-none transition focus:border-[#2563eb]"
+                    required
+                    >
+                    {selectedAttendance?.check_in == null &&
+                        selectedAttendance?.check_out != null && (
+                        <option value="Missing Check-In">
+                            Missing Check-In
+                        </option>
+                        )}
+
+                    {selectedAttendance?.check_in != null &&
+                        selectedAttendance?.check_out == null && (
+                        <option value="Missing Check-Out">
+                            Missing Check-Out
+                        </option>
+                        )}
+                </select>
+              </div>
+            </div>
+
+            {/* Current Attendance */}
+            <div className="mt-5 rounded-xl bg-[#f5f7fb] p-5">
+
+              <p className="text-sm font-semibold text-gray-700">
+                Current Attendance (as per system)
+              </p>
+
+              {!selectedAttendance ? (
+                <p className="mt-3 text-sm text-gray-400">
+                  Select an attendance date to view the current record.
+                </p>
+              ) : (
+                <div className="mt-4 grid gap-4 sm:grid-cols-3">
+
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                      Check-In
+                    </p>
+
+                    <p className="mt-1 text-base font-bold text-[#17213a]">
+                      {formatTime(selectedAttendance.check_in)}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                      Check-Out
+                    </p>
+
+                    <p className="mt-1 text-base font-bold text-[#17213a]">
+                      {formatTime(selectedAttendance.check_out)}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                      Status
+                    </p>
+
+                    <span className="mt-1 inline-flex rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-yellow-700">
+                      {selectedAttendance.status}
+                    </span>
+                  </div>
+
+                </div>
+              )}
+
+            </div>
+
+          </section>
+
+          {/* Provide Correct Information */}
+          <section className="px-6 py-6">
+
+            <h3 className="text-base font-bold text-[#17213a]">
+              2. Provide Correct Information
+            </h3>
+
+            {formError && (
+                <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3">
+                    <p className="text-sm font-medium text-red-700">
+                    {formError}
+                    </p>
+                </div>
+            )}
+
+            {/* Requested Time */}
+            <div className="mt-5">
+
+              <label className="text-sm font-semibold text-gray-700">
+                {issueType === "Missing Check-In"
+                  ? "Requested Check-In Time"
+                  : "Requested Check-Out Time"}{" "}
+                <span className="text-red-500">*</span>
+              </label>
+
+              <input
+                type="time"
+                value={requestedTime}
+                onChange={(event) =>
+                  setRequestedTime(event.target.value)
+                }
+                className="mt-2 w-full rounded-xl border border-gray-200 px-3 py-3 text-sm text-gray-700 outline-none transition focus:border-[#2563eb]"
+                required
+              />
+
+            </div>
+
+            {/* Reason */}
+            <div className="mt-5">
+
+              <div className="flex items-center justify-between">
+
+                <label className="text-sm font-semibold text-gray-700">
+                  Reason for Request{" "}
+                  <span className="text-red-500">*</span>
+                </label>
+
+                <span className="text-xs text-gray-400">
+                  {reason.length}/300
+                </span>
+
+              </div>
+
+              <textarea
+                value={reason}
+                onChange={(event) => {
+                  if (event.target.value.length <= 300) {
+                    setReason(event.target.value);
+                  }
+                }}
+                rows={4}
+                placeholder="Explain why the attendance needs to be corrected."
+                className="mt-2 w-full resize-none rounded-xl border border-gray-200 px-3 py-3 text-sm text-gray-700 outline-none transition focus:border-[#2563eb]"
+                required
+              />
+
+            </div>
+
+            {/* Attachment */}
+            <div className="mt-5">
+
+              <label className="text-sm font-semibold text-gray-700">
+                Add Attachment{" "}
+                <span className="font-normal text-gray-400">
+                  (Optional)
+                </span>
+              </label>
+
+              <label className="mt-2 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 bg-[#fafbfc] px-6 py-8 text-center transition hover:border-[#2563eb] hover:bg-[#f8faff]">
+
+                <p className="text-sm font-semibold text-gray-600">
+                  {attachment
+                    ? attachment.name
+                    : "Drag & drop your file here or click to browse"}
+                </p>
+
+                <p className="mt-1 text-xs text-gray-400">
+                  JPG, PNG, PDF up to 5MB
+                </p>
+
+                <input
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.pdf"
+                  onChange={handleAttachmentChange}
+                  className="hidden"
+                />
+
+              </label>
+
+            </div>
+
+          </section>
+
+          {/* Actions */}
+          <div className="flex items-center justify-end gap-3 border-t border-gray-100 px-6 py-5">
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+
+            <button
+              type="submit"
+              className="rounded-xl bg-[#2563eb] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1d4ed8]"
+            >
+              ➤ Submit Request
+            </button>
+
+          </div>
+
+        </form>
+
+      </div>
+    </div>
+  );
+}
+
+export default EmployeeAttendanceRegularizationModal;

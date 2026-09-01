@@ -281,12 +281,20 @@ function Attendance() {
     return sortDirection === "asc" ? sorted : sorted.reverse();
   }, [records, sortKey, sortDirection]);
 
+  // Color map for sub percentages - using inline styles to ensure colors are applied
+  const subColorStyles = {
+    "Present Today": { color: "#059669" }, // emerald-600
+    "Late Today": { color: "#f97316" }, // orange-500
+    "On Leave": { color: "#9333ea" }, // purple-600
+    "Absent Today": { color: "#e11d48" }, // rose-600
+  };
+
   const summaryCards = [
-    { label: "Total Employees", value: summary?.total_employees ?? "-", sub: null, subColor: "", icon: Users, iconBg: "bg-blue-50", iconColor: "text-blue-600" },
-    { label: "Present Today", value: summary?.present_count ?? "-", sub: summary ? `${summary.present_percentage}%` : "-", subColor: "text-emerald-600", icon: UserCheck, iconBg: "bg-emerald-50", iconColor: "text-emerald-600" },
-    { label: "Late Today", value: summary?.late_count ?? "-", sub: summary ? `${summary.late_percentage}%` : "-", subColor: "text-orange-500", icon: Clock, iconBg: "bg-orange-50", iconColor: "text-orange-500" },
-    { label: "On Leave", value: summary?.on_leave_count ?? "-", sub: summary ? `${summary.on_leave_percentage}%` : "-", subColor: "text-purple-600", icon: CalendarDays, iconBg: "bg-purple-50", iconColor: "text-purple-600" },
-    { label: "Absent Today", value: summary?.absent_count ?? "-", sub: summary ? `${summary.absent_percentage}%` : "-", subColor: "text-rose-600", icon: UserX, iconBg: "bg-rose-50", iconColor: "text-rose-600" },
+    { label: "Total Employees", value: summary?.total_employees ?? "-", sub: null, subStyle: {}, icon: Users, iconBg: "bg-blue-50", iconColor: "text-blue-600" },
+    { label: "Present Today", value: summary?.present_count ?? "-", sub: summary ? `${summary.present_percentage}%` : "-", subStyle: subColorStyles["Present Today"], icon: UserCheck, iconBg: "bg-emerald-50", iconColor: "text-emerald-600" },
+    { label: "Late Today", value: summary?.late_count ?? "-", sub: summary ? `${summary.late_percentage}%` : "-", subStyle: subColorStyles["Late Today"], icon: Clock, iconBg: "bg-orange-50", iconColor: "text-orange-500" },
+    { label: "On Leave", value: summary?.on_leave_count ?? "-", sub: summary ? `${summary.on_leave_percentage}%` : "-", subStyle: subColorStyles["On Leave"], icon: CalendarDays, iconBg: "bg-purple-50", iconColor: "text-purple-600" },
+    { label: "Absent Today", value: summary?.absent_count ?? "-", sub: summary ? `${summary.absent_percentage}%` : "-", subStyle: subColorStyles["Absent Today"], icon: UserX, iconBg: "bg-rose-50", iconColor: "text-rose-600" },
   ];
 
   const summaryTotals = summary
@@ -346,7 +354,7 @@ function Attendance() {
               <div className="mt-1 flex items-baseline gap-2">
                 <span className="text-2xl font-bold text-gray-900">{card.value}</span>
                 {card.sub && (
-                  <span className={`text-sm font-semibold ${card.subColor}`}>{card.sub}</span>
+                  <span className="text-sm font-semibold" style={card.subStyle}>{card.sub}</span>
                 )}
               </div>
             </div>
