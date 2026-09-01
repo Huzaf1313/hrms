@@ -214,7 +214,7 @@ class AttendanceService:
                 out_time
             ),
             working_hours=format_total_hours(working_hours),
-            status=attendance.get("status") or "present",
+            status=(attendance.get("status") or "present").lower(),
             is_regularized=attendance.get("is_regularized", False),
             notes=attendance.get("notes"),
         )
@@ -247,7 +247,7 @@ class AttendanceService:
             "in_time": data.get("in_time"),
             "out_time": data.get("out_time"),
             "working_hours": working_hours,
-            "status": data["status"],
+            "status": data["status"].lower() if data.get("status") else "present",
             "notes": data.get("notes"),
             "updated_at": datetime.utcnow(),
         }
@@ -370,9 +370,9 @@ class AttendanceService:
                     "status": "absent",
                 }
 
-            record["status"] = record.get("status") or "present"
+            record["status"] = (record.get("status") or "present").lower()
 
-            if status and record["status"] != status:
+            if status and record["status"] != status.lower():
                 continue
 
             roster.append((record, employee))

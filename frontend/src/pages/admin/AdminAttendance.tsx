@@ -218,6 +218,17 @@ function AdminAttendance() {
   const [error, setError] = useState("");
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const [showMarkModal, setShowMarkModal] = useState(false);
+  const [markForm, setMarkForm] = useState({
+    employee_id: "",
+    date: getToday(),
+    status: "present" as AttendanceStatus,
+    shift: "General",
+    in_time: "",
+    out_time: "",
+  });
+  const [isMarkingAttendance, setIsMarkingAttendance] = useState(false);
+  const [markError, setMarkError] = useState("");
 
   useEffect(() => {
     let isCurrent = true;
@@ -286,6 +297,67 @@ function AdminAttendance() {
     }
   }
 
+  async function handleMarkAttendance() {
+    if (!markForm.employee_id) {
+      setMarkError("Please select an employee");
+      return;
+    }
+    if (!markForm.status) {
+      setMarkError("Please select a status");
+      return;
+    }
+
+    setIsMarkingAttendance(true);
+    setMarkError("");
+
+    try {
+      await attendanceService.mark({
+        employee_id: markForm.employee_id,
+        date: markForm.date,
+        status: markForm.status,
+        shift: markForm.shift,
+        in_time: markForm.in_time || undefined,
+        out_time: markForm.out_time || undefined,
+      });
+
+      // Reload data
+      setShowMarkModal(false);
+      setMarkForm({
+        employee_id: "",
+        date: getToday(),
+        status: "present",
+        shift: "General",
+        in_time: "",
+        out_time: "",
+      });
+
+      // Refresh the attendance list
+      const attendanceResult = await attendanceService.list({
+        date,
+        department_id: departmentId || undefined,
+        status: status || undefined,
+        search: search || undefined,
+        page,
+        limit,
+      });
+      setRecords(attendanceResult.items);
+
+      const summaryResult = await attendanceService.summary(
+        date,
+        departmentId || undefined,
+      );
+      setSummary(summaryResult);
+    } catch (err) {
+      const errorMsg =
+        err instanceof ApiError
+          ? err.message
+          : "Failed to mark attendance";
+      setMarkError(errorMsg);
+    } finally {
+      setIsMarkingAttendance(false);
+    }
+  }
+
   const sortedRecords = useMemo(() => {
     if (!sortKey) return records;
 
@@ -301,12 +373,20 @@ function AdminAttendance() {
     return sortDirection === "asc" ? sorted : sorted.reverse();
   }, [records, sortKey, sortDirection]);
 
+  // Color map for sub percentages - using inline styles to ensure colors are applied
+  const subColorStyles = {
+    "Present Today": { color: "#059669" }, // emerald-600
+    "Late Today": { color: "#f97316" }, // orange-500
+    "On Leave": { color: "#9333ea" }, // purple-600
+    "Absent Today": { color: "#e11d48" }, // rose-600
+  };
+
   const summaryCards = [
-    { label: "Total Employees", value: summary?.total_employees ?? "-", sub: null, subColor: "", icon: Users, iconBg: "bg-blue-50", iconColor: "text-blue-600" },
-    { label: "Present Today", value: summary?.present_count ?? "-", sub: summary ? `${summary.present_percentage}%` : "-", subColor: "text-emerald-600", icon: UserCheck, iconBg: "bg-emerald-50", iconColor: "text-emerald-600" },
-    { label: "Late Today", value: summary?.late_count ?? "-", sub: summary ? `${summary.late_percentage}%` : "-", subColor: "text-orange-500", icon: Clock, iconBg: "bg-orange-50", iconColor: "text-orange-500" },
-    { label: "On Leave", value: summary?.on_leave_count ?? "-", sub: summary ? `${summary.on_leave_percentage}%` : "-", subColor: "text-purple-600", icon: CalendarDays, iconBg: "bg-purple-50", iconColor: "text-purple-600" },
-    { label: "Absent Today", value: summary?.absent_count ?? "-", sub: summary ? `${summary.absent_percentage}%` : "-", subColor: "text-rose-600", icon: UserX, iconBg: "bg-rose-50", iconColor: "text-rose-600" },
+    { label: "Total Employees", value: summary?.total_employees ?? "-", sub: null, subStyle: {}, icon: Users, iconBg: "bg-blue-50", iconColor: "text-blue-600" },
+    { label: "Present Today", value: summary?.present_count ?? "-", sub: summary ? `${summary.present_percentage}%` : "-", subStyle: subColorStyles["Present Today"], icon: UserCheck, iconBg: "bg-emerald-50", iconColor: "text-emerald-600" },
+    { label: "Late Today", value: summary?.late_count ?? "-", sub: summary ? `${summary.late_percentage}%` : "-", subStyle: subColorStyles["Late Today"], icon: Clock, iconBg: "bg-orange-50", iconColor: "text-orange-500" },
+    { label: "On Leave", value: summary?.on_leave_count ?? "-", sub: summary ? `${summary.on_leave_percentage}%` : "-", subStyle: subColorStyles["On Leave"], icon: CalendarDays, iconBg: "bg-purple-50", iconColor: "text-purple-600" },
+    { label: "Absent Today", value: summary?.absent_count ?? "-", sub: summary ? `${summary.absent_percentage}%` : "-", subStyle: subColorStyles["Absent Today"], icon: UserX, iconBg: "bg-rose-50", iconColor: "text-rose-600" },
   ];
 
   const summaryTotals = summary
@@ -346,6 +426,7 @@ function AdminAttendance() {
           <button
             type="button"
             className="flex items-center gap-2 rounded-full bg-[#2563eb] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1d4ed8]"
+            onClick={() => setShowMarkModal(true)}
           >
             <UserPlus className="h-4 w-4" />
             Mark Attendance
@@ -366,7 +447,7 @@ function AdminAttendance() {
               <div className="mt-1 flex items-baseline gap-2">
                 <span className="text-2xl font-bold text-gray-900">{card.value}</span>
                 {card.sub && (
-                  <span className={`text-sm font-semibold ${card.subColor}`}>{card.sub}</span>
+                  <span className="text-sm font-semibold" style={card.subStyle}>{card.sub}</span>
                 )}
               </div>
             </div>
@@ -655,6 +736,143 @@ function AdminAttendance() {
           </div>
         </div>
       </div>
+
+      {/* Mark Attendance Modal */}
+      {showMarkModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-lg">
+            <h2 className="mb-4 text-xl font-bold text-gray-900">Mark Attendance</h2>
+
+            {markError && (
+              <div className="mb-4 rounded-lg bg-rose-50 p-3 text-sm text-rose-600">
+                {markError}
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Employee
+                </label>
+                <select
+                  value={markForm.employee_id}
+                  onChange={(e) =>
+                    setMarkForm((prev) => ({
+                      ...prev,
+                      employee_id: e.target.value,
+                    }))
+                  }
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#2563eb] focus:outline-none"
+                >
+                  <option value="">Select an employee</option>
+                  {records.map((record) => (
+                    <option key={record.id} value={record.employee.id}>
+                      {record.employee.first_name} {record.employee.last_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-700">
+                    Date
+                  </label>
+                  <input
+                    type="date"
+                    value={markForm.date}
+                    onChange={(e) =>
+                      setMarkForm((prev) => ({
+                        ...prev,
+                        date: e.target.value,
+                      }))
+                    }
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#2563eb] focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-700">
+                    Status
+                  </label>
+                  <select
+                    value={markForm.status}
+                    onChange={(e) =>
+                      setMarkForm((prev) => ({
+                        ...prev,
+                        status: e.target.value as AttendanceStatus,
+                      }))
+                    }
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#2563eb] focus:outline-none"
+                  >
+                    <option value="present">Present</option>
+                    <option value="late">Late</option>
+                    <option value="absent">Absent</option>
+                    <option value="on_leave">On Leave</option>
+                    <option value="missing_punch">Missing Punch</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-700">
+                    In Time
+                  </label>
+                  <input
+                    type="time"
+                    value={markForm.in_time}
+                    onChange={(e) =>
+                      setMarkForm((prev) => ({
+                        ...prev,
+                        in_time: e.target.value,
+                      }))
+                    }
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#2563eb] focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-700">
+                    Out Time
+                  </label>
+                  <input
+                    type="time"
+                    value={markForm.out_time}
+                    onChange={(e) =>
+                      setMarkForm((prev) => ({
+                        ...prev,
+                        out_time: e.target.value,
+                      }))
+                    }
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#2563eb] focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowMarkModal(false);
+                    setMarkError("");
+                  }}
+                  disabled={isMarkingAttendance}
+                  className="flex-1 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleMarkAttendance}
+                  disabled={isMarkingAttendance}
+                  className="flex-1 rounded-lg bg-[#2563eb] px-4 py-2 text-sm font-medium text-white hover:bg-[#1d4ed8] disabled:opacity-50"
+                >
+                  {isMarkingAttendance ? "Saving..." : "Mark Attendance"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -77,7 +77,7 @@ class AttendanceRepository:
             {"$match": filters},
             {
                 "$group": {
-                    "_id": "$status",
+                    "_id": {"$toLower": "$status"},
                     "count": {"$sum": 1},
                 }
             },
@@ -95,7 +95,7 @@ class AttendanceRepository:
                 "$group": {
                     "_id": {
                         "department_id": "$department_id",
-                        "status": "$status",
+                        "status": {"$toLower": "$status"},
                     },
                     "count": {"$sum": 1},
                 }
