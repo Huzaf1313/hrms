@@ -82,7 +82,7 @@ def calculate_working_hours(in_time: str | None, out_time: str | None) -> str | 
     hours, remainder = divmod(int(delta.total_seconds()), 3600)
     minutes = remainder // 60
 
-    return f"{hours}h {minutes}m"
+    return f"{hours}H {minutes}M"
 
 def format_punch_time(value) -> str | None:
     if value is None:
