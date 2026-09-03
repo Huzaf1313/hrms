@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 
 interface EmployeeSidebarProps {
-  onLogout?: () => void;
+  onLogout: () => void;
 }
 
 interface NavItem {

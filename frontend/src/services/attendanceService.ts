@@ -14,15 +14,6 @@ export interface GetAttendanceParams {
   limit?: number;
 }
 
-export interface MarkAttendanceParams {
-  employee_id: string;
-  date: string;
-  status: string;
-  shift?: string;
-  in_time?: string;
-  out_time?: string;
-}
-
 export const attendanceService = {
   list(params: GetAttendanceParams = {}) {
     return api.get<AttendanceListResponse>("/attendance", { ...params });
@@ -35,9 +26,14 @@ export const attendanceService = {
     });
   },
 
-  mark(params: MarkAttendanceParams) {
-    return api.post<AttendanceRecord>("/attendance", {
-      ...params,
-    });
+  mark(params: {
+    employee_id: string;
+    date: string;
+    status: string;
+    shift?: string;
+    in_time?: string;
+    out_time?: string;
+  }) {
+    return api.post<AttendanceRecord>("/attendance", params);
   },
 };

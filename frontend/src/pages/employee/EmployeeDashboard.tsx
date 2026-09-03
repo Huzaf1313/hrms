@@ -1,7 +1,10 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+
+import { api } from "../../services/api";
 
 interface User {
   id: string;
+  employee_id?: string | null;
   full_name: string;
   email: string;
   role: string;
@@ -9,6 +12,32 @@ interface User {
   is_locked: boolean;
   created_at: string;
   updated_at: string;
+}
+
+interface AttendanceRecord {
+  date: string;
+  check_in: string | null;
+  check_out: string | null;
+  in_time?: string | null;
+  out_time?: string | null;
+}
+
+function normalizeAttendance(record: AttendanceRecord): AttendanceRecord {
+  return {
+    ...record,
+    check_in: record.check_in ?? record.in_time ?? null,
+    check_out: record.check_out ?? record.out_time ?? null,
+  };
+}
+
+function getInitials(name: string) {
+  return name
+    .trim()
+    .split(/\s+/)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 }
 
 const leaveRequests = [
@@ -84,27 +113,128 @@ function EmployeeDashboard() {
 
   const firstName = employeeName.split(" ")[0];
 
+  const currentDate = new Date();
+
+  const formattedDate = currentDate.toLocaleDateString("en-IN", {
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+
+  const initials = getInitials(employeeName);
+
+  const [todayAttendance, setTodayAttendance] =
+    useState<AttendanceRecord | null>(null);
+
+  useEffect(() => {
+    if (!user?.employee_id) {
+      return;
+    }
+
+    api
+      .get<AttendanceRecord[]>(`/employees/${user.employee_id}/attendance`, {
+        page: 1,
+        limit: 100,
+      })
+      .then((records) => {
+        const today = new Date();
+        const record = records.map(normalizeAttendance).find((item) => {
+          const recordDate = new Date(item.date);
+
+          return (
+            recordDate.getDate() === today.getDate() &&
+            recordDate.getMonth() === today.getMonth() &&
+            recordDate.getFullYear() === today.getFullYear()
+          );
+        });
+
+        setTodayAttendance(record ?? null);
+      })
+      .catch(() => setTodayAttendance(null));
+  }, [user?.employee_id]);
+
+  function formatTime(value: string | null) {
+    if (!value) {
+      return "--";
+    }
+
+    const text = value.trim();
+
+    if (/^\d{1,2}:\d{2}\s*[AP]M$/i.test(text)) {
+      return text;
+    }
+
+    const hasTimezone = /(?:Z|[+-]\d{2}:\d{2})$/i.test(text);
+    const parsedValue = new Date(hasTimezone ? text : `${text}Z`);
+
+    return Number.isNaN(parsedValue.getTime())
+      ? "--"
+      : parsedValue.toLocaleTimeString("en-IN", {
+          timeZone: "Asia/Kolkata",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+  }
+
   return (
-  <main className="min-w-0 flex-1 px-6 pb-10 pt-8 lg:px-8">
+      <main className="min-w-0 flex-1 bg-[#f5f7fb] px-5 py-7 text-[#17213a] sm:px-7 lg:px-10">
 
-    {/* Greeting */}
-    <section className="mb-7">
-      <p className="text-sm font-medium text-[#2563eb]">
-        Employee Portal
-      </p>
+        {/* =========================================================
+            MAIN CONTENT
+        ========================================================= */}
+          <div className="mb-6 flex items-center justify-end gap-4">
+            {/* Date */}
+            <div className="hidden rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 shadow-sm sm:block">
+              {formattedDate}
+            </div>
 
-      <h1 className="mt-1 text-3xl font-bold tracking-tight text-[#171b1d] sm:text-4xl">
-        Good Morning, {firstName} 👋
-      </h1>
+            {/* Notifications */}
+            <button
+              type="button"
+              className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-600 shadow-sm transition hover:bg-gray-50"
+              aria-label="Notifications"
+            >
+              <span className="text-lg">🔔</span>
 
-      <p className="mt-2 text-sm text-gray-500">
-        Here's what's happening with your work today.
-      </p>
-    </section>
+              <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />
+            </button>
 
-    {/* =======================================================
-        KPI CARDS
-    ======================================================= */}
+            {/* Profile */}
+            <div className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-3 py-2 shadow-sm">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#dce5df] text-sm font-bold text-[#2563eb]">
+                {initials || "E"}
+              </div>
+
+              <div className="hidden text-left sm:block">
+                <p className="text-sm font-semibold text-gray-800">
+                  {employeeName}
+                </p>
+                <p className="text-xs text-gray-500">
+                  Employee
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Greeting */}
+          <section className="mb-7">
+            <p className="text-sm font-medium text-[#2563eb]">
+              Employee Portal
+            </p>
+
+            <h1 className="mt-1 text-3xl font-bold tracking-tight text-[#171b1d] sm:text-4xl">
+              Good Morning, {firstName} 👋
+            </h1>
+
+            <p className="mt-2 text-sm text-gray-500">
+              Here's what's happening with your work today.
+            </p>
+          </section>
+
+          {/* =======================================================
+              KPI CARDS
+          ======================================================= */}
           <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
 
             {/* Attendance */}
@@ -117,7 +247,7 @@ function EmployeeDashboard() {
                   </p>
 
                   <p className="mt-3 text-2xl font-bold text-[#17213a]">
-                    Checked In
+                    {todayAttendance?.check_in ? "Checked In" : "Not Marked"}
                   </p>
                 </div>
 
@@ -130,14 +260,14 @@ function EmployeeDashboard() {
                 <div className="flex justify-between">
                   <span className="text-gray-500">Punch In</span>
                   <span className="font-semibold text-gray-700">
-                    09:12 AM
+                    {formatTime(todayAttendance?.check_in ?? null)}
                   </span>
                 </div>
 
                 <div className="flex justify-between">
                   <span className="text-gray-500">Punch Out</span>
                   <span className="font-semibold text-gray-400">
-                    --
+                    {formatTime(todayAttendance?.check_out ?? null)}
                   </span>
                 </div>
               </div>
@@ -560,9 +690,9 @@ function EmployeeDashboard() {
 
           {/* Footer */}
           <footer className="mt-8 border-t border-gray-200 py-6 text-center text-xs text-gray-400">
-            Ac 2026 HRMS. All rights reserved. A� Employee Portal
+            © 2026 HRMS. All rights reserved. · Employee Portal
           </footer>
-        </main>
+      </main>
   );
 }
 

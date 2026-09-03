@@ -90,7 +90,9 @@ def format_punch_time(value) -> str | None:
 
     if isinstance(value, datetime):
         if value.tzinfo is None:
-            value = value.replace(tzinfo=timezone.utc)
+            # Legacy attendance records stored local wall-clock values
+            # without a timezone. They are already IST, not UTC.
+            value = value.replace(tzinfo=IST)
         ist_value = value.astimezone(IST)
         return ist_value.strftime("%I:%M %p")
 

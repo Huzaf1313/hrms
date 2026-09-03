@@ -50,6 +50,16 @@ function App() {
               />
             }
           />
+          <Route
+            path="/dashboard/regularization"
+            element={
+              <DashboardLayout
+                activePage="Regularization Requests"
+                onNavigate={() => undefined}
+                onLogout={handleLogout}
+              />
+            }
+          />
         </Route>
 
         <Route element={<ProtectedRoute />}>

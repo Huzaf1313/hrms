@@ -35,7 +35,6 @@ const tabs = [
   { label: "Late", status: "late" },
   { label: "On Leave", status: "on_leave" },
   { label: "Absent", status: "absent" },
-  { label: "Missing Punch", status: "missing_punch" },
 ];
 
 const statusStyles: Record<AttendanceStatus, string> = {
@@ -190,8 +189,10 @@ function displayPunchTime(value: string | null | undefined): string {
     const parsed = new Date(value);
     if (!Number.isNaN(parsed.getTime())) {
       return parsed.toLocaleTimeString([], {
+        timeZone: "Asia/Kolkata",
         hour: "2-digit",
         minute: "2-digit",
+        hour12: true,
       });
     }
   }
@@ -230,6 +231,7 @@ function AdminAttendance() {
   });
   const [isMarkingAttendance, setIsMarkingAttendance] = useState(false);
   const [markError, setMarkError] = useState("");
+  const [attendanceRefreshKey, setAttendanceRefreshKey] = useState(0);
 
   useEffect(() => {
     let isCurrent = true;
@@ -287,7 +289,7 @@ function AdminAttendance() {
     return () => {
       isCurrent = false;
     };
-  }, [date, departmentId, limit, page, search, status]);
+  }, [date, departmentId, limit, page, search, status, attendanceRefreshKey]);
 
   function handleSort(key: SortKey) {
     if (sortKey === key) {
@@ -405,6 +407,48 @@ function AdminAttendance() {
   const initials = (record: AttendanceRecord) =>
     `${record.employee.first_name[0] ?? ""}${record.employee.last_name[0] ?? ""}`;
 
+  function exportAttendance() {
+    const escapeCell = (value: string) =>
+      value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const rows = sortedRecords
+      .map((row) => [
+        `${row.employee.first_name} ${row.employee.last_name}`,
+        row.employee.employee_code,
+        row.employee.department_name ?? "-",
+        row.shift,
+        displayPunchTime(row.in_time ?? row.check_in),
+        displayPunchTime(row.out_time ?? row.check_out),
+        displayWorkingHours(row.working_hours ?? row.total_hours),
+        formatStatus(row.status),
+      ])
+      .map(
+        (values) =>
+          `<tr>${values
+            .map((value) => `<td>${escapeCell(String(value))}</td>`)
+            .join("")}</tr>`,
+      )
+      .join("");
+
+    const workbook = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office"
+        xmlns:x="urn:schemas-microsoft-com:office:excel"
+        xmlns="http://www.w3.org/TR/REC-html40">
+        <head><meta charset="UTF-8" /></head>
+        <body><table>
+          <tr><th>Employee</th><th>Employee ID</th><th>Department</th><th>Shift</th><th>In Time</th><th>Out Time</th><th>Working Hours</th><th>Status</th></tr>
+          ${rows}
+        </table></body>
+      </html>`;
+    const blob = new Blob([workbook], { type: "application/vnd.ms-excel" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = `attendance-${date}.xls`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div className="px-10 pb-10 pt-8">
       {/* Header */}
@@ -419,6 +463,7 @@ function AdminAttendance() {
         <div className="flex items-center gap-3">
           <button
             type="button"
+            onClick={exportAttendance}
             className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             <Download className="h-4 w-4" />
@@ -505,7 +550,7 @@ function AdminAttendance() {
             <option value="late">Late</option>
             <option value="absent">Absent</option>
             <option value="on_leave">On Leave</option>
-            <option value="missing_punch">Missing Punch</option>
+            {/* <option value="missing_punch">Missing Punch</option> */}
           </select>
         </div>
         <div className="flex items-end gap-2">
@@ -739,7 +784,9 @@ function AdminAttendance() {
 
         {/* Regularization Requests */}
         <div className="flex w-full flex-col gap-6 lg:w-80">
-          <RegularizationRequestsCard />
+          <RegularizationRequestsCard
+            onReviewed={() => setAttendanceRefreshKey((current) => current + 1)}
+          />
         </div>
       </div>
 
@@ -814,7 +861,6 @@ function AdminAttendance() {
                     <option value="late">Late</option>
                     <option value="absent">Absent</option>
                     <option value="on_leave">On Leave</option>
-                    <option value="missing_punch">Missing Punch</option>
                   </select>
                 </div>
               </div>

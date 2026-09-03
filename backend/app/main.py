@@ -18,6 +18,12 @@ from app.repositories.employee_attendance_repository import (
     EmployeeAttendanceRepository,
 )
 from app.api.v1.users import router as users_router
+from app.api.v1.employee_attendance_regularization import (
+    router as employee_attendance_regularization_router,
+)
+from app.repositories.employee_attendance_regularization_repository import (
+    EmployeeAttendanceRegularizationRepository,
+)
 
 
 @asynccontextmanager
@@ -26,6 +32,9 @@ async def lifespan(app: FastAPI):
 
     attendance_repository = EmployeeAttendanceRepository()
     await attendance_repository.ensure_indexes()
+
+    regularization_repository = EmployeeAttendanceRegularizationRepository()
+    await regularization_repository.ensure_indexes()
 
     yield
 
@@ -90,11 +99,19 @@ app.include_router(
 app.include_router(
     leaves_router,
     prefix="/api/v1",
+    tags=["Leaves"]
 )
 
 app.include_router(
     attendance_router,
     prefix="/api/v1",
+    tags=["Attendance"]
+)
+
+app.include_router(
+    employee_attendance_regularization_router,
+    prefix="/api/v1",
+    tags=["Attendance Regularization"]
 )
 
 app.include_router(
