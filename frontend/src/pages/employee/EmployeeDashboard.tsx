@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import EmployeeSidebar from "./EmployeeSidebar";
 
 interface User {
   id: string;
@@ -76,11 +75,7 @@ const holidays = [
   },
 ];
 
-interface EmployeeDashboardProps {
-  onLogout: () => void;
-}
-
-function EmployeeDashboard({ onLogout }: EmployeeDashboardProps) {
+function EmployeeDashboard() {
     const user = useMemo<User | null>(() => {
     const storedUser = localStorage.getItem("user");
 
@@ -112,8 +107,6 @@ function EmployeeDashboard({ onLogout }: EmployeeDashboardProps) {
 
   return (
   <div className="flex min-h-screen bg-[#f5f7fb] text-[#17213a]">
-    <EmployeeSidebar onLogout={onLogout} />
-
       <div className="min-w-0 flex-1">
 
         {/* =========================================================

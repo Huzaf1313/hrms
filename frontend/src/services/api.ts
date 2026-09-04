@@ -5,6 +5,8 @@ const API_BASE_URL: string =
 const TOKEN_KEY = "hrms_access_token";
 const REFRESH_TOKEN_KEY = "hrms_refresh_token";
 
+let refreshPromise: Promise<string> | null = null;
+
 export function getAccessToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
 }
@@ -56,6 +58,42 @@ interface RequestOptions {
   params?: Record<string, string | number | boolean | undefined>;
 }
 
+async function refreshAccessToken(): Promise<string> {
+  const refreshToken = getRefreshToken();
+
+  if (!refreshToken) {
+    throw new ApiError("Session expired. Please log in again.", 401);
+  }
+
+  if (!refreshPromise) {
+    refreshPromise = requestRaw<{
+      access_token: string;
+      refresh_token: string;
+      token_type: string;
+    }>("/auth/refresh", {
+      method: "POST",
+      body: {
+        refresh_token: refreshToken,
+      },
+    })
+      .then((response) => {
+        setAccessToken(response.access_token);
+        setRefreshToken(response.refresh_token);
+
+        return response.access_token;
+      })
+      .catch((error) => {
+        clearSession();
+        throw error;
+      })
+      .finally(() => {
+        refreshPromise = null;
+      });
+  }
+
+  return refreshPromise;
+}
+
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { method = "GET", body, params } = options;
 
@@ -97,6 +135,61 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   const payload = await response.json().catch(() => null);
 
 if (!response.ok) {
+  if (response.status === 401) {
+    try {
+      const newAccessToken = await refreshAccessToken();
+
+      const retryHeaders: Record<string, string> = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${newAccessToken}`,
+      };
+
+      const retryResponse = await fetch(url.toString(), {
+        method,
+        headers: retryHeaders,
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+      });
+
+      const retryPayload = await retryResponse.json().catch(() => null);
+
+      if (!retryResponse.ok) {
+        const retryMessage =
+          retryPayload?.detail ??
+          retryPayload?.message ??
+          `Request failed with status ${retryResponse.status}`;
+
+        throw new ApiError(retryMessage, retryResponse.status);
+      }
+
+      if (!retryPayload) {
+        throw new ApiError(
+          "Received an empty response from the server.",
+          retryResponse.status,
+        );
+      }
+
+      if (
+        typeof retryPayload === "object" &&
+        retryPayload !== null &&
+        "data" in retryPayload &&
+        "success" in retryPayload
+      ) {
+        return retryPayload.data as T;
+      }
+
+      return retryPayload as T;
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+
+      throw new ApiError(
+        "Session expired. Please log in again.",
+        401,
+      );
+    }
+  }
+
   const message =
     payload?.detail ??
     payload?.message ??
@@ -186,4 +279,3 @@ export const apiRaw = {
   post: <T>(path: string, body?: unknown) =>
     requestRaw<T>(path, { method: "POST", body }),
 };
-

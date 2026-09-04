@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
-import { api, setAccessToken, ApiError } from "../services/api";
+import { api, setAccessToken, ApiError, setRefreshToken, apiRaw } from "../services/api";
 
 const roles = [
   "Manager",
@@ -55,7 +55,7 @@ function Login() {
     setIsLoading(true);
 
     try {
-      const loginResponse = await api.post("/auth/login", {
+      const loginResponse = await apiRaw.post("/auth/login", {
         email: email.trim(),
         password,
       });
@@ -68,7 +68,7 @@ function Login() {
 
       setAccessToken(access_token);
 
-      localStorage.setItem("refresh_token", refresh_token);
+      setRefreshToken(refresh_token);
       localStorage.setItem("token_type", token_type);
 
       const userResponse = await api.get("/users/me");
@@ -367,8 +367,8 @@ function Login() {
 
               {/* Security */}
               <div className="mt-8 rounded-xl bg-[#f6f8fc] p-4 text-center text-xs text-[#68758e]">
-                256-bit SSL Encrypted&nbsp;&nbsp; GÇó &nbsp;&nbsp;
-                Your data is always secure&nbsp;&nbsp; GÇó &nbsp;&nbsp;
+                256-bit SSL Encrypted&nbsp;&nbsp; Gï¿½ï¿½ &nbsp;&nbsp;
+                Your data is always secure&nbsp;&nbsp; Gï¿½ï¿½ &nbsp;&nbsp;
                 Enterprise Grade Security
               </div>
 

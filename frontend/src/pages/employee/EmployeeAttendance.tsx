@@ -39,6 +39,23 @@ interface AttendanceRecord {
   updated_at: string | null;
 }
 
+interface RegularizationRequest {
+  id: string;
+  employee_id: string;
+  attendance_id: string;
+  date: string;
+  issue_type: string;
+  requested_check_in?: string | null;
+  requested_check_out?: string | null;
+  reason: string;
+  status: string;
+  requested_at: string;
+  reviewed_at?: string | null;
+  reviewed_by?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 function EmployeeAttendance() {
   const user = useMemo<User | null>(() => {
     const storedUser = localStorage.getItem("user");
@@ -64,8 +81,10 @@ function EmployeeAttendance() {
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [employeeId, setEmployeeId] = useState<string | null>(null);
-  const [isRegularizationModalOpen, setIsRegularizationModalOpen] =
-  useState(false);
+  const [isRegularizationModalOpen, setIsRegularizationModalOpen] = useState(false);
+  const [showAllHistory, setShowAllHistory] = useState(false);
+  const [regularizationRequests, setRegularizationRequests] = useState<RegularizationRequest[]>([]);
+  const [showAllRequests, setShowAllRequests] = useState(false);
   
 useEffect(() => {
   async function loadAttendance() {
@@ -98,6 +117,17 @@ const records = await api.get<AttendanceRecord[]>(
 );
 
       setAttendanceRecords(records);
+
+const requests = await api.get<RegularizationRequest[]>(
+  `/employees/${user.employee_id}/attendance/regularization`,
+  {
+    page: 1,
+    limit: 100,
+  },
+);
+
+setRegularizationRequests(requests);
+
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);
@@ -798,132 +828,129 @@ const records = await api.get<AttendanceRecord[]>(
         ========================================================= */}
         <section className="mt-6 grid grid-cols-1 gap-8 lg:grid-cols-2">
 
-        {/* Punch In/Out History */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+          {/* Punch In/Out History */}
+          <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
 
-          <div className="flex items-start justify-between">
+            <div className="flex items-start justify-between">
 
-            <div>
-              <h2 className="text-lg font-bold text-[#17213a]">
-                Punch In/Out History
-              </h2>
+              <div>
+                <h2 className="text-lg font-bold text-[#17213a]">
+                  Punch In/Out History
+                </h2>
 
-              <p className="mt-1 text-sm text-gray-500">
-                Your recent daily punch records.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              className="text-sm font-semibold text-[#2563eb] hover:underline"
-            >
-              View All History
-            </button>
-
-          </div>
-
-          <div className="mt-6 space-y-3">
-
-            {attendanceRecords.length === 0 ? (
-              <div className="rounded-xl bg-[#f5f7fb] p-5 text-center">
-                <p className="text-sm text-gray-500">
-                  No attendance history available.
+                <p className="mt-1 text-sm text-gray-500">
+                  Your recent daily punch records.
                 </p>
               </div>
-            ) : (
-              attendanceRecords
-                .slice(0, 5)
-                .map((record) => {
 
-                  const recordDate = new Date(record.date);
+              <button
+                type="button"
+                onClick={() => setShowAllHistory((prev) => !prev)}
+                className="text-sm font-semibold text-[#2563eb] hover:underline"
+              >
+                {showAllHistory
+                  ? "Show Recent History"
+                  : "View All History"}
+              </button>
 
-                  const formattedDate = recordDate.toLocaleDateString(
-                    "en-IN",
-                    {
-                      day: "2-digit",
-                      month: "short",
-                      weekday: "short",
-                    },
-                  );
+            </div>
 
-                  return (
-                    <div
-                      key={record.id}
-                      className="rounded-xl border border-gray-100 p-4"
-                    >
+            <div className="mt-6 space-y-3">
 
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              {attendanceRecords.length === 0 ? (
 
-                        {/* Date */}
-                        <div>
-                          <p className="text-sm font-semibold text-[#17213a]">
-                            {formattedDate}
-                          </p>
+                <div className="rounded-xl border border-dashed border-gray-200 p-6 text-center">
+                  <p className="text-sm font-medium text-gray-500">
+                    No attendance records found.
+                  </p>
+                </div>
 
-                          <p className="mt-1 text-xs text-gray-400">
-                            {record.status}
-                          </p>
-                        </div>
+              ) : (
 
-                        {/* Punch Details */}
-                        <div className="grid grid-cols-3 gap-5 text-sm">
+                attendanceRecords
+                  .slice(
+                    0,
+                    showAllHistory
+                      ? attendanceRecords.length
+                      : 5,
+                  )
+                  .map((record) => {
 
-                          <div>
-                            <p className="text-xs text-gray-400">
-                              Check-In
-                            </p>
+                    const recordDate = new Date(record.date);
 
-                            <p className="mt-1 font-semibold text-gray-700">
-                              {formatTime(record.check_in)}
-                            </p>
-                          </div>
+                    const formattedDate =
+                      recordDate.toLocaleDateString("en-IN", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      });
 
-                          <div>
-                            <p className="text-xs text-gray-400">
-                              Check-Out
-                            </p>
+                    return (
+                      <div
+                        key={record.id}
+                        className="rounded-xl border border-gray-100 p-4"
+                      >
 
-                            <p className="mt-1 font-semibold text-gray-700">
-                              {formatTime(record.check_out)}
-                            </p>
-                          </div>
+                        <div className="flex items-start justify-between gap-3">
 
                           <div>
-                            <p className="text-xs text-gray-400">
-                              Duration
+                            <p className="text-sm font-semibold text-[#17213a]">
+                              {formattedDate}
                             </p>
 
-                            <p className="mt-1 font-semibold text-gray-700">
+                            <p className="mt-1 text-xs text-gray-500">
+                              Check-In:{" "}
+                              {record.check_in
+                                ? formatTime(record.check_in)
+                                : "--"}
+                            </p>
+
+                            <p className="mt-1 text-xs text-gray-500">
+                              Check-Out:{" "}
+                              {record.check_out
+                                ? formatTime(record.check_out)
+                                : "--"}
+                            </p>
+
+                            <p className="mt-2 text-xs text-gray-400">
+                              Total Hours:{" "}
                               {formatDuration(record.total_hours)}
                             </p>
                           </div>
 
+                          <span
+                            className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${
+                              record.status.toLowerCase() === "present"
+                                ? "bg-green-100 text-green-700"
+                                : record.status.toLowerCase() === "late"
+                                  ? "bg-orange-100 text-orange-700"
+                                  : record.status.toLowerCase() === "absent"
+                                    ? "bg-red-100 text-red-700"
+                                    : record.status.toLowerCase() === "on leave"
+                                      ? "bg-purple-100 text-purple-700"
+                                      : "bg-gray-100 text-gray-600"
+                            }`}
+                          >
+                            {record.status}
+                          </span>
+
                         </div>
 
                       </div>
+                    );
+                  })
 
-                    </div>
-                  );
-                })
-            )}
+              )}
+
+            </div>
 
           </div>
 
-          <div className="mt-5 border-t border-gray-100 pt-4">
-            <button
-              type="button"
-              className="text-sm font-semibold text-[#2563eb] hover:underline"
-            >
-              View All History
-            </button>
-          </div>
 
-        </div>
-
-        {/* Regularization Requests */}
+          {/* Regularization Requests */}
           <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
 
-            <div className="flex items-start justify-between">
+            <div className="flex items-start justify-between gap-4">
 
               <div>
                 <h2 className="text-lg font-bold text-[#17213a]">
@@ -935,124 +962,134 @@ const records = await api.get<AttendanceRecord[]>(
                 </p>
               </div>
 
-              <div className="flex items-start justify-between">
+              <button
+                type="button"
+                onClick={() => setIsRegularizationModalOpen(true)}
+                className="rounded-xl bg-[#2563eb] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1d4ed8]"
+              >
+                Submit Request
+              </button>
 
-              <div>
-                  <h2 className="text-lg font-bold text-[#17213a]">
-                    Regularization Requests
-                  </h2>
+            </div>
 
-                  <p className="mt-1 text-sm text-gray-500">
-                    Your attendance regularization requests.
+
+            {/* Request List */}
+            <div className="mt-6 space-y-3">
+
+              {regularizationRequests.length === 0 ? (
+
+                <div className="rounded-xl border border-dashed border-gray-200 p-6 text-center">
+                  <p className="text-sm font-medium text-gray-500">
+                    No regularization requests found.
                   </p>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setIsRegularizationModalOpen(true)}
-                  className="rounded-xl bg-[#2563eb] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1d4ed8]"
-                >
-                  Submit Request
-                </button>
-              </div>
-            </div>
+              ) : (
 
-            <div className="mt-6 space-y-3">
-              {/* Request 1 */}
-              <div className="rounded-xl border border-gray-100 p-4">
+                regularizationRequests
+                  .slice(
+                    0,
+                    showAllRequests
+                      ? regularizationRequests.length
+                      : 3,
+                  )
+                  .map((request) => {
 
-                <div className="flex items-start justify-between gap-3">
+                    const requestDate = new Date(request.date);
 
-                  <div>
-                    <p className="text-sm font-semibold text-[#17213a]">
-                      20 May (Mon)
-                    </p>
+                    const formattedDate =
+                      requestDate.toLocaleDateString("en-IN", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      });
 
-                    <p className="mt-1 text-xs text-gray-500">
-                      Missing Check-Out
-                    </p>
+                    const requestedDate =
+                      new Date(
+                        request.requested_at,
+                      ).toLocaleDateString("en-IN", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      });
 
-                    <p className="mt-2 text-xs text-gray-400">
-                      Requested on 21 May 2024
-                    </p>
-                  </div>
+                    const status =
+                      request.status.toLowerCase();
 
-                  <span className="rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-yellow-700">
-                    Pending
-                  </span>
+                    let statusClass =
+                      "bg-yellow-100 text-yellow-700";
 
-                </div>
+                    if (status === "approved") {
+                      statusClass =
+                        "bg-green-100 text-green-700";
+                    } else if (status === "rejected") {
+                      statusClass =
+                        "bg-red-100 text-red-700";
+                    }
 
-              </div>
+                    return (
+                      <div
+                        key={request.id}
+                        className="rounded-xl border border-gray-100 p-4"
+                      >
 
-              {/* Request 2 */}
-              <div className="rounded-xl border border-gray-100 p-4">
+                        <div className="flex items-start justify-between gap-3">
 
-                <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-semibold text-[#17213a]">
+                              {formattedDate}
+                            </p>
 
-                  <div>
-                    <p className="text-sm font-semibold text-[#17213a]">
-                      14 May (Tue)
-                    </p>
+                            <p className="mt-1 text-xs text-gray-500">
+                              {request.issue_type}
+                            </p>
 
-                    <p className="mt-1 text-xs text-gray-500">
-                      Wrong Check-In Time
-                    </p>
+                            <p className="mt-2 text-xs text-gray-400">
+                              Requested on {requestedDate}
+                            </p>
+                          </div>
 
-                    <p className="mt-2 text-xs text-gray-400">
-                      Requested on 15 May 2024
-                    </p>
-                  </div>
+                          <span
+                            className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${statusClass}`}
+                          >
+                            {request.status}
+                          </span>
 
-                  <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
-                    Approved
-                  </span>
+                        </div>
 
-                </div>
+                      </div>
+                    );
+                  })
 
-              </div>
-
-              {/* Request 3 */}
-              <div className="rounded-xl border border-gray-100 p-4">
-
-                <div className="flex items-start justify-between gap-3">
-
-                  <div>
-                    <p className="text-sm font-semibold text-[#17213a]">
-                      8 May (Wed)
-                    </p>
-
-                    <p className="mt-1 text-xs text-gray-500">
-                      Missing Check-Out
-                    </p>
-
-                    <p className="mt-2 text-xs text-gray-400">
-                      Requested on 9 May 2024
-                    </p>
-                  </div>
-
-                  <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">
-                    Rejected
-                  </span>
-
-                </div>
-
-              </div>
+              )}
 
             </div>
+
 
             {/* View All Requests */}
-            <div className="mt-5 border-t border-gray-100 pt-4">
-              <button
-                type="button"
-                className="text-sm font-semibold text-[#2563eb] hover:underline"
-              >
-                View All Requests
-              </button>
-            </div>
+            {regularizationRequests.length > 3 && (
+              <div className="mt-5 border-t border-gray-100 pt-4">
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowAllRequests(
+                      (previous) => !previous,
+                    )
+                  }
+                  className="text-sm font-semibold text-[#2563eb] hover:underline"
+                >
+                  {showAllRequests
+                    ? "Show Recent Requests"
+                    : "View All Requests"}
+                </button>
+
+              </ div>
+            )}
 
           </div>
-          </section>
+
+        </section>
 
         {/* =========================================================
             TODAY'S TIMELINE

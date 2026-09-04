@@ -13,9 +13,11 @@ import DashboardLayout from "./layouts/DashboardLayout";
 import EmployeeDashboard from "./pages/employee/EmployeeDashboard";
 import EmployeeProfile from "./pages/employee/EmployeeProfile";
 import EmployeeAttendance from "./pages/employee/EmployeeAttendance";
+import EmployeeLeave from "./pages/employee/EmployeeLeave";
 
 import { clearSession, getRefreshToken } from "./services/api";
 import { authService } from "./services/authService";
+import EmployeeLayout from "./layouts/EmployeeLayout";
 
 function App() {
   const [activePage, setActivePage] = useState("Dashboard");
@@ -53,23 +55,28 @@ function App() {
 
         <Route element={<ProtectedRoute />}>
           <Route
-            path="/employee/dashboard"
-            element={<EmployeeDashboard onLogout={handleLogout} />}
-          />
-        </Route>
+            element={<EmployeeLayout onLogout={handleLogout} />}
+          >
+            <Route
+              path="/employee/dashboard"
+              element={<EmployeeDashboard />}
+            />
 
-        <Route
-          path="/employee/profile"
-          element={<EmployeeProfile />}
-        />
+            <Route
+              path="/employee/profile"
+              element={<EmployeeProfile />}
+            />
 
-        <Route
-          element={<ProtectedRoute />}
-        >
-          <Route
-            path="/employee/attendance"
-            element={<EmployeeAttendance onLogout={handleLogout} />}
-          />
+            <Route
+              path="/employee/attendance"
+              element={<EmployeeAttendance />}
+            />
+
+            <Route
+              path="/employee/leave"
+              element={<EmployeeLeave />}
+            />
+          </Route>
         </Route>
 
         <Route

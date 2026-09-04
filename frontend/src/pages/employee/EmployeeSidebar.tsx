@@ -3,16 +3,10 @@ import {
   LayoutDashboard,
   UserRound,
   CalendarCheck2,
-  Clock3,
-  FileClock,
-  CalendarPlus,
   CalendarDays,
-  Scale,
   Wallet,
-  ReceiptText,
   FileText,
   Target,
-  ClipboardCheck,
   Package,
   CircleHelp,
   LogOut,
@@ -41,53 +35,83 @@ const sections: NavSection[] = [
       { label: "My Profile", icon: UserRound, path: "/employee/profile" },
     ],
   },
-  {
-    title: "Attendance",
-    items: [
-      {
-        label: "My Attendance",
-        icon: CalendarCheck2,
-        path: "/employee/attendance",
-        matchPrefix: true,
-      },
-      { label: "Punch In/Out", icon: Clock3, path: "/employee/attendance" },
-      { label: "Regularization Requests", icon: FileClock },
-    ],
-  },
-  {
-    title: "Leave",
-    items: [
-      { label: "Apply Leave", icon: CalendarPlus },
-      { label: "My Leave", icon: CalendarDays },
-      { label: "Leave Balance", icon: Scale },
-    ],
-  },
-  {
-    title: "Payroll",
-    items: [
-      { label: "My Payslip", icon: Wallet },
-      { label: "Salary Details", icon: ReceiptText },
-    ],
-  },
-  {
-    title: "Documents",
-    items: [{ label: "My Documents", icon: FileText }],
-  },
-  {
-    title: "Performance",
-    items: [
-      { label: "My Goals", icon: Target },
-      { label: "My Reviews", icon: ClipboardCheck },
-    ],
-  },
-  {
-    title: "Assets",
-    items: [{ label: "My Assets", icon: Package }],
-  },
-  {
-    title: "Help",
-    items: [{ label: "Help & Support", icon: CircleHelp }],
-  },
+{
+  title: "Attendance",
+  items: [
+    {
+      label: "My Attendance",
+      icon: CalendarCheck2,
+      path: "/employee/attendance",
+      matchPrefix: true,
+    },
+  ],
+},
+{
+  title: "Leave",
+  items: [
+    {
+      label: "My Leave",
+      icon: CalendarDays,
+      path: "/employee/leave",
+      matchPrefix: true,
+    },
+  ],
+},
+{
+  title: "Payroll",
+  items: [
+    {
+      label: "My Payslip",
+      icon: Wallet,
+      path: "/employee/payroll",
+      matchPrefix: true,
+    },
+  ],
+},
+{
+  title: "Documents",
+  items: [
+    {
+      label: "My Documents",
+      icon: FileText,
+      path: "/employee/documents",
+      matchPrefix: true,
+    },
+  ],
+},
+{
+  title: "Performance",
+  items: [
+    {
+      label: "My Performance",
+      icon: Target,
+      path: "/employee/performance",
+      matchPrefix: true,
+    },
+  ],
+},
+{
+  title: "Assets",
+  items: [
+    {
+      label: "My Assets",
+      icon: Package,
+      path: "/employee/assets",
+      matchPrefix: true,
+    },
+  ],
+},
+{
+  title: "Help",
+  items: [
+    {
+      label: "Help & Support",
+      icon: CircleHelp,
+      path: "/employee/help",
+      matchPrefix: true,
+    },
+  ],
+},
 ];
 
 function isItemActive(
@@ -108,7 +132,7 @@ function EmployeeSidebar({
   const location = useLocation();
 
   return (
-    <aside className="flex h-screen w-[250px] shrink-0 flex-col bg-[#0d1e3e] px-4 py-6">
+    <aside className="flex min-h-screen w-[250px] shrink-0 flex-col bg-[#0d1e3e] px-4 py-6">
       {/* Logo */}
       <button
         type="button"
@@ -126,7 +150,7 @@ function EmployeeSidebar({
       </button>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto">
+      <nav className="flex-1">
         {sections.map((section, sectionIndex) => (
           <div key={section.title ?? `top-${sectionIndex}`} className="mb-5">
             {section.title && (
@@ -172,9 +196,7 @@ function EmployeeSidebar({
             </div>
           </div>
         ))}
-      </nav>
-
-      {/* Footer */}
+        {/* Logout */}
       <div className="shrink-0 border-t border-white/10 pt-4">
         <button
           type="button"
@@ -185,6 +207,7 @@ function EmployeeSidebar({
           <span>Logout</span>
         </button>
       </div>
+      </nav>
     </aside>
   );
 }
