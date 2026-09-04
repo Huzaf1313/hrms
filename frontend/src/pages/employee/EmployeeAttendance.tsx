@@ -33,6 +33,18 @@ interface AttendanceRecord {
   updated_at: string | null;
 }
 
+function getIndiaDate(date = new Date()): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
 function normalizeAttendance(record: AttendanceRecord): AttendanceRecord {
   return {
     ...record,
@@ -260,7 +272,8 @@ const records = await api.get<AttendanceRecord[]>(
             "/attendance",
             {
                 employee_id: employeeId,
-                date: now.toISOString().split("T")[0],
+                // Attendance dates follow the India business day, not UTC.
+                date: getIndiaDate(now),
                 in_time: now.toISOString(),
                 out_time: null,
                 status: "present",
@@ -312,17 +325,11 @@ const records = await api.get<AttendanceRecord[]>(
                 setActionError(null);
 
                 const checkOutTime = new Date();
-                const checkInTime = new Date(todayRecord.check_in);
-
-                const totalHours =
-                (checkOutTime.getTime() - checkInTime.getTime()) /
-                (1000 * 60 * 60);
 
                 const attendance = await api.put<AttendanceRecord>(
                 `/attendance/${todayRecord.id}`,
                 {
                     out_time: checkOutTime.toISOString(),
-                    working_hours: Number(totalHours.toFixed(2)),
                 },
                 );
 

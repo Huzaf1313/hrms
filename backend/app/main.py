@@ -4,27 +4,29 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.v1.leaves import router as leaves_router
+from app.api.v1.admin_leaves import router as leaves_router
 from app.api.v1.attendance import router as attendance_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.departments import router as departments_router
 from app.api.v1.employees import router as employees_router
 from app.api.v1.health import router as health_router
 from app.api.v1.dashboard import router as dashboard_router
-from app.core.config import settings
-from app.core.exceptions import AppException
-from app.db.database import connect_to_database, close_database_connection
-from app.repositories.employee_attendance_repository import (
-    EmployeeAttendanceRepository,
-)
 from app.api.v1.users import router as users_router
 from app.api.v1.employee_attendance_regularization import (
     router as employee_attendance_regularization_router,
 )
+
+from app.core.config import settings
+from app.core.exceptions import AppException
+from app.db.database import connect_to_database, close_database_connection
+
+from app.repositories.employee_attendance_repository import (
+    EmployeeAttendanceRepository,
+)
+
 from app.repositories.employee_attendance_regularization_repository import (
     EmployeeAttendanceRegularizationRepository,
 )
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

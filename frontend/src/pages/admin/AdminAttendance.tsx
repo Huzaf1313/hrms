@@ -175,11 +175,15 @@ function AttendanceDonut({ summary }: { summary: AttendanceSummary | null }) {
 
 function getToday(): string {
   const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, "0");
-  const day = String(today.getDate()).padStart(2, "0");
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(today);
+  const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
 
-  return `${year}-${month}-${day}`;
+  return `${values.year}-${values.month}-${values.day}`;
 }
 
 function displayPunchTime(value: string | null | undefined): string {

@@ -20,7 +20,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { departmentService } from "../../services/departmentService";
-import { leaveService, type LeaveRequest, type LeaveStatus, type LeaveSummary } from "../../services/leaveService";
+import { leaveService, type LeaveRequest, type LeaveStatus, type LeaveSummary } from "../../services/admin_leave_service";
 import type { Department } from "../../types/department";
 
 const leaveBalances = [
@@ -247,20 +247,33 @@ function AdminLeave() {
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([
+    Promise.allSettled([
       leaveService.list({ page, limit: 10, status: statusFilter || undefined, leave_type: leaveTypeFilter || undefined, department_id: departmentFilter || undefined }),
       leaveService.summary(),
       departmentService.list(),
-    ]).then(([list, leaveSummary, departmentList]) => {
+    ]).then(([listResult, summaryResult, departmentsResult]) => {
       if (cancelled) return;
-      setRequests(list.items);
-      setPages(list.pages);
-      setTotal(list.total);
-      setSummary(leaveSummary);
-      setDepartments(departmentList);
-      setError("");
-    }).catch(() => {
-      if (!cancelled) setError("Failed to load leave data.");
+      let hasError = false;
+
+      if (listResult.status === "fulfilled") {
+        setRequests(listResult.value.items);
+        setPages(listResult.value.pages);
+        setTotal(listResult.value.total);
+      } else {
+        hasError = true;
+      }
+
+      if (summaryResult.status === "fulfilled") {
+        setSummary(summaryResult.value);
+      } else {
+        hasError = true;
+      }
+
+      if (departmentsResult.status === "fulfilled") {
+        setDepartments(departmentsResult.value);
+      }
+
+      setError(hasError ? "Some leave data could not be loaded." : "");
     }).finally(() => {
       if (!cancelled) setIsLoading(false);
     });

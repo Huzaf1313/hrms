@@ -41,14 +41,14 @@ export const leaveService = {
     leave_type?: string;
     department_id?: string;
   } = {}) {
-    return api.get<LeaveListResponse>("/leaves", params);
+    return api.get<LeaveListResponse>("/admin/leaves", params);
   },
 
   summary() {
-    return api.get<LeaveSummary>("/leaves/summary");
+    return api.get<LeaveSummary>("/admin/leaves/summary");
   },
 
   updateStatus(id: string, status: Exclude<LeaveStatus, "pending" | "cancelled">) {
-    return api.patch<LeaveRequest>(`/leaves/${id}/status`, { status });
+    return api.patch<LeaveRequest>(`/admin/leaves/${id}/status`, { status });
   },
 };

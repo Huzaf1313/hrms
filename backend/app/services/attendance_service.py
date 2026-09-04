@@ -41,6 +41,11 @@ def to_datetime(value: date | None) -> datetime | None:
     return datetime(value.year, value.month, value.day)
 
 
+def business_today() -> date:
+    """Return today's attendance date in the application's business timezone."""
+    return datetime.now(IST).date()
+
+
 def calculate_working_hours(in_time: str | None, out_time: str | None) -> str | None:
     if not in_time or not out_time:
         return None
@@ -326,7 +331,7 @@ class AttendanceService:
         search: str | None,
         pagination: PaginationParams,
     ) -> AttendanceListResponse:
-        selected_date = attendance_date or date.today()
+        selected_date = attendance_date or business_today()
         date_filter = {"date": to_datetime(selected_date)}
         employees = await self.employee_repository.get_all(
             filters=build_filter({"department_id": department_id}),

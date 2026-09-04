@@ -9,7 +9,7 @@ import HiringPipeline from "../components/HiringPipeline";
 import Celebrations from "../components/Celebrations";
 import AdminEmployees from "../pages/admin/AdminEmployees";
 import AdminAttendance from "../pages/admin/AdminAttendance";
-import AdminLeave from "../pages/admin/AdminLeave";
+import AdminLeave from "../pages/admin/admin_leave";
 import AdminRegularizationRequests from "../pages/admin/AdminRegularizationRequests";
 import { getDashboardData, type DashboardData } from "../services/dashboardService";
 

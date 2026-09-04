@@ -8,7 +8,10 @@ from app.repositories.employee_repository import EmployeeRepository
 from app.repositories.leave_repository import LeaveRepository
 
 
-class LeaveService:
+IST = timezone(timedelta(hours=5, minutes=30))
+
+
+class AdminLeaveService:
 
     def __init__(self):
         self.repository = LeaveRepository()
@@ -92,7 +95,12 @@ class LeaveService:
         filters = {}
 
         if status:
-            filters["status"] = status
+            # Employee-created records may use title case (for example,
+            # "Cancelled"). Mongo status filtering must remain case-insensitive.
+            filters["status"] = {
+                "$regex": f"^{status}$",
+                "$options": "i",
+            }
 
         if employee_id:
             filters["employee_id"] = employee_id
@@ -149,7 +157,8 @@ class LeaveService:
                 404,
             )
 
-        if leave["status"] in ["approved", "rejected", "cancelled"]:
+        current_status = str(leave.get("status", "")).lower()
+        if current_status in ["approved", "rejected", "cancelled"]:
             raise AppException(
                 "This leave request has already been finalized",
                 400,
@@ -197,7 +206,7 @@ class LeaveService:
         return True
 
     async def get_summary(self):
-        today = date.today()
+        today = datetime.now(IST).date()
 
         month_start = datetime.combine(
             today.replace(day=1),
@@ -275,8 +284,8 @@ class LeaveService:
             "start_date": document["start_date"].date(),
             "end_date": document["end_date"].date(),
             "reason": document.get("reason"),
-            "status": document["status"],
-            "created_at": document["created_at"],
+            "status": str(document.get("status", "pending")).lower(),
+            "created_at": document.get("created_at") or document.get("requested_at"),
             "reviewed_at": document.get("reviewed_at"),
             "reviewed_by": document.get("reviewed_by"),
             "admin_note": document.get("admin_note"),
