@@ -19,6 +19,9 @@ from app.api.v1.employee_attendance_regularization import (
 from app.api.v1.employee_leave import (
     router as employee_leave_router,
 )
+from app.api.v1.employee_payroll import (
+    router as employee_payroll_router,
+)
 from app.api.v1.leaves import router as leaves_router
 from app.api.v1.attendance import router as attendance_router
 
@@ -39,6 +42,9 @@ from app.repositories.employee_attendance_regularization_repository import (
 from app.repositories.employee_leave_repository import (
     EmployeeLeaveRepository,
 )
+from app.repositories.employee_payroll_repository import (
+    EmployeePayrollRepository,
+)
 
 
 @asynccontextmanager
@@ -55,6 +61,9 @@ async def lifespan(app: FastAPI):
 
     employee_leave_repository = EmployeeLeaveRepository()
     await employee_leave_repository.ensure_indexes()
+
+    employee_payroll_repository = EmployeePayrollRepository()
+    await employee_payroll_repository.ensure_indexes()
 
     yield
 
@@ -128,6 +137,11 @@ app.include_router(
 
 app.include_router(
     employee_leave_router,
+    prefix="/api/v1",
+)
+
+app.include_router(
+    employee_payroll_router,
     prefix="/api/v1",
 )
 
