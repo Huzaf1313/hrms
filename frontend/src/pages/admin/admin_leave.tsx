@@ -164,72 +164,242 @@ function LeaveChart() {
 
 // --- Month calendar grid ------------------------------------------------
 
-type DayDot = "pending" | "approved" | "rejected";
+type DayDot = "pending";
 
 const dotColor: Record<DayDot, string> = {
   pending: "bg-orange-400",
-  approved: "bg-emerald-400",
-  rejected: "bg-rose-400",
 };
 
-// May 2024 starts on Wednesday; 29-30 April are leading days from the prior month.
-const calendarWeeks: { day: number; muted?: boolean; dots?: DayDot[] }[][] = [
-  [
-    { day: 29, muted: true },
-    { day: 30, muted: true },
-    { day: 1 },
-    { day: 2 },
-    { day: 3 },
-    { day: 4 },
-    { day: 5 },
-  ],
-  [
-    { day: 6 },
-    { day: 7, dots: ["approved"] },
-    { day: 8, dots: ["rejected"] },
-    { day: 9 },
-    { day: 10 },
-    { day: 11, dots: ["approved"] },
-    { day: 12 },
-  ],
-  [
-    { day: 13 },
-    { day: 14 },
-    { day: 15, dots: ["approved"] },
-    { day: 16 },
-    { day: 17, dots: ["approved"] },
-    { day: 18, dots: ["rejected"] },
-    { day: 19, dots: ["approved"] },
-  ],
-];
+function LeaveCalendar({
+  requests,
+  department,
+  leaveType,
+}: {
+  requests: LeaveRequest[];
+  department: string;
+  leaveType: string;
+}) {
+  const [viewDate, setViewDate] = useState(() => new Date());
+  const today = new Date();
+  const todayKey = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
 
-function LeaveCalendar() {
+  const filteredRequests = requests.filter(
+    (request) =>
+      (!department || request.department_id === department) &&
+      (!leaveType || request.leave_type === leaveType),
+  );
+
+  const pendingDays = filteredRequests.reduce<Record<number, DayDot[]>>((days, request) => {
+    if (request.status !== "pending") return days;
+
+    const start = new Date(request.start_date);
+    const end = new Date(request.end_date);
+
+    for (let day = new Date(start); day <= end; day.setDate(day.getDate() + 1)) {
+      const key = new Date(day.getFullYear(), day.getMonth(), day.getDate()).getTime();
+      const current = days[key] ?? [];
+      if (!current.includes("pending")) current.push("pending");
+      days[key] = current;
+    }
+
+    return days;
+  }, {});
+
+  const monthStart = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1);
+  const startOffset = (monthStart.getDay() + 6) % 7;
+  const calendarStart = new Date(monthStart);
+  calendarStart.setDate(monthStart.getDate() - startOffset);
+
+  const calendarWeeks = Array.from({ length: 6 }, (_, weekIndex) =>
+    Array.from({ length: 7 }, (_, dayIndex) => {
+      const current = new Date(calendarStart);
+      current.setDate(calendarStart.getDate() + weekIndex * 7 + dayIndex);
+
+      return {
+        day: current.getDate(),
+        muted: current.getMonth() !== viewDate.getMonth(),
+        dotKey: new Date(current.getFullYear(), current.getMonth(), current.getDate()).getTime(),
+      };
+    }),
+  );
+
   return (
-    <div className="grid grid-cols-7 gap-y-3 text-center">
-      {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map((day) => (
-        <div key={day} className="text-xs font-semibold text-gray-400">
-          {day}
-        </div>
-      ))}
+    <div className="space-y-3">
+      <div className="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2">
+        <button
+          type="button"
+          onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1))}
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-lg font-semibold text-gray-600 hover:bg-gray-100"
+          aria-label="Previous month"
+        >
+          &lt;
+        </button>
+        <span className="text-sm font-semibold text-gray-700">
+          {viewDate.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+        </span>
+        <button
+          type="button"
+          onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1))}
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-lg font-semibold text-gray-600 hover:bg-gray-100"
+          aria-label="Next month"
+        >
+          &gt;
+        </button>
+      </div>
 
-      {calendarWeeks.map((week, weekIndex) =>
-        week.map((cell) => (
-          <div key={`${weekIndex}-${cell.day}`} className="flex flex-col items-center gap-1 py-1">
-            <span className={`text-sm ${cell.muted ? "text-gray-300" : "text-gray-700"}`}>
-              {cell.day}
-            </span>
-            <div className="flex h-1.5 items-center gap-0.5">
-              {(cell.dots ?? []).map((dot, index) => (
-                <span key={index} className={`h-1.5 w-1.5 rounded-full ${dotColor[dot]}`} />
-              ))}
-            </div>
+      <div className="grid min-h-[360px] grid-cols-7 gap-y-2 text-center">
+        {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map((day) => (
+          <div key={day} className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+            {day}
           </div>
-        )),
-      )}
+        ))}
+
+                {calendarWeeks.flat().map((cell) => {
+          const isToday = cell.dotKey === todayKey;
+          const hasPending = (pendingDays[cell.dotKey] ?? []).length > 0;
+
+          return (
+            <div
+              key={`${cell.dotKey}`}
+              className="flex min-h-[52px] flex-col items-center justify-start rounded-xl border border-transparent px-1 py-2"
+            >
+              <span className={`text-sm font-medium ${isToday ? "font-bold text-blue-600" : cell.muted ? "text-gray-300" : "text-gray-700"}`}>
+                {cell.day}
+              </span>
+                            <div className="mt-1 flex h-2.5 items-center gap-1">
+                {isToday && <span className="h-2.5 w-2.5 rounded-full bg-blue-500" />}
+                {hasPending && <span className={`h-2.5 w-2.5 rounded-full ${dotColor.pending}`} />}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+const departmentColors = ["#2563eb", "#10b981", "#f59e0b", "#8b5cf6", "#f97316", "#94a3b8"];
+const leaveTypeKpiColors = ["#10b981", "#2563eb", "#f59e0b", "#8b5cf6", "#f97316", "#94a3b8"];
+
+function LeaveByDepartmentKpi({ requests }: { requests: LeaveRequest[] }) {
+  const counts = requests.reduce<Record<string, number>>((result, request) => {
+    const department = request.department_name || "Other";
+    result[department] = (result[department] ?? 0) + 1;
+    return result;
+  }, {});
+
+  const items = Object.entries(counts).sort(([, a], [, b]) => b - a);
+  const total = items.reduce((sum, [, count]) => sum + count, 0);
+
+  const gradient = items
+    .reduce<{ offset: number; segments: string[] }>(
+      (result, [, count], index) => {
+        const start = (result.offset / Math.max(total, 1)) * 100;
+        const offset = result.offset + count;
+        const end = (offset / Math.max(total, 1)) * 100;
+        result.segments.push(`${departmentColors[index % departmentColors.length]} ${start}% ${end}%`);
+        return { offset, segments: result.segments };
+      },
+      { offset: 0, segments: [] },
+    )
+    .segments.join(", ");
+
+  return (
+    <div className="rounded-3xl bg-white p-6 shadow-sm">
+      <h3 className="mb-5 font-bold text-gray-900">Leave by Department</h3>
+      <div className="flex flex-wrap items-center gap-8">
+        <div
+          className="relative h-36 w-36 shrink-0 rounded-full"
+          style={{ background: `conic-gradient(${gradient || "#e5e7eb 0 100%"})` }}
+        >
+          <div className="absolute inset-7 flex flex-col items-center justify-center rounded-full bg-white">
+            <span className="text-2xl font-bold text-gray-900">{total}</span>
+            <span className="text-xs text-gray-400">Total</span>
+          </div>
+        </div>
+        <div className="flex flex-1 flex-col gap-3">
+          {items.length === 0 ? (
+            <span className="text-sm text-gray-400">No department data</span>
+          ) : (
+            items.map(([department, count], index) => (
+              <div key={department} className="flex items-center justify-between gap-4 text-sm">
+                <span className="flex items-center gap-2 text-gray-600">
+                  <span
+                    className="h-2.5 w-2.5 rounded-full"
+                    style={{ backgroundColor: departmentColors[index % departmentColors.length] }}
+                  />
+                  {department}
+                </span>
+                <span className="font-semibold text-gray-700">
+                  {count} ({total ? ((count / total) * 100).toFixed(2) : 0}%)
+                </span>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
     </div>
   );
 }
 
+function LeaveByTypeKpi({ requests }: { requests: LeaveRequest[] }) {
+  const counts = requests.reduce<Record<string, number>>((result, request) => {
+    result[request.leave_type] = (result[request.leave_type] ?? 0) + 1;
+    return result;
+  }, {});
+
+  const items = Object.entries(counts).sort(([, a], [, b]) => b - a);
+  const total = items.reduce((sum, [, count]) => sum + count, 0);
+
+  const gradient = items
+    .reduce<{ offset: number; segments: string[] }>(
+      (result, [, count], index) => {
+        const start = (result.offset / Math.max(total, 1)) * 100;
+        const offset = result.offset + count;
+        const end = (offset / Math.max(total, 1)) * 100;
+        result.segments.push(`${leaveTypeKpiColors[index % leaveTypeKpiColors.length]} ${start}% ${end}%`);
+        return { offset, segments: result.segments };
+      },
+      { offset: 0, segments: [] },
+    )
+    .segments.join(", ");
+
+  return (
+    <div className="rounded-3xl bg-white p-6 shadow-sm">
+      <h3 className="mb-5 font-bold text-gray-900">Leave by Type</h3>
+      <div className="flex flex-wrap items-center gap-8">
+        <div
+          className="relative h-36 w-36 shrink-0 rounded-full"
+          style={{ background: `conic-gradient(${gradient || "#e5e7eb 0 100%"})` }}
+        >
+          <div className="absolute inset-7 flex flex-col items-center justify-center rounded-full bg-white">
+            <span className="text-2xl font-bold text-gray-900">{total}</span>
+            <span className="text-xs text-gray-400">Total</span>
+          </div>
+        </div>
+        <div className="flex min-w-0 flex-1 flex-col gap-3">
+          {items.length === 0 ? (
+            <span className="text-sm text-gray-400">No leave type data</span>
+          ) : (
+            items.map(([leaveType, count], index) => (
+              <div key={leaveType} className="flex items-center justify-between gap-4 text-sm">
+                <span className="flex items-center gap-2 text-gray-600">
+                  <span
+                    className="h-2.5 w-2.5 rounded-full"
+                    style={{ backgroundColor: leaveTypeKpiColors[index % leaveTypeKpiColors.length] }}
+                  />
+                  {leaveType}
+                </span>
+                <span className="font-semibold text-gray-700">
+                  {count} ({total ? ((count / total) * 100).toFixed(2) : 0}%)
+                </span>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 // -------------------------------------------------------------------------
 
 function AdminLeave() {
@@ -244,6 +414,7 @@ function AdminLeave() {
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [selectedRequest, setSelectedRequest] = useState<LeaveRequest | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -474,8 +645,11 @@ function AdminLeave() {
                   <td className="py-4 text-gray-600">{new Date(request.created_at).toLocaleDateString()}</td>
                   <td className="py-4">
                     <div className="flex items-center justify-end gap-2">
-                      <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50">
-                        <Eye className="h-3.5 w-3.5" />
+                      <button
+                        type="button"
+                        onClick={() => setSelectedRequest(request)}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50"
+>                       <Eye className="h-3.5 w-3.5" />
                       </button>
                       {request.status === "pending" && (
                         <>
@@ -511,51 +685,234 @@ function AdminLeave() {
         </div>
       </div>
 
-      {/* Calendar + Upcoming leave */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
-        <div className="rounded-3xl bg-white p-6 shadow-sm lg:col-span-3">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="font-bold text-gray-900">Leave Calendar (May 2024)</h3>
-            <button className="text-xs font-semibold text-[#2563eb] hover:underline">
-              View Full Calendar
-            </button>
+      {/* Calendar + Upcoming leave + KPI cards */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.25fr_2fr_2fr]">
+        <div className="rounded-3xl bg-white p-6 shadow-sm lg:col-span-1 lg:h-[620px]">
+          <div className="mb-4 flex items-center justify-between gap-2">
+            <h3 className="font-bold text-gray-900">Leave Calendar</h3>
           </div>
-          <LeaveCalendar />
+
+          <LeaveCalendar requests={requests} department="" leaveType="" />
+          <div className="mt-4 flex flex-wrap gap-4 border-t border-gray-100 pt-3 text-xs text-gray-500">
+            <span><i className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-blue-500" />Today</span>
+            <span><i className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-orange-400" />Pending</span>
+          </div>
         </div>
 
-        <div className="rounded-3xl bg-white p-6 shadow-sm lg:col-span-2">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="font-bold text-gray-900">Upcoming Leave (Next 7 Days)</h3>
+        <div className="min-w-0 rounded-3xl bg-white p-6 shadow-sm lg:col-span-1 lg:h-[620px]">
+          <div className="mb-4 flex items-center justify-between gap-3">
+          <h3 className="font-bold text-gray-900">Upcoming Leave (Next 7 Days)</h3>
             <button className="text-xs font-semibold text-[#2563eb] hover:underline">
               View All
             </button>
           </div>
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3">
             {requests.filter((request) => request.status === "approved").slice(0, 3).map((leave) => {
               const name = leave.employee_name || leave.employee_id;
-              return <div key={leave.id} className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100 text-xs font-semibold text-blue-700">
-                    {name.split(" ").map((part) => part[0]).join("")}
-                  </div>
-                  <div>
-                    <div className="text-sm font-semibold text-gray-900">{name}</div>
-                    <div className="text-xs text-gray-400">{leave.employee_id}</div>
-                    <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${leaveTypeColors[leave.leave_type] || "bg-gray-50 text-gray-600"}`}>
-                      {leave.leave_type}
+              const initials = name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase();
+
+              return (
+                <div key={leave.id} className="rounded-2xl border border-gray-100 bg-gray-50/60 p-3 transition-colors hover:bg-gray-50">
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-[11px] font-bold text-blue-700">
+                        {initials}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-semibold text-gray-900">{name}</div>
+                        <div className="text-[11px] text-gray-400">{leave.employee_id}</div>
+                      </div>
+                    </div>
+                    <span className="inline-flex shrink-0 items-center rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
+                      Approved
                     </span>
                   </div>
+
+                  <div className="flex items-center justify-between gap-3 text-[12px] text-gray-600">
+                    <div className="min-w-0">
+                      <span className={`inline-flex rounded-full px-2 py-0.5 font-medium ${leaveTypeColors[leave.leave_type] || "bg-gray-100 text-gray-600"}`}>
+                        {leave.leave_type}
+                      </span>
+                      <div className="mt-1 truncate text-[11px] text-gray-500">
+                        {leave.department_name || "Department not assigned"}
+                      </div>
+                    </div>
+                    <span className="truncate font-medium text-gray-500">{leave.start_date} - {leave.end_date}</span>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-xs text-gray-500">{leave.start_date} - {leave.end_date}</div>
-                  <div className="text-xs font-semibold text-gray-700">Approved</div>
-                </div>
-              </div>
-              ;
+              );
             })}
           </div>
         </div>
+
+        <div className="flex flex-col gap-6 lg:col-span-1 lg:h-[620px] [&>div]:flex-1">
+          <LeaveByDepartmentKpi requests={requests} />
+          <LeaveByTypeKpi requests={requests} />
+        </div>
       </div>
+
+      {/* Leave Request Details Modal */}
+      {selectedRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white shadow-xl">
+            {/* Header */}
+            <div className="flex items-start justify-between border-b border-gray-100 px-6 py-5">
+              <div>
+                <h2 className="text-xl font-bold text-[#17213a]">Leave Request</h2>
+                <p className="mt-1 text-sm text-gray-500">
+                  Submitted by {selectedRequest.employee_name || selectedRequest.employee_id}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedRequest(null)}
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-xl text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="px-6 py-6">
+              {/* Employee + status */}
+              <div className="mb-5 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-700">
+                    {(selectedRequest.employee_name || selectedRequest.employee_id)
+                      .split(" ")
+                      .map((part) => part[0])
+                      .join("")}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">
+                      {selectedRequest.employee_name || selectedRequest.employee_id}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {selectedRequest.employee_id} • {selectedRequest.department_name || "-"}
+                    </p>
+                  </div>
+                </div>
+                <span
+                  className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${statusStyles[selectedRequest.status]}`}
+                >
+                  {statusLabel[selectedRequest.status]}
+                </span>
+              </div>
+
+              {/* Leave Type */}
+              <div className="mb-4">
+                <p className="mb-1 text-sm font-semibold text-gray-700">Leave Type</p>
+                <span
+                  className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
+                    leaveTypeColors[selectedRequest.leave_type] || "bg-gray-50 text-gray-600"
+                  }`}
+                >
+                  {selectedRequest.leave_type}
+                </span>
+              </div>
+
+              {/* From / To */}
+              <div className="mb-4 grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-gray-700">From Date</p>
+                  <p className="mt-1 text-sm text-gray-900">
+                    {new Date(selectedRequest.start_date).toLocaleDateString("en-IN", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-700">To Date</p>
+                  <p className="mt-1 text-sm text-gray-900">
+                    {new Date(selectedRequest.end_date).toLocaleDateString("en-IN", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </p>
+                </div>
+              </div>
+
+              {/* Total Days */}
+              <div className="mb-4 flex items-center justify-between rounded-xl bg-blue-50 px-4 py-3">
+                <span className="text-sm text-gray-700">Total Days</span>
+                <span className="text-sm font-bold text-[#2563eb]">
+                  {Math.max(
+                    1,
+                    Math.round(
+                      (new Date(selectedRequest.end_date).getTime() -
+                        new Date(selectedRequest.start_date).getTime()) /
+                        86400000,
+                    ) + 1,
+                  )}{" "}
+                  Day(s)
+                </span>
+              </div>
+
+              {/* Reason */}
+              <div className="mb-4">
+                <p className="mb-1 text-sm font-semibold text-gray-700">Reason</p>
+                <p className="rounded-xl border border-gray-100 bg-gray-50 p-3 text-sm text-gray-700">
+                  {selectedRequest.reason || "No reason provided."}
+                </p>
+              </div>
+
+              {/* Applied On */}
+              <div className="border-t border-gray-100 pt-4 text-sm text-gray-500">
+                Applied on{" "}
+                {new Date(selectedRequest.created_at).toLocaleDateString("en-IN", {
+                  day: "2-digit",
+                  month: "short",
+                  year: "numeric",
+                })}
+              </div>
+            </div>
+
+            {/* Footer actions */}
+            <div className="border-t border-gray-100 px-6 py-5">
+              {selectedRequest.status === "pending" ? (
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      updateRequestStatus(selectedRequest, "rejected");
+                      setSelectedRequest(null);
+                    }}
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-rose-200 px-4 py-2.5 text-sm font-semibold text-rose-600 hover:bg-rose-50"
+                  >
+                    <X className="h-4 w-4" />
+                    Reject
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      updateRequestStatus(selectedRequest, "approved");
+                      setSelectedRequest(null);
+                    }}
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-600"
+                  >
+                    <Check className="h-4 w-4" />
+                    Approve
+                  </button>
+                </div>
+              ) : (
+                <div
+                  className={`flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold ${statusStyles[selectedRequest.status]}`}
+                >
+                  {selectedRequest.status === "approved" ? (
+                    <Check className="h-4 w-4" />
+                  ) : (
+                    <X className="h-4 w-4" />
+                  )}
+                  This request has been {statusLabel[selectedRequest.status].toLowerCase()}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
