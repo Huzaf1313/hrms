@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { api } from "../../services/api";
 
 interface AttendanceRecord {
@@ -32,16 +32,15 @@ function EmployeeAttendanceRegularizationModal({
   const [attachment, setAttachment] = useState<File | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (isOpen) {
-      setSelectedDate("");
-      setIssueType("Missing Check-Out");
-      setRequestedTime("");
-      setReason("");
-      setAttachment(null);
-      setFormError(null);
-    }
-  }, [isOpen]);
+  const handleClose = () => {
+    setSelectedDate("");
+    setIssueType("Missing Check-Out");
+    setRequestedTime("");
+    setReason("");
+    setAttachment(null);
+    setFormError(null);
+    onClose();
+  };
 
   if (!isOpen) {
     return null;
@@ -167,7 +166,7 @@ function EmployeeAttendanceRegularizationModal({
 
     console.log("Regularization request submitted:", response);
 
-    onClose();
+     handleClose();
   } catch (error) {
     console.error("Regularization submission failed:", error);
 
@@ -198,7 +197,7 @@ function EmployeeAttendanceRegularizationModal({
 
           <button
             type="button"
-            onClick={onClose}
+             onClick={handleClose}
             className="flex h-9 w-9 items-center justify-center rounded-lg text-xl text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
             aria-label="Close"
           >
@@ -457,7 +456,7 @@ function EmployeeAttendanceRegularizationModal({
 
             <button
               type="button"
-              onClick={onClose}
+               onClick={handleClose}
               className="rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
             >
               Cancel

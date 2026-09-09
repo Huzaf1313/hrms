@@ -179,6 +179,7 @@ function EmployeeDashboard() {
 
   return (
       <main className="min-w-0 flex-1 bg-[#f5f7fb] px-5 py-7 text-[#17213a] sm:px-7 lg:px-10">
+  return (
 
         {/* =========================================================
             MAIN CONTENT

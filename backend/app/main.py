@@ -12,6 +12,7 @@ from app.api.v1.employees import router as employees_router
 from app.api.v1.health import router as health_router
 from app.api.v1.dashboard import router as dashboard_router
 from app.api.v1.users import router as users_router
+from app.api.v1.employee_attendance import router as employee_attendance_router
 from app.api.v1.employee_attendance_regularization import (
     router as employee_attendance_regularization_router,
 )
@@ -19,13 +20,24 @@ from app.api.v1.employee_attendance_regularization import (
 from app.core.config import settings
 from app.core.exceptions import AppException
 from app.db.database import connect_to_database, close_database_connection
+from app.api.v1.employee_leave import (
+    router as employee_leave_router,
+)
+from app.api.v1.employee_payroll import (
+    router as employee_payroll_router,
+)
 
 from app.repositories.employee_attendance_repository import (
     EmployeeAttendanceRepository,
 )
-
 from app.repositories.employee_attendance_regularization_repository import (
     EmployeeAttendanceRegularizationRepository,
+)
+from app.repositories.employee_leave_repository import (
+    EmployeeLeaveRepository,
+)
+from app.repositories.employee_payroll_repository import (
+    EmployeePayrollRepository,
 )
 
 @asynccontextmanager
@@ -37,6 +49,12 @@ async def lifespan(app: FastAPI):
 
     regularization_repository = EmployeeAttendanceRegularizationRepository()
     await regularization_repository.ensure_indexes()
+
+    employee_leave_repository = EmployeeLeaveRepository()
+    await employee_leave_repository.ensure_indexes()
+
+    employee_payroll_repository = EmployeePayrollRepository()
+    await employee_payroll_repository.ensure_indexes()
 
     yield
 
@@ -63,7 +81,11 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-app.add_exception_handler(AppException, app_exception_handler)
+app.add_exception_handler(
+    AppException,
+    app_exception_handler,
+)
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -73,6 +95,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+app.include_router(
+    employee_attendance_router,
+    prefix="/api/v1",
+)
 
 app.include_router(
     health_router,
@@ -101,19 +128,28 @@ app.include_router(
 app.include_router(
     leaves_router,
     prefix="/api/v1",
-    tags=["Leaves"]
+    tags=["Leaves"],
 )
 
 app.include_router(
     attendance_router,
     prefix="/api/v1",
-    tags=["Attendance"]
+    tags=["Attendance"],
 )
 
 app.include_router(
     employee_attendance_regularization_router,
     prefix="/api/v1",
-    tags=["Attendance Regularization"]
+)
+
+app.include_router(
+    employee_leave_router,
+    prefix="/api/v1",
+)
+
+app.include_router(
+    employee_payroll_router,
+    prefix="/api/v1",
 )
 
 app.include_router(

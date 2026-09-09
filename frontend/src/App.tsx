@@ -10,13 +10,14 @@ import Login from "./pages/login";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Registration from "./pages/Registration";
 import DashboardLayout from "./layouts/DashboardLayout";
-import EmployeeLayout from "./layouts/EmployeeLayout";
 import EmployeeDashboard from "./pages/employee/EmployeeDashboard";
 import EmployeeProfile from "./pages/employee/EmployeeProfile";
 import EmployeeAttendance from "./pages/employee/EmployeeAttendance";
+import EmployeeLeave from "./pages/employee/EmployeeLeave";
 
 import { clearSession, getRefreshToken } from "./services/api";
 import { authService } from "./services/authService";
+import EmployeeLayout from "./layouts/EmployeeLayout";
 
 function App() {
   const [activePage, setActivePage] = useState("Dashboard");
@@ -71,6 +72,7 @@ function App() {
             <Route path="dashboard" element={<EmployeeDashboard />} />
             <Route path="profile" element={<EmployeeProfile />} />
             <Route path="attendance" element={<EmployeeAttendance />} />
+            <Route path="leave" element={<EmployeeLeave />} />
           </Route>
         </Route>
 

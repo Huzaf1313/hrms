@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
-import { api, setAccessToken, ApiError } from "../services/api";
+import { api, setAccessToken, ApiError, setRefreshToken } from "../services/api";
 
 const roles = [
   "Manager",
@@ -75,7 +75,7 @@ function Login() {
 
       setAccessToken(access_token);
 
-      localStorage.setItem("refresh_token", refresh_token);
+      setRefreshToken(refresh_token);
       localStorage.setItem("token_type", token_type);
 
       const userResponse = await api.get("/users/me");

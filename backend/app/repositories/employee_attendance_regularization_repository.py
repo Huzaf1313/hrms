@@ -108,23 +108,6 @@ class EmployeeAttendanceRegularizationRepository:
 
         return await cursor.to_list(length=limit)
 
-    async def get_all(
-        self,
-        status: str | None = None,
-        skip: int = 0,
-        limit: int = 100,
-    ):
-        filters = {"status": status} if status else {}
-        cursor = (
-            self.collection
-            .find(filters)
-            .sort("requested_at", -1)
-            .skip(skip)
-            .limit(limit)
-        )
-
-        return await cursor.to_list(length=limit)
-
     async def update(
         self,
         regularization_id: str,
