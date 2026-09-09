@@ -6,7 +6,10 @@ from app.db.database import database
 
 
 class LeaveRepository:
-    collection = database["leave_requests"]
+    # Employee leave requests are stored in the shared employee_leave
+    # collection. The previous collection name caused admin queries to return
+    # an empty list and zero KPI counts.
+    collection = database["employee_leave"]
 
     async def create(self, leave_data: dict):
         result = await self.collection.insert_one(leave_data)
@@ -111,7 +114,7 @@ class LeaveRepository:
                     "$gte": month_start,
                     "$lt": month_end,
                 },
-                "status": "pending",
+                "status": {"$regex": "^pending$", "$options": "i"},
             }
         )
 
@@ -121,7 +124,7 @@ class LeaveRepository:
                     "$gte": month_start,
                     "$lt": month_end,
                 },
-                "status": "approved",
+                "status": {"$regex": "^approved$", "$options": "i"},
             }
         )
 
@@ -131,13 +134,13 @@ class LeaveRepository:
                     "$gte": month_start,
                     "$lt": month_end,
                 },
-                "status": "rejected",
+                "status": {"$regex": "^rejected$", "$options": "i"},
             }
         )
 
         on_leave_today = await self.collection.count_documents(
             {
-                "status": "approved",
+                "status": {"$regex": "^approved$", "$options": "i"},
                 "start_date": {
                     "$lte": today_start
                 },
@@ -149,7 +152,7 @@ class LeaveRepository:
 
         upcoming_leaves = await self.collection.count_documents(
             {
-                "status": "approved",
+                "status": {"$regex": "^approved$", "$options": "i"},
                 "start_date": {
                     "$gte": tomorrow_start,
                     "$lt": upcoming_end,

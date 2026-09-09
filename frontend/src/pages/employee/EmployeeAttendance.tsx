@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { api, ApiError } from "../../services/api";
+import EmployeeAttendanceRegularizationModal from "./EmployeeAttendanceRegularizationModal";
 
 interface User {
   id: string;
@@ -12,7 +13,10 @@ interface User {
   is_locked: boolean;
   created_at: string;
   updated_at: string;
-}
+  first_name: string | null;
+  last_name: string | null;
+  work_location: string | null;
+  }
 
 interface AttendanceRecord {
   id: string;
@@ -24,19 +28,28 @@ interface AttendanceRecord {
   out_time?: string | null;
   status: string;
   total_hours: number | null;
-  working_hours?: string | null;
   remarks: string | null;
   created_at: string | null;
   updated_at: string | null;
 }
 
+function getIndiaDate(date = new Date()): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
 function normalizeAttendance(record: AttendanceRecord): AttendanceRecord {
   return {
     ...record,
-    employee_id: record.employee_id || "",
     check_in: record.check_in ?? record.in_time ?? null,
     check_out: record.check_out ?? record.out_time ?? null,
-    total_hours: record.total_hours ?? null,
   };
 }
 
@@ -61,12 +74,13 @@ function EmployeeAttendance() {
   >([]);
 
   const [isLoading, setIsLoading] = useState(true);
-
   const [error, setError] = useState<string | null>(null);
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [employeeId, setEmployeeId] = useState<string | null>(null);
-
+  const [isRegularizationModalOpen, setIsRegularizationModalOpen] =
+  useState(false);
+  
 useEffect(() => {
   async function loadAttendance() {
     if (!user?.employee_id) {
@@ -97,7 +111,7 @@ const records = await api.get<AttendanceRecord[]>(
   },
 );
 
-  setAttendanceRecords(records.map(normalizeAttendance));
+      setAttendanceRecords(records.map(normalizeAttendance));
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);
@@ -162,27 +176,69 @@ const records = await api.get<AttendanceRecord[]>(
     );
     });
 
+    const calendarYear = today.getFullYear();
+    const calendarMonth = today.getMonth();
+
+    const monthName = today.toLocaleDateString("en-IN", {
+      month: "long",
+      year: "numeric",
+    });
+
+    const firstDayOfMonth = new Date(
+      calendarYear,
+      calendarMonth,
+      1,
+    ).getDay();
+
+    const daysInMonth = new Date(
+      calendarYear,
+      calendarMonth + 1,
+      0,
+    ).getDate();
+
+    const calendarDays = Array.from(
+      { length: firstDayOfMonth + daysInMonth },
+      (_, index) => {
+        if (index < firstDayOfMonth) {
+          return null;
+        }
+
+        return index - firstDayOfMonth + 1;
+      },
+    );
+
+    function getAttendanceForDay(day: number) {
+      return attendanceRecords.find((record) => {
+        const recordDate = new Date(record.date);
+
+        return (
+          recordDate.getDate() === day &&
+          recordDate.getMonth() === calendarMonth &&
+          recordDate.getFullYear() === calendarYear
+        );
+      });
+    }
+
     function formatTime(value: string | null) {
         if (!value) {
             return "--";
         }
 
-      const text = value.trim();
+        const text = value.trim();
 
-      if (/^\d{1,2}:\d{2}\s*[AP]M$/i.test(text)) {
-        return text;
-      }
+        if (/^\d{1,2}:\d{2}\s*[AP]M$/i.test(text)) {
+            return text;
+        }
 
-      const utcValue = text.endsWith("Z") || text.includes("+")
-        ? text
-        : `${text}Z`;
-      const parsed = new Date(utcValue);
+        // API timestamps may use either Z or an explicit UTC offset.
+        const hasTimezone = /(?:Z|[+-]\d{2}:\d{2})$/i.test(text);
+        const parsedValue = new Date(hasTimezone ? text : `${text}Z`);
 
-      if (Number.isNaN(parsed.getTime())) {
-        return "--";
-      }
+        if (Number.isNaN(parsedValue.getTime())) {
+            return "--";
+        }
 
-      return parsed.toLocaleTimeString("en-IN", {
+        return parsedValue.toLocaleTimeString("en-IN", {
             timeZone: "Asia/Kolkata",
             hour: "2-digit",
             minute: "2-digit",
@@ -201,7 +257,7 @@ const records = await api.get<AttendanceRecord[]>(
             return;
         }
 
-        if (todayRecord?.check_in) {
+        if (todayRecord) {
             setActionError("Attendance has already been marked for today.");
             return;
         }
@@ -216,7 +272,8 @@ const records = await api.get<AttendanceRecord[]>(
             "/attendance",
             {
                 employee_id: employeeId,
-                date: now.toISOString().split("T")[0],
+                // Attendance dates follow the India business day, not UTC.
+                date: getIndiaDate(now),
                 in_time: now.toISOString(),
                 out_time: null,
                 status: "present",
@@ -225,7 +282,7 @@ const records = await api.get<AttendanceRecord[]>(
             );
 
             setAttendanceRecords((records) => [
-              normalizeAttendance(attendance),
+            normalizeAttendance(attendance),
             ...records,
             ]);
         } catch (err) {
@@ -295,6 +352,17 @@ const records = await api.get<AttendanceRecord[]>(
                 setIsActionLoading(false);
             }
             };
+
+          function formatDuration(totalHours: number | null) {
+            if (totalHours == null) {
+              return "--";
+            }
+
+            const hours = Math.floor(totalHours);
+            const minutes = Math.round((totalHours - hours) * 60);
+
+            return `${hours}h ${minutes}m`;
+          }
 
   return (
     <div className="px-6 pb-10 pt-8 lg:px-8">
@@ -477,11 +545,6 @@ const records = await api.get<AttendanceRecord[]>(
 
           </section>
 
-          {/* Footer */}
-          <footer className="mt-8 border-t border-gray-200 py-6 text-center text-xs text-gray-400">
-            © 2026 HRMS. All rights reserved. · Employee Portal
-          </footer>
-
           {/* =========================================================
             TODAY'S ATTENDANCE & LEAVE BALANCE
         ========================================================= */}
@@ -597,7 +660,7 @@ const records = await api.get<AttendanceRecord[]>(
 
                 {/* Attendance Actions */}
                     <div className="mt-4">
-                            {!todayRecord?.check_in ? (
+                        {!todayRecord ? (
                              <button
                             type="button"
                              onClick={handleCheckIn}
@@ -627,6 +690,26 @@ const records = await api.get<AttendanceRecord[]>(
                             )}
                             </div>
 
+                {/* Shift & Workplace Info */}
+                  <div className="mt-5 border-t border-gray-100 pt-4">
+                    <div className="flex flex-col gap-2 text-xs text-gray-500 sm:flex-row sm:items-center sm:justify-between">
+                      
+                      <div>
+                        <span className="font-semibold text-gray-600">
+                          General Shift:
+                        </span>{" "}
+                        09:30 AM – 06:30 PM
+                      </div>
+
+                      <div>
+                        <span className="font-semibold text-gray-600">
+                          Workplace:
+                        </span>{" "}
+                        Main Office
+                      </div>
+
+                    </div>
+                  </div>
         </div>
 
         {/* Leave Balance */}
@@ -729,9 +812,542 @@ const records = await api.get<AttendanceRecord[]>(
 
         </section>
 
+        {/* =========================================================
+            PUNCH HISTORY & REGULARIZATION
+        ========================================================= */}
+        <section className="mt-6 grid grid-cols-1 gap-8 lg:grid-cols-2">
+
+        {/* Punch In/Out History */}
+        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+
+          <div className="flex items-start justify-between">
+
+            <div>
+              <h2 className="text-lg font-bold text-[#17213a]">
+                Punch In/Out History
+              </h2>
+
+              <p className="mt-1 text-sm text-gray-500">
+                Your recent daily punch records.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              className="text-sm font-semibold text-[#2563eb] hover:underline"
+            >
+              View All History
+            </button>
+
+          </div>
+
+          <div className="mt-6 space-y-3">
+
+            {attendanceRecords.length === 0 ? (
+              <div className="rounded-xl bg-[#f5f7fb] p-5 text-center">
+                <p className="text-sm text-gray-500">
+                  No attendance history available.
+                </p>
+              </div>
+            ) : (
+              attendanceRecords
+                .slice(0, 5)
+                .map((record) => {
+
+                  const recordDate = new Date(record.date);
+
+                  const formattedDate = recordDate.toLocaleDateString(
+                    "en-IN",
+                    {
+                      day: "2-digit",
+                      month: "short",
+                      weekday: "short",
+                    },
+                  );
+
+                  return (
+                    <div
+                      key={record.id}
+                      className="rounded-xl border border-gray-100 p-4"
+                    >
+
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+
+                        {/* Date */}
+                        <div>
+                          <p className="text-sm font-semibold text-[#17213a]">
+                            {formattedDate}
+                          </p>
+
+                          <p className="mt-1 text-xs text-gray-400">
+                            {record.status}
+                          </p>
+                        </div>
+
+                        {/* Punch Details */}
+                        <div className="grid grid-cols-3 gap-5 text-sm">
+
+                          <div>
+                            <p className="text-xs text-gray-400">
+                              Check-In
+                            </p>
+
+                            <p className="mt-1 font-semibold text-gray-700">
+                              {formatTime(record.check_in)}
+                            </p>
+                          </div>
+
+                          <div>
+                            <p className="text-xs text-gray-400">
+                              Check-Out
+                            </p>
+
+                            <p className="mt-1 font-semibold text-gray-700">
+                              {formatTime(record.check_out)}
+                            </p>
+                          </div>
+
+                          <div>
+                            <p className="text-xs text-gray-400">
+                              Duration
+                            </p>
+
+                            <p className="mt-1 font-semibold text-gray-700">
+                              {formatDuration(record.total_hours)}
+                            </p>
+                          </div>
+
+                        </div>
+
+                      </div>
+
+                    </div>
+                  );
+                })
+            )}
+
+          </div>
+
+          <div className="mt-5 border-t border-gray-100 pt-4">
+            <button
+              type="button"
+              className="text-sm font-semibold text-[#2563eb] hover:underline"
+            >
+              View All History
+            </button>
+          </div>
+
+        </div>
+
+        {/* Regularization Requests */}
+          <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+
+            <div className="flex items-start justify-between">
+
+              <div>
+                <h2 className="text-lg font-bold text-[#17213a]">
+                  Regularization Requests
+                </h2>
+
+                <p className="mt-1 text-sm text-gray-500">
+                  Track your attendance regularization requests.
+                </p>
+              </div>
+
+              <div className="flex items-start justify-between">
+
+              <div>
+                  <h2 className="text-lg font-bold text-[#17213a]">
+                    Regularization Requests
+                  </h2>
+
+                  <p className="mt-1 text-sm text-gray-500">
+                    Your attendance regularization requests.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsRegularizationModalOpen(true)}
+                  className="rounded-xl bg-[#2563eb] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1d4ed8]"
+                >
+                  Submit Request
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-6 space-y-3">
+              {/* Request 1 */}
+              <div className="rounded-xl border border-gray-100 p-4">
+
+                <div className="flex items-start justify-between gap-3">
+
+                  <div>
+                    <p className="text-sm font-semibold text-[#17213a]">
+                      20 May (Mon)
+                    </p>
+
+                    <p className="mt-1 text-xs text-gray-500">
+                      Missing Check-Out
+                    </p>
+
+                    <p className="mt-2 text-xs text-gray-400">
+                      Requested on 21 May 2024
+                    </p>
+                  </div>
+
+                  <span className="rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-yellow-700">
+                    Pending
+                  </span>
+
+                </div>
+
+              </div>
+
+              {/* Request 2 */}
+              <div className="rounded-xl border border-gray-100 p-4">
+
+                <div className="flex items-start justify-between gap-3">
+
+                  <div>
+                    <p className="text-sm font-semibold text-[#17213a]">
+                      14 May (Tue)
+                    </p>
+
+                    <p className="mt-1 text-xs text-gray-500">
+                      Wrong Check-In Time
+                    </p>
+
+                    <p className="mt-2 text-xs text-gray-400">
+                      Requested on 15 May 2024
+                    </p>
+                  </div>
+
+                  <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
+                    Approved
+                  </span>
+
+                </div>
+
+              </div>
+
+              {/* Request 3 */}
+              <div className="rounded-xl border border-gray-100 p-4">
+
+                <div className="flex items-start justify-between gap-3">
+
+                  <div>
+                    <p className="text-sm font-semibold text-[#17213a]">
+                      8 May (Wed)
+                    </p>
+
+                    <p className="mt-1 text-xs text-gray-500">
+                      Missing Check-Out
+                    </p>
+
+                    <p className="mt-2 text-xs text-gray-400">
+                      Requested on 9 May 2024
+                    </p>
+                  </div>
+
+                  <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">
+                    Rejected
+                  </span>
+
+                </div>
+
+              </div>
+
+            </div>
+
+            {/* View All Requests */}
+            <div className="mt-5 border-t border-gray-100 pt-4">
+              <button
+                type="button"
+                className="text-sm font-semibold text-[#2563eb] hover:underline"
+              >
+                View All Requests
+              </button>
+            </div>
+
+          </div>
+          </section>
+
+        {/* =========================================================
+            TODAY'S TIMELINE
+        ========================================================= */}
+        <section className="mt-6">
+          <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+
+            <div>
+              <h2 className="text-lg font-bold text-[#17213a]">
+                Today's Timeline
+              </h2>
+
+              <p className="mt-1 text-sm text-gray-500">
+                Your punch-in and punch-out activity for today.
+              </p>
+            </div>
+
+            <div className="mt-6 space-y-6">
+
+              {/* Check-In */}
+              <div className="flex items-start gap-4">
+
+                <div className="relative flex flex-col items-center">
+                  <span
+                    className={`h-4 w-4 rounded-full ring-4 ${
+                      todayRecord?.check_in
+                        ? "bg-green-500 ring-green-100"
+                        : "bg-gray-300 ring-gray-100"
+                    }`}
+                  />
+
+                  <span className="mt-1 h-12 w-px bg-gray-200" />
+                </div>
+
+                <div className="flex-1">
+                  <div className="flex flex-col justify-between gap-1 sm:flex-row sm:items-center">
+                    <div>
+                      <p className="text-sm font-semibold text-gray-800">
+                        Check-In
+                      </p>
+
+                      <p className="mt-1 text-xs text-gray-400">
+                        {todayRecord?.check_in
+                          ? formatTime(todayRecord.check_in)
+                          : "--:-- --"}
+                      </p>
+                    </div>
+
+                    <span
+                      className={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${
+                        todayRecord?.check_in
+                          ? "bg-green-100 text-green-700"
+                          : "bg-gray-100 text-gray-500"
+                      }`}
+                    >
+                      {todayRecord?.check_in
+                        ? "Web Portal"
+                        : "Not yet punched in"}
+                    </span>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Check-Out */}
+              <div className="flex items-start gap-4">
+
+                <div className="flex flex-col items-center">
+                  <span
+                    className={`h-4 w-4 rounded-full ring-4 ${
+                      todayRecord?.check_out
+                        ? "bg-green-500 ring-green-100"
+                        : "bg-gray-300 ring-gray-100"
+                    }`}
+                  />
+                </div>
+
+                <div className="flex-1">
+                  <div className="flex flex-col justify-between gap-1 sm:flex-row sm:items-center">
+                    <div>
+                      <p className="text-sm font-semibold text-gray-800">
+                        Check-Out
+                      </p>
+
+                      <p className="mt-1 text-xs text-gray-400">
+                        {todayRecord?.check_out
+                          ? formatTime(todayRecord.check_out)
+                          : "--:-- --"}
+                      </p>
+                    </div>
+
+                    <span
+                      className={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${
+                        todayRecord?.check_out
+                          ? "bg-green-100 text-green-700"
+                          : "bg-gray-100 text-gray-500"
+                      }`}
+                    >
+                      {todayRecord?.check_out
+                        ? "Web Portal"
+                        : "Not yet punched out"}
+                    </span>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+        </section>
+
+        {/* =========================================================
+            ATTENDANCE OVERVIEW
+        ========================================================= */}
+        <section className="mt-6">
+          <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+
+            <div>
+              <h2 className="text-lg font-bold text-[#17213a]">
+                Attendance Overview
+              </h2>
+
+              <p className="mt-1 text-sm text-gray-500">
+                Monthly attendance calendar.
+              </p>
+            </div>
+
+            {/* Month Header */}
+            <div className="mt-6 flex items-center justify-between">
+              <h3 className="text-base font-semibold text-[#17213a]">
+                {monthName}
+              </h3>
+            </div>
+
+            {/* Calendar */}
+            <div className="mt-5 overflow-x-auto">
+
+              <div className="min-w-[600px]">
+
+                {/* Week Days */}
+                <div className="grid grid-cols-7 border-b border-gray-100 pb-3">
+
+                  {[
+                    "Sun",
+                    "Mon",
+                    "Tue",
+                    "Wed",
+                    "Thu",
+                    "Fri",
+                    "Sat",
+                  ].map((day) => (
+                    <div
+                      key={day}
+                      className="text-center text-xs font-semibold uppercase tracking-wide text-gray-400"
+                    >
+                      {day}
+                    </div>
+                  ))}
+
+                </div>
+
+                {/* Calendar Days */}
+                <div className="grid grid-cols-7">
+
+                  {calendarDays.map((day, index) => {
+
+                    if (day === null) {
+                      return (
+                        <div
+                          key={`empty-${index}`}
+                          className="h-16 border-b border-r border-gray-100"
+                        />
+                      );
+                    }
+
+                    const attendance = getAttendanceForDay(day);
+
+                    const isToday =
+                      day === today.getDate() &&
+                      calendarMonth === today.getMonth() &&
+                      calendarYear === today.getFullYear();
+
+                    const status =
+                      attendance?.status?.toLowerCase();
+
+                    let statusClass =
+                      "text-gray-700";
+
+                    if (status === "present") {
+                      statusClass =
+                        "bg-green-100 text-green-700";
+                    } else if (status === "late") {
+                      statusClass =
+                        "bg-orange-100 text-orange-700";
+                    } else if (status === "absent") {
+                      statusClass =
+                        "bg-red-100 text-red-700";
+                    } else if (status === "on leave") {
+                      statusClass =
+                        "bg-purple-100 text-purple-700";
+                    }
+
+                    return (
+                      <div
+                        key={day}
+                        className="flex h-16 items-center justify-center border-b border-r border-gray-100"
+                      >
+
+                        <div
+                          className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold ${
+                            isToday
+                              ? "bg-[#2563eb] text-white"
+                              : statusClass
+                          }`}
+                        >
+                          {day}
+                        </div>
+
+                      </div>
+                    );
+                  })}
+
+                </div>
+
+              </div>
+
+            </div>
+
+            {/* Legend */}
+            <div className="mt-6 flex flex-wrap gap-x-5 gap-y-3">
+
+              <div className="flex items-center gap-2">
+                <span className="h-3 w-3 rounded-full bg-green-500" />
+                <span className="text-xs text-gray-500">
+                  Present
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="h-3 w-3 rounded-full bg-orange-400" />
+                <span className="text-xs text-gray-500">
+                  Late
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="h-3 w-3 rounded-full bg-red-500" />
+                <span className="text-xs text-gray-500">
+                  Absent
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="h-3 w-3 rounded-full bg-purple-500" />
+                <span className="text-xs text-gray-500">
+                  On Leave
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="h-3 w-3 rounded-full bg-gray-300" />
+                <span className="text-xs text-gray-500">
+                  Weekly Off
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
+        <EmployeeAttendanceRegularizationModal
+          isOpen={isRegularizationModalOpen}
+          onClose={() => setIsRegularizationModalOpen(false)}
+          attendanceRecords={attendanceRecords}
+        />
         </main>
     </div>
   );
 }
-
 export default EmployeeAttendance;

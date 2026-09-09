@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowLeft,
   ArrowRightLeft,
@@ -14,10 +14,44 @@ import {
   TrendingUp,
   User,
   UserX,
+  Palmtree,  
+  Gift, 
+  Timer
 } from "lucide-react";
 
 import type { Department } from "../../types/department";
 import type { Employee } from "../../types/employee";
+
+const leaveBalanceConfig = [
+  {
+    label: "Casual Leave",
+    type: "casualleave",
+    total: 6,
+    icon: Palmtree,
+    iconBg: "bg-teal-50",
+    iconColor: "text-teal-600",
+  },
+  {
+    label: "Earned Leave",
+    type: "earnedleave",
+    total: 12,
+    icon: Gift,
+    iconBg: "bg-orange-50",
+    iconColor: "text-orange-500",
+  },
+  {
+    label: "Comp Off",
+    type: "compoff",
+    total: 1,
+    icon: Timer,
+    iconBg: "bg-violet-50",
+    iconColor: "text-violet-600",
+  },
+];
+
+function leaveTypeKey(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
 
 interface AdminEmployeeDetailsPageProps {
   employee: Employee;
@@ -106,6 +140,67 @@ function AdminEmployeeDetailsPage({
   );
 
   const [showBankDetails, setShowBankDetails] = useState(false);
+
+  const [leaveUsed, setLeaveUsed] = useState<Record<string, number>>({});
+  const [leaveLoading, setLeaveLoading] = useState(true);
+
+  useEffect(() => {
+  const fetchLeaveBalance = async () => {
+    try {
+      setLeaveLoading(true);
+
+      const response = await fetch(
+        `http://localhost:8000/api/v1/admin/leaves?employee_id=${employee.employee_id}&limit=100`,
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch leave requests");
+      }
+
+      const result = await response.json();
+
+      const approvedLeaves = result?.data?.items ?? [];
+
+      const used: Record<string, number> = {};
+
+      approvedLeaves
+        .filter(
+          (leave: { status?: string }) =>
+            leave.status?.toLowerCase() === "approved",
+        )
+        .forEach(
+          (leave: {
+            leave_type: string;
+            start_date: string;
+            end_date: string;
+          }) => {
+            const start = new Date(leave.start_date);
+            const end = new Date(leave.end_date);
+
+            const millisecondsPerDay = 1000 * 60 * 60 * 24;
+
+            const days =
+              Math.floor(
+                (end.getTime() - start.getTime()) / millisecondsPerDay,
+              ) + 1;
+
+            const type = leaveTypeKey(leave.leave_type);
+
+            used[type] = (used[type] || 0) + days;
+          },
+        );
+
+      setLeaveUsed(used);
+    } catch (error) {
+      console.error("Failed to fetch leave balance:", error);
+      setLeaveUsed({});
+    } finally {
+      setLeaveLoading(false);
+    }
+  };
+
+  fetchLeaveBalance();
+}, [employee.employee_id]);
 
   const departmentName =
     departments.find(
@@ -443,6 +538,58 @@ function AdminEmployeeDetailsPage({
               </p>
             )}
           </div>
+
+  {/* LEAVE BALANCE */}
+<div className="rounded-3xl bg-white p-6 shadow-sm">
+  <h3 className="mb-5 font-bold text-gray-900">Leave Balance</h3>
+
+  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+    {leaveBalanceConfig.map((balance) => {
+      const Icon = balance.icon;
+
+      const used = leaveUsed[balance.type] ?? 0;
+      const available = Math.max(balance.total - used, 0);
+
+      return (
+        <div
+          key={balance.label}
+          className="rounded-2xl border border-gray-100 p-4"
+        >
+          <div
+            className={`mb-3 flex h-8 w-8 items-center justify-center rounded-lg ${balance.iconBg}`}
+          >
+            <Icon className={`h-4 w-4 ${balance.iconColor}`} />
+          </div>
+
+          <p className="text-xs text-gray-500">
+            {balance.label}
+          </p>
+
+          {leaveLoading ? (
+            <p className="mt-1 text-sm text-gray-400">
+              Loading...
+            </p>
+          ) : (
+            <>
+              <p className="mt-1 text-xl font-bold text-gray-900">
+                {used}
+                <span className="text-sm font-medium text-gray-400">
+                  {" "}
+                  / {balance.total} Days
+                </span>
+              </p>
+
+              <p className="text-xs text-gray-400">
+                {available} Available
+              </p>
+            </>
+          )}
+        </div>
+      );
+    })}
+  </div>
+</div>
+
 
           {/* PROMOTION / TRANSFER HISTORY */}
           <div className="rounded-3xl bg-white p-6 shadow-sm">

@@ -41,6 +41,11 @@ def to_datetime(value: date | None) -> datetime | None:
     return datetime(value.year, value.month, value.day)
 
 
+def business_today() -> date:
+    """Return today's attendance date in the application's business timezone."""
+    return datetime.now(IST).date()
+
+
 def calculate_working_hours(in_time: str | None, out_time: str | None) -> str | None:
     if not in_time or not out_time:
         return None
@@ -82,7 +87,7 @@ def calculate_working_hours(in_time: str | None, out_time: str | None) -> str | 
     hours, remainder = divmod(int(delta.total_seconds()), 3600)
     minutes = remainder // 60
 
-    return f"{hours}h {minutes}m"
+    return f"{hours}H {minutes}M"
 
 def format_punch_time(value) -> str | None:
     if value is None:
@@ -90,7 +95,9 @@ def format_punch_time(value) -> str | None:
 
     if isinstance(value, datetime):
         if value.tzinfo is None:
-            value = value.replace(tzinfo=timezone.utc)
+            # Legacy attendance records stored local wall-clock values
+            # without a timezone. They are already IST, not UTC.
+            value = value.replace(tzinfo=IST)
         ist_value = value.astimezone(IST)
         return ist_value.strftime("%I:%M %p")
 
@@ -324,7 +331,7 @@ class AttendanceService:
         search: str | None,
         pagination: PaginationParams,
     ) -> AttendanceListResponse:
-        selected_date = attendance_date or date.today()
+        selected_date = attendance_date or business_today()
         date_filter = {"date": to_datetime(selected_date)}
         employees = await self.employee_repository.get_all(
             filters=build_filter({"department_id": department_id}),

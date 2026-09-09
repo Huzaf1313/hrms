@@ -27,6 +27,7 @@ import type {
   AttendanceSummary,
 } from "../../types/attendance";
 import type { Department } from "../../types/department";
+import RegularizationRequestsCard from "../../components/admin/RegularizationRequestsCard";
 
 const tabs = [
   { label: "All Employees", status: undefined as string | undefined },
@@ -34,7 +35,6 @@ const tabs = [
   { label: "Late", status: "late" },
   { label: "On Leave", status: "on_leave" },
   { label: "Absent", status: "absent" },
-  { label: "Missing Punch", status: "missing_punch" },
 ];
 
 const statusStyles: Record<AttendanceStatus, string> = {
@@ -175,11 +175,15 @@ function AttendanceDonut({ summary }: { summary: AttendanceSummary | null }) {
 
 function getToday(): string {
   const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, "0");
-  const day = String(today.getDate()).padStart(2, "0");
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(today);
+  const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
 
-  return `${year}-${month}-${day}`;
+  return `${values.year}-${values.month}-${values.day}`;
 }
 
 function displayPunchTime(value: string | null | undefined): string {
@@ -189,8 +193,10 @@ function displayPunchTime(value: string | null | undefined): string {
     const parsed = new Date(value);
     if (!Number.isNaN(parsed.getTime())) {
       return parsed.toLocaleTimeString([], {
+        timeZone: "Asia/Kolkata",
         hour: "2-digit",
         minute: "2-digit",
+        hour12: true,
       });
     }
   }
@@ -229,6 +235,7 @@ function AdminAttendance() {
   });
   const [isMarkingAttendance, setIsMarkingAttendance] = useState(false);
   const [markError, setMarkError] = useState("");
+  const [attendanceRefreshKey, setAttendanceRefreshKey] = useState(0);
 
   useEffect(() => {
     let isCurrent = true;
@@ -286,7 +293,7 @@ function AdminAttendance() {
     return () => {
       isCurrent = false;
     };
-  }, [date, departmentId, limit, page, search, status]);
+  }, [date, departmentId, limit, page, search, status, attendanceRefreshKey]);
 
   function handleSort(key: SortKey) {
     if (sortKey === key) {
@@ -404,6 +411,48 @@ function AdminAttendance() {
   const initials = (record: AttendanceRecord) =>
     `${record.employee.first_name[0] ?? ""}${record.employee.last_name[0] ?? ""}`;
 
+  function exportAttendance() {
+    const escapeCell = (value: string) =>
+      value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const rows = sortedRecords
+      .map((row) => [
+        `${row.employee.first_name} ${row.employee.last_name}`,
+        row.employee.employee_code,
+        row.employee.department_name ?? "-",
+        row.shift,
+        displayPunchTime(row.in_time ?? row.check_in),
+        displayPunchTime(row.out_time ?? row.check_out),
+        displayWorkingHours(row.working_hours ?? row.total_hours),
+        formatStatus(row.status),
+      ])
+      .map(
+        (values) =>
+          `<tr>${values
+            .map((value) => `<td>${escapeCell(String(value))}</td>`)
+            .join("")}</tr>`,
+      )
+      .join("");
+
+    const workbook = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office"
+        xmlns:x="urn:schemas-microsoft-com:office:excel"
+        xmlns="http://www.w3.org/TR/REC-html40">
+        <head><meta charset="UTF-8" /></head>
+        <body><table>
+          <tr><th>Employee</th><th>Employee ID</th><th>Department</th><th>Shift</th><th>In Time</th><th>Out Time</th><th>Working Hours</th><th>Status</th></tr>
+          ${rows}
+        </table></body>
+      </html>`;
+    const blob = new Blob([workbook], { type: "application/vnd.ms-excel" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = `attendance-${date}.xls`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div className="px-10 pb-10 pt-8">
       {/* Header */}
@@ -418,6 +467,7 @@ function AdminAttendance() {
         <div className="flex items-center gap-3">
           <button
             type="button"
+            onClick={exportAttendance}
             className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             <Download className="h-4 w-4" />
@@ -504,7 +554,7 @@ function AdminAttendance() {
             <option value="late">Late</option>
             <option value="absent">Absent</option>
             <option value="on_leave">On Leave</option>
-            <option value="missing_punch">Missing Punch</option>
+            {/* <option value="missing_punch">Missing Punch</option> */}
           </select>
         </div>
         <div className="flex items-end gap-2">
@@ -542,10 +592,81 @@ function AdminAttendance() {
         ))}
       </div>
 
-      {/* Content: table + sidebar */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+      {/* Row 1: Summary cards side by side */}
+      <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-3">
+        {/* Attendance Summary */}
+        <div className="rounded-3xl bg-white p-6 shadow-sm">
+          <h3 className="mb-4 font-bold text-gray-900">Attendance Summary</h3>
+          <div className="flex justify-center">
+            <AttendanceDonut summary={summary} />
+          </div>
+          <div className="mt-5 flex flex-col gap-2.5">
+            {summaryTotals.map((item) => (
+              <div key={item.label} className="flex items-center justify-between text-sm">
+                <span className="flex items-center gap-2 text-gray-600">
+                  <span className={`h-2 w-2 rounded-full ${item.color}`} />
+                  {item.label}
+                </span>
+                <span className="font-medium text-gray-700">
+                  {item.value} ({item.pct})
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Department Wise Present % */}
+        <div className="rounded-3xl bg-white p-6 shadow-sm">
+          <h3 className="mb-4 font-bold text-gray-900">Department Wise Present %</h3>
+          <div className="flex flex-col gap-4">
+            {(summary?.department_presence ?? []).map((dept) => (
+              <div key={dept.department_id}>
+                <div className="mb-1.5 flex items-center justify-between text-sm">
+                  <span className="text-gray-600">{dept.department_name}</span>
+                  <span className="font-semibold text-gray-900">{dept.present_percentage}%</span>
+                </div>
+                <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
+                  <div
+                    className="h-full rounded-full bg-[#2563eb]"
+                    style={{ width: `${dept.present_percentage}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="rounded-3xl bg-white p-6 shadow-sm">
+          <h3 className="mb-4 font-bold text-gray-900">Quick Actions</h3>
+          <div className="grid grid-cols-2 gap-3">
+            {quickActions.map((action) => {
+              const Icon = action.icon;
+              return (
+                <button
+                  key={action.label}
+                  type="button"
+                  className="flex min-w-0 flex-col items-start gap-2 rounded-2xl border border-gray-100 p-3 text-left hover:bg-gray-50"
+                >
+                  <span
+                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${action.iconBg}`}
+                  >
+                    <Icon className={`h-4 w-4 ${action.iconColor}`} />
+                  </span>
+                  <span className="w-full break-words text-xs font-medium leading-tight text-gray-700">
+                    {action.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Row 2: Table + Regularization side by side */}
+      <div className="flex flex-col gap-6 lg:flex-row">
         {/* Table */}
-        <div className="self-start rounded-3xl bg-white p-6 shadow-sm lg:col-span-4">
+        <div className="min-w-0 flex-1 self-start rounded-3xl bg-white p-6 shadow-sm">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div className="relative">
               <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -631,7 +752,7 @@ function AdminAttendance() {
                     <td className="py-4 text-gray-600">{row.employee.employee_code}</td>
                     <td className="py-4 text-gray-600">{row.employee.department_name ?? "-"}</td>
                     <td className="py-4">
-                    <div className="text-gray-700">{row.shift}</div>
+                      <div className="text-gray-700">{row.shift}</div>
                     </td>
                     <td className="py-4 text-gray-600">{displayPunchTime(row.in_time ?? row.check_in)}</td>
                     <td className="py-4 text-gray-600">{displayPunchTime(row.out_time ?? row.check_out)}</td>
@@ -665,75 +786,11 @@ function AdminAttendance() {
           </div>
         </div>
 
-        {/* Sidebar */}
-        <div className="flex flex-col gap-6">
-          {/* Attendance Summary */}
-          <div className="rounded-3xl bg-white p-6 shadow-sm">
-            <h3 className="mb-4 font-bold text-gray-900">Attendance Summary</h3>
-            <div className="flex justify-center">
-              <AttendanceDonut summary={summary} />
-            </div>
-            <div className="mt-5 flex flex-col gap-2.5">
-              {summaryTotals.map((item) => (
-                <div key={item.label} className="flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-2 text-gray-600">
-                    <span className={`h-2 w-2 rounded-full ${item.color}`} />
-                    {item.label}
-                  </span>
-                  <span className="font-medium text-gray-700">
-                    {item.value} ({item.pct})
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Department Wise Present % */}
-          <div className="rounded-3xl bg-white p-6 shadow-sm">
-            <h3 className="mb-4 font-bold text-gray-900">Department Wise Present %</h3>
-            <div className="flex flex-col gap-4">
-              {(summary?.department_presence ?? []).map((dept) => (
-                <div key={dept.department_id}>
-                  <div className="mb-1.5 flex items-center justify-between text-sm">
-                    <span className="text-gray-600">{dept.department_name}</span>
-                    <span className="font-semibold text-gray-900">{dept.present_percentage}%</span>
-                  </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
-                    <div
-                      className="h-full rounded-full bg-[#2563eb]"
-                      style={{ width: `${dept.present_percentage}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="rounded-3xl bg-white p-6 shadow-sm">
-            <h3 className="mb-4 font-bold text-gray-900">Quick Actions</h3>
-            <div className="grid grid-cols-2 gap-3">
-              {quickActions.map((action) => {
-                const Icon = action.icon;
-                return (
-                  <button
-                    key={action.label}
-                    type="button"
-                    className="flex min-w-0 flex-col items-start gap-2 rounded-2xl border border-gray-100 p-3 text-left hover:bg-gray-50"
-                  >
-                    <span
-                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${action.iconBg}`}
-                    >
-                      <Icon className={`h-4 w-4 ${action.iconColor}`} />
-                    </span>
-                    <span className="w-full break-words text-xs font-medium leading-tight text-gray-700">
-                      {action.label}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+        {/* Regularization Requests */}
+        <div className="flex w-full flex-col gap-6 lg:w-80">
+          <RegularizationRequestsCard
+            onReviewed={() => setAttendanceRefreshKey((current) => current + 1)}
+          />
         </div>
       </div>
 
@@ -808,7 +865,6 @@ function AdminAttendance() {
                     <option value="late">Late</option>
                     <option value="absent">Absent</option>
                     <option value="on_leave">On Leave</option>
-                    <option value="missing_punch">Missing Punch</option>
                   </select>
                 </div>
               </div>
@@ -878,4 +934,3 @@ function AdminAttendance() {
 }
 
 export default AdminAttendance;
-

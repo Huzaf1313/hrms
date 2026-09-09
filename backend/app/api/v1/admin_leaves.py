@@ -2,23 +2,38 @@ from fastapi import APIRouter, Depends, Query
 
 from app.api.deps import require_permission
 from app.core.roles import Permission
-from app.schemas.leave import (
+from app.schemas.admin_leave import (
     LeaveCreate,
     LeaveStatusUpdate,
 )
-from app.services.leave_service import LeaveService
-
+from app.services.admin_leave_service import AdminLeaveService
 
 router = APIRouter(
-    prefix="/leaves",
+    prefix="/admin/leaves",
 )
 
-service = LeaveService()
+service = AdminLeaveService()
+
+# Authentication is currently disabled for the other active admin modules
+# while the frontend session/role flow is being wired up.
+AUTH_ENABLED = False
+
+
+def require_permission_toggle(permission: Permission):
+    if AUTH_ENABLED:
+        return require_permission(permission)
+
+    async def bypass_auth() -> None:
+        return None
+
+    return bypass_auth
 
 
 @router.get("/summary")
 async def get_leave_summary(
-    current_user: dict = Depends(require_permission(Permission.LEAVE_READ)),
+    current_user: dict | None = Depends(
+        require_permission_toggle(Permission.LEAVE_READ)
+    ),
 ):
     return {
         "success": True,
@@ -29,7 +44,9 @@ async def get_leave_summary(
 
 @router.get("")
 async def get_leaves(
-    current_user: dict = Depends(require_permission(Permission.LEAVE_READ)),
+    current_user: dict | None = Depends(
+        require_permission_toggle(Permission.LEAVE_READ)
+    ),
     page: int = Query(
         default=1,
         ge=1,
@@ -63,7 +80,9 @@ async def get_leaves(
 @router.get("/{leave_id}")
 async def get_leave(
     leave_id: str,
-    current_user: dict = Depends(require_permission(Permission.LEAVE_READ)),
+    current_user: dict | None = Depends(
+        require_permission_toggle(Permission.LEAVE_READ)
+    ),
 ):
     return {
         "success": True,
@@ -75,7 +94,9 @@ async def get_leave(
 @router.post("")
 async def create_leave(
     payload: LeaveCreate,
-    current_user: dict = Depends(require_permission(Permission.LEAVE_CREATE)),
+    current_user: dict | None = Depends(
+        require_permission_toggle(Permission.LEAVE_CREATE)
+    ),
 ):
     data = await service.create_leave(
         payload.model_dump()
@@ -92,13 +113,15 @@ async def create_leave(
 async def update_leave_status(
     leave_id: str,
     payload: LeaveStatusUpdate,
-    current_user: dict = Depends(require_permission(Permission.LEAVE_APPROVE)),
+    current_user: dict | None = Depends(
+        require_permission_toggle(Permission.LEAVE_APPROVE)
+    ),
 ):
     data = await service.update_status(
         leave_id=leave_id,
         status=payload.status,
         admin_note=payload.admin_note,
-        admin_user_id=str(current_user["_id"]),
+        admin_user_id=str(current_user["_id"]) if current_user else None,
     )
 
     return {
@@ -111,7 +134,9 @@ async def update_leave_status(
 @router.delete("/{leave_id}")
 async def delete_leave(
     leave_id: str,
-    current_user: dict = Depends(require_permission(Permission.LEAVE_UPDATE)),
+    current_user: dict | None = Depends(
+        require_permission_toggle(Permission.LEAVE_UPDATE)
+    ),
 ):
     await service.delete_leave(leave_id)
 

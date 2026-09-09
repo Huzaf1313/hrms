@@ -15,7 +15,7 @@ from app.schemas.attendance import (
     MyAttendanceStatus,
 )
 from app.schemas.common import APIResponse
-from app.services.attendance_service import AttendanceService
+from app.services.attendance_service import AttendanceService, business_today
 from app.utils.pagination import PaginationParams
 
 
@@ -70,7 +70,7 @@ async def mark_attendance(
     response_model=APIResponse[MyAttendanceStatus],
 )
 async def get_my_attendance_status(
-    attendance_date: date = Query(default_factory=date.today, alias="date"),
+    attendance_date: date | None = Query(default=None, alias="date"),
     current_user: dict = Depends(get_current_user),
 ):
     """Employee self-service - status/in-time/out-time for the logged-in
@@ -85,7 +85,7 @@ async def get_my_attendance_status(
 
     status = await service.get_my_status(
         employee_id=employee["employee_id"],
-        attendance_date=attendance_date,
+        attendance_date=attendance_date or business_today(),
     )
 
     return APIResponse(

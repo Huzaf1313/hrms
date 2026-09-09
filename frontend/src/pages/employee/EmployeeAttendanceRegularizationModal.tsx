@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { api } from "../../services/api";
 
 interface AttendanceRecord {
   id: string;
@@ -108,50 +109,77 @@ function EmployeeAttendanceRegularizationModal({
     setAttachment(file);
   };
 
-  const handleSubmit = (event: React.FormEvent) => {
-    event.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+  event.preventDefault();
 
-    setFormError(null);
+  setFormError(null);
 
-    if (!selectedDate) {
-        setFormError("Please select an attendance date.");
-        return;
-    }
+  if (!selectedDate) {
+    setFormError("Please select an attendance date.");
+    return;
+  }
 
-    if (!selectedAttendance) {
-        setFormError("The selected attendance record could not be found.");
-        return;
-    }
+  if (!selectedAttendance) {
+    setFormError("The selected attendance record could not be found.");
+    return;
+  }
 
-    if (!issueType) {
-        setFormError("Please select an issue type.");
-        return;
-    }
+  if (!issueType) {
+    setFormError("Please select an issue type.");
+    return;
+  }
 
-    if (!requestedTime) {
-        setFormError("Please provide the requested time.");
-        return;
-    }
+  if (!requestedTime) {
+    setFormError("Please provide the requested time.");
+    return;
+  }
 
-    if (!reason.trim()) {
-        setFormError("Please provide a reason for the request.");
-        return;
-    }
+  if (!reason.trim()) {
+    setFormError("Please provide a reason for the request.");
+    return;
+  }
 
-    if (reason.trim().length > 300) {
-        setFormError("Reason cannot exceed 300 characters.");
-        return;
-    }
+  if (reason.trim().length > 300) {
+    setFormError("Reason cannot exceed 300 characters.");
+    return;
+  }
 
-    // Backend submission will be added later.
-    console.log({
-        selectedDate,
-        issueType,
-        requestedTime,
-        reason: reason.trim(),
-        attachment,
-    });
+  try {
+    const requestData = {
+      attendance_id: selectedAttendance.id,
+      date: selectedDate,
+      issue_type: issueType,
+      requested_check_in:
+        issueType === "Missing Check-In"
+          ? `${selectedDate}T${requestedTime}:00+05:30`
+          : null,
+      requested_check_out:
+        issueType === "Missing Check-Out"
+          ? `${selectedDate}T${requestedTime}:00+05:30`
+          : null,
+      reason: reason.trim(),
     };
+
+    const response = await api.post(
+      "/employee-attendance/regularization",
+      requestData,
+    );
+
+    console.log("Regularization request submitted:", response);
+
+    onClose();
+  } catch (error) {
+    console.error("Regularization submission failed:", error);
+
+    if (error instanceof Error) {
+      setFormError(error.message);
+    } else {
+      setFormError(
+        "Failed to submit regularization request. Please try again.",
+      );
+    }
+  }
+};
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
       <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-xl">
