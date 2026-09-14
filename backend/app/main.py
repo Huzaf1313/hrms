@@ -16,6 +16,7 @@ from app.api.v1.employee_attendance import router as employee_attendance_router
 from app.api.v1.employee_attendance_regularization import (
     router as employee_attendance_regularization_router,
 )
+from app.api.v1.employee_documents import router as employee_documents_router
 
 from app.core.config import settings
 from app.core.exceptions import AppException
@@ -26,6 +27,8 @@ from app.api.v1.employee_leave import (
 from app.api.v1.employee_payroll import (
     router as employee_payroll_router,
 )
+
+from app.api.v1 import employee_payslip
 
 from app.repositories.employee_attendance_repository import (
     EmployeeAttendanceRepository,
@@ -153,6 +156,11 @@ app.include_router(
 )
 
 app.include_router(
+    employee_payslip.router,
+    prefix="/api/v1",
+)
+
+app.include_router(
     users_router,
     prefix="/api/v1",
     tags=["Users"],
@@ -162,4 +170,9 @@ app.include_router(
     dashboard_router,
     prefix="/api/v1",
     tags=["Dashboard"],
+)
+
+app.include_router(
+    employee_documents_router,
+    prefix="/api/v1",
 )

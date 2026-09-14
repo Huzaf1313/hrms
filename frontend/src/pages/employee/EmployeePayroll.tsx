@@ -1,4 +1,4 @@
- import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowDownToLine,
   Banknote,
@@ -14,6 +14,7 @@ import {
   Wallet,
   X,
 } from "lucide-react";
+import { api, downloadFile } from "../../services/api";
 
 type PayrollTab =
   | "Payslips"
@@ -22,6 +23,7 @@ type PayrollTab =
   | "Tax Details";
 
 interface Payslip {
+  id: string;
   month: string;
   paidOn: string;
   amount: number;
@@ -39,127 +41,6 @@ interface Deduction {
   amount: number;
   shortLabel: string;
 }
-
-const payslips: Payslip[] = [
-  {
-    month: "May 2024",
-    paidOn: "25 May 2024",
-    amount: 28450,
-    status: "Credited",
-  },
-  {
-    month: "Apr 2024",
-    paidOn: "25 Apr 2024",
-    amount: 27980,
-    status: "Credited",
-  },
-  {
-    month: "Mar 2024",
-    paidOn: "25 Mar 2024",
-    amount: 27980,
-    status: "Credited",
-  },
-  {
-    month: "Feb 2024",
-    paidOn: "26 Feb 2024",
-    amount: 27450,
-    status: "Credited",
-  },
-  {
-    month: "Jan 2024",
-    paidOn: "26 Jan 2024",
-    amount: 27450,
-    status: "Credited",
-  },
-  {
-    month: "Dec 2023",
-    paidOn: "26 Dec 2023",
-    amount: 27450,
-    status: "Credited",
-  },
-  {
-    month: "Nov 2023",
-    paidOn: "25 Nov 2023",
-    amount: 27200,
-    status: "Credited",
-  },
-  {
-    month: "Oct 2023",
-    paidOn: "25 Oct 2023",
-    amount: 27200,
-    status: "Credited",
-  },
-  {
-    month: "Sep 2023",
-    paidOn: "25 Sep 2023",
-    amount: 27200,
-    status: "Credited",
-  },
-  {
-    month: "Aug 2023",
-    paidOn: "25 Aug 2023",
-    amount: 27000,
-    status: "Credited",
-  },
-  {
-    month: "Jul 2023",
-    paidOn: "25 Jul 2023",
-    amount: 27000,
-    status: "Credited",
-  },
-  {
-    month: "Jun 2023",
-    paidOn: "26 Jun 2023",
-    amount: 26850,
-    status: "Credited",
-  },
-];
-
-const salaryComponents: SalaryComponent[] = [
-  {
-    label: "Basic Salary",
-    amount: 25000,
-    percentage: 77,
-  },
-  {
-    label: "HRA",
-    amount: 3000,
-    percentage: 9,
-  },
-  {
-    label: "Special Allowance",
-    amount: 2000,
-    percentage: 6,
-  },
-  {
-    label: "Conveyance",
-    amount: 1000,
-    percentage: 3,
-  },
-  {
-    label: "Other Allowance",
-    amount: 450,
-    percentage: 1,
-  },
-];
-
-const deductions: Deduction[] = [
-  {
-    label: "Provident Fund",
-    shortLabel: "PF",
-    amount: 1250,
-  },
-  {
-    label: "Professional Tax",
-    shortLabel: "PT",
-    amount: 200,
-  },
-  {
-    label: "Income Tax (TDS)",
-    shortLabel: "TDS",
-    amount: 1100,
-  },
-];
 
 const tabs: PayrollTab[] = [
   "Payslips",
@@ -179,6 +60,170 @@ function EmployeePayroll() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedPayslip, setSelectedPayslip] = useState<Payslip | null>(null);
 
+  const [payrollData, setPayrollData] = useState<any[]>([]);
+  const [, setLoading] = useState(true);
+  const [, setError] = useState("");
+  const [latestPayroll, setLatestPayroll] = useState<any | null>(null);
+
+  useEffect(() => {
+  async function fetchPayroll() {
+    try {
+      setLoading(true);
+      setError("");
+
+      const user = JSON.parse(
+        localStorage.getItem("user") || "{}"
+      );
+
+      const employeeId = user.employee_id;
+
+      if (!employeeId) {
+        throw new Error("Employee information not found.");
+      }
+
+      const response = await api.get<{
+        items: any[];
+        total: number;
+        page: number;
+        limit: number;
+        pages: number;
+      }>(`/employee-payroll/employees/${employeeId}`, {
+        page: 1,
+        limit: 100,
+      });
+
+      setPayrollData(response.items || []);
+
+      const latestResponse = await api.get<any>(
+        `/employee-payroll/employees/${employeeId}/latest`
+      );
+
+      setLatestPayroll(latestResponse);
+    } catch (err) {
+      console.error("Failed to fetch payroll:", err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to load payroll information."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  fetchPayroll();
+}, []);
+
+const payslips: Payslip[] = payrollData.map((record) => ({
+  id: record.id,
+  month: record.month,
+  paidOn: record.payment?.paid_on
+    ? new Date(record.payment.paid_on).toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      })
+    : "Not paid",
+  amount: Number(record.net_salary ?? 0),
+  status:
+    record.payment?.status === "Processing"
+      ? "Processing"
+      : "Credited",
+}));
+
+const salaryComponents: SalaryComponent[] = latestPayroll
+  ? [
+      {
+        label: "Basic Salary",
+        amount: Number(latestPayroll.salary?.basic ?? 0),
+        percentage:
+          latestPayroll.salary?.gross > 0
+            ? Math.round(
+                (Number(latestPayroll.salary?.basic ?? 0) /
+                  Number(latestPayroll.salary.gross)) *
+                  100
+              )
+            : 0,
+      },
+      {
+        label: "HRA",
+        amount: Number(latestPayroll.salary?.hra ?? 0),
+        percentage:
+          latestPayroll.salary?.gross > 0
+            ? Math.round(
+                (Number(latestPayroll.salary?.hra ?? 0) /
+                  Number(latestPayroll.salary.gross)) *
+                  100
+              )
+            : 0,
+      },
+      {
+        label: "Special Allowance",
+        amount: Number(latestPayroll.salary?.special_allowance ?? 0),
+        percentage:
+          latestPayroll.salary?.gross > 0
+            ? Math.round(
+                (Number(latestPayroll.salary?.special_allowance ?? 0) /
+                  Number(latestPayroll.salary.gross)) *
+                  100
+              )
+            : 0,
+      },
+      {
+        label: "Conveyance",
+        amount: Number(latestPayroll.salary?.conveyance ?? 0),
+        percentage:
+          latestPayroll.salary?.gross > 0
+            ? Math.round(
+                (Number(latestPayroll.salary?.conveyance ?? 0) /
+                  Number(latestPayroll.salary.gross)) *
+                  100
+              )
+            : 0,
+      },
+      {
+        label: "Other Allowance",
+        amount: Number(latestPayroll.salary?.other_allowance ?? 0),
+        percentage:
+          latestPayroll.salary?.gross > 0
+            ? Math.round(
+                (Number(latestPayroll.salary?.other_allowance ?? 0) /
+                  Number(latestPayroll.salary.gross)) *
+                  100
+              )
+            : 0,
+      },
+    ]
+  : [];
+
+  const deductions: Deduction[] = latestPayroll
+  ? [
+      {
+        label: "Provident Fund",
+        shortLabel: "PF",
+        amount: Number(latestPayroll.deductions?.pf ?? 0),
+      },
+      {
+        label: "Professional Tax",
+        shortLabel: "PT",
+        amount: Number(latestPayroll.deductions?.pt ?? 0),
+      },
+      {
+        label: "Income Tax (TDS)",
+        shortLabel: "TDS",
+        amount: Number(latestPayroll.deductions?.tds ?? 0),
+      },
+    ]
+  : [];
+
+  const taxableIncome = latestPayroll
+  ? Number(latestPayroll.tax_details?.taxable_income ?? 0)
+  : 0;
+
+  const taxDeducted = latestPayroll
+  ? Number(latestPayroll.tax_details?.tax_deducted ?? 0)
+  : 0;
+
   const totalPages = Math.ceil(payslips.length / ITEMS_PER_PAGE);
 
   const currentPayslips = useMemo(() => {
@@ -197,15 +242,13 @@ function EmployeePayroll() {
     payslips.length,
   );
 
-  const totalDeductions = deductions.reduce(
-    (total, deduction) => total + deduction.amount,
-    0,
-  );
+  const totalDeductions = latestPayroll
+  ? Number(latestPayroll.deductions?.total ?? 0)
+  : 0;
 
-  const grossSalary = salaryComponents.reduce(
-    (total, component) => total + component.amount,
-    0,
-  );
+  const grossSalary = latestPayroll
+  ? Number(latestPayroll.salary?.gross ?? 0)
+  : 0;
 
   const netSalary = grossSalary - totalDeductions;
 
@@ -218,14 +261,40 @@ function EmployeePayroll() {
   }
 
   function handleNextPage() {
-    setCurrentPage((page) => Math.min(totalPages, page + 1));
+    setCurrentPage((page) => Math.min(Math.max(totalPages, 1), page + 1));
   }
 
-  function handleDownloadPayslip(payslip?: Payslip) {
-    const month = payslip?.month ?? "May 2024";
-
-    window.alert(`Payslip download for ${month} will be connected to the backend later.`);
+  async function handleDownloadPayslip(payslip?: Payslip) {
+  if (!payslip?.id) {
+    window.alert("Payslip information is not available.");
+    return;
   }
+
+  try {
+    const pdfBlob = await downloadFile(
+      `/employee-payslip/${payslip.id}/download`,
+    );
+
+    const downloadUrl = window.URL.createObjectURL(pdfBlob);
+
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.download = `payslip_${payslip.month.replace(/\s+/g, "_")}.pdf`;
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    window.URL.revokeObjectURL(downloadUrl);
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Unable to download payslip.";
+
+        window.alert(message);
+      }
+    }
 
   return (
     <>
@@ -251,7 +320,7 @@ function EmployeePayroll() {
             <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
               <CalendarDays className="h-4 w-4 text-slate-400" />
               <span className="text-sm font-medium text-slate-700">
-                May 2024
+                {latestPayroll?.month ?? "—"}
               </span>
             </div>
           </div>
@@ -265,9 +334,9 @@ function EmployeePayroll() {
                   <p className="text-sm font-medium text-slate-500">
                     Net Salary
                   </p>
-                  <p className="mt-2 text-2xl font-bold tracking-tight text-slate-900">
-                    ₹28,450
-                  </p>
+                  {latestPayroll
+                    ? formatCurrency(Number(latestPayroll.net_salary ?? 0))
+                    : "—"}
                 </div>
 
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50">
@@ -278,7 +347,7 @@ function EmployeePayroll() {
               <div className="mt-4 flex items-center gap-2">
                 <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
                   <CircleCheck className="h-3.5 w-3.5" />
-                  Credited
+                  {latestPayroll?.payment?.status ?? "—"}
                 </span>
               </div>
 
@@ -286,14 +355,18 @@ function EmployeePayroll() {
                 <div>
                   <p className="text-xs text-slate-400">Basic</p>
                   <p className="mt-1 text-sm font-semibold text-slate-700">
-                    ₹25,000
+                    {latestPayroll
+                      ? formatCurrency(Number(latestPayroll.salary?.basic ?? 0))
+                      : "—"}
                   </p>
                 </div>
 
                 <div>
                   <p className="text-xs text-slate-400">Deductions</p>
                   <p className="mt-1 text-sm font-semibold text-slate-700">
-                    ₹2,550
+                    {latestPayroll
+                      ? formatCurrency(Number(latestPayroll.deductions?.total ?? 0))
+                      : "—"}
                   </p>
                 </div>
               </div>
@@ -307,7 +380,7 @@ function EmployeePayroll() {
                     Pay Period
                   </p>
                   <p className="mt-2 text-xl font-bold text-slate-900">
-                    May 2024
+                    {latestPayroll?.month ?? "—"}
                   </p>
                 </div>
 
@@ -317,7 +390,23 @@ function EmployeePayroll() {
               </div>
 
               <p className="mt-5 text-sm text-slate-500">
-                01 May 2024 – 31 May 2024
+                {latestPayroll
+                  ? `${new Date(latestPayroll.pay_period_start).toLocaleDateString(
+                      "en-IN",
+                      {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      }
+                    )} – ${new Date(latestPayroll.pay_period_end).toLocaleDateString(
+                      "en-IN",
+                      {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      }
+                    )}`
+                  : "—"}
               </p>
 
               <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100">
@@ -333,7 +422,7 @@ function EmployeePayroll() {
                     Bank Account
                   </p>
                   <p className="mt-2 text-xl font-bold text-slate-900">
-                    HDFC Bank
+                    {latestPayroll?.bank_details?.bank_name ?? "—"}
                   </p>
                 </div>
 
@@ -345,7 +434,9 @@ function EmployeePayroll() {
               <div className="mt-4 flex items-center gap-2">
                 <CreditCard className="h-4 w-4 text-slate-400" />
                 <span className="text-sm font-medium text-slate-600">
-                  •••• 4587
+                  {latestPayroll?.bank_details?.account_last4
+                    ? `•••• ${latestPayroll.bank_details.account_last4}`
+                    : "—"}
                 </span>
               </div>
 
@@ -368,16 +459,17 @@ function EmployeePayroll() {
                 </div>
 
                 <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-blue-200">
-                  May 2024 Payslip
+                  {latestPayroll?.month
+                    ? `${latestPayroll.month} Payslip`
+                    : "Payslip"}
                 </p>
-
                 <h2 className="mt-1 text-lg font-bold text-white">
                   Your payslip is ready!
                 </h2>
 
                 <button
                   type="button"
-                  onClick={() => handleDownloadPayslip()}
+                  onClick={() => handleDownloadPayslip(payslips[0])}
                   className="mt-4 inline-flex items-center gap-2 rounded-lg bg-white px-3.5 py-2 text-sm font-semibold text-[#0d1e3e] transition hover:bg-slate-100"
                 >
                   <ArrowDownToLine className="h-4 w-4" />
@@ -609,6 +701,7 @@ function EmployeePayroll() {
                     salaryComponents={salaryComponents}
                     grossSalary={grossSalary}
                     netSalary={netSalary}
+                    payrollMonth={latestPayroll?.month}
                   />
                 )}
 
@@ -616,10 +709,16 @@ function EmployeePayroll() {
                   <DeductionsDetails
                     deductions={deductions}
                     totalDeductions={totalDeductions}
+                    payrollMonth={latestPayroll?.month}
                   />
                 )}
 
-                {activeTab === "Tax Details" && <TaxDetails />}
+                {activeTab === "Tax Details" && <TaxDetails
+                                                  latestPayroll={latestPayroll}
+                                                  taxableIncome={taxableIncome}
+                                                  taxDeducted={taxDeducted}
+                                                />
+                }
               </div>
             </section>
 
@@ -631,8 +730,8 @@ function EmployeePayroll() {
                   <h2 className="text-lg font-bold text-slate-900">
                     Salary Breakdown
                   </h2>
-                  <p className="mt-1 text-sm text-slate-500">
-                    May 2024
+                   <p className="mt-1 text-sm text-slate-500">
+                    {latestPayroll?.month ?? "—"}
                   </p>
                 </div>
 
@@ -641,8 +740,55 @@ function EmployeePayroll() {
                   <div
                     className="relative h-52 w-52 rounded-full"
                     style={{
-                      background:
-                        "conic-gradient(#2563eb 0deg 277.2deg, #60a5fa 277.2deg 309.6deg, #818cf8 309.6deg 331.2deg, #a78bfa 331.2deg 342deg, #c4b5fd 342deg 360deg)",
+                      background: latestPayroll
+                      ? `conic-gradient(
+                          #2563eb 0deg ${
+                            (salaryComponents[0].percentage / 100) * 360
+                          }deg,
+                          #60a5fa ${
+                            (salaryComponents[0].percentage / 100) * 360
+                          }deg ${
+                            ((salaryComponents[0].percentage +
+                              salaryComponents[1].percentage) /
+                              100) *
+                            360
+                          }deg,
+                          #818cf8 ${
+                            ((salaryComponents[0].percentage +
+                              salaryComponents[1].percentage) /
+                              100) *
+                            360
+                          }deg ${
+                            ((salaryComponents[0].percentage +
+                              salaryComponents[1].percentage +
+                              salaryComponents[2].percentage) /
+                              100) *
+                            360
+                          }deg,
+                          #a78bfa ${
+                            ((salaryComponents[0].percentage +
+                              salaryComponents[1].percentage +
+                              salaryComponents[2].percentage) /
+                              100) *
+                            360
+                          }deg ${
+                            ((salaryComponents[0].percentage +
+                              salaryComponents[1].percentage +
+                              salaryComponents[2].percentage +
+                              salaryComponents[3].percentage) /
+                              100) *
+                            360
+                          }deg,
+                          #c4b5fd ${
+                            ((salaryComponents[0].percentage +
+                              salaryComponents[1].percentage +
+                              salaryComponents[2].percentage +
+                              salaryComponents[3].percentage) /
+                              100) *
+                            360
+                          }deg 360deg
+                        )`
+                      : "conic-gradient(#e2e8f0 0deg 360deg)",
                     }}
                   >
                     <div className="absolute inset-[24px] flex flex-col items-center justify-center rounded-full bg-white">
@@ -703,7 +849,7 @@ function EmployeePayroll() {
                       Recent Deductions
                     </h2>
                     <p className="mt-1 text-sm text-slate-500">
-                      May 2024
+                      {latestPayroll?.month ?? "—"}
                     </p>
                   </div>
 
@@ -861,12 +1007,14 @@ interface SalaryDetailsProps {
   salaryComponents: SalaryComponent[];
   grossSalary: number;
   netSalary: number;
+  payrollMonth?: string;
 }
 
 function SalaryDetails({
   salaryComponents,
   grossSalary,
   netSalary,
+  payrollMonth,
 }: SalaryDetailsProps) {
   return (
     <div>
@@ -875,7 +1023,9 @@ function SalaryDetails({
           Salary Details
         </h2>
         <p className="mt-1 text-sm text-slate-500">
-          Your current salary structure for May 2024.
+          {payrollMonth
+            ? `Your current salary structure for ${payrollMonth}.`
+            : "Your current salary structure."}
         </p>
       </div>
 
@@ -929,11 +1079,13 @@ function SalaryDetails({
 interface DeductionsDetailsProps {
   deductions: Deduction[];
   totalDeductions: number;
+  payrollMonth?: string;
 }
 
 function DeductionsDetails({
   deductions,
   totalDeductions,
+  payrollMonth,
 }: DeductionsDetailsProps) {
   return (
     <div>
@@ -942,7 +1094,9 @@ function DeductionsDetails({
           Deductions & Contributions
         </h2>
         <p className="mt-1 text-sm text-slate-500">
-          Deductions applied to your May 2024 salary.
+          {payrollMonth
+            ? `Deductions applied to your ${payrollMonth} salary.`
+            : "Deductions applied to your salary."}
         </p>
       </div>
 
@@ -989,7 +1143,19 @@ function DeductionsDetails({
   );
 }
 
-function TaxDetails() {
+function TaxDetails({
+  latestPayroll,
+  taxableIncome,
+  taxDeducted,
+}: {
+  latestPayroll: any | null;
+  taxableIncome: number;
+  taxDeducted: number;
+}) {
+  const professionalTax = latestPayroll
+    ? Number(latestPayroll.deductions?.pt ?? 0)
+    : 0;
+
   return (
     <div>
       <div className="mb-6">
@@ -1006,11 +1172,17 @@ function TaxDetails() {
           <p className="text-sm text-slate-500">
             Income Tax (TDS)
           </p>
+
           <p className="mt-2 text-2xl font-bold text-slate-900">
-            ₹1,100
+            {latestPayroll
+              ? formatCurrency(taxDeducted)
+              : "—"}
           </p>
+
           <p className="mt-1 text-xs text-slate-400">
-            Deducted for May 2024
+            {latestPayroll?.month
+              ? `Deducted for ${latestPayroll.month}`
+              : "No payroll information available"}
           </p>
         </div>
 
@@ -1018,11 +1190,49 @@ function TaxDetails() {
           <p className="text-sm text-slate-500">
             Professional Tax
           </p>
+
           <p className="mt-2 text-2xl font-bold text-slate-900">
-            ₹200
+            {latestPayroll
+              ? formatCurrency(professionalTax)
+              : "—"}
           </p>
+
           <p className="mt-1 text-xs text-slate-400">
-            Deducted for May 2024
+            {latestPayroll?.month
+              ? `Deducted for ${latestPayroll.month}`
+              : "No payroll information available"}
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-slate-200 p-5">
+          <p className="text-sm text-slate-500">
+            Taxable Income
+          </p>
+
+          <p className="mt-2 text-2xl font-bold text-slate-900">
+            {latestPayroll
+              ? formatCurrency(taxableIncome)
+              : "—"}
+          </p>
+
+          <p className="mt-1 text-xs text-slate-400">
+            Taxable income for {latestPayroll?.month ?? "the selected payroll period"}
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-slate-200 p-5">
+          <p className="text-sm text-slate-500">
+            Total Tax Deducted
+          </p>
+
+          <p className="mt-2 text-2xl font-bold text-slate-900">
+            {latestPayroll
+              ? formatCurrency(taxDeducted)
+              : "—"}
+          </p>
+
+          <p className="mt-1 text-xs text-slate-400">
+            Income tax deducted from payroll
           </p>
         </div>
 
@@ -1036,10 +1246,10 @@ function TaxDetails() {
               <p className="text-sm font-semibold text-slate-800">
                 Tax information
               </p>
+
               <p className="mt-1 text-sm leading-6 text-slate-500">
-                Detailed annual tax calculations, taxable income,
-                declarations and tax documents will be connected to
-                the payroll backend later.
+                Taxable income and tax deductions are now connected
+                to your payroll information.
               </p>
             </div>
           </div>
