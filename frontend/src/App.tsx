@@ -16,6 +16,8 @@ import EmployeeAttendance from "./pages/employee/EmployeeAttendance";
 import EmployeeLeave from "./pages/employee/EmployeeLeave";
 import EmployeePayroll from "./pages/employee/EmployeePayroll";
 import EmployeeDocuments from "./pages/employee/EmployeeDocuments";
+import EmployeeAnnouncements from "./pages/employee/EmployeeAnnouncements";
+import EmployeeHelpSupport from "./pages/employee/EmployeeHelpSupport";
 
 import { clearSession, getRefreshToken } from "./services/api";
 import { authService } from "./services/authService";
@@ -78,6 +80,8 @@ function App() {
             <Route path="leave" element={<EmployeeLeave />} />
             <Route path="payroll" element={<EmployeePayroll />} />
             <Route path="documents" element={<EmployeeDocuments />} />
+            <Route path="announcements" element={<EmployeeAnnouncements />} />
+            <Route path="help" element={<EmployeeHelpSupport />} />
           </Route>
         </Route>
 

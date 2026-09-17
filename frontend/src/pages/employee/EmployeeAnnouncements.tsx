@@ -1,0 +1,276 @@
+import { useState } from "react";
+import {
+  Bell,
+  CalendarDays,
+  ChevronDown,
+  ChevronRight,
+  Search,
+  SlidersHorizontal,
+} from "lucide-react";
+
+const categories = [
+  "All",
+  "Company",
+  "HR & Policy",
+  "Events",
+  "IT & System",
+];
+
+function EmployeeAnnouncements() {
+    const [selectedCategory, setSelectedCategory] = useState("All");
+    const [searchQuery, setSearchQuery] = useState("");
+    const [filterCategory, setFilterCategory] = useState("all");
+    const [filterDate, setFilterDate] = useState("30");
+    const [currentPage, setCurrentPage] = useState(1);
+  return (
+    <main className="p-6">
+      {/* Page Header */}
+      <div className="mb-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Announcements
+            </h1>
+            <p className="mt-1 text-sm text-gray-500">
+              Stay updated with the latest company announcements and notices.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {/* Search */}
+            <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+
+            <input
+                type="text"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Search announcements..."
+                className="h-10 w-full rounded-lg border border-gray-200 bg-white pl-9 pr-4 text-sm outline-none transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:w-64"
+            />
+            </div>
+
+            {/* Notifications */}
+            <button
+              type="button"
+              className="relative flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition hover:bg-gray-50"
+              aria-label="Notifications"
+            >
+              <Bell className="h-5 w-5" />
+
+              <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
+                3
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Category Tabs */}
+      <div className="mb-6 overflow-x-auto">
+        <div className="flex min-w-max gap-2 rounded-xl border border-gray-200 bg-white p-1.5">
+            {categories.map((category) => (
+            <button
+                key={category}
+                type="button"
+                onClick={() => setSelectedCategory(category)}
+                className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+                selectedCategory === category
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                }`}
+            >
+                {category}
+            </button>
+            ))}
+        </div>
+        </div>
+
+      {/* Main Content */}
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
+        {/* Announcements Feed */}
+        <section className="rounded-xl border border-gray-200 bg-white">
+          <div className="border-b border-gray-100 px-5 py-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-base font-semibold text-gray-900">
+                  Announcements
+                </h2>
+                <p className="mt-1 text-xs text-gray-500">
+                  Latest announcements and company notices
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Empty state - real data will be connected later */}
+          <div className="flex min-h-[360px] items-center justify-center px-6 py-12">
+            <div className="max-w-sm text-center">
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-blue-50">
+                <Bell className="h-6 w-6 text-blue-600" />
+              </div>
+
+              <h3 className="text-base font-semibold text-gray-900">
+                No announcements available
+              </h3>
+
+              <p className="mt-2 text-sm leading-6 text-gray-500">
+                Announcements published by HR will appear here.
+              </p>
+            </div>
+          </div>
+
+          {/* Pagination structure */}
+          <div className="flex items-center justify-between border-t border-gray-100 px-5 py-4">
+            <p className="text-xs text-gray-500">
+              Showing 0 announcements
+            </p>
+            <div className="flex items-center gap-1">
+                <button
+                    type="button"
+                    disabled={currentPage === 1}
+                    onClick={() =>
+                    setCurrentPage((previous) => Math.max(1, previous - 1))
+                    }
+                    className={`flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 ${
+                    currentPage === 1
+                        ? "cursor-not-allowed text-gray-300"
+                        : "text-gray-600 transition hover:bg-gray-50"
+                    }`}
+                    aria-label="Previous page"
+                >
+                    <ChevronRight className="h-4 w-4 rotate-180" />
+                </button>
+
+                {[1, 2, 3].map((page) => (
+                    <button
+                    key={page}
+                    type="button"
+                    onClick={() => setCurrentPage(page)}
+                    className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold ${
+                        currentPage === page
+                        ? "bg-blue-600 text-white"
+                        : "border border-gray-200 text-gray-600 transition hover:bg-gray-50"
+                    }`}
+                    >
+                    {page}
+                    </button>
+                ))}
+
+                <button
+                    type="button"
+                    onClick={() =>
+                    setCurrentPage((previous) => Math.min(3, previous + 1))
+                    }
+                    disabled={currentPage === 3}
+                    className={`flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 ${
+                    currentPage === 3
+                        ? "cursor-not-allowed text-gray-300"
+                        : "text-gray-600 transition hover:bg-gray-50"
+                    }`}
+                    aria-label="Next page"
+                >
+                    <ChevronRight className="h-4 w-4" />
+                </button>
+            </div>
+          </div>
+        </section>
+
+        {/* Right Sidebar */}
+        <aside className="space-y-6">
+          {/* Filters */}
+          <section className="rounded-xl border border-gray-200 bg-white p-5">
+            <div className="mb-5 flex items-center gap-2">
+              <SlidersHorizontal className="h-4 w-4 text-gray-500" />
+              <h2 className="text-sm font-semibold text-gray-900">
+                Filter Announcements
+              </h2>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-gray-600">
+                  Category
+                </label>
+
+                <div className="relative">
+                  <select
+                    value={filterCategory}
+                    onChange={(event) => setFilterCategory(event.target.value)}
+                    className="h-10 w-full appearance-none rounded-lg border border-gray-200 bg-white px-3 pr-9 text-sm text-gray-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  >
+                    <option value="all">All Categories</option>
+                    <option value="company">Company</option>
+                    <option value="hr">HR & Policy</option>
+                    <option value="events">Events</option>
+                    <option value="it">IT & System</option>
+                  </select>
+
+                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-gray-600">
+                  Date
+                </label>
+
+                <div className="relative">
+                  <select
+                    value={filterDate}
+                    onChange={(event) => setFilterDate(event.target.value)}
+                    className="h-10 w-full appearance-none rounded-lg border border-gray-200 bg-white px-3 pr-9 text-sm text-gray-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  >
+                    <option value="30">Last 30 Days</option>
+                    <option value="7">Last 7 Days</option>
+                    <option value="90">Last 90 Days</option>
+                    <option value="all">All Time</option>
+                  </select>
+
+                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                </div>
+              </div>
+
+                <button
+                    type="button"
+                    onClick={() => {
+                        setFilterCategory("all");
+                        setFilterDate("30");
+                        setSelectedCategory("All");
+                        setSearchQuery("");
+                        setCurrentPage(1);
+                    }}
+                    className="h-10 w-full rounded-lg border border-gray-200 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
+                    >
+                    Clear Filter
+                </button>
+            </div>
+          </section>
+
+          {/* Important Announcements */}
+          <section className="rounded-xl border border-gray-200 bg-white p-5">
+            <div className="mb-4">
+              <h2 className="text-sm font-semibold text-gray-900">
+                Important
+              </h2>
+              <p className="mt-1 text-xs text-gray-500">
+                Flagged notices will appear here.
+              </p>
+            </div>
+
+            <div className="flex min-h-[120px] items-center justify-center rounded-lg bg-gray-50 px-4 py-6 text-center">
+              <div>
+                <CalendarDays className="mx-auto mb-2 h-5 w-5 text-gray-400" />
+                <p className="text-xs text-gray-500">
+                  No important announcements available.
+                </p>
+              </div>
+            </div>
+          </section>
+        </aside>
+      </div>
+    </main>
+  );
+}
+
+export default EmployeeAnnouncements;

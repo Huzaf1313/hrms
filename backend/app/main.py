@@ -17,6 +17,9 @@ from app.api.v1.employee_attendance_regularization import (
     router as employee_attendance_regularization_router,
 )
 from app.api.v1.employee_documents import router as employee_documents_router
+from app.api.v1.employee_announcement import (
+    router as employee_announcement_router,
+)
 
 from app.core.config import settings
 from app.core.exceptions import AppException
@@ -174,5 +177,10 @@ app.include_router(
 
 app.include_router(
     employee_documents_router,
+    prefix="/api/v1",
+)
+
+app.include_router(
+    employee_announcement_router,
     prefix="/api/v1",
 )

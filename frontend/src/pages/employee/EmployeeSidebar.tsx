@@ -6,8 +6,7 @@ import {
   CalendarDays,
   Wallet,
   FileText,
-  Target,
-  Package,
+  Megaphone,
   CircleHelp,
   LogOut,
 } from "lucide-react";
@@ -80,23 +79,12 @@ const sections: NavSection[] = [
   ],
 },
 {
-  title: "Performance",
+  title: "Announcements",
   items: [
     {
-      label: "My Performance",
-      icon: Target,
-      path: "/employee/performance",
-      matchPrefix: true,
-    },
-  ],
-},
-{
-  title: "Assets",
-  items: [
-    {
-      label: "My Assets",
-      icon: Package,
-      path: "/employee/assets",
+      label: "Announcements",
+      icon: Megaphone,
+      path: "/employee/announcements",
       matchPrefix: true,
     },
   ],
