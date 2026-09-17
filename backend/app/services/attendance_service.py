@@ -203,7 +203,8 @@ class AttendanceService:
             first_name=employee.get("first_name", "Unknown") if employee else "Unknown",
             last_name=employee.get("last_name", "") if employee else "",
             avatar_url=employee.get("avatar_url") if employee else None,
-            department_id=attendance.get("department_id", ""),
+            department_id=attendance.get("department_id")
+            or (employee.get("department_id", "") if employee else ""),
             department_name=department.get("name") if department else None,
         )
 
@@ -419,12 +420,13 @@ class AttendanceService:
         employee_id: str,
         pagination: PaginationParams,
     ) -> list[AttendanceResponse]:
+        employee = await self._get_employee(employee_id)
+        canonical_employee_id = employee["employee_id"] if employee else employee_id
         records = await self.repository.get_all(
-            filters={"employee_id": employee_id},
+            filters={"employee_id": canonical_employee_id},
             skip=pagination.skip,
             limit=pagination.limit,
         )
-        employee = await self._get_employee(employee_id)
         department = (
             await self.department_repository.get_by_id(employee["department_id"])
             if employee and employee.get("department_id")

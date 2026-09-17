@@ -51,7 +51,7 @@ const sections: NavSection[] = [
   {
     title: "Management",
     items: [
-      { label: "Payroll", icon: Wallet },
+      { label: "Payroll", icon: Wallet, page: "Payroll" },
       { label: "Recruitment", icon: Briefcase },
       { label: "Performance", icon: TrendingUp },
       { label: "Reports", icon: BarChart3 },

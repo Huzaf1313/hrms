@@ -101,7 +101,7 @@ if (!user.employee_id) {
 setEmployeeId(user.employee_id);
 
 const records = await api.get<AttendanceRecord[]>(
-  `/employees/${user.employee_id}/attendance`,
+  `/employee-attendance/employees/${user.employee_id}`,
   {
     page: 1,
     limit: 100,
@@ -267,7 +267,7 @@ setRegularizationRequests(requests);
             const now = new Date();
 
             const attendance = await api.post<AttendanceRecord>(
-            "/attendance",
+            "/employee-attendance",
             {
                 employee_id: employeeId,
                 date: now.toISOString().split("T")[0],
@@ -329,7 +329,7 @@ setRegularizationRequests(requests);
                 (1000 * 60 * 60);
 
                 const attendance = await api.put<AttendanceRecord>(
-                `/attendance/${todayRecord.id}`,
+                `/employee-attendance/${todayRecord.id}`,
                 {
                     check_out: checkOutTime.toISOString(),
                     total_hours: Number(totalHours.toFixed(2)),

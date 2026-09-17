@@ -53,6 +53,7 @@ class Permission(str, Enum):
     PAYROLL_READ = "payroll.read"
     PAYROLL_CREATE = "payroll.create"
     PAYROLL_UPDATE = "payroll.update"
+    PAYROLL_MANAGE = "payroll.manage"
     PAYROLL_PROCESS = "payroll.process"
     PAYROLL_REPORTS = "payroll.reports"
 

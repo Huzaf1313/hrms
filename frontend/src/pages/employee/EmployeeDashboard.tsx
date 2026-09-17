@@ -133,7 +133,7 @@ function EmployeeDashboard() {
     }
 
     api
-      .get<AttendanceRecord[]>(`/employees/${user.employee_id}/attendance`, {
+      .get<AttendanceRecord[]>(`/employee-attendance/employees/${user.employee_id}`, {
         page: 1,
         limit: 100,
       })

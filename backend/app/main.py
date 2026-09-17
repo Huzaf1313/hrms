@@ -27,6 +27,14 @@ from app.api.v1.employee_payroll import (
     router as employee_payroll_router,
 )
 
+from app.api.v1.admin_salary_structures import (
+    router as admin_salary_structures_router,
+)
+
+from app.api.v1.admin_deductions import (
+    router as admin_deductions_router,
+)
+
 from app.repositories.employee_attendance_repository import (
     EmployeeAttendanceRepository,
 )
@@ -95,12 +103,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-app.include_router(
-    employee_attendance_router,
-    prefix="/api/v1",
-)
-
 app.include_router(
     health_router,
     prefix="/api/v1",
@@ -128,28 +130,49 @@ app.include_router(
 app.include_router(
     leaves_router,
     prefix="/api/v1",
-    tags=["Leaves"],
+    tags=["Admin Leaves"],
 )
 
 app.include_router(
     attendance_router,
     prefix="/api/v1",
-    tags=["Attendance"],
+    tags=["Admin Attendance"],
 )
 
 app.include_router(
-    employee_attendance_regularization_router,
+    employee_attendance_router,
     prefix="/api/v1",
+    tags=["Employee Attendance"]
 )
 
 app.include_router(
     employee_leave_router,
     prefix="/api/v1",
+    tags=["Employee Leaves"],
+)
+
+app.include_router(
+    employee_attendance_regularization_router,
+    prefix="/api/v1",
+    tags=["Employee Attendance Regularization"]
 )
 
 app.include_router(
     employee_payroll_router,
     prefix="/api/v1",
+    tags=["Employee Payroll"], 
+)
+
+app.include_router(
+    admin_salary_structures_router,
+    prefix="/api/v1",
+    tags=["Admin Salary Structures"],
+)
+
+app.include_router(
+    admin_deductions_router,
+    prefix="/api/v1",
+    tags=["Deductions & Contributions"],
 )
 
 app.include_router(
