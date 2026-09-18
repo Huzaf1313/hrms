@@ -18,9 +18,19 @@ class AdminSalaryStructureUpdate(BaseModel):
     earnings: list[Earning] | None = None
 
 
+class AppliedDeduction(BaseModel):
+    id: str
+    name: str
+    type: str
+    calculation_method: str
+    percentage: float | None = None
+    fixed_amount: float | None = None
+
+
 class AdminSalaryStructureResponse(BaseModel):
     id: str
     name: str
     range: str
     earnings: list[Earning]
     gross_salary: float
+    deductions: list[AppliedDeduction] = Field(default_factory=list)

@@ -51,3 +51,22 @@ class AdminSalaryStructureRepository:
         )
 
         return result.deleted_count > 0
+
+    async def apply_deduction_to_all(self, deduction: dict):
+        applied = {
+            "id": str(deduction["_id"]),
+            "name": deduction.get("name", ""),
+            "type": deduction.get("type", "deduction"),
+            "calculation_method": deduction.get(
+                "calculation_method", "percentage_of_basic"
+            ),
+            "percentage": deduction.get("percentage"),
+            "fixed_amount": deduction.get("fixed_amount"),
+        }
+
+        result = await self.collection.update_many(
+            {"deductions.id": {"$ne": applied["id"]}},
+            {"$push": {"deductions": applied}},
+        )
+
+        return result.modified_count

@@ -100,6 +100,10 @@ class Permission(str, Enum):
     SETTINGS_READ = "settings.read"
     SETTINGS_UPDATE = "settings.update"
 
+    # Announcements
+    ANNOUNCEMENT_READ = "announcement.read"
+    ANNOUNCEMENT_MANAGE = "announcement.manage"
+
     # Own profile
     SELF_PROFILE_READ = "self_profile.read"
     SELF_PROFILE_UPDATE = "self_profile.update"
@@ -137,6 +141,9 @@ EMPLOYEE_PERMISSIONS = {
 
     # Payslips
     Permission.PAYSLIPS_READ,
+
+    # Announcements
+    Permission.ANNOUNCEMENT_READ,
 
     # Own Profile
     Permission.SELF_PROFILE_READ,

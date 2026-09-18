@@ -19,9 +19,17 @@ class AdminSalaryStructureService:
             range=structure.get("range", ""),
             earnings=earnings,
             gross_salary=gross_salary,
+            deductions=structure.get("deductions", []),
         )
 
+    @staticmethod
+    def validate_earnings(earnings: list[dict]):
+        names = [earning.get("label", "").strip().casefold() for earning in earnings]
+        if len(names) != len(set(names)):
+            raise AppException("This earning field already exists in the salary structure", 400)
+
     async def create_structure(self, data: dict):
+        self.validate_earnings(data.get("earnings", []))
         structure = await self.repository.create(data)
 
         return self._serialize(structure)
@@ -54,6 +62,9 @@ class AdminSalaryStructureService:
             for key, value in update_data.items()
             if value is not None
         }
+
+        if "earnings" in update_data:
+            self.validate_earnings(update_data["earnings"])
 
         updated = await self.repository.update(structure_id, update_data)
 

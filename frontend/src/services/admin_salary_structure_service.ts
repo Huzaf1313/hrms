@@ -5,12 +5,22 @@ export interface Earning {
   amount: number;
 }
 
+export interface AppliedDeduction {
+  id: string;
+  name: string;
+  type: "deduction" | "contribution";
+  calculation_method: string;
+  percentage?: number | null;
+  fixed_amount?: number | null;
+}
+
 export interface SalaryStructure {
   id: string;
   name: string;
   range: string;
   earnings: Earning[];
   gross_salary: number;
+  deductions?: AppliedDeduction[];
 }
 
 export interface SalaryStructureInput {

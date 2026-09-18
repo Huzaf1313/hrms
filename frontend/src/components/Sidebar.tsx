@@ -6,9 +6,7 @@ import {
   CalendarCheck,
   CalendarDays,
   Wallet,
-  Briefcase,
-  TrendingUp,
-  BarChart3,
+  Megaphone,
   Settings,
 } from "lucide-react";
 
@@ -52,10 +50,8 @@ const sections: NavSection[] = [
     title: "Management",
     items: [
       { label: "Payroll", icon: Wallet, page: "Payroll" },
-      { label: "Recruitment", icon: Briefcase },
-      { label: "Performance", icon: TrendingUp },
-      { label: "Reports", icon: BarChart3 },
-      { label: "Settings", icon: Settings },
+      { label: "Announcement", icon: Megaphone, page: "Announcement" },
+      { label: "Settings", icon: Settings, page: "Settings" },
     ],
   },
 ];

@@ -81,6 +81,12 @@ export const adminDeductionService = {
     return api.delete<null>(`/admin/deductions/${id}`);
   },
 
+  apply(id: string) {
+    return api.post<{ updated_structures: number }>(
+      `/admin/deductions/${id}/apply`,
+    );
+  },
+
   calculate(payload: DeductionCalculationRequest) {
     return api.post<DeductionCalculationResponse>(
       "/admin/deductions/calculate",

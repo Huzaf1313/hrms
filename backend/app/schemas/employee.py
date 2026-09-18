@@ -58,6 +58,8 @@ class EmployeeCreate(BaseModel):
     employment_type: str = "Full-time"
     work_location: str | None = None
     reporting_manager: str | None = None
+    salary_structure: str | None = None
+    salary: str | None = None
 
     # Additional Information
     emergency_contact: EmergencyContact | None = None
@@ -86,6 +88,8 @@ class EmployeeUpdate(BaseModel):
     employment_type: str | None = None
     work_location: str | None = None
     reporting_manager: str | None = None
+    salary_structure: str | None = None
+    salary: str | None = None
 
     emergency_contact: EmergencyContact | None = None
     bank_information: BankInformation | None = None
@@ -121,6 +125,8 @@ class EmployeeResponse(BaseModel):
     employment_type: str
     work_location: str | None = None
     reporting_manager: str | None = None
+    salary_structure: str | None = None
+    salary: str | None = None
 
     # Additional Information
     emergency_contact: EmergencyContact | None = None

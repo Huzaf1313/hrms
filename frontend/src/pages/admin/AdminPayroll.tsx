@@ -14,6 +14,7 @@ import {
 import SalaryStructureTab from "../../components/admin/SalaryStructureTab";
 import DeductionsTab from "../../components/admin/DeductionsTab";
 import PayslipsTab from "../../components/admin/PayslipsTab";
+import Reports from "../../components/admin/Reports";
 
 const summaryCards = [
   { label: "Total Employees", value: "128", note: "Active employees", icon: Users, color: "bg-blue-600" },
@@ -68,15 +69,6 @@ function StatusBadge({ status }: { status: string }) {
     <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${isComplete ? "bg-emerald-50 text-emerald-600" : "bg-orange-50 text-orange-600"}`}>
       {status}
     </span>
-  );
-}
-
-function ComingSoonPanel({ label }: { label: string }) {
-  return (
-    <div className="rounded-xl border border-slate-100 bg-white p-10 text-center shadow-sm">
-      <p className="text-sm font-semibold text-slate-700">{label}</p>
-      <p className="mt-1 text-xs text-slate-400">This section is not built yet.</p>
-    </div>
   );
 }
 
@@ -201,7 +193,7 @@ export default function AdminPayroll() {
       {activeTab === "structure" && <SalaryStructureTab />}
       {activeTab === "deductions" && <DeductionsTab />}
       {activeTab === "payslips" && <PayslipsTab />}
-      {activeTab === "reports" && <ComingSoonPanel label="Reports" />}
+      {activeTab === "reports" && <Reports />}
     </div>
   );
 }

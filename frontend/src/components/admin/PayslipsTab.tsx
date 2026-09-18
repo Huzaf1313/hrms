@@ -1,5 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Eye, Download, X, Search } from "lucide-react";
+import { employeeService } from "../../services/employeeService";
+import { salaryStructureService, type SalaryStructure } from "../../services/admin_salary_structure_service";
+import type { Employee } from "../../types/employee";
 
 
 type PayslipStatus = "Paid" | "Pending" | "Processing";
@@ -48,52 +51,6 @@ const companyInfo = {
   contact: "+91 7387580316, +91 7559203807",
 };
 
-// TODO: replace with data from an API once payroll runs generate real payslips
-const mockPayslips: Payslip[] = [
-  {
-    id: "1",
-    employeeName: "Shruti Ugale",
-    employeeCode: "EMP007",
-    department: "Engineering",
-    designation: "Software Developer",
-    bankName: "Yes Bank",
-    accountNo: "1234567890",
-    month: "May 2026",
-    monthValue: "2026-05",
-    earnings: { basicSalary: 8000, hra: 3000, specialAllowance: 3000, attendanceBonus: 0, overtime: 0, otherAllowances: 0 },
-    deductions: { pf: 960, esi: 118, pt: 200, tds: 1390, leaveDeduction: 0, otherDeductions: 0 },
-    status: "Paid",
-  },
-  {
-    id: "2",
-    employeeName: "Rahul Sharma",
-    employeeCode: "EMP012",
-    department: "Sales",
-    designation: "Sales Executive",
-    bankName: "HDFC Bank",
-    accountNo: "9876543210",
-    month: "May 2026",
-    monthValue: "2026-05",
-    earnings: { basicSalary: 18000, hra: 7000, specialAllowance: 5000, attendanceBonus: 5000, overtime: 0, otherAllowances: 0 },
-    deductions: { pf: 2160, esi: 0, pt: 200, tds: 3640, leaveDeduction: 0, otherDeductions: 0 },
-    status: "Paid",
-  },
-  {
-    id: "3",
-    employeeName: "Amit Verma",
-    employeeCode: "EMP018",
-    department: "Marketing",
-    designation: "Marketing Associate",
-    bankName: "ICICI Bank",
-    accountNo: "5647382910",
-    month: "May 2026",
-    monthValue: "2026-05",
-    earnings: { basicSalary: 6000, hra: 1500, specialAllowance: 1000, attendanceBonus: 0, overtime: 500, otherAllowances: 0 },
-    deductions: { pf: 720, esi: 66, pt: 0, tds: 2780, leaveDeduction: 0, otherDeductions: 0 },
-    status: "Pending",
-  },
-];
-
 const statusStyles: Record<PayslipStatus, string> = {
   Paid: "bg-emerald-50 text-emerald-600",
   Pending: "bg-orange-50 text-orange-500",
@@ -130,30 +87,56 @@ function paidMonthLabel(month: string): string {
   return month.split(" ")[0];
 }
 
-function DetailCell({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex border border-slate-800 px-3 py-2 text-sm">
-      <span className="font-semibold text-slate-900">{label}</span>
-      <span className="ml-1 text-slate-800">: {value}</span>
-    </div>
-  );
+function currentMonthValue(): string {
+  return new Date().toISOString().slice(0, 7);
 }
 
-function AmountRow({
-  label,
-  value,
-  bold = false,
-}: {
-  label: string;
-  value: number;
-  bold?: boolean;
-}) {
-  return (
-    <div className={`flex items-center justify-between border-b border-slate-800 px-3 py-2 last:border-b-0 ${bold ? "font-bold" : ""}`}>
-      <span>{label}</span>
-      <span>{formatCurrency(value)}</span>
-    </div>
-  );
+function structureMatchesEmployee(structure: SalaryStructure, employee: Employee): boolean {
+  const selected = employee.salary_structure?.trim().toLowerCase();
+  if (!selected) return false;
+
+  return structure.name.toLowerCase().includes(selected);
+}
+
+function earningAmount(structure: SalaryStructure | undefined, labels: string[], fallback: number): number {
+  const earning = structure?.earnings.find((item) => {
+    const label = item.label.toLowerCase();
+    return labels.some((value) => label.includes(value));
+  });
+
+  return earning?.amount ?? fallback;
+}
+
+function buildPayslip(employee: Employee, structures: SalaryStructure[]): Payslip {
+  const structure = structures.find((item) => structureMatchesEmployee(item, employee));
+  const baseSalary = Number(employee.salary) || 0;
+  const monthValue = currentMonthValue();
+  const month = new Date(`${monthValue}-01`).toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+
+  return {
+    id: employee.id,
+    employeeName: `${employee.first_name} ${employee.last_name}`.trim(),
+    employeeCode: employee.employee_id,
+    department: employee.department_id,
+    designation: employee.designation,
+    bankName: employee.bank_information?.bank_name ?? "-",
+    accountNo: employee.bank_information?.account_number ?? "-",
+    month,
+    monthValue,
+    earnings: {
+      basicSalary: earningAmount(structure, ["basic"], baseSalary),
+      hra: earningAmount(structure, ["hra", "house rent"], 0),
+      specialAllowance: earningAmount(structure, ["special allowance"], 0),
+      attendanceBonus: earningAmount(structure, ["attendance"], 0),
+      overtime: earningAmount(structure, ["overtime"], 0),
+      otherAllowances: earningAmount(structure, ["other", "conveyance"], 0),
+    },
+    deductions: { pf: 0, esi: 0, pt: 0, tds: 0, leaveDeduction: 0, otherDeductions: 0 },
+    status: "Pending",
+  };
 }
 
 function PayslipDetailModal({ payslip, onClose }: { payslip: Payslip; onClose: () => void }) {
@@ -161,15 +144,9 @@ function PayslipDetailModal({ payslip, onClose }: { payslip: Payslip; onClose: (
   const deductionTotal = totalDeductions(payslip.deductions);
   const net = gross - deductionTotal;
 
-  function handleDownloadPdf() {
-    // TODO: wire up real PDF generation (e.g. a backend endpoint or a client-side
-    // library) once payslips are backed by the database.
-    alert("PDF download will be available once the payslip backend is connected.");
-  }
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white shadow-2xl">
+    <div className="payslip-modal fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-lg bg-white shadow-2xl">
         {/* Close button */}
         <div className="flex justify-end p-3">
           <button
@@ -182,91 +159,62 @@ function PayslipDetailModal({ payslip, onClose }: { payslip: Payslip; onClose: (
           </button>
         </div>
 
-        <div className="px-8 pb-8">
-          {/* Company header */}
-          <div className="mb-6 flex flex-wrap items-center justify-between gap-4 border-b border-slate-300 pb-4">
-            <h3 className="text-xl font-bold text-slate-900">{companyInfo.name}</h3>
-            <div className="text-right text-xs text-slate-600">
-              <p>
-                Website -{" "}
-                <a href={companyInfo.website} className="text-blue-600 underline">
-                  {companyInfo.website}
-                </a>
-              </p>
-              <p>Email - {companyInfo.email}</p>
-            </div>
-          </div>
-
-          <h1 className="mb-5 text-center text-xl font-bold underline">Employee Payslip</h1>
-
-          {/* Employee Details */}
-          <h2 className="mb-2 text-center text-base font-bold">Employee Details</h2>
-          <div className="mb-6 grid grid-cols-1 sm:grid-cols-2">
-            <DetailCell label="Employee Name" value={payslip.employeeName} />
-            <DetailCell label="Designation" value={payslip.designation} />
-            <DetailCell label="Employee ID" value={payslip.employeeCode} />
-            <DetailCell label="Bank Name" value={payslip.bankName} />
-            <DetailCell label="Paid Month" value={paidMonthLabel(payslip.month)} />
-            <DetailCell label="Account No" value={payslip.accountNo} />
-          </div>
-
-          {/* Earnings and Deductions */}
-          <h2 className="mb-2 text-center text-base font-bold">Earnings and Deductions</h2>
-          <div className="mb-6 grid grid-cols-1 border border-slate-800 sm:grid-cols-2">
-            <div className="border-b border-slate-800 sm:border-b-0 sm:border-r">
-              <div className="flex items-center justify-between border-b border-slate-800 bg-slate-50 px-3 py-2 text-sm font-bold">
-                <span>Description</span>
-                <span>Amount</span>
+        <div className="payslip-paper relative mx-auto px-5 pb-7 sm:px-10">
+          <img src="/aarmarks-logo.png.png" alt="" className="payslip-watermark" />
+          <header className="payslip-header relative flex items-center justify-between gap-5 border-b-2 border-slate-700 pb-4">
+            <div className="flex items-center gap-2">
+              <img src="/aarmarks-logo.png.png" alt="AarMarks Media logo" className="h-16 w-16 object-contain" />
+              <div className="font-sans text-[21px] font-bold leading-tight text-[#079bb0] sm:text-[25px]">
+                <div>AarMarks Media</div>
+                <div className="text-center">Pvt. Ltd</div>
               </div>
-              <AmountRow label="Basic Salary" value={payslip.earnings.basicSalary} />
-              <AmountRow label="House Rent Allowances" value={payslip.earnings.hra} />
-              <AmountRow label="Special Allowance" value={payslip.earnings.specialAllowance} />
-              <AmountRow label="Attendance Bonus" value={payslip.earnings.attendanceBonus} />
-              <AmountRow label="Overtime" value={payslip.earnings.overtime} />
-              <AmountRow label="Other Allowances" value={payslip.earnings.otherAllowances} />
-              <AmountRow label="Gross Earnings" value={gross} bold />
             </div>
-            <div>
-              <div className="flex items-center justify-between border-b border-slate-800 bg-slate-50 px-3 py-2 text-sm font-bold">
-                <span>Description</span>
-                <span>Amount</span>
-              </div>
-              <AmountRow label="Provident Fund (PF)" value={payslip.deductions.pf} />
-              <AmountRow label="Employee State Insurance (ESI)" value={payslip.deductions.esi} />
-              <AmountRow label="Professional Tax (PT)" value={payslip.deductions.pt} />
-              <AmountRow label="Income Tax (TDS)" value={payslip.deductions.tds} />
-              <AmountRow label="Leave Deduction" value={payslip.deductions.leaveDeduction} />
-              <AmountRow label="Other Deductions" value={payslip.deductions.otherDeductions} />
-              <AmountRow label="Total Deductions" value={deductionTotal} bold />
+            <div className="px-3 py-2 text-[12px] leading-5 sm:text-[14px]">
+              <div>Website - <a href={companyInfo.website} className="text-blue-700 underline">{companyInfo.website}</a></div>
+              <div>Email&nbsp;&nbsp;&nbsp;- {companyInfo.email}</div>
             </div>
-          </div>
+          </header>
 
-          {/* Net Salary */}
-          <h2 className="mb-2 text-center text-base font-bold">Net Salary</h2>
-          <div className="mb-6 border border-slate-800">
-            <div className="flex items-center justify-between border-b border-slate-800 bg-slate-50 px-3 py-2 text-sm font-bold">
-              <span>Particular</span>
-              <span>Amount</span>
-            </div>
-            <AmountRow label="Gross Earnings" value={gross} />
-            <AmountRow label="Total Deductions" value={deductionTotal} />
-            <AmountRow label="Net Salary Payable" value={net} bold />
-          </div>
+          <h1 className="payslip-title">Employee Payslip</h1>
+          <h2 className="payslip-section-title">Employee Details</h2>
+          <table className="payslip-table payslip-details-table">
+            <tbody>
+              <tr><td><b>Employee Name</b> : {payslip.employeeName}</td><td><b>Designation</b> : {payslip.designation}</td></tr>
+              <tr><td><b>Employee ID</b> : {payslip.employeeCode || "-"}</td><td><b>Bank Name</b> : {payslip.bankName}</td></tr>
+              <tr><td><b>Paid Month</b> : {paidMonthLabel(payslip.month)}</td><td><b>Account No</b> : {payslip.accountNo || "-"}</td></tr>
+            </tbody>
+          </table>
 
-          {/* Download */}
-          <div className="flex justify-center">
-            <button
-              type="button"
-              onClick={handleDownloadPdf}
-              className="flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
-            >
-              <Download className="h-4 w-4" />
-              Download Payslip PDF
-            </button>
-          </div>
+          <h2 className="payslip-section-title">Earnings and Deductions</h2>
+          <table className="payslip-table payslip-earnings-table">
+            <thead><tr><th>Description</th><th>Amount</th><th>Description</th><th>Amount</th></tr></thead>
+            <tbody>
+              {[
+                ["Basic Salary", payslip.earnings.basicSalary, "Provident Fund (PF)", payslip.deductions.pf],
+                ["House Rent Allowances", payslip.earnings.hra, "Employee State Insurance (ESI)", payslip.deductions.esi],
+                ["Special Allowance", payslip.earnings.specialAllowance, "Professional Tax (PT)", payslip.deductions.pt],
+                ["Attendance Bonus", payslip.earnings.attendanceBonus, "Income Tax (TDS)", payslip.deductions.tds],
+                ["Overtime", payslip.earnings.overtime, "Leave Deduction", payslip.deductions.leaveDeduction],
+                ["Other Allowances", payslip.earnings.otherAllowances, "Other Deductions", payslip.deductions.otherDeductions],
+              ].map(([earningLabel, earningValue, deductionLabel, deductionValue]) => (
+                <tr key={String(earningLabel)}><td>{earningLabel}</td><td>{formatCurrency(Number(earningValue))}</td><td>{deductionLabel}</td><td>{formatCurrency(Number(deductionValue))}</td></tr>
+              ))}
+              <tr className="font-bold"><td>Gross Earnings</td><td>{formatCurrency(gross)}</td><td>Total Deductions</td><td>{formatCurrency(deductionTotal)}</td></tr>
+            </tbody>
+          </table>
+
+          <h2 className="payslip-section-title">Net Salary</h2>
+          <table className="payslip-table payslip-net-table">
+            <thead><tr><th>Particular</th><th>Amount</th></tr></thead>
+            <tbody>
+              <tr><td>Gross Earnings</td><td>{formatCurrency(gross)}</td></tr>
+              <tr><td>Total Deductions</td><td>{formatCurrency(deductionTotal)}</td></tr>
+              <tr className="font-bold"><td>Net Salary Payable</td><td>{formatCurrency(net)}</td></tr>
+            </tbody>
+          </table>
 
           {/* Company footer */}
-          <div className="mt-6 border-t border-slate-300 pt-4 text-center text-[11px] text-slate-500">
+          <div className="payslip-footer mt-6 border-t border-slate-300 pt-4 text-center text-[11px]">
             <p>{companyInfo.address}</p>
             <p>Contact Number: {companyInfo.contact}</p>
           </div>
@@ -277,12 +225,39 @@ function PayslipDetailModal({ payslip, onClose }: { payslip: Payslip; onClose: (
 }
 
 function PayslipsTab() {
-  const [monthValue, setMonthValue] = useState("2026-05");
+  const [monthValue, setMonthValue] = useState(currentMonthValue);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<PayslipStatus | "">("");
   const [selectedPayslip, setSelectedPayslip] = useState<Payslip | null>(null);
+  const [payslips, setPayslips] = useState<Payslip[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const filtered = mockPayslips.filter((payslip) => {
+  useEffect(() => {
+    let mounted = true;
+
+    Promise.all([
+      employeeService.list({ status: "active", page: 1, limit: 100 }),
+      salaryStructureService.list(),
+    ])
+      .then(([employees, structures]) => {
+        if (mounted) {
+          setPayslips(employees.map((employee) => buildPayslip(employee, structures)));
+        }
+      })
+      .catch((requestError: Error) => {
+        if (mounted) setError(requestError.message);
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const filtered = payslips.filter((payslip) => {
     const matchesMonth = payslip.monthValue === monthValue;
     const matchesSearch =
       !search ||
@@ -339,6 +314,9 @@ function PayslipsTab() {
           </div>
         </div>
       </div>
+
+      {error && <div className="mb-4 rounded-lg bg-rose-50 px-4 py-3 text-sm text-rose-600">{error}</div>}
+      {loading && <p className="mb-4 text-sm text-slate-500">Loading employees and salary structures...</p>}
 
       <div className="overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm">
         <div className="overflow-x-auto">

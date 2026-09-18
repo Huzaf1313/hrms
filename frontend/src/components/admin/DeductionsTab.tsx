@@ -574,6 +574,12 @@ export default function DeductionsTab() {
   const [error, setError] =
     useState<string | null>(null);
 
+  const [applyMessage, setApplyMessage] =
+    useState<string | null>(null);
+
+  const [applyingId, setApplyingId] =
+    useState<string | null>(null);
+
   const [previewBasic, setPreviewBasic] =
     useState<number | "">("");
 
@@ -738,6 +744,25 @@ export default function DeductionsTab() {
     }
   }
 
+  async function handleApply(component: DeductionComponent) {
+    try {
+      setApplyingId(component.id);
+      setError(null);
+      setApplyMessage(null);
+
+      const response = await adminDeductionService.apply(component.id);
+
+      setApplyMessage(
+        `${component.name} applied to ${response.updated_structures} salary structure${response.updated_structures === 1 ? "" : "s"}.`,
+      );
+    } catch (err) {
+      console.error(err);
+      setError("Unable to apply this deduction or contribution.");
+    } finally {
+      setApplyingId(null);
+    }
+  }
+
   /* =======================================================
      PREVIEW
   ======================================================= */
@@ -768,6 +793,12 @@ export default function DeductionsTab() {
       {error && (
         <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">
           {error}
+        </div>
+      )}
+
+      {applyMessage && (
+        <div className="mb-4 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
+          {applyMessage}
         </div>
       )}
 
@@ -887,6 +918,16 @@ export default function DeductionsTab() {
                       {/* Actions */}
                       <td className="px-5 py-4">
                         <div className="flex justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleApply(component)}
+                            disabled={applyingId === component.id}
+                            className="rounded-lg border border-blue-200 px-3 py-2 text-xs font-semibold text-blue-600 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60"
+                            title="Apply to every salary structure"
+                          >
+                            {applyingId === component.id ? "Applying..." : "Apply"}
+                          </button>
+
                           <button
                             type="button"
                             onClick={() =>

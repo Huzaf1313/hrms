@@ -119,6 +119,25 @@ async def delete_deduction(
 
 
 @router.post(
+    "/admin/deductions/{deduction_id}/apply",
+    response_model=APIResponse[dict],
+)
+async def apply_deduction_to_salary_structures(
+    deduction_id: str,
+    current_user: dict = Depends(
+        require_permission(Permission.PAYROLL_MANAGE)
+    ),
+):
+    updated_count = await service.apply_to_all_salary_structures(deduction_id)
+
+    return APIResponse(
+        success=True,
+        message="Deduction or contribution applied to all salary structures",
+        data={"updated_structures": updated_count},
+    )
+
+
+@router.post(
     "/admin/deductions/calculate",
     response_model=APIResponse[DeductionCalculationResponse],
 )

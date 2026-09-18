@@ -2,6 +2,9 @@ from app.core.exceptions import AppException
 from app.repositories.admin_deduction_repository import (
     AdminDeductionRepository,
 )
+from app.repositories.admin_salary_structure_repository import (
+    AdminSalaryStructureRepository,
+)
 from app.schemas.admin_deduction import (
     AdminDeductionResponse,
     DeductionCalculationResult,
@@ -12,6 +15,7 @@ from app.schemas.admin_deduction import (
 class AdminDeductionService:
     def __init__(self):
         self.repository = AdminDeductionRepository()
+        self.salary_structure_repository = AdminSalaryStructureRepository()
 
     def _serialize(self, deduction: dict) -> AdminDeductionResponse:
         return AdminDeductionResponse(
@@ -94,6 +98,14 @@ class AdminDeductionService:
             )
 
         return True
+
+    async def apply_to_all_salary_structures(self, deduction_id: str):
+        deduction = await self.repository.get_by_id(deduction_id)
+
+        if not deduction:
+            raise AppException("Deduction or contribution not found", 404)
+
+        return await self.salary_structure_repository.apply_deduction_to_all(deduction)
 
     async def calculate_deductions(
         self,

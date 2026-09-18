@@ -70,6 +70,22 @@ function StructureCard({
           <Trash2 className="h-3.5 w-3.5" />
         </button>
       </div>
+
+      {structure.deductions && structure.deductions.length > 0 && (
+        <div className="mt-4 border-t border-slate-100 pt-4">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+            Applied deductions & contributions
+          </p>
+          <div className="space-y-1 text-xs text-slate-600">
+            {structure.deductions.map((deduction) => (
+              <div key={deduction.id} className="flex items-center justify-between gap-2">
+                <span>{deduction.name}</span>
+                <span className="text-slate-400">{deduction.type}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -108,6 +124,11 @@ function EditStructureModal({
   }
 
   function addRow() {
+    if (earnings.some((earning) => earning.label.trim().toLowerCase() === "new allowance")) {
+      window.alert("This earning field already exists in the salary structure.");
+      return;
+    }
+
     setEarnings((current) => [...current, { label: "New Allowance", amount: 0 }]);
   }
 
@@ -255,6 +276,12 @@ function SalaryStructureTab() {
   }, []);
 
   async function handleSave(updated: SalaryStructure) {
+    const labels = updated.earnings.map((earning) => earning.label.trim().toLowerCase());
+    if (labels.some((label, index) => labels.indexOf(label) !== index)) {
+      window.alert("This earning field already exists in the salary structure.");
+      return;
+    }
+
     setError(null);
     const payload = {
       name: updated.name.trim(),
