@@ -1,19 +1,12 @@
 import { useMemo, useState } from "react";
-import { Bell, CalendarDays, ChevronDown, Menu, Search } from "lucide-react";
+import { Bell, ChevronDown, Menu, Search } from "lucide-react";
+
+import DatePicker from "./DatePicker";
 
 interface HeaderProps {
   onLogout: () => void;
   onToggleSidebar?: () => void;
   pageTitle?: string;
-}
-
-function formatToday(): string {
-  return new Date().toLocaleDateString("en-GB", {
-    weekday: "short",
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
 }
 
 function readUser() {
@@ -45,7 +38,6 @@ function Header({ onLogout, onToggleSidebar, pageTitle = "Dashboard" }: HeaderPr
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   const user = useMemo(() => readUser(), []);
-  const today = useMemo(() => formatToday(), []);
 
   const fullName = user?.full_name ?? "Admin";
   const initials = fullName
@@ -104,10 +96,7 @@ function Header({ onLogout, onToggleSidebar, pageTitle = "Dashboard" }: HeaderPr
           </span>
         </button>
 
-        <div className="hidden items-center gap-2 rounded-full border border-gray-200 px-3.5 py-2 md:flex">
-          <CalendarDays className="h-4 w-4 text-gray-500" />
-          <span className="text-sm font-medium text-gray-700">{today}</span>
-        </div>
+        <DatePicker />
 
         <div className="relative">
           <button

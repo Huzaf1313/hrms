@@ -79,9 +79,9 @@ class EmployeeAttendanceService:
         skip: int = 0,
         limit: int = 100,
     ):
-        employee = await self.employee_repository.get_by_employee_id(
-            employee_id
-        )
+        employee = await self.employee_repository.get_by_employee_id(employee_id)
+        if not employee:
+            employee = await self.employee_repository.get_by_id(employee_id)
 
         if not employee:
             raise AppException(
@@ -90,7 +90,7 @@ class EmployeeAttendanceService:
             )
 
         return await self.repository.get_by_employee(
-            employee_id=employee_id,
+            employee_id=employee["employee_id"],
             skip=skip,
             limit=limit,
         )

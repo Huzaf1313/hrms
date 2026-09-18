@@ -19,47 +19,35 @@ router = APIRouter()
 
 service = EmployeeAttendanceService()
 
-# Keep this consistent with the current employee API setup.
-AUTH_ENABLED = False
-
-
-def require_permission_toggle(permission: Permission):
-    if AUTH_ENABLED:
-        return require_permission(permission)
-
-    async def bypass_auth() -> None:
-        return None
-
-    return bypass_auth
-
-
 def serialize_attendance(
     attendance: dict,
 ) -> AttendanceResponse:
+    attendance_date = attendance["date"]
+    if hasattr(attendance_date, "date"):
+        attendance_date = attendance_date.date()
+
     return AttendanceResponse(
         id=str(attendance["_id"]),
         employee_id=attendance["employee_id"],
-        date=attendance["date"],
-        check_in=attendance.get("check_in"),
-        check_out=attendance.get("check_out"),
-        status=attendance["status"],
-        total_hours=attendance.get("total_hours"),
-        remarks=attendance.get("remarks"),
+        date=attendance_date,
+        check_in=attendance.get("check_in") or attendance.get("in_time"),
+        check_out=attendance.get("check_out") or attendance.get("out_time"),
+        status=attendance.get("status", "present"),
+        total_hours=attendance.get("total_hours") or attendance.get("working_hours"),
+        remarks=attendance.get("remarks") or attendance.get("notes"),
         created_at=attendance.get("created_at"),
         updated_at=attendance.get("updated_at"),
     )
 
 
 @router.post(
-    "/attendance",
+    "/employee-attendance",
     response_model=APIResponse[AttendanceResponse],
 )
 async def create_attendance(
     data: AttendanceCreate,
     current_user: dict | None = Depends(
-        require_permission_toggle(
-            Permission.ATTENDANCE_CREATE
-        )
+        require_permission(Permission.ATTENDANCE_CREATE)
     ),
 ):
     attendance_data = data.model_dump()
@@ -75,7 +63,7 @@ async def create_attendance(
     )
 
 @router.get(
-    "/attendance/range",
+    "/employee-attendance/range",
     response_model=APIResponse[list[AttendanceResponse]],
 )
 async def get_attendance_by_date_range(
@@ -84,9 +72,7 @@ async def get_attendance_by_date_range(
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=100, ge=1, le=100),
     current_user: dict | None = Depends(
-        require_permission_toggle(
-            Permission.ATTENDANCE_READ
-        )
+        require_permission(Permission.ATTENDANCE_READ)
     ),
 ):
     skip = (page - 1) * limit
@@ -109,15 +95,13 @@ async def get_attendance_by_date_range(
 
 
 @router.get(
-    "/attendance/{attendance_id}",
+    "/employee-attendance/{attendance_id}",
     response_model=APIResponse[AttendanceResponse],
 )
 async def get_attendance(
     attendance_id: str,
     current_user: dict | None = Depends(
-        require_permission_toggle(
-            Permission.ATTENDANCE_READ
-        )
+        require_permission(Permission.ATTENDANCE_READ)
     ),
 ):
     attendance = await service.get_attendance(
@@ -132,7 +116,7 @@ async def get_attendance(
 
 
 @router.get(
-    "/employees/{employee_id}/attendance",
+    "/employee-attendance/employees/{employee_id}",
     response_model=APIResponse[list[AttendanceResponse]],
 )
 async def get_employee_attendance(
@@ -140,9 +124,7 @@ async def get_employee_attendance(
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=100, ge=1, le=100),
     current_user: dict | None = Depends(
-        require_permission_toggle(
-            Permission.ATTENDANCE_READ
-        )
+        require_permission(Permission.ATTENDANCE_READ)
     ),
 ):
     skip = (page - 1) * limit
@@ -164,7 +146,7 @@ async def get_employee_attendance(
 
 
 @router.get(
-    "/attendance",
+    "/employee-attendance",
     response_model=APIResponse[list[AttendanceResponse]],
 )
 async def get_attendance_by_date(
@@ -172,9 +154,7 @@ async def get_attendance_by_date(
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=100, ge=1, le=100),
     current_user: dict | None = Depends(
-        require_permission_toggle(
-            Permission.ATTENDANCE_READ
-        )
+        require_permission(Permission.ATTENDANCE_READ)
     ),
 ):
     skip = (page - 1) * limit
@@ -197,16 +177,14 @@ async def get_attendance_by_date(
 
 
 @router.put(
-    "/attendance/{attendance_id}",
+    "/employee-attendance/{attendance_id}",
     response_model=APIResponse[AttendanceResponse],
 )
 async def update_attendance(
     attendance_id: str,
     data: AttendanceUpdate,
     current_user: dict | None = Depends(
-        require_permission_toggle(
-            Permission.ATTENDANCE_UPDATE
-        )
+        require_permission(Permission.ATTENDANCE_UPDATE)
     ),
 ):
     update_data = data.model_dump()
@@ -224,15 +202,13 @@ async def update_attendance(
 
 
 @router.delete(
-    "/attendance/{attendance_id}",
+    "/employee-attendance/{attendance_id}",
     response_model=APIResponse[None],
 )
 async def delete_attendance(
     attendance_id: str,
     current_user: dict | None = Depends(
-        require_permission_toggle(
-            Permission.ATTENDANCE_UPDATE
-        )
+        require_permission(Permission.ATTENDANCE_UPDATE)
     ),
 ):
     await service.delete_attendance(

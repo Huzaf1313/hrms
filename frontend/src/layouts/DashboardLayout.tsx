@@ -11,6 +11,9 @@ import AdminEmployees from "../pages/admin/AdminEmployees";
 import AdminAttendance from "../pages/admin/AdminAttendance";
 import AdminLeave from "../pages/admin/admin_leave";
 import AdminRegularizationRequests from "../pages/admin/AdminRegularizationRequests";
+import AdminPayroll from "../pages/admin/AdminPayroll";
+import AdminAnnouncements from "../pages/admin/AdminAnnouncements";
+import AdminSettings from "../pages/admin/AdminSetting";
 import { getDashboardData, type DashboardData } from "../services/dashboardService";
 
 interface DashboardLayoutProps {
@@ -62,6 +65,12 @@ function DashboardLayout({
           <AdminLeave />
         ) : activePage === "Regularization Requests" ? (
           <AdminRegularizationRequests />
+        ) : activePage === "Payroll" ? (
+          <AdminPayroll />
+        ) : activePage === "Announcement" ? (
+          <AdminAnnouncements />
+        ) : activePage === "Settings" ? (
+          <AdminSettings />
         ) : (
           <div className="px-8 pb-10 pt-8">
             {/* Scrolling Celebration Announcement */}

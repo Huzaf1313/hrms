@@ -1,23 +1,15 @@
 import { useMemo, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import { Bell, CalendarDays, ChevronDown, LogOut, Menu } from "lucide-react";
+import { Bell, ChevronDown, LogOut, Menu } from "lucide-react";
 
 import EmployeeSidebar from "../pages/employee/EmployeeSidebar";
+import DatePicker from "../components/DatePicker";
 
 const pageTitles: Record<string, string> = {
   "/employee/dashboard": "Dashboard",
   "/employee/profile": "My Profile",
   "/employee/attendance": "My Attendance",
 };
-
-function formatToday(): string {
-  return new Date().toLocaleDateString("en-GB", {
-    weekday: "short",
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
 
 function readUser() {
   try {
@@ -38,7 +30,6 @@ function EmployeeLayout({ onLogout }: { onLogout: () => void }) {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   const user = useMemo(() => readUser(), []);
-  const today = useMemo(() => formatToday(), []);
 
   const fullName = user?.full_name ?? "Employee";
 
@@ -85,10 +76,7 @@ function EmployeeLayout({ onLogout }: { onLogout: () => void }) {
               </span>
             </button>
 
-            <div className="hidden items-center gap-2 rounded-full border border-gray-200 px-3.5 py-2 md:flex">
-              <CalendarDays className="h-4 w-4 text-gray-500" />
-              <span className="text-sm font-medium text-gray-700">{today}</span>
-            </div>
+            <DatePicker />
 
             <div className="relative">
               <button

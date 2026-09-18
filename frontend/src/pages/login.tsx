@@ -1,7 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
-import { api, setAccessToken, ApiError, setRefreshToken } from "../services/api";
+import {
+  api,
+  ApiError,
+  clearSession,
+  setAccessToken,
+  setRefreshToken,
+} from "../services/api";
 
 const roles = [
   "Manager",
@@ -85,9 +91,7 @@ function Login() {
       const expectedRole = roleMap[selectedRole];
 
       if (user.role !== expectedRole) {
-        setAccessToken(null);
-
-        localStorage.removeItem("refresh_token");
+        clearSession();
         localStorage.removeItem("token_type");
 
         setError(
@@ -111,9 +115,7 @@ function Login() {
         navigate("/dashboard");
       }
     } catch (error: unknown) {
-      setAccessToken(null);
-
-      localStorage.removeItem("refresh_token");
+      clearSession();
       localStorage.removeItem("token_type");
 
       setError(
