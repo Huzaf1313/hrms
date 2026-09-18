@@ -208,5 +208,4 @@ class EmployeeAttendanceService:
                 "Attendance record not found",
                 404,
             )
-
         return True

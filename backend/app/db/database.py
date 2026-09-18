@@ -17,7 +17,10 @@ def _use_public_dns_resolvers():
 
 _use_public_dns_resolvers()
 
-client = AsyncIOMotorClient(settings.MONGODB_URI)
+client = AsyncIOMotorClient(
+    settings.MONGODB_URI,
+    tz_aware=True,
+)
 database = client[settings.DATABASE_NAME]
 
 
