@@ -52,6 +52,8 @@ export class ApiError extends Error {
   }
 }
 
+
+
 interface RequestOptions {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
@@ -340,3 +342,58 @@ export const apiRaw = {
   post: <T>(path: string, body?: unknown) =>
     requestRaw<T>(path, { method: "POST", body }),
 };
+
+export async function downloadFile(path: string): Promise<Blob> {
+  const url = new URL(`${API_BASE_URL}${path}`);
+
+  const makeRequest = async (token: string | null): Promise<Response> => {
+    const headers: Record<string, string> = {};
+
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
+    try {
+      return await fetch(url.toString(), {
+        method: "GET",
+        headers,
+      });
+    } catch {
+      throw new ApiError(
+        "Could not reach the server. Check your connection and that the backend is running.",
+        0,
+      );
+    }
+  };
+
+  let response = await makeRequest(getAccessToken());
+
+  if (response.status === 401) {
+    try {
+      const newAccessToken = await refreshAccessToken();
+      response = await makeRequest(newAccessToken);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+
+      throw new ApiError(
+        "Session expired. Please log in again.",
+        401,
+      );
+    }
+  }
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null);
+
+    const message =
+      payload?.detail ??
+      payload?.message ??
+      `Request failed with status ${response.status}`;
+
+    throw new ApiError(message, response.status);
+  }
+
+  return response.blob();
+}

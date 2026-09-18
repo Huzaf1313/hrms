@@ -14,10 +14,15 @@ import EmployeeDashboard from "./pages/employee/EmployeeDashboard";
 import EmployeeProfile from "./pages/employee/EmployeeProfile";
 import EmployeeAttendance from "./pages/employee/EmployeeAttendance";
 import EmployeeLeave from "./pages/employee/EmployeeLeave";
+import EmployeePayroll from "./pages/employee/EmployeePayroll";
+import EmployeeDocuments from "./pages/employee/EmployeeDocuments";
+import EmployeeAnnouncements from "./pages/employee/EmployeeAnnouncements";
+import EmployeeHelpSupport from "./pages/employee/EmployeeHelpSupport";
 
 import { clearSession, getRefreshToken } from "./services/api";
 import { authService } from "./services/authService";
 import EmployeeLayout from "./layouts/EmployeeLayout";
+
 
 function App() {
   const [activePage, setActivePage] = useState("Dashboard");
@@ -73,6 +78,10 @@ function App() {
             <Route path="profile" element={<EmployeeProfile />} />
             <Route path="attendance" element={<EmployeeAttendance />} />
             <Route path="leave" element={<EmployeeLeave />} />
+            <Route path="payroll" element={<EmployeePayroll />} />
+            <Route path="documents" element={<EmployeeDocuments />} />
+            <Route path="announcements" element={<EmployeeAnnouncements />} />
+            <Route path="help" element={<EmployeeHelpSupport />} />
           </Route>
         </Route>
 

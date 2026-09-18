@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { api, ApiError } from "../../services/api";
+
 import EmployeeAttendanceRegularizationModal from "./EmployeeAttendanceRegularizationModal";
 
 interface User {
@@ -48,6 +49,44 @@ interface RegularizationRequest {
   updated_at: string;
 }
 
+type LeaveStatus = "Pending" | "Approved" | "Rejected";
+
+interface LeaveRequest {
+  id: string;
+  dateApplied: string;
+  leaveType: string;
+  from: string;
+  to: string;
+  duration: number;
+  status: LeaveStatus;
+  reason: string;
+  attachmentUrl: string | null;
+  requestedAt: string;
+  reviewedAt: string | null;
+  reviewedBy: string | null;
+  adminNote: string | null;
+}
+
+interface BackendLeaveRequest {
+  id: string;
+  employee_id: string;
+  leave_type: string;
+  start_date: string;
+  end_date: string;
+  reason: string;
+  status: string;
+  attachment_url?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  reviewed_at?: string | null;
+  reviewed_by?: string | null;
+  admin_note?: string | null;
+}
+
+interface LeaveListResponse {
+  items: BackendLeaveRequest[];
+}
+
 function EmployeeAttendance() {
   const user = useMemo<User | null>(() => {
     const storedUser = localStorage.getItem("user");
@@ -67,6 +106,7 @@ function EmployeeAttendance() {
   const [attendanceRecords, setAttendanceRecords] = useState<
     AttendanceRecord[]
   >([]);
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -77,6 +117,7 @@ function EmployeeAttendance() {
   const [showAllHistory, setShowAllHistory] = useState(false);
   const [regularizationRequests, setRegularizationRequests] = useState<RegularizationRequest[]>([]);
   const [showAllRequests, setShowAllRequests] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date());
   
 useEffect(() => {
   async function loadAttendance() {
@@ -100,25 +141,68 @@ if (!user.employee_id) {
 
 setEmployeeId(user.employee_id);
 
-const records = await api.get<AttendanceRecord[]>(
-  `/employee-attendance/employees/${user.employee_id}`,
-  {
-    page: 1,
-    limit: 100,
-  },
+const [records, leaveList, requests] = await Promise.all([
+  api.get<AttendanceRecord[]>(
+    `/employees/${user.employee_id}/attendance`,
+    {
+      page: 1,
+      limit: 100,
+    },
+  ),
+
+  api.get<LeaveListResponse>(
+    `/employee-leave/employees/${user.employee_id}`,
+    {
+      page: 1,
+      limit: 100,
+    },
+  ),
+
+  api.get<RegularizationRequest[]>(
+    `/employees/${user.employee_id}/attendance/regularization`,
+    {
+      page: 1,
+      limit: 100,
+    },
+  ),
+]);
+
+console.log("ATTENDANCE RECORDS:", records);
+console.log(
+  "TODAY:",
+  new Date().toString(),
+  new Date().toISOString(),
 );
+console.log("LEAVE DATA:", leaveList.items);
 
-      setAttendanceRecords(records);
-
-const requests = await api.get<RegularizationRequest[]>(
-  `/employees/${user.employee_id}/attendance/regularization`,
-  {
-    page: 1,
-    limit: 100,
-  },
-);
-
+setAttendanceRecords(records);
 setRegularizationRequests(requests);
+
+setAttendanceRecords(records);
+setRegularizationRequests(requests);
+
+setLeaveRequests(
+  leaveList.items.map((leave) => ({
+    id: leave.id,
+    dateApplied: leave.created_at ?? "",
+    leaveType: leave.leave_type,
+    from: leave.start_date,
+    to: leave.end_date,
+    duration: 0,
+    status:
+      leave.status.toLowerCase() === "approved"
+        ? "Approved"
+        : leave.status.toLowerCase() === "rejected"
+          ? "Rejected"
+          : "Pending",
+    reason: leave.reason,
+    attachmentUrl: leave.attachment_url ?? null,
+    requestedAt: leave.created_at ?? "",
+    reviewedAt: leave.reviewed_at ?? null,
+    reviewedBy: leave.reviewed_by ?? null,
+    adminNote: leave.admin_note ?? null,
+  })),
+);
 
     } catch (err) {
       if (err instanceof ApiError) {
@@ -134,6 +218,15 @@ setRegularizationRequests(requests);
   loadAttendance();
 }, [user?.employee_id]);
 
+useEffect(() => {
+  const interval = window.setInterval(() => {
+    setCurrentTime(new Date());
+  }, 60_000);
+
+  return () => {
+    window.clearInterval(interval);
+  };
+}, []);
 
   const currentMonth = new Date();
 
@@ -148,31 +241,142 @@ setRegularizationRequests(requests);
     },
   );
 
-  const presentDays = currentMonthRecords.filter(
-    (record) =>
-      record.status.toLowerCase() === "present",
-  ).length;
+const today = currentTime;
 
-  const absentDays = currentMonthRecords.filter(
-    (record) =>
-      record.status.toLowerCase() === "absent",
-  ).length;
+const approvedLeaveDates = new Set<string>();
 
-  const lateDays = currentMonthRecords.filter(
-    (record) =>
-      record.status.toLowerCase() === "late",
-  ).length;
+leaveRequests
+  .filter(
+    (leave) =>
+      leave.status === "Approved",
+  )
+  .forEach((leave) => {
+    const start = new Date(leave.from);
+    const end = new Date(leave.to);
 
-  const leaveDays = currentMonthRecords.filter(
-    (record) =>
-      record.status.toLowerCase() === "on leave",
-  ).length;
+    const current = new Date(start);
+    current.setHours(0, 0, 0, 0);
 
-  const workingHours = currentMonthRecords.reduce(
+    const endDate = new Date(end);
+    endDate.setHours(0, 0, 0, 0);
+
+    while (current <= endDate) {
+      if (
+        current.getMonth() === currentMonth.getMonth() &&
+        current.getFullYear() === currentMonth.getFullYear()
+      ) {
+        approvedLeaveDates.add(
+          current.toISOString().split("T")[0],
+        );
+      }
+
+      current.setDate(current.getDate() + 1);
+    }
+  });
+
+const presentDays = currentMonthRecords.filter(
+  (record) => {
+    const status = record.status.toLowerCase();
+
+    return (
+      status === "present" ||
+      status === "late"
+    );
+  },
+).length;
+
+const lateDays = currentMonthRecords.filter(
+  (record) => {
+    if (!record.check_in) {
+      return false;
+    }
+
+    const checkIn = new Date(record.check_in);
+
+    // Shift starts at 09:30
+    const shiftStart = new Date(checkIn);
+    shiftStart.setHours(9, 30, 0, 0);
+
+    return checkIn > shiftStart;
+  },
+).length;
+
+const leaveDays = approvedLeaveDates.size;
+
+const attendanceDates = new Set(
+  currentMonthRecords.map(
+    (record) => record.date,
+  ),
+);
+
+let absentDays = 0;
+
+const monthStart = new Date(
+  currentMonth.getFullYear(),
+  currentMonth.getMonth(),
+  1,
+);
+
+const currentDay = new Date(monthStart);
+currentDay.setHours(0, 0, 0, 0);
+
+const todayOnly = new Date(today);
+todayOnly.setHours(0, 0, 0, 0);
+
+while (currentDay <= todayOnly) {
+  const dayOfWeek = currentDay.getDay();
+
+  const isWeekday =
+    dayOfWeek !== 0 &&
+    dayOfWeek !== 6;
+
+  const dateKey = currentDay
+    .toISOString()
+    .split("T")[0];
+
+  if (
+    isWeekday &&
+    !attendanceDates.has(dateKey) &&
+    !approvedLeaveDates.has(dateKey)
+  ) {
+    absentDays += 1;
+  }
+
+  currentDay.setDate(
+    currentDay.getDate() + 1,
+  );
+}
+
+const completedWorkingHours =
+  currentMonthRecords.reduce(
     (total, record) =>
       total + (record.total_hours ?? 0),
     0,
-  );const today = new Date();
+  );
+
+const todayRecordForHours =
+  currentMonthRecords.find(
+    (record) =>
+      record.date ===
+      today.toISOString().split("T")[0],
+  );
+
+let workingHours = completedWorkingHours;
+
+if (
+  todayRecordForHours?.check_in &&
+  !todayRecordForHours.check_out
+) {
+  const checkIn = new Date(
+    todayRecordForHours.check_in,
+  );
+
+  const liveHours =
+    (today.getTime() - checkIn.getTime()) /
+    (1000 * 60 * 60);
+
+  workingHours += Math.max(liveHours, 0);
+}
 
     const todayRecord = attendanceRecords.find((record) => {
     const recordDate = new Date(record.date);

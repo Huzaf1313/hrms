@@ -181,5 +181,3 @@ async def delete_employee(
         message="Employee deleted successfully",
         data=None,
     )
-
-

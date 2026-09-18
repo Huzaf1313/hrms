@@ -9,6 +9,8 @@ const pageTitles: Record<string, string> = {
   "/employee/dashboard": "Dashboard",
   "/employee/profile": "My Profile",
   "/employee/attendance": "My Attendance",
+  "/employee/announcements": "Announcements",
+  "/employee/help": "Help & Support",
 };
 
 function readUser() {
