@@ -8,6 +8,7 @@ from app.core.roles import Permission
 from app.schemas.common import APIResponse
 from app.schemas.employee_attendance_regularization import (
     AttendanceRegularizationCreate,
+    AttendanceRegularizationReview,
     AttendanceRegularizationResponse,
 )
 from app.services.employee_attendance_regularization_service import (
@@ -21,28 +22,18 @@ router = APIRouter()
 service = EmployeeAttendanceRegularizationService()
 employee_repository = EmployeeRepository()
 
-# Keep this consistent with the current employee API setup.
-AUTH_ENABLED = False
-
-
-def require_permission_toggle(permission: Permission):
-    if AUTH_ENABLED:
-        return require_permission(permission)
-
-    async def bypass_auth() -> None:
-        return None
-
-    return bypass_auth
-
-
 def serialize_regularization(
     regularization: dict,
 ) -> AttendanceRegularizationResponse:
+    request_date = regularization["date"]
+    if hasattr(request_date, "date"):
+        request_date = request_date.date()
+
     return AttendanceRegularizationResponse(
         id=str(regularization["_id"]),
         employee_id=regularization["employee_id"],
         attendance_id=regularization["attendance_id"],
-        date=regularization["date"],
+        date=request_date,
         issue_type=regularization["issue_type"],
         requested_check_in=regularization.get(
             "requested_check_in"
@@ -70,9 +61,7 @@ async def create_regularization_request(
     data: AttendanceRegularizationCreate,
     current_user: dict = Depends(get_current_user),
     _permission: dict | None = Depends(
-        require_permission_toggle(
-            Permission.ATTENDANCE_CREATE
-        )
+        require_permission(Permission.ATTENDANCE_CREATE)
     ),
 ):
     employee = await employee_repository.get_by_email(
@@ -112,9 +101,7 @@ async def get_employee_regularization_requests(
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=100, ge=1, le=100),
     current_user: dict | None = Depends(
-        require_permission_toggle(
-            Permission.ATTENDANCE_READ
-        )
+        require_permission(Permission.ATTENDANCE_READ)
     ),
 ):
     skip = (page - 1) * limit
@@ -143,9 +130,7 @@ async def get_employee_regularization_requests(
 async def get_regularization_request(
     regularization_id: str,
     current_user: dict | None = Depends(
-        require_permission_toggle(
-            Permission.ATTENDANCE_READ
-        )
+        require_permission(Permission.ATTENDANCE_READ)
     ),
 ):
     regularization = await service.get_request(
@@ -155,5 +140,51 @@ async def get_regularization_request(
     return APIResponse(
         success=True,
         message="Regularization request retrieved successfully",
+        data=serialize_regularization(regularization),
+    )
+
+
+@router.get(
+    "/employee-attendance/regularization",
+    response_model=APIResponse[list[AttendanceRegularizationResponse]],
+)
+async def get_regularization_requests(
+    status: str | None = Query(default=None),
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=100, ge=1, le=100),
+    current_user: dict = Depends(require_permission(Permission.ATTENDANCE_APPROVE)),
+):
+    requests = await service.get_all_requests(
+        status=status,
+        skip=(page - 1) * limit,
+        limit=limit,
+    )
+
+    return APIResponse(
+        success=True,
+        message="Regularization requests retrieved successfully",
+        data=[serialize_regularization(request) for request in requests],
+    )
+
+
+@router.patch(
+    "/employee-attendance/regularization/{regularization_id}/review",
+    response_model=APIResponse[AttendanceRegularizationResponse],
+)
+async def review_regularization_request(
+    regularization_id: str,
+    data: AttendanceRegularizationReview,
+    current_user: dict = Depends(require_permission(Permission.ATTENDANCE_APPROVE)),
+):
+    regularization = await service.review_request(
+        regularization_id=regularization_id,
+        decision=data.status,
+        reviewed_by=str(current_user["_id"]),
+        comment=data.comment,
+    )
+
+    return APIResponse(
+        success=True,
+        message="Regularization request reviewed successfully",
         data=serialize_regularization(regularization),
     )

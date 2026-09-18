@@ -60,7 +60,10 @@ interface RequestOptions {
   params?: Record<string, string | number | boolean | undefined>;
 }
 
-
+interface FormRequestOptions {
+  method?: "POST" | "PUT" | "PATCH";
+  body: FormData;
+}
 
 async function refreshAccessToken(): Promise<string> {
   const refreshToken = getRefreshToken();
@@ -222,6 +225,58 @@ if (
 return payload as T;
 }
 
+async function requestForm<T>(
+  path: string,
+  options: FormRequestOptions,
+): Promise<T> {
+  const token = getAccessToken();
+  const headers: Record<string, string> = {};
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  let response: Response;
+
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      method: options.method ?? "POST",
+      headers,
+      body: options.body,
+    });
+  } catch {
+    throw new ApiError(
+      "Could not reach the server. Check your connection and that the backend is running.",
+      0,
+    );
+  }
+
+  const payload = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    const message =
+      payload?.detail ??
+      payload?.message ??
+      `Request failed with status ${response.status}`;
+    throw new ApiError(message, response.status);
+  }
+
+  if (!payload) {
+    throw new ApiError("Received an empty response from the server.", response.status);
+  }
+
+  if (
+    typeof payload === "object" &&
+    payload !== null &&
+    "data" in payload &&
+    "success" in payload
+  ) {
+    return payload.data as T;
+  }
+
+  return payload as T;
+}
+
 export const api = {
   get: <T>(path: string, params?: RequestOptions["params"]) =>
     request<T>(path, { method: "GET", params }),
@@ -233,6 +288,10 @@ export const api = {
     request<T>(path, { method: "PATCH", body }),
   delete: <T>(path: string) =>
     request<T>(path, { method: "DELETE" }),
+  postForm: <T>(path: string, body: FormData) =>
+    requestForm<T>(path, { method: "POST", body }),
+  putForm: <T>(path: string, body: FormData) =>
+    requestForm<T>(path, { method: "PUT", body }),
 };
 
 // The /auth/* endpoints return their payload directly (no {success, message,

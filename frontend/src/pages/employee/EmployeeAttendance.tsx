@@ -471,7 +471,7 @@ if (
             const now = new Date();
 
             const attendance = await api.post<AttendanceRecord>(
-            "/attendance",
+            "/employee-attendance",
             {
                 employee_id: employeeId,
                 date: now.toISOString().split("T")[0],
@@ -533,7 +533,7 @@ if (
                 (1000 * 60 * 60);
 
                 const attendance = await api.put<AttendanceRecord>(
-                `/attendance/${todayRecord.id}`,
+                `/employee-attendance/${todayRecord.id}`,
                 {
                     check_out: checkOutTime.toISOString(),
                     total_hours: Number(totalHours.toFixed(2)),

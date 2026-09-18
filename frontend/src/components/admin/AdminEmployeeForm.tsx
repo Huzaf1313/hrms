@@ -1,6 +1,5 @@
 import { useRef, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
-import { Eye, EyeOff } from "lucide-react";
 
 import type { Department } from "../../types/department";
 import type { Employee, EmployeeCreate } from "../../types/employee";
@@ -39,6 +38,8 @@ function toFormState(employee?: Employee): EmployeeCreate {
       employment_type: "full_time",
       work_location: "",
       reporting_manager: "",
+      salary_structure: "",
+      salary: "",
     };
   }
 
@@ -58,6 +59,8 @@ function toFormState(employee?: Employee): EmployeeCreate {
     employment_type: employee.employment_type,
     work_location: employee.work_location ?? "",
     reporting_manager: employee.reporting_manager ?? "",
+    salary_structure: employee.salary_structure ?? "",
+    salary: employee.salary ?? "",
   };
 }
 
@@ -74,7 +77,6 @@ function AdminEmployeeForm({
   );
 
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
   const [showPassword, setShowPassword] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
@@ -566,37 +568,110 @@ function AdminEmployeeForm({
             />
           </div>
 
-          {/* PASSWORD */}
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
-              Temporary Password
-            </label>
+          {/* SALARY STRUCTURE */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:col-span-2">
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
+                Salary Structure
+              </label>
 
-            <div className="relative">
-              <input
-                required={!isEditMode}
-                type={isPasswordVisible ? "text" : "password"}
-                value={form.password ?? ""}
-                onChange={(event) =>
-                  updateField("password", event.target.value)
-                }
-                placeholder={isEditMode ? "Leave blank to keep current" : "Temp@1234"}
-                minLength={8}
-                className="w-full rounded-xl border border-gray-200 px-4 py-3 pr-12 text-sm outline-none transition focus:border-[#456b54] focus:ring-2 focus:ring-[#456b54]/10"
-              />
-              <button
-                type="button"
-                onClick={() => setIsPasswordVisible((visible) => !visible)}
-                aria-label={isPasswordVisible ? "Hide password" : "Show password"}
-                title={isPasswordVisible ? "Hide password" : "Show password"}
-                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-gray-500 transition hover:bg-gray-100 hover:text-[#456b54]"
+              <select
+                value={form.salary_structure ?? ""}
+                onChange={(event) => {
+                  updateField("salary_structure", event.target.value as EmployeeCreate["salary_structure"]);
+                  updateField("salary", "");
+                }}
+                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#456b54] focus:ring-2 focus:ring-[#456b54]/10"
               >
-                {isPasswordVisible ? (
-                  <EyeOff className="h-4 w-4" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
-              </button>
+                <option value="" disabled>
+                  Select Salary Structure
+                </option>
+                <option value="basic">Structure A – Basic</option>
+                <option value="standard">Structure B – Standard</option>
+                <option value="professional">Structure C – Professional</option>
+              </select>
+
+              <p className="mt-1.5 text-xs text-gray-400">
+                {form.salary_structure === "basic" && "Below ₹10,000"}
+                {form.salary_structure === "standard" && "₹10,000 – ₹20,000"}
+                {form.salary_structure === "professional" && "Above ₹20,000"}
+              </p>
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
+                Salary Amount
+              </label>
+
+                <input
+                  type="number"
+                  min={
+                    form.salary_structure === "standard"
+                      ? 10000
+                      : form.salary_structure === "professional"
+                        ? 20001
+                        : 1
+                  }
+                  max={
+                    form.salary_structure === "basic"
+                      ? 9999
+                      : form.salary_structure === "standard"
+                        ? 20000
+                        : undefined
+                  }
+                  required={Boolean(form.salary_structure)}
+                  value={form.salary ?? ""}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    const salary = Number(value);
+
+                    if (
+                      value !== "" &&
+                      form.salary_structure === "basic" &&
+                      salary >= 10000
+                    ) {
+                      return;
+                    }
+
+                    if (
+                      value !== "" &&
+                      form.salary_structure === "standard" &&
+                      salary > 20000
+                    ) {
+                      return;
+                    }
+
+                    updateField("salary", value);
+                  }}
+                  onBlur={() => {
+                    const salary = Number(form.salary);
+
+                    if (
+                      !form.salary ||
+                      !Number.isFinite(salary) ||
+                      (form.salary_structure === "basic" && salary < 1) ||
+                      (form.salary_structure === "standard" &&
+                        salary < 10000) ||
+                      (form.salary_structure === "professional" &&
+                        salary <= 20000)
+                    ) {
+                      updateField("salary", "");
+                    }
+                  }}
+                placeholder="Enter salary"
+                disabled={!form.salary_structure}
+                className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#456b54] focus:ring-2 focus:ring-[#456b54]/10 disabled:bg-gray-100 disabled:cursor-not-allowed"
+              />
+
+              <p className="mt-1.5 text-xs text-gray-400">
+                {!form.salary_structure
+                  ? "Select a salary structure first"
+                  : form.salary_structure === "basic"
+                    ? "Allowed: ₹1 – ₹9,999"
+                    : form.salary_structure === "standard"
+                      ? "Allowed: ₹10,000 – ₹20,000"
+                      : "Allowed: ₹20,001 and above"}
+              </p>
             </div>
           </div>
 

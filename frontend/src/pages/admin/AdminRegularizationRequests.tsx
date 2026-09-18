@@ -75,7 +75,13 @@ function AdminRegularizationRequests() {
         limit: 100,
       })
       .then(setRequests)
-      .catch(() => setError("Unable to load regularization requests."))
+      .catch((loadError) =>
+        setError(
+          loadError instanceof ApiError
+            ? loadError.message
+            : "Unable to load regularization requests.",
+        ),
+      )
       .finally(() => setIsLoading(false));
   }, []);
 

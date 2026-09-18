@@ -11,6 +11,11 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
+    # Local directory (relative to the backend working directory) where
+    # uploaded files (e.g. announcement attachments) are stored, and served
+    # from at /{UPLOAD_DIR}/... — see the StaticFiles mount in main.py.
+    UPLOAD_DIR: str = "uploads"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

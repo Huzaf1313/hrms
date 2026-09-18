@@ -24,21 +24,6 @@ router = APIRouter()
 service = AttendanceService()
 employee_repository = EmployeeRepository()
 
-# TODO: set back to True once the frontend login flow + role handling is
-# fully wired up. Mirrors the same toggle in app/api/v1/employees.py.
-AUTH_ENABLED = False
-
-
-def require_permission_toggle(permission: Permission):
-    if AUTH_ENABLED:
-        return require_permission(permission)
-
-    async def bypass_auth() -> None:
-        return None
-
-    return bypass_auth
-
-
 @router.post(
     "/attendance",
     response_model=APIResponse[AttendanceResponse],
@@ -46,7 +31,7 @@ def require_permission_toggle(permission: Permission):
 async def mark_attendance(
     data: AttendanceMark,
     current_user: dict | None = Depends(
-        require_permission_toggle(Permission.ATTENDANCE_CREATE)
+        require_permission(Permission.ATTENDANCE_CREATE)
     ),
 ):
     """Creates a new record for the employee+date, or updates the existing
@@ -107,7 +92,7 @@ async def get_attendance_list(
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=10, ge=1, le=100),
     current_user: dict | None = Depends(
-        require_permission_toggle(Permission.ATTENDANCE_READ)
+        require_permission(Permission.ATTENDANCE_READ)
     ),
 ):
     pagination = PaginationParams(page=page, limit=limit)
@@ -136,7 +121,7 @@ async def get_employee_attendance(
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=100, ge=1, le=100),
     current_user: dict | None = Depends(
-        require_permission_toggle(Permission.ATTENDANCE_READ)
+        require_permission(Permission.ATTENDANCE_READ)
     ),
 ):
     result = await service.get_employee_attendance(
@@ -159,7 +144,7 @@ async def get_attendance_summary(
     attendance_date: date = Query(alias="date"),
     department_id: str | None = Query(default=None),
     current_user: dict | None = Depends(
-        require_permission_toggle(Permission.ATTENDANCE_READ)
+        require_permission(Permission.ATTENDANCE_READ)
     ),
 ):
     summary = await service.get_summary(
@@ -181,7 +166,7 @@ async def get_attendance_summary(
 async def get_attendance(
     attendance_id: str,
     current_user: dict | None = Depends(
-        require_permission_toggle(Permission.ATTENDANCE_READ)
+        require_permission(Permission.ATTENDANCE_READ)
     ),
 ):
     attendance = await service.get_attendance(attendance_id)
@@ -201,7 +186,7 @@ async def update_attendance(
     attendance_id: str,
     data: AttendanceUpdate,
     current_user: dict | None = Depends(
-        require_permission_toggle(Permission.ATTENDANCE_UPDATE)
+        require_permission(Permission.ATTENDANCE_UPDATE)
     ),
 ):
     attendance = await service.update_attendance(
@@ -223,7 +208,7 @@ async def update_attendance(
 async def approve_regularization(
     attendance_id: str,
     current_user: dict | None = Depends(
-        require_permission_toggle(Permission.ATTENDANCE_APPROVE)
+        require_permission(Permission.ATTENDANCE_APPROVE)
     ),
 ):
     attendance = await service.update_attendance(

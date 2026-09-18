@@ -1,8 +1,10 @@
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.api.v1.admin_leaves import router as leaves_router
 from app.api.v1.admin_attendance import router as attendance_router
@@ -45,10 +47,15 @@ from app.repositories.employee_leave_repository import (
 from app.repositories.employee_payroll_repository import (
     EmployeePayrollRepository,
 )
+from app.repositories.admin_announcement_repository import (
+    AdminAnnouncementRepository,
+)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await connect_to_database()
+
+    os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 
     attendance_repository = EmployeeAttendanceRepository()
     await attendance_repository.ensure_indexes()
@@ -61,6 +68,9 @@ async def lifespan(app: FastAPI):
 
     employee_payroll_repository = EmployeePayrollRepository()
     await employee_payroll_repository.ensure_indexes()
+
+    announcement_repository = AdminAnnouncementRepository()
+    await announcement_repository.ensure_indexes()
 
     yield
 
@@ -101,10 +111,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-app.include_router(
-    employee_attendance_router,
-    prefix="/api/v1",
+# Serves uploaded files (e.g. announcement attachments) at /uploads/...
+os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+app.mount(
+    f"/{settings.UPLOAD_DIR}",
+    StaticFiles(directory=settings.UPLOAD_DIR),
+    name="uploads",
 )
 
 app.include_router(
@@ -134,28 +146,55 @@ app.include_router(
 app.include_router(
     leaves_router,
     prefix="/api/v1",
-    tags=["Leaves"],
+    tags=["Admin Leaves"],
 )
 
 app.include_router(
     attendance_router,
     prefix="/api/v1",
-    tags=["Attendance"],
+    tags=["Admin Attendance"],
 )
 
 app.include_router(
-    employee_attendance_regularization_router,
+    employee_attendance_router,
     prefix="/api/v1",
+    tags=["Employee Attendance"]
 )
 
 app.include_router(
     employee_leave_router,
     prefix="/api/v1",
+    tags=["Employee Leaves"],
+)
+
+app.include_router(
+    employee_attendance_regularization_router,
+    prefix="/api/v1",
+    tags=["Employee Attendance Regularization"]
 )
 
 app.include_router(
     employee_payroll_router,
     prefix="/api/v1",
+    tags=["Employee Payroll"], 
+)
+
+app.include_router(
+    admin_salary_structures_router,
+    prefix="/api/v1",
+    tags=["Admin Salary Structures"],
+)
+
+app.include_router(
+    admin_deductions_router,
+    prefix="/api/v1",
+    tags=["Deductions & Contributions"],
+)
+
+app.include_router(
+    announcements_router,
+    prefix="/api/v1",
+    tags=["Announcements"],
 )
 
 app.include_router(

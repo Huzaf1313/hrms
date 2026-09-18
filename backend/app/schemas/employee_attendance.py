@@ -56,10 +56,10 @@ class AttendanceResponse(BaseModel):
     id: str
     employee_id: str
     date: date
-    check_in: datetime | None = None
-    check_out: datetime | None = None
+    check_in: datetime | str | None = None
+    check_out: datetime | str | None = None
     status: str
-    total_hours: float | None = None
+    total_hours: float | str | None = None
     remarks: str | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
