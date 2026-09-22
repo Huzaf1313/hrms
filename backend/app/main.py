@@ -34,6 +34,11 @@ from app.api.v1.employee_payroll import (
 )
 
 from app.api.v1 import employee_payslip
+from app.api.v1.admin_salary_structures import (
+    router as admin_salary_structures_router,
+)
+from app.api.v1.admin_deductions import router as admin_deductions_router
+from app.api.v1.admin_announcements import router as announcements_router
 
 from app.repositories.employee_attendance_repository import (
     EmployeeAttendanceRepository,
@@ -156,6 +161,12 @@ app.include_router(
 )
 
 app.include_router(
+    employee_attendance_regularization_router,
+    prefix="/api/v1",
+    tags=["Employee Attendance Regularization"]
+)
+
+app.include_router(
     employee_attendance_router,
     prefix="/api/v1",
     tags=["Employee Attendance"]
@@ -165,12 +176,6 @@ app.include_router(
     employee_leave_router,
     prefix="/api/v1",
     tags=["Employee Leaves"],
-)
-
-app.include_router(
-    employee_attendance_regularization_router,
-    prefix="/api/v1",
-    tags=["Employee Attendance Regularization"]
 )
 
 app.include_router(

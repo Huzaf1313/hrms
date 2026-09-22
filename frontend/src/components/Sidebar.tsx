@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
-  Building2,
+  /*Building2,*/
   CalendarCheck,
   CalendarDays,
   Wallet,
@@ -36,7 +36,7 @@ const sections: NavSection[] = [
     title: "Organization",
     items: [
       { label: "Employees", icon: Users, page: "Employees" },
-      { label: "Departments", icon: Building2 },
+      /*{ label: "Departments", icon: Building2 },*/
     ],
   },
   {

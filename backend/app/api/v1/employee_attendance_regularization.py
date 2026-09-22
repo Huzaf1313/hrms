@@ -22,9 +22,16 @@ router = APIRouter()
 service = EmployeeAttendanceRegularizationService()
 employee_repository = EmployeeRepository()
 
-def serialize_regularization(
+async def serialize_regularization(
     regularization: dict,
 ) -> AttendanceRegularizationResponse:
+    attendance = await service.attendance_repository.get_by_id(
+        regularization["attendance_id"]
+    )
+    employee = await employee_repository.get_by_employee_id(
+        regularization["employee_id"]
+    )
+
     request_date = regularization["date"]
     if hasattr(request_date, "date"):
         request_date = request_date.date()
@@ -48,6 +55,34 @@ def serialize_regularization(
         reviewed_by=regularization.get("reviewed_by"),
         created_at=regularization["created_at"],
         updated_at=regularization["updated_at"],
+        current_check_in=(
+            (attendance.get("check_in") or attendance.get("in_time"))
+            if attendance
+            else None
+        ),
+        current_check_out=(
+            (attendance.get("check_out") or attendance.get("out_time"))
+            if attendance
+            else None
+        ),
+        employee_name=(
+            employee.get("full_name")
+            or " ".join(
+                part
+                for part in (
+                    employee.get("first_name"),
+                    employee.get("last_name"),
+                )
+                if part
+            )
+            if employee
+            else None
+        ),
+        employee_code=employee.get("employee_id") if employee else None,
+        department_name=(
+            employee.get("department_name") if employee else None
+        ),
+        review_comment=regularization.get("review_comment"),
     )
 
 
@@ -87,7 +122,7 @@ async def create_regularization_request(
     return APIResponse(
         success=True,
         message="Regularization request submitted successfully",
-        data=serialize_regularization(regularization),
+        data=await serialize_regularization(regularization),
     )
 
 @router.get(
@@ -116,7 +151,7 @@ async def get_employee_regularization_requests(
         success=True,
         message="Regularization requests retrieved successfully",
         data=[
-            serialize_regularization(request)
+            await serialize_regularization(request)
             for request in requests
         ],
     )
@@ -140,7 +175,7 @@ async def get_regularization_request(
     return APIResponse(
         success=True,
         message="Regularization request retrieved successfully",
-        data=serialize_regularization(regularization),
+        data=await serialize_regularization(regularization),
     )
 
 
@@ -163,7 +198,10 @@ async def get_regularization_requests(
     return APIResponse(
         success=True,
         message="Regularization requests retrieved successfully",
-        data=[serialize_regularization(request) for request in requests],
+        data=[
+            await serialize_regularization(request)
+            for request in requests
+        ],
     )
 
 
@@ -186,5 +224,5 @@ async def review_regularization_request(
     return APIResponse(
         success=True,
         message="Regularization request reviewed successfully",
-        data=serialize_regularization(regularization),
+        data=await serialize_regularization(regularization),
     )

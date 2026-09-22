@@ -36,8 +36,10 @@ class AttendanceRegularizationResponse(BaseModel):
 
     created_at: datetime
     updated_at: datetime
-    current_check_in: datetime | None = None
-    current_check_out: datetime | None = None
+    # Attendance records may store punches as either ISO datetimes or display
+    # strings such as "09:30 AM".
+    current_check_in: str | datetime | None = None
+    current_check_out: str | datetime | None = None
     review_comment: str | None = None
 
     employee_name: str | None = None
