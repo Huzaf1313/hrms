@@ -13,7 +13,22 @@ class EmployeeAnnouncementService:
 
     @staticmethod
     def _serialize(announcement: dict[str, Any]) -> dict[str, Any]:
+        announcement = announcement.copy()
+
         announcement["id"] = str(announcement.pop("_id"))
+
+        # Map Admin announcement fields to Employee announcement fields.
+        announcement["status"] = "published"
+        announcement["published_at"] = announcement.get("publish_date")
+        announcement["created_by"] = (
+            announcement.get("author_name")
+            or announcement.get("author_id")
+        )
+        announcement["is_important"] = announcement.get(
+            "pinned",
+            False,
+        )
+
         return announcement
 
     async def create(
@@ -41,7 +56,9 @@ class EmployeeAnnouncementService:
         self,
         announcement_id: str,
     ) -> dict[str, Any] | None:
-        announcement = await self.repository.get_by_id(announcement_id)
+        announcement = await self.repository.get_by_id(
+            announcement_id
+        )
 
         if not announcement:
             return None

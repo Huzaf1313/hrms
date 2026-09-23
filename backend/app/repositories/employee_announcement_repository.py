@@ -5,7 +5,7 @@ from app.db.database import database
 
 class EmployeeAnnouncementRepository:
     def __init__(self):
-        self.collection_name = "employee_announcements"
+        self.collection_name = "announcements"
 
     def get_collection(self):
         return database[self.collection_name]
@@ -15,7 +15,10 @@ class EmployeeAnnouncementRepository:
 
         result = await collection.insert_one(data)
 
-        created = await collection.find_one({"_id": result.inserted_id})
+        created = await collection.find_one(
+            {"_id": result.inserted_id}
+        )
+
         return created
 
     async def get_by_id(
@@ -77,9 +80,7 @@ class EmployeeAnnouncementRepository:
     ) -> tuple[list[dict[str, Any]], int]:
         collection = self.get_collection()
 
-        query: dict[str, Any] = {
-            "status": "published",
-        }
+        query: dict[str, Any] = {}
 
         if category and category.lower() != "all":
             query["category"] = category
@@ -94,7 +95,7 @@ class EmployeeAnnouncementRepository:
 
         cursor = (
             collection.find(query)
-            .sort("published_at", -1)
+            .sort("publish_date", -1)
             .skip(skip)
             .limit(limit)
         )

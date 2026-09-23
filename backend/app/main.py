@@ -18,6 +18,20 @@ from app.api.v1.employee_attendance import router as employee_attendance_router
 from app.api.v1.employee_attendance_regularization import (
     router as employee_attendance_regularization_router,
 )
+
+from app.api.v1.admin_salary_structures import (
+    router as admin_salary_structures_router,
+)
+
+from app.api.v1.admin_deductions import (
+    router as admin_deductions_router,
+)
+
+from app.api.v1.admin_announcements import (
+    router as announcements_router,
+)
+
+
 from app.api.v1.employee_documents import router as employee_documents_router
 from app.api.v1.employee_announcement import (
     router as employee_announcement_router,
