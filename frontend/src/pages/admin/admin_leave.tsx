@@ -224,12 +224,12 @@ function LeaveCalendar({
   );
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2">
+    <div className="space-y-2">
+      <div className="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-1">
         <button
           type="button"
           onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1))}
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-lg font-semibold text-gray-600 hover:bg-gray-100"
+          className="flex h-7 w-7 items-center justify-center rounded-lg border border-gray-200 bg-white text-base font-semibold text-gray-600 hover:bg-gray-100"
           aria-label="Previous month"
         >
           &lt;
@@ -240,14 +240,14 @@ function LeaveCalendar({
         <button
           type="button"
           onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1))}
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-lg font-semibold text-gray-600 hover:bg-gray-100"
+          className="flex h-7 w-7 items-center justify-center rounded-lg border border-gray-200 bg-white text-base font-semibold text-gray-600 hover:bg-gray-100"
           aria-label="Next month"
         >
           &gt;
         </button>
       </div>
 
-      <div className="grid min-h-[360px] grid-cols-7 gap-y-2 text-center">
+      <div className="grid min-h-[238px] grid-cols-7 gap-y-0.5 text-center">
         {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map((day) => (
           <div key={day} className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">
             {day}
@@ -261,7 +261,7 @@ function LeaveCalendar({
           return (
             <div
               key={`${cell.dotKey}`}
-              className="flex min-h-[52px] flex-col items-center justify-start rounded-xl border border-transparent px-1 py-2"
+              className="flex min-h-[33px] flex-col items-center justify-start rounded-lg border border-transparent px-1 py-0"
             >
               <span className={`text-sm font-medium ${isToday ? "font-bold text-blue-600" : cell.muted ? "text-gray-300" : "text-gray-700"}`}>
                 {cell.day}
@@ -304,19 +304,19 @@ function LeaveByDepartmentKpi({ requests }: { requests: LeaveRequest[] }) {
     .segments.join(", ");
 
   return (
-    <div className="rounded-3xl bg-white p-6 shadow-sm">
-      <h3 className="mb-5 font-bold text-gray-900">Leave by Department</h3>
-      <div className="flex flex-wrap items-center gap-8">
+    <div className="overflow-y-auto rounded-3xl bg-white p-4 shadow-sm">
+      <h3 className="mb-2 font-bold text-gray-900">Leave by Department</h3>
+      <div className="flex flex-wrap items-center gap-4">
         <div
-          className="relative h-36 w-36 shrink-0 rounded-full"
+          className="relative h-24 w-24 shrink-0 rounded-full"
           style={{ background: `conic-gradient(${gradient || "#e5e7eb 0 100%"})` }}
         >
-          <div className="absolute inset-7 flex flex-col items-center justify-center rounded-full bg-white">
-            <span className="text-2xl font-bold text-gray-900">{total}</span>
-            <span className="text-xs text-gray-400">Total</span>
+          <div className="absolute inset-4 flex flex-col items-center justify-center rounded-full bg-white">
+            <span className="text-lg font-bold text-gray-900">{total}</span>
+            <span className="text-[10px] leading-tight text-gray-400">Total</span>
           </div>
         </div>
-        <div className="flex flex-1 flex-col gap-3">
+        <div className="flex flex-1 flex-col gap-1.5">
           {items.length === 0 ? (
             <span className="text-sm text-gray-400">No department data</span>
           ) : (
@@ -364,19 +364,19 @@ function LeaveByTypeKpi({ requests }: { requests: LeaveRequest[] }) {
     .segments.join(", ");
 
   return (
-    <div className="rounded-3xl bg-white p-6 shadow-sm">
-      <h3 className="mb-5 font-bold text-gray-900">Leave by Type</h3>
-      <div className="flex flex-wrap items-center gap-8">
+    <div className="overflow-y-auto rounded-3xl bg-white p-4 shadow-sm">
+      <h3 className="mb-2 font-bold text-gray-900">Leave by Type</h3>
+      <div className="flex flex-wrap items-center gap-4">
         <div
-          className="relative h-36 w-36 shrink-0 rounded-full"
+          className="relative h-24 w-24 shrink-0 rounded-full"
           style={{ background: `conic-gradient(${gradient || "#e5e7eb 0 100%"})` }}
         >
-          <div className="absolute inset-7 flex flex-col items-center justify-center rounded-full bg-white">
-            <span className="text-2xl font-bold text-gray-900">{total}</span>
-            <span className="text-xs text-gray-400">Total</span>
+          <div className="absolute inset-4 flex flex-col items-center justify-center rounded-full bg-white">
+            <span className="text-lg font-bold text-gray-900">{total}</span>
+            <span className="text-[10px] leading-tight text-gray-400">Total</span>
           </div>
         </div>
-        <div className="flex min-w-0 flex-1 flex-col gap-3">
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
           {items.length === 0 ? (
             <span className="text-sm text-gray-400">No leave type data</span>
           ) : (
@@ -687,20 +687,20 @@ function AdminLeave() {
 
       {/* Calendar + Upcoming leave + KPI cards */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.25fr_2fr_2fr]">
-        <div className="rounded-3xl bg-white p-6 shadow-sm lg:col-span-1 lg:h-[620px]">
-          <div className="mb-4 flex items-center justify-between gap-2">
+        <div className="overflow-y-auto rounded-3xl bg-white p-4 shadow-sm lg:col-span-1 lg:h-[400px]">
+          <div className="mb-2 flex items-center justify-between gap-2">
             <h3 className="font-bold text-gray-900">Leave Calendar</h3>
           </div>
 
           <LeaveCalendar requests={requests} department="" leaveType="" />
-          <div className="mt-4 flex flex-wrap gap-4 border-t border-gray-100 pt-3 text-xs text-gray-500">
+          <div className="mt-2 flex flex-wrap gap-4 border-t border-gray-100 pt-1.5 text-xs text-gray-500">
             <span><i className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-blue-500" />Today</span>
             <span><i className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-orange-400" />Pending</span>
           </div>
         </div>
 
-        <div className="min-w-0 rounded-3xl bg-white p-6 shadow-sm lg:col-span-1 lg:h-[620px]">
-          <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="min-w-0 overflow-y-auto rounded-3xl bg-white p-4 shadow-sm lg:col-span-1 lg:h-[400px]">
+          <div className="mb-2 flex items-center justify-between gap-3">
           <h3 className="font-bold text-gray-900">Upcoming Leave (Next 7 Days)</h3>
             <button className="text-xs font-semibold text-[#2563eb] hover:underline">
               View All
@@ -745,7 +745,7 @@ function AdminLeave() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-6 lg:col-span-1 lg:h-[620px] [&>div]:flex-1">
+        <div className="flex flex-col gap-4 lg:col-span-1 lg:h-[400px] [&>div]:flex-1">
           <LeaveByDepartmentKpi requests={requests} />
           <LeaveByTypeKpi requests={requests} />
         </div>

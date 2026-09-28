@@ -142,13 +142,11 @@ EMPLOYEE_PERMISSIONS = {
     # Payslips
     Permission.PAYSLIPS_READ,
 
-    # Announcements
-    Permission.ANNOUNCEMENT_READ,
-
     # Own Profile
     Permission.SELF_PROFILE_READ,
     Permission.SELF_PROFILE_UPDATE,
 }
+
 
 
 ROLE_PERMISSIONS: dict[UserRole, set[Permission]] = {

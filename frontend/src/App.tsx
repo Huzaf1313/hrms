@@ -7,7 +7,7 @@ import {
 } from "react-router-dom";
 
 import Login from "./pages/login";
-import ProtectedRoute from "./components/ProtectedRoute";
+import ProtectedRoute, { AdminRoute } from "./components/ProtectedRoute";
 import Registration from "./pages/Registration";
 import DashboardLayout from "./layouts/DashboardLayout";
 import EmployeeDashboard from "./pages/employee/EmployeeDashboard";
@@ -45,7 +45,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Registration />} />
 
-        <Route element={<ProtectedRoute />}>
+        <Route element={<AdminRoute />}>
           <Route
             path="/dashboard"
             element={

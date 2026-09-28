@@ -3,8 +3,12 @@ from datetime import datetime
 from app.core.exceptions import AppException
 from app.core.roles import UserRole
 from app.core.security import hash_password
+from app.repositories.admin_salary_structure_repository import (
+    AdminSalaryStructureRepository,
+)
 from app.repositories.department_repository import DepartmentRepository
 from app.repositories.employee_repository import EmployeeRepository
+from app.services.admin_salary_structure_service import parse_salary_floor
 from app.utils.filtering import build_filter
 from app.utils.pagination import PaginationParams
 
@@ -13,6 +17,51 @@ class EmployeeService:
     def __init__(self):
         self.repository = EmployeeRepository()
         self.department_repository = DepartmentRepository()
+        self.salary_structure_repository = AdminSalaryStructureRepository()
+
+    async def _validate_salary(
+        self,
+        salary_structure_name: str | None,
+        salary,
+    ):
+        if not salary_structure_name or salary in (None, ""):
+            return
+
+        structure = await self.salary_structure_repository.get_by_name(
+            salary_structure_name
+        )
+
+        if not structure:
+            return
+
+        minimum = structure.get("min_salary")
+
+        if minimum is None:
+            minimum = parse_salary_floor(structure.get("range"))
+
+        maximum = structure.get("max_salary")
+
+        if minimum is None and maximum is None:
+            return
+
+        try:
+            amount = float(salary)
+        except (TypeError, ValueError):
+            raise AppException("Salary must be a number", 400)
+
+        if minimum is not None and amount < minimum:
+            raise AppException(
+                f"Salary for '{salary_structure_name}' must be at least "
+                f"{int(minimum):,}",
+                400,
+            )
+
+        if maximum is not None and amount > maximum:
+            raise AppException(
+                f"Salary for '{salary_structure_name}' cannot be more than "
+                f"{int(maximum):,}",
+                400,
+            )
 
     async def create_employee(self, employee_data: dict):
         existing_employee = await self.repository.get_by_employee_id(
@@ -44,6 +93,11 @@ class EmployeeService:
                 "Department not found",
                 400,
             )
+
+        await self._validate_salary(
+            employee_data.get("salary_structure"),
+            employee_data.get("salary"),
+        )
 
         employee_data["status"] = "active"
         employee_data["full_name"] = (
@@ -182,6 +236,15 @@ class EmployeeService:
                     "Department not found",
                     400,
                 )
+
+        if "salary_structure" in update_data or "salary" in update_data:
+            await self._validate_salary(
+                update_data.get(
+                    "salary_structure",
+                    employee.get("salary_structure"),
+                ),
+                update_data.get("salary", employee.get("salary")),
+            )
 
         update_data["updated_at"] = datetime.utcnow()
 

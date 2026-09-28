@@ -8,9 +8,42 @@ from fastapi import UploadFile
 from app.core.config import settings
 from app.core.exceptions import AppException
 from app.repositories.admin_announcement_repository import AdminAnnouncementRepository
-from app.schemas.admin_announcement import AdminAnnouncementResponse
+from app.schemas.admin_announcement import (
+    AdminAnnouncementResponse,
+    AnnouncementAudience,
+)
 
 ATTACHMENT_SUBDIR = "announcements"
+
+
+def _clean_ids(values: list[str] | None) -> list[str]:
+    seen: set[str] = set()
+    result: list[str] = []
+
+    for value in values or []:
+        cleaned = str(value).strip()
+
+        if not cleaned or cleaned in seen:
+            continue
+
+        seen.add(cleaned)
+        result.append(cleaned)
+
+    return result
+
+
+def _resolve_targets(
+    audience: str | None,
+    departments: list[str] | None,
+    employees: list[str] | None,
+) -> tuple[list[str], list[str]]:
+    if audience == AnnouncementAudience.DEPARTMENT_WISE.value:
+        return _clean_ids(departments), []
+
+    if audience == AnnouncementAudience.CUSTOM.value:
+        return [], _clean_ids(employees)
+
+    return [], []
 
 
 class AdminAnnouncementService:
@@ -28,6 +61,8 @@ class AdminAnnouncementService:
             audience=announcement.get("audience"),
             description=announcement.get("description", ""),
             pinned=announcement.get("pinned", False),
+            target_departments=announcement.get("target_departments") or [],
+            target_employees=announcement.get("target_employees") or [],
             attachment=announcement.get("attachment"),
             author_id=announcement.get("author_id", ""),
             author_name=announcement.get("author_name", ""),
@@ -86,6 +121,15 @@ class AdminAnnouncementService:
         data["publish_date"] = data["publish_date"].isoformat()
         if data.get("expiry_date") is not None:
             data["expiry_date"] = data["expiry_date"].isoformat()
+
+        (
+            data["target_departments"],
+            data["target_employees"],
+        ) = _resolve_targets(
+            data.get("audience"),
+            data.get("target_departments"),
+            data.get("target_employees"),
+        )
 
         if attachment is not None and attachment.filename:
             data["attachment"] = await self._save_attachment(attachment)
@@ -158,6 +202,16 @@ class AdminAnnouncementService:
 
         if "expiry_date" in update_data:
             update_data["expiry_date"] = update_data["expiry_date"].isoformat()
+
+        if "target_departments" in update_data or "target_employees" in update_data:
+            effective_audience = update_data.get("audience") or existing.get("audience")
+            departments, employees = _resolve_targets(
+                effective_audience,
+                update_data.get("target_departments"),
+                update_data.get("target_employees"),
+            )
+            update_data["target_departments"] = departments
+            update_data["target_employees"] = employees
 
         if attachment is not None and attachment.filename:
             self._delete_attachment_file(existing.get("attachment"))

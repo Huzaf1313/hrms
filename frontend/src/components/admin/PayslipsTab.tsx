@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Eye, Download, X, Search } from "lucide-react";
+import { Eye, Download, Search } from "lucide-react";
 import { employeeService } from "../../services/employeeService";
 import { salaryStructureService, type SalaryStructure } from "../../services/admin_salary_structure_service";
 import type { Employee } from "../../types/employee";
@@ -40,17 +40,6 @@ interface Payslip {
   status: PayslipStatus;
 }
 
-// Company details shown on the payslip header/footer.
-// TODO: pull this from company settings once configurable.
-
-const companyInfo = {
-  name: "AarMarks Media Pvt. Ltd.",
-  website: "https://www.aarmarksmedia.com/",
-  email: "hr@aarmarksmedia.com",
-  address: "Krytal square, 4th floor 406, near Khanvilkar Pump, Sita Colony, Kolhapur, Maharashtra 416003",
-  contact: "+91 7387580316, +91 7559203807",
-};
-
 const statusStyles: Record<PayslipStatus, string> = {
   Paid: "bg-emerald-50 text-emerald-600",
   Pending: "bg-orange-50 text-orange-500",
@@ -83,39 +72,23 @@ function totalDeductions(deductions: PayslipDeductions): number {
   );
 }
 
-function paidMonthLabel(month: string): string {
-  return month.split(" ")[0];
-}
-
 function currentMonthValue(): string {
   return new Date().toISOString().slice(0, 7);
 }
 
 function structureMatchesEmployee(structure: SalaryStructure, employee: Employee): boolean {
   const selected = employee.salary_structure?.trim().toLowerCase();
-  if (!selected) return false;
-
-  return structure.name.toLowerCase().includes(selected);
+  return Boolean(selected && structure.name.toLowerCase().includes(selected));
 }
 
 function earningAmount(structure: SalaryStructure | undefined, labels: string[], fallback: number): number {
-  const earning = structure?.earnings.find((item) => {
-    const label = item.label.toLowerCase();
-    return labels.some((value) => label.includes(value));
-  });
-
+  const earning = structure?.earnings.find((item) => labels.some((value) => item.label.toLowerCase().includes(value)));
   return earning?.amount ?? fallback;
 }
 
 function buildPayslip(employee: Employee, structures: SalaryStructure[]): Payslip {
   const structure = structures.find((item) => structureMatchesEmployee(item, employee));
-  const baseSalary = Number(employee.salary) || 0;
   const monthValue = currentMonthValue();
-  const month = new Date(`${monthValue}-01`).toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-  });
-
   return {
     id: employee.id,
     employeeName: `${employee.first_name} ${employee.last_name}`.trim(),
@@ -124,10 +97,10 @@ function buildPayslip(employee: Employee, structures: SalaryStructure[]): Paysli
     designation: employee.designation,
     bankName: employee.bank_information?.bank_name ?? "-",
     accountNo: employee.bank_information?.account_number ?? "-",
-    month,
+    month: new Date(`${monthValue}-01`).toLocaleDateString("en-US", { month: "long", year: "numeric" }),
     monthValue,
     earnings: {
-      basicSalary: earningAmount(structure, ["basic"], baseSalary),
+      basicSalary: earningAmount(structure, ["basic"], Number(employee.salary) || 0),
       hra: earningAmount(structure, ["hra", "house rent"], 0),
       specialAllowance: earningAmount(structure, ["special allowance"], 0),
       attendanceBonus: earningAmount(structure, ["attendance"], 0),
@@ -143,82 +116,12 @@ function PayslipDetailModal({ payslip, onClose }: { payslip: Payslip; onClose: (
   const gross = totalEarnings(payslip.earnings);
   const deductionTotal = totalDeductions(payslip.deductions);
   const net = gross - deductionTotal;
-
   return (
     <div className="payslip-modal fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-lg bg-white shadow-2xl">
-        {/* Close button */}
-        <div className="flex justify-end p-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100"
-            aria-label="Close"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-
-        <div className="payslip-paper relative mx-auto px-5 pb-7 sm:px-10">
-          <img src="/aarmarks-logo.png.png" alt="" className="payslip-watermark" />
-          <header className="payslip-header relative flex items-center justify-between gap-5 border-b-2 border-slate-700 pb-4">
-            <div className="flex items-center gap-2">
-              <img src="/aarmarks-logo.png.png" alt="AarMarks Media logo" className="h-16 w-16 object-contain" />
-              <div className="font-sans text-[21px] font-bold leading-tight text-[#079bb0] sm:text-[25px]">
-                <div>AarMarks Media</div>
-                <div className="text-center">Pvt. Ltd</div>
-              </div>
-            </div>
-            <div className="px-3 py-2 text-[12px] leading-5 sm:text-[14px]">
-              <div>Website - <a href={companyInfo.website} className="text-blue-700 underline">{companyInfo.website}</a></div>
-              <div>Email&nbsp;&nbsp;&nbsp;- {companyInfo.email}</div>
-            </div>
-          </header>
-
-          <h1 className="payslip-title">Employee Payslip</h1>
-          <h2 className="payslip-section-title">Employee Details</h2>
-          <table className="payslip-table payslip-details-table">
-            <tbody>
-              <tr><td><b>Employee Name</b> : {payslip.employeeName}</td><td><b>Designation</b> : {payslip.designation}</td></tr>
-              <tr><td><b>Employee ID</b> : {payslip.employeeCode || "-"}</td><td><b>Bank Name</b> : {payslip.bankName}</td></tr>
-              <tr><td><b>Paid Month</b> : {paidMonthLabel(payslip.month)}</td><td><b>Account No</b> : {payslip.accountNo || "-"}</td></tr>
-            </tbody>
-          </table>
-
-          <h2 className="payslip-section-title">Earnings and Deductions</h2>
-          <table className="payslip-table payslip-earnings-table">
-            <thead><tr><th>Description</th><th>Amount</th><th>Description</th><th>Amount</th></tr></thead>
-            <tbody>
-              {[
-                ["Basic Salary", payslip.earnings.basicSalary, "Provident Fund (PF)", payslip.deductions.pf],
-                ["House Rent Allowances", payslip.earnings.hra, "Employee State Insurance (ESI)", payslip.deductions.esi],
-                ["Special Allowance", payslip.earnings.specialAllowance, "Professional Tax (PT)", payslip.deductions.pt],
-                ["Attendance Bonus", payslip.earnings.attendanceBonus, "Income Tax (TDS)", payslip.deductions.tds],
-                ["Overtime", payslip.earnings.overtime, "Leave Deduction", payslip.deductions.leaveDeduction],
-                ["Other Allowances", payslip.earnings.otherAllowances, "Other Deductions", payslip.deductions.otherDeductions],
-              ].map(([earningLabel, earningValue, deductionLabel, deductionValue]) => (
-                <tr key={String(earningLabel)}><td>{earningLabel}</td><td>{formatCurrency(Number(earningValue))}</td><td>{deductionLabel}</td><td>{formatCurrency(Number(deductionValue))}</td></tr>
-              ))}
-              <tr className="font-bold"><td>Gross Earnings</td><td>{formatCurrency(gross)}</td><td>Total Deductions</td><td>{formatCurrency(deductionTotal)}</td></tr>
-            </tbody>
-          </table>
-
-          <h2 className="payslip-section-title">Net Salary</h2>
-          <table className="payslip-table payslip-net-table">
-            <thead><tr><th>Particular</th><th>Amount</th></tr></thead>
-            <tbody>
-              <tr><td>Gross Earnings</td><td>{formatCurrency(gross)}</td></tr>
-              <tr><td>Total Deductions</td><td>{formatCurrency(deductionTotal)}</td></tr>
-              <tr className="font-bold"><td>Net Salary Payable</td><td>{formatCurrency(net)}</td></tr>
-            </tbody>
-          </table>
-
-          {/* Company footer */}
-          <div className="payslip-footer mt-6 border-t border-slate-300 pt-4 text-center text-[11px]">
-            <p>{companyInfo.address}</p>
-            <p>Contact Number: {companyInfo.contact}</p>
-          </div>
-        </div>
+        <div className="flex justify-end p-3"><button type="button" onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100" aria-label="Close">x</button></div>
+        <div className="payslip-paper relative mx-auto px-5 pb-7 sm:px-10"><img src="/aarmarks-logo.png.png" alt="" className="payslip-watermark" /><header className="payslip-header relative flex items-center justify-between gap-5 border-b-2 border-slate-700 pb-4"><div className="flex items-center gap-2"><img src="/aarmarks-logo.png.png" alt="AarMarks Media logo" className="h-16 w-16 object-contain" /><div className="font-sans text-[21px] font-bold leading-tight text-[#079bb0] sm:text-[25px]"><div>AarMarks Media</div><div className="text-center">Pvt. Ltd</div></div></div><div className="px-3 py-2 text-[12px] leading-5 sm:text-[14px]"><div>Website - <a href="https://www.aarmarksmedia.com/" className="text-blue-700 underline">https://www.aarmarksmedia.com/</a></div><div>Email&nbsp;&nbsp;&nbsp;- hr@aarmarksmedia.com</div></div></header>
+          <h1 className="payslip-title">Employee Payslip</h1><h2 className="payslip-section-title">Employee Details</h2><table className="payslip-table payslip-details-table"><tbody><tr><td><b>Employee Name</b> : {payslip.employeeName}</td><td><b>Designation</b> : {payslip.designation}</td></tr><tr><td><b>Employee ID</b> : {payslip.employeeCode || "-"}</td><td><b>Bank Name</b> : {payslip.bankName}</td></tr><tr><td><b>Paid Month</b> : {payslip.month.split(" ")[0]}</td><td><b>Account No</b> : {payslip.accountNo || "-"}</td></tr></tbody></table><h2 className="payslip-section-title">Earnings and Deductions</h2><table className="payslip-table payslip-earnings-table"><thead><tr><th>Description</th><th>Amount</th><th>Description</th><th>Amount</th></tr></thead><tbody>{[["Basic Salary", payslip.earnings.basicSalary, "Provident Fund (PF)", payslip.deductions.pf], ["House Rent Allowances", payslip.earnings.hra, "Employee State Insurance (ESI)", payslip.deductions.esi], ["Special Allowance", payslip.earnings.specialAllowance, "Professional Tax (PT)", payslip.deductions.pt], ["Attendance Bonus", payslip.earnings.attendanceBonus, "Income Tax (TDS)", payslip.deductions.tds], ["Overtime", payslip.earnings.overtime, "Leave Deduction", payslip.deductions.leaveDeduction], ["Other Allowances", payslip.earnings.otherAllowances, "Other Deductions", payslip.deductions.otherDeductions]].map(([a, b, c, d]) => <tr key={String(a)}><td>{a}</td><td>{formatCurrency(Number(b))}</td><td>{c}</td><td>{formatCurrency(Number(d))}</td></tr>)}<tr className="font-bold"><td>Gross Earnings</td><td>{formatCurrency(gross)}</td><td>Total Deductions</td><td>{formatCurrency(deductionTotal)}</td></tr></tbody></table><h2 className="payslip-section-title">Net Salary</h2><table className="payslip-table payslip-net-table"><tbody><tr><td>Gross Earnings</td><td>{formatCurrency(gross)}</td></tr><tr><td>Total Deductions</td><td>{formatCurrency(deductionTotal)}</td></tr><tr className="font-bold"><td>Net Salary Payable</td><td>{formatCurrency(net)}</td></tr></tbody></table><div className="payslip-footer mt-6 border-t border-slate-300 pt-4 text-center text-[11px]"><p>Krytal square, 4th floor 406, near Khanvilkar Pump, Sita Colony, Kolhapur, Maharashtra 416003</p><p>Contact Number: +91 7387580316, +91 7559203807</p></div></div>
       </div>
     </div>
   );
@@ -268,7 +171,6 @@ function PayslipsTab() {
   });
 
   function handleDownload(payslip: Payslip) {
-    // TODO: wire up real PDF generation once payslips are backed by the database.
     alert(`Download will be available once the payslip backend is connected (${payslip.employeeName}).`);
   }
 

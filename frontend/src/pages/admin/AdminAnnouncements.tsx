@@ -29,8 +29,20 @@ import {
   ListOrdered,
   Link,
   X,
+  Building2,
+  Users,
+  Check,
+  ChevronDown,
+  UserPlus,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 import { api, ApiError } from "../../services/api";
+import { departmentService } from "../../services/departmentService";
+import { employeeService } from "../../services/employeeService";
+import type { Department } from "../../types/department";
+import type { Employee } from "../../types/employee";
+
 
 // ---- Types ------------------------------------------------------------------
 
@@ -59,6 +71,9 @@ interface Announcement {
   expiryDate: string | null;
   audience: Audience;
   pinned: boolean;
+  createdAt: string;
+  targetDepartments: string[];
+  targetEmployees: string[];
   attachment?: {
     filename: string;
     url: string;
@@ -66,6 +81,7 @@ interface Announcement {
     size?: number;
   } | null;
 }
+
 
 interface PinnedItem {
   id: string;
@@ -163,6 +179,12 @@ const statusStyles: Record<Status, string> = {
   INFO: "bg-orange-100 text-orange-700",
 };
 
+const audienceStyles: Record<Audience, string> = {
+  "All Employees": "bg-slate-100 text-slate-600",
+  "Department-wise": "bg-blue-50 text-blue-700",
+  Custom: "bg-purple-50 text-purple-700",
+};
+
 const dotStyles: Record<Category, string> = {
   "Company News": "bg-blue-500",
   "HR & Policy": "bg-purple-500",
@@ -170,12 +192,353 @@ const dotStyles: Record<Category, string> = {
   "IT & System": "bg-orange-500",
 };
 
+// ---- Date helpers ------------------------------------------------------------
+
+function formatDateTime(value?: string | null): string {
+  if (!value) return "—";
+
+  const parsed = new Date(value);
+
+  if (Number.isNaN(parsed.getTime())) return "—";
+
+  return parsed.toLocaleString("en-US", {
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
+// ---- Draft persistence ------------------------------------------------------
+
+const DRAFT_STORAGE_KEY = "hrms_announcement_draft";
+
+interface AnnouncementDraft {
+  title: string;
+  category: Category | "";
+  priority: Priority;
+  publishDate: string;
+  expiryDate: string;
+  audience: Audience;
+  description: string;
+  isPinned: boolean;
+  selectedDepartments: string[];
+  selectedEmployees: string[];
+  isAddEmployeeMode?: boolean;
+}
+
+function readDraft(): AnnouncementDraft | null {
+  try {
+    const raw = window.sessionStorage.getItem(DRAFT_STORAGE_KEY);
+
+    return raw ? (JSON.parse(raw) as AnnouncementDraft) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeDraft(draft: AnnouncementDraft) {
+  try {
+    window.sessionStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+  } catch {
+    // Storage unavailable (private mode / quota) - the draft simply will not
+    // survive navigation. Publishing still works as normal.
+  }
+}
+
+function clearDraft() {
+  try {
+    window.sessionStorage.removeItem(DRAFT_STORAGE_KEY);
+  } catch {
+    // Ignore - nothing to clean up.
+  }
+}
+
+function formatDateOnly(value?: string | null): string {
+  if (!value) return "—";
+
+  const parsed = new Date(`${value}T00:00:00`);
+
+  if (Number.isNaN(parsed.getTime())) return "—";
+
+  return parsed.toLocaleDateString("en-US", {
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+  });
+}
+
+// ---- Multi-select dropdown ---------------------------------------------------
+
+interface MultiSelectOption {
+  value: string;
+  label: string;
+  hint?: string;
+}
+
+interface MultiSelectProps {
+  label: string;
+  placeholder: string;
+  options: MultiSelectOption[];
+  selected: string[];
+  onChange: (next: string[]) => void;
+  isLoading?: boolean;
+  emptyText?: string;
+  onAddNew?: () => void;
+  addNewLabel?: string;
+}
+
+function MultiSelect({
+  label,
+  placeholder,
+  options,
+  selected,
+  onChange,
+  isLoading = false,
+  emptyText = "No options available",
+  onAddNew,
+  addNewLabel,
+}: MultiSelectProps) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const toggle = (value: string) => {
+    onChange(
+      selected.includes(value)
+        ? selected.filter((item) => item !== value)
+        : [...selected, value],
+    );
+  };
+
+  const selectedLabels = options
+    .filter((option) => selected.includes(option.value))
+    .map((option) => option.label);
+
+  return (
+    <div className="mb-5">
+      <label className="mb-2 block text-sm font-semibold text-slate-800">
+        {label}
+      </label>
+
+      <div className="relative">
+        {isOpen && (
+          <button
+            type="button"
+            aria-label="Close dropdown"
+            className="fixed inset-0 z-10 cursor-default"
+            onClick={() => setIsOpen(false)}
+          />
+        )}
+
+        <button
+          type="button"
+          onClick={() => setIsOpen((previous) => !previous)}
+          className="relative z-20 flex w-full items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 text-left text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-500/10"
+          aria-expanded={isOpen}
+        >
+          <span
+            className={
+              selectedLabels.length > 0 ? "text-slate-700" : "text-slate-400"
+            }
+          >
+            {selectedLabels.length === 0
+              ? placeholder
+              : selectedLabels.length <= 2
+                ? selectedLabels.join(", ")
+                : `${selectedLabels.length} selected`}
+          </span>
+
+          <ChevronDown
+            className={`h-4 w-4 shrink-0 text-slate-400 transition ${
+              isOpen ? "rotate-180" : ""
+            }`}
+          />
+        </button>
+
+        {isOpen && (
+          <div className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+            {isLoading ? (
+              <p className="flex items-center gap-2 px-4 py-3 text-sm text-slate-400">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Loading...
+              </p>
+            ) : options.length === 0 ? (
+              <p className="px-4 py-3 text-sm text-slate-400">{emptyText}</p>
+            ) : (
+              options.map((option) => {
+                const isSelected = selected.includes(option.value);
+
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => toggle(option.value)}
+                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-slate-700 transition hover:bg-slate-50"
+                  >
+                    <span
+                      className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
+                        isSelected
+                          ? "border-blue-600 bg-blue-600 text-white"
+                          : "border-slate-300"
+                      }`}
+                    >
+                      {isSelected && <Check className="h-3 w-3" />}
+                    </span>
+
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate">{option.label}</span>
+
+                      {option.hint && (
+                        <span className="block truncate text-xs text-slate-400">
+                          {option.hint}
+                        </span>
+                      )}
+                    </span>
+                  </button>
+                );
+              })
+            )}
+
+            {onAddNew && (
+              <div className="mt-1 border-t border-slate-100 p-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsOpen(false);
+                    onAddNew();
+                  }}
+                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-semibold text-blue-600 transition hover:bg-blue-50"
+                >
+                  <Plus className="h-4 w-4" />
+                  {addNewLabel ?? "Add new"}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {selectedLabels.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {options
+            .filter((option) => selected.includes(option.value))
+            .map((option) => (
+              <span
+                key={option.value}
+                className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700"
+              >
+                {option.label}
+                <button
+                  type="button"
+                  onClick={() => toggle(option.value)}
+                  className="text-blue-400 transition hover:text-blue-700"
+                  aria-label={`Remove ${option.label}`}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---- Confirmation dialog ---------------------------------------------------
+
+function ConfirmDialog({
+  title,
+  message,
+  confirmLabel,
+  isWorking,
+  onConfirm,
+  onCancel,
+  tone = "primary",
+  icon,
+}: {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  isWorking: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+  tone?: "primary" | "danger";
+  icon?: ReactNode;
+}) {
+  const isDanger = tone === "danger";
+
+  return (
+    <div
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/40 p-6"
+      onClick={onCancel}
+    >
+      <div
+        className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl"
+        onClick={(event) => event.stopPropagation()}
+        role="alertdialog"
+        aria-modal="true"
+        aria-label={title}
+      >
+        <div className={icon ? "flex items-start gap-3" : undefined}>
+          {icon && (
+            <span
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
+                isDanger ? "bg-red-100" : "bg-blue-50"
+              }`}
+            >
+              {icon}
+            </span>
+          )}
+
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold text-slate-900">{title}</h2>
+            <p className="mt-1 text-sm text-slate-500">{message}</p>
+          </div>
+        </div>
+
+        <div className="mt-6 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={isWorking}
+            className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-60"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={isWorking}
+            className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60 ${
+              isDanger
+                ? "bg-red-600 hover:bg-red-700"
+                : "bg-[#2563eb] hover:bg-[#1d4ed8]"
+            }`}
+          >
+            {isWorking && <Loader2 className="h-4 w-4 animate-spin" />}
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ---- Page --------------------------------------------------------------------
 
-export default function AdminAnnouncements() {
+interface AdminAnnouncementsProps {
+  onCreateEmployee?: () => void;
+}
+
+export default function AdminAnnouncements({
+  onCreateEmployee,
+}: AdminAnnouncementsProps = {}) {
   // List state
   const [activeTab, setActiveTab] =
     useState<(typeof tabs)[number]>("All");
+
 
   const [search, setSearch] = useState("");
 
@@ -185,29 +548,71 @@ export default function AdminAnnouncements() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // Restore any in-progress draft. Required because navigating to the
+  // Employees page unmounts this component. Read once, then used as the
+  // initial value for each piece of form state.
+  const [restoredDraft] = useState<AnnouncementDraft | null>(readDraft);
+
   // Create form state
-  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(
+    () => restoredDraft !== null,
+  );
   const [editingAnnouncement, setEditingAnnouncement] =
     useState<Announcement | null>(null);
 
-  const [title, setTitle] = useState("");
-  const [category, setCategory] = useState<Category | "">("");
-  const [priority, setPriority] = useState<Priority>("Important");
-
-  const [publishDate, setPublishDate] = useState(
-    new Date().toISOString().split("T")[0]
+  const [title, setTitle] = useState(restoredDraft?.title ?? "");
+  const [category, setCategory] = useState<Category | "">(
+    restoredDraft?.category ?? "",
+  );
+  const [priority, setPriority] = useState<Priority>(
+    restoredDraft?.priority ?? "Important",
   );
 
-  const [expiryDate, setExpiryDate] = useState("");
+  const [publishDate, setPublishDate] = useState(
+    restoredDraft?.publishDate ?? new Date().toISOString().split("T")[0],
+  );
 
-  const [audience, setAudience] =
-    useState<Audience>("All Employees");
+  const [expiryDate, setExpiryDate] = useState(restoredDraft?.expiryDate ?? "");
 
-  const [description, setDescription] = useState("");
+  const [audience, setAudience] = useState<Audience>(
+    restoredDraft?.audience ?? "All Employees",
+  );
+
+  const [description, setDescription] = useState(
+    restoredDraft?.description ?? "",
+  );
 
   const [attachment, setAttachment] = useState<File | null>(null);
 
-  const [isPinned, setIsPinned] = useState(true);
+  const [isPinned, setIsPinned] = useState(restoredDraft?.isPinned ?? true);
+
+  const [selectedDepartments, setSelectedDepartments] = useState<string[]>(
+    restoredDraft?.selectedDepartments ?? [],
+  );
+  const [selectedEmployees, setSelectedEmployees] = useState<string[]>(
+    restoredDraft?.selectedEmployees ?? [],
+  );
+
+  // Audience target options
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [isLoadingOptions, setIsLoadingOptions] = useState(true);
+  const [isAddingDepartment, setIsAddingDepartment] = useState(false);
+  const [newDepartmentName, setNewDepartmentName] = useState("");
+  const [isCreatingDepartment, setIsCreatingDepartment] = useState(false);
+  const [isAddEmployeeMode, setIsAddEmployeeMode] = useState(
+    restoredDraft?.isAddEmployeeMode ?? false,
+  );
+
+  // Confirmation dialogs, replacing browser alert()/confirm() popups.
+  const [pendingDelete, setPendingDelete] = useState<Announcement | null>(
+    null,
+  );
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isConfirmingPublish, setIsConfirmingPublish] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+
 
   const mapAnnouncement = (item: {
     id: string;
@@ -220,6 +625,9 @@ export default function AdminAnnouncements() {
     audience: Audience;
     pinned: boolean;
     author_name: string;
+    created_at: string;
+    target_departments?: string[] | null;
+    target_employees?: string[] | null;
     attachment?: Announcement["attachment"];
   }): Announcement => ({
     id: item.id,
@@ -243,8 +651,217 @@ export default function AdminAnnouncements() {
     audience: item.audience,
     pinned: item.pinned,
     author: item.author_name || "HR Team",
+    createdAt: item.created_at,
+    targetDepartments: item.target_departments ?? [],
+    targetEmployees: item.target_employees ?? [],
     attachment: item.attachment,
   });
+
+  // ---- Persist draft --------------------------------------------------------
+
+  // Must be defined before the "add new employee" handler below, which
+  // persists synchronously before navigating away.
+  const currentDraft: AnnouncementDraft = {
+    title,
+    category,
+    priority,
+    publishDate,
+    expiryDate,
+    audience,
+    description,
+    isPinned,
+    selectedDepartments,
+    selectedEmployees,
+    isAddEmployeeMode,
+  };
+
+  useEffect(() => {
+    if (!showCreateForm) return;
+
+    writeDraft(currentDraft);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showCreateForm, ...Object.values(currentDraft)]);
+
+  // ---- Label helpers ------------------------------------------------------
+
+  const departmentNameById = (id: string) =>
+    departments.find((department) => department.id === id)?.name ?? "Unknown";
+
+  const employeeNameById = (id: string) => {
+    const employee = employees.find((item) => item.id === id);
+
+    if (!employee) return "Unknown";
+
+    const fullName = `${employee.first_name} ${employee.last_name}`.trim();
+
+    return fullName || employee.email;
+  };
+
+  // Resolved audience, so an admin can see exactly who receives the post.
+  const audienceNames = (a: Announcement): string[] => {
+    if (a.audience === "All Employees") return [];
+
+    if (a.audience === "Department-wise") {
+      return a.targetDepartments.map(departmentNameById);
+    }
+
+    return a.targetEmployees.map(employeeNameById);
+  };
+
+  const audienceLabel = (a: Announcement) => {
+    if (a.audience === "All Employees") return "Everyone";
+
+    const names = audienceNames(a);
+
+    if (names.length === 0) return "No recipients selected";
+
+    return `${names.length} ${a.audience === "Department-wise" ? "department" : "employee"}${names.length === 1 ? "" : "s"}`;
+  };
+
+  const audienceTooltip = (a: Announcement) => {
+    if (a.audience === "All Employees") {
+      return "Visible to every employee";
+    }
+
+    const names = audienceNames(a);
+
+    if (names.length === 0) {
+      return "No recipients are selected, so nobody will see this";
+    }
+
+    return "Only: " + names.join(", ");
+  };
+
+  // Human summary of who will receive the announcement being published.
+  const publishConfirmationMessage = () => {
+    if (audience === "All Employees") {
+      return `"${title.trim() || "This announcement"}" will be visible to every employee.`;
+    }
+
+    const names =
+      audience === "Department-wise"
+        ? selectedDepartments.map(departmentNameById)
+        : selectedEmployees.map(employeeNameById);
+
+    if (names.length === 0) {
+      return "No recipients are selected, so nobody will see this announcement.";
+    }
+
+    const heading =
+      audience === "Department-wise"
+        ? names.length === 1
+          ? "department"
+          : "departments"
+        : names.length === 1
+          ? "employee"
+          : "employees";
+
+    return (
+      `"${title.trim() || "This announcement"}" will be sent to ` +
+      `${names.length} ${heading}: ${names.join(", ")}.`
+    );
+  };
+
+  const departmentOptions: MultiSelectOption[] = useMemo(
+    () =>
+      departments.map((department) => ({
+        value: department.id,
+        label: department.name,
+      })),
+    [departments],
+  );
+
+  const employeeOptions: MultiSelectOption[] = useMemo(
+    () =>
+      employees.map((employee) => ({
+        value: employee.id,
+        label:
+          `${employee.first_name} ${employee.last_name}`.trim() ||
+          employee.email,
+        hint: employee.email,
+      })),
+    [employees],
+  );
+
+  // ---- Load audience target options ---------------------------------------
+
+  useEffect(() => {
+    let isMounted = true;
+
+    Promise.allSettled([
+      departmentService.listAll(),
+      employeeService.listAll({ status: "active" }),
+    ])
+      .then(([departmentResult, employeeResult]) => {
+        if (!isMounted) return;
+
+        if (departmentResult.status === "fulfilled") {
+          setDepartments(departmentResult.value);
+        }
+
+        if (employeeResult.status === "fulfilled") {
+          setEmployees(employeeResult.value);
+        }
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingOptions(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // ---- Create a new department inline -------------------------------------
+
+  const handleCreateDepartment = async () => {
+    const name = newDepartmentName.trim();
+
+    if (name.length < 2) {
+      setError("Department name must be at least 2 characters.");
+      return;
+    }
+
+    if (
+      departments.some(
+        (department) =>
+          department.name.trim().toLowerCase() === name.toLowerCase(),
+      )
+    ) {
+      setError(`"${name}" already exists.`);
+      return;
+    }
+
+    try {
+      setIsCreatingDepartment(true);
+      setError("");
+
+      const created = await departmentService.create({ name });
+
+      setDepartments((previous) => [...previous, created]);
+      setSelectedDepartments((previous) => [...previous, created.id]);
+      setNewDepartmentName("");
+      setIsAddingDepartment(false);
+    } catch (requestError: unknown) {
+      setError(
+        requestError instanceof ApiError
+          ? requestError.message
+          : "Could not create the department.",
+      );
+    } finally {
+      setIsCreatingDepartment(false);
+    }
+  };
+
+  // ---- Audience change ----------------------------------------------------
+
+  const handleAudienceChange = (next: Audience) => {
+    setAudience(next);
+
+    if (next !== "Department-wise") setSelectedDepartments([]);
+    if (next !== "Custom") setSelectedEmployees([]);
+  };
+
 
   useEffect(() => {
     let isMounted = true;
@@ -311,26 +928,40 @@ export default function AdminAnnouncements() {
     setDescription(announcement.description);
     setAttachment(null);
     setIsPinned(announcement.pinned);
+    setSelectedDepartments(announcement.targetDepartments);
+    setSelectedEmployees(announcement.targetEmployees);
     setSelectedAnnouncement(null);
     setShowCreateForm(true);
   };
 
-  const handleDeleteAnnouncement = async (announcement: Announcement) => {
-    if (!window.confirm(`Delete "${announcement.title}"?`)) return;
+
+  const requestDeleteAnnouncement = (announcement: Announcement) => {
+    setPendingDelete(announcement);
+  };
+
+  const handleDeleteAnnouncement = async () => {
+    if (!pendingDelete) return;
+
+    const announcement = pendingDelete;
 
     try {
+      setIsDeleting(true);
       setError("");
       await api.delete(`/announcements/${announcement.id}`);
       setAnnouncementList((previous) =>
         previous.filter((item) => item.id !== announcement.id),
       );
       setSelectedAnnouncement(null);
+      setPendingDelete(null);
     } catch (requestError: unknown) {
       setError(
         requestError instanceof ApiError
           ? requestError.message
           : "Could not delete the announcement.",
       );
+      setPendingDelete(null);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -346,34 +977,59 @@ export default function AdminAnnouncements() {
     setDescription("");
     setAttachment(null);
     setIsPinned(true);
+    setSelectedDepartments([]);
+    setSelectedEmployees([]);
+    setNewDepartmentName("");
+    setIsAddingDepartment(false);
+    setIsAddEmployeeMode(false);
   };
 
   // ---- Cancel form ---------------------------------------------------------
 
   const handleCancel = () => {
+    clearDraft();
     resetForm();
     setEditingAnnouncement(null);
     setShowCreateForm(false);
   };
 
+
   // ---- Publish announcement -----------------------------------------------
 
-  const handlePublish = async () => {
+  // Step 1: validate, then ask for confirmation.
+  const handlePublishClick = () => {
+    setError("");
+
     if (!title.trim()) {
-      alert("Please enter an announcement title.");
+      setError("Please enter an announcement title.");
       return;
     }
 
     if (!category) {
-      alert("Please select a category.");
+      setError("Please select a category.");
       return;
     }
 
     if (!description.trim()) {
-      alert("Please enter the announcement description.");
+      setError("Please enter the announcement description.");
       return;
     }
 
+    if (audience === "Department-wise" && selectedDepartments.length === 0) {
+      setError("Please select at least one department.");
+      return;
+    }
+
+    if (audience === "Custom" && selectedEmployees.length === 0) {
+      setError("Please select at least one employee.");
+      return;
+    }
+
+    setIsConfirmingPublish(true);
+  };
+
+  // Step 2: the user confirmed, so actually send it.
+  const handlePublish = async () => {
     const formData = new FormData();
     formData.append("title", title.trim());
     formData.append("category", category);
@@ -383,14 +1039,25 @@ export default function AdminAnnouncements() {
     formData.append("audience", audience);
     formData.append("description", description.trim());
     formData.append("pinned", String(isPinned));
+    selectedDepartments.forEach((id) =>
+      formData.append("target_departments", id),
+    );
+    selectedEmployees.forEach((id) =>
+      formData.append("target_employees", id),
+    );
     if (editingAnnouncement) {
       formData.append("clear_expiry", String(!expiryDate));
     }
     if (attachment) formData.append("attachment", attachment);
 
+    const wasEditing = editingAnnouncement !== null;
+    const publishedTitle = title.trim();
+
     try {
+      setIsPublishing(true);
       setError("");
-      const saved = editingAnnouncement
+
+      const saved = wasEditing
         ? await api.putForm<Parameters<typeof mapAnnouncement>[0]>(
             `/announcements/${editingAnnouncement.id}`,
             formData,
@@ -399,28 +1066,45 @@ export default function AdminAnnouncements() {
             "/announcements",
             formData,
           );
+
       const savedAnnouncement = mapAnnouncement(saved);
+
       setAnnouncementList((previous) =>
-        editingAnnouncement
+        wasEditing
           ? previous.map((item) =>
               item.id === savedAnnouncement.id ? savedAnnouncement : item,
             )
           : [savedAnnouncement, ...previous],
       );
-      alert(
-        editingAnnouncement
-          ? "Announcement updated successfully!"
-          : "Announcement published successfully!",
-      );
+
+      setIsConfirmingPublish(false);
+      clearDraft();
       resetForm();
       setEditingAnnouncement(null);
       setShowCreateForm(false);
+
+      setSuccessMessage(
+        `"${publishedTitle}" was ${wasEditing ? "updated" : "published"} successfully.`,
+      );
+
+      window.setTimeout(() => setSuccessMessage(""), 6000);
     } catch (requestError: unknown) {
+      setIsConfirmingPublish(false);
+
+      if (requestError instanceof ApiError && requestError.status === 403) {
+        setError(
+          "You do not have permission to publish announcements. Only HR Admin and Manager accounts can create them.",
+        );
+        return;
+      }
+
       setError(
         requestError instanceof ApiError
           ? requestError.message
           : "Could not publish the announcement.",
       );
+    } finally {
+      setIsPublishing(false);
     }
   };
 
@@ -470,6 +1154,13 @@ export default function AdminAnnouncements() {
             </p>
           </div>
         </div>
+
+        {error && (
+          <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
 
         {/* Main grid -------------------------------------------------------- */}
 
@@ -621,7 +1312,7 @@ export default function AdminAnnouncements() {
                       name="audience"
                       value={item}
                       checked={audience === item}
-                      onChange={() => setAudience(item)}
+                      onChange={() => handleAudienceChange(item)}
                       className="h-4 w-4 accent-blue-600"
                     />
 
@@ -630,6 +1321,120 @@ export default function AdminAnnouncements() {
                 ))}
               </div>
             </div>
+
+            {/* Department targets ------------------------------------------ */}
+
+            {audience === "Department-wise" && (
+              <>
+                {isAddingDepartment ? (
+                  <div className="mb-5 rounded-lg border border-blue-100 bg-blue-50/50 p-4">
+                    <label className="mb-2 block text-sm font-semibold text-slate-800">
+                      New department
+                    </label>
+
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <input
+                        type="text"
+                        value={newDepartmentName}
+                        autoFocus
+                        onChange={(event) =>
+                          setNewDepartmentName(event.target.value)
+                        }
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault();
+                            void handleCreateDepartment();
+                          }
+                        }}
+                        placeholder="e.g. Customer Success"
+                        className="flex-1 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-500/10"
+                      />
+
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          disabled={isCreatingDepartment}
+                          onClick={() => void handleCreateDepartment()}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {isCreatingDepartment ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Plus className="h-4 w-4" />
+                          )}
+                          Add
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsAddingDepartment(false);
+                            setNewDepartmentName("");
+                          }}
+                          className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <MultiSelect
+                    label="Departments"
+                    placeholder="Select departments"
+                    options={departmentOptions}
+                    selected={selectedDepartments}
+                    onChange={setSelectedDepartments}
+                    isLoading={isLoadingOptions}
+                    emptyText="No departments found"
+                    onAddNew={() => setIsAddingDepartment(true)}
+                    addNewLabel="Add new department"
+                  />
+                )}
+              </>
+            )}
+
+            {/* Employee targets --------------------------------------------- */}
+
+            {audience === "Custom" && (
+              <>
+                <MultiSelect
+                  label="Employees"
+                  placeholder="Select employees"
+                  options={employeeOptions}
+                  selected={selectedEmployees}
+                  onChange={setSelectedEmployees}
+                  isLoading={isLoadingOptions}
+                  emptyText="No active employees found"
+                  onAddNew={
+                    onCreateEmployee
+                      ? () => {
+                          // Persist synchronously - this component unmounts as
+                          // soon as the navigation below is processed.
+                          writeDraft({
+                            ...currentDraft,
+                            isAddEmployeeMode: true,
+                          });
+                          onCreateEmployee();
+                        }
+                      : undefined
+                  }
+                  addNewLabel="Add new employee"
+                />
+
+                {isAddEmployeeMode && (
+                  <div className="-mt-3 mb-5 flex flex-wrap items-center gap-3 rounded-lg border border-amber-100 bg-amber-50/60 px-4 py-3 text-sm text-amber-800">
+                    <UserPlus className="h-4 w-4 shrink-0" />
+
+                    <span className="flex-1">
+                      Your draft is saved. Create the employee on the Employees
+                      page, then return here - the list refreshes automatically
+                      and the new employee will be available to select.
+                    </span>
+                  </div>
+                )}
+              </>
+            )}
 
             {/* Description -------------------------------------------------- */}
 
@@ -802,7 +1607,7 @@ export default function AdminAnnouncements() {
 
                 <button
                   type="button"
-                  onClick={handlePublish}
+                  onClick={handlePublishClick}
                   className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
                 >
                    {editingAnnouncement ? (
@@ -810,7 +1615,7 @@ export default function AdminAnnouncements() {
                    ) : (
                      <Send className="h-4 w-4" />
                    )}
-                   {editingAnnouncement ? "Save Changes" : "Publish Announcement"}
+                   {editingAnnouncement ? "Save Changes" : "Announcement"}
                 </button>
               </div>
             </div>
@@ -934,6 +1739,17 @@ export default function AdminAnnouncements() {
             </div>
           </div>
         </div>
+
+        {isConfirmingPublish && (
+          <ConfirmDialog
+            title={editingAnnouncement ? "Update this announcement?" : "Publish this announcement?"}
+            message={publishConfirmationMessage()}
+            confirmLabel={editingAnnouncement ? "Update" : "Publish"}
+            isWorking={isPublishing}
+            onConfirm={() => void handlePublish()}
+            onCancel={() => setIsConfirmingPublish(false)}
+          />
+        )}
       </div>
     );
   }
@@ -978,6 +1794,13 @@ export default function AdminAnnouncements() {
       {error && (
         <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}
+        </div>
+      )}
+
+      {successMessage && (
+        <div className="mb-4 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
+          <Check className="h-4 w-4 shrink-0" />
+          {successMessage}
         </div>
       )}
 
@@ -1042,36 +1865,71 @@ export default function AdminAnnouncements() {
                       {style.icon}
                     </span>
 
-                    <div className="min-w-0 flex-1">
-                      <div className="mb-1.5 flex items-center justify-between gap-2">
-                        <span
-                          className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${style.badge}`}
-                        >
-                          {a.category}
-                        </span>
-
-                        {a.status && (
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-1.5 flex flex-wrap items-center gap-2">
                           <span
-                            className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${statusStyles[a.status]}`}
+                            className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${style.badge}`}
                           >
-                            {a.status}
+                            {a.category}
                           </span>
-                        )}
-                      </div>
 
-                      <h3 className="mb-1 text-[15px] font-semibold text-slate-900">
-                        {a.title}
-                      </h3>
+                          <span
+                            className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
+                              audienceNames(a).length === 0 &&
+                              a.audience !== "All Employees"
+                                ? "bg-red-100 text-red-700"
+                                : audienceStyles[a.audience]
+                            }`}
+                            title={audienceTooltip(a)}
+                          >
+                            {audienceLabel(a)}
+                          </span>
 
-                      <p className="mb-3 text-sm leading-relaxed text-slate-500">
-                        {a.description}
-                      </p>
+                          {a.status && (
+                            <span
+                              className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${statusStyles[a.status]}`}
+                            >
+                              {a.status}
+                            </span>
+                          )}
+                        </div>
+
+                        <h3 className="mb-1 text-[15px] font-semibold text-slate-900">
+                          {a.title}
+                        </h3>
+
+                        <p className="mb-3 text-sm leading-6 text-slate-500">
+                          {audienceNames(a).length > 0 && (
+                            <span className="mb-1 flex flex-wrap items-center gap-1.5">
+                              <span className="font-medium text-slate-600">
+                                To:
+                              </span>
+
+                              {audienceNames(a).map((name) => (
+                                <span
+                                  key={name}
+                                  className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-600"
+                                >
+                                  {name}
+                                </span>
+                              ))}
+                            </span>
+                          )}
+
+                          {a.description}
+                        </p>
+
 
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4 text-xs text-slate-400">
-                          <span className="flex items-center gap-1">
-                            <Calendar className="h-3.5 w-3.5" />
-                            {a.date}
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-400">
+                          <span
+                            className="flex items-center gap-1"
+                            title={
+                              "Publishes on " + formatDateOnly(a.publishDate)
+                            }
+                          >
+                            <Clock className="h-3.5 w-3.5" />
+                            {formatDateTime(a.createdAt)}
                           </span>
 
                           <span className="flex items-center gap-1">
@@ -1079,6 +1937,7 @@ export default function AdminAnnouncements() {
                             By {a.author}
                           </span>
                         </div>
+
 
                         <div className="flex items-center gap-3">
                           <button
@@ -1092,7 +1951,7 @@ export default function AdminAnnouncements() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => void handleDeleteAnnouncement(a)}
+                            onClick={() => requestDeleteAnnouncement(a)}
                             className="rounded-lg p-1.5 text-slate-500 hover:bg-red-50 hover:text-red-600"
                             title="Delete announcement"
                             aria-label="Delete announcement"
@@ -1333,6 +2192,13 @@ export default function AdminAnnouncements() {
                 <Calendar className="h-4 w-4" />
                 Published {selectedAnnouncement.date}
               </span>
+              <span
+                className="flex items-center gap-1.5"
+                title="Announcement created at this time"
+              >
+                <Clock className="h-4 w-4" />
+                Created {formatDateTime(selectedAnnouncement.createdAt)}
+              </span>
               <span className="flex items-center gap-1.5">
                 <User className="h-4 w-4" />
                 By {selectedAnnouncement.author}
@@ -1349,7 +2215,11 @@ export default function AdminAnnouncements() {
             <div className="mt-6 grid grid-cols-1 gap-3 border-t border-slate-100 pt-4 text-sm sm:grid-cols-2">
               <div>
                 <p className="text-xs text-slate-400">Audience</p>
-                <p className="font-medium text-slate-700">{selectedAnnouncement.audience}</p>
+                <p className="font-medium text-slate-700">
+                  {selectedAnnouncement.audience === "All Employees"
+                    ? "All Employees (everyone)"
+                    : audienceLabel(selectedAnnouncement)}
+                </p>
               </div>
               <div>
                 <p className="text-xs text-slate-400">Expiry date</p>
@@ -1357,7 +2227,56 @@ export default function AdminAnnouncements() {
                   {selectedAnnouncement.expiryDate || "No expiry date"}
                 </p>
               </div>
+
+              {selectedAnnouncement.audience === "Department-wise" && (
+                <div className="sm:col-span-2">
+                  <p className="text-xs text-slate-400">Departments</p>
+
+                  {selectedAnnouncement.targetDepartments.length === 0 ? (
+                    <p className="font-medium text-slate-700">
+                      No departments selected
+                    </p>
+                  ) : (
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {selectedAnnouncement.targetDepartments.map((id) => (
+                        <span
+                          key={id}
+                          className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700"
+                        >
+                          <Building2 className="h-3 w-3" />
+                          {departmentNameById(id)}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {selectedAnnouncement.audience === "Custom" && (
+                <div className="sm:col-span-2">
+                  <p className="text-xs text-slate-400">Employees</p>
+
+                  {selectedAnnouncement.targetEmployees.length === 0 ? (
+                    <p className="font-medium text-slate-700">
+                      No employees selected
+                    </p>
+                  ) : (
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {selectedAnnouncement.targetEmployees.map((id) => (
+                        <span
+                          key={id}
+                          className="inline-flex items-center gap-1.5 rounded-full bg-purple-50 px-2.5 py-1 text-xs font-medium text-purple-700"
+                        >
+                          <Users className="h-3 w-3" />
+                          {employeeNameById(id)}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
+
 
             {selectedAnnouncement.attachment && (
               <a
@@ -1373,6 +2292,19 @@ export default function AdminAnnouncements() {
             )}
           </div>
         </div>
+      )}
+
+      {pendingDelete && (
+        <ConfirmDialog
+          title="Delete this announcement?"
+          message={`"${pendingDelete.title}" will be removed permanently and will no longer be visible to its audience.`}
+          confirmLabel="Delete"
+          isWorking={isDeleting}
+          tone="danger"
+          icon={<Trash2 className="h-5 w-5 text-red-600" />}
+          onConfirm={() => void handleDeleteAnnouncement()}
+          onCancel={() => setPendingDelete(null)}
+        />
       )}
     </div>
   );

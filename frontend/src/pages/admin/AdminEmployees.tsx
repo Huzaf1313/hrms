@@ -4,8 +4,16 @@ import AdminEmployeeDetailsPage from "../../components/admin/AdminEmployeeDetail
 import AdminEmployeeForm from "../../components/admin/AdminEmployeeForm";
 import AdminEmployeeTable from "../../components/admin/AdminEmployeeTable";
 import { ApiError } from "../../services/api";
+import {
+  salaryStructureService,
+  type SalaryStructure,
+} from "../../services/admin_salary_structure_service";
 import { departmentService } from "../../services/departmentService";
 import { employeeService } from "../../services/employeeService";
+import {
+  userService,
+  type ManagerAccount,
+} from "../../services/userService";
 import type { Department } from "../../types/department";
 import type {
   Employee,
@@ -103,9 +111,17 @@ function CredentialsModal({
   );
 }
 
-function AdminEmployees() {
+interface AdminEmployeesProps {
+  autoOpenCreateForm?: boolean;
+}
+
+function AdminEmployees({ autoOpenCreateForm = false }: AdminEmployeesProps) {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [salaryStructures, setSalaryStructures] = useState<SalaryStructure[]>(
+    [],
+  );
+  const [managers, setManagers] = useState<ManagerAccount[]>([]);
   const [search, setSearch] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -113,7 +129,7 @@ function AdminEmployees() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(autoOpenCreateForm);
   const [editingEmployee, setEditingEmployee] = useState<Employee | undefined>(undefined);
   const [viewingEmployee, setViewingEmployee] = useState<Employee | undefined>(undefined);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -168,6 +184,20 @@ function AdminEmployees() {
       .list()
       .then(setDepartments)
       .catch(() => setDepartments([]));
+  }, []);
+
+  useEffect(() => {
+    salaryStructureService
+      .list()
+      .then(setSalaryStructures)
+      .catch(() => setSalaryStructures([]));
+  }, []);
+
+  useEffect(() => {
+    userService
+      .listManagers()
+      .then(setManagers)
+      .catch(() => setManagers([]));
   }, []);
 
   function openCreateForm() {
@@ -227,6 +257,38 @@ function AdminEmployees() {
     }
   }
 
+  async function handleUpdateEmployee(
+  employeeId: string,
+  data: {
+    emergency_contact?: {
+      name: string;
+      relationship: string;
+      phone: string;
+      address: string;
+    };
+    bank_information?: {
+      bank_name: string;
+      account_holder_name: string;
+      account_number: string;
+      ifsc_code: string;
+    };
+  },
+): Promise<Employee> {
+  const updated = await employeeService.update(employeeId, data);
+
+  setViewingEmployee((current) =>
+    current?.id === employeeId ? updated : current,
+  );
+
+  setEmployees((current) =>
+    current.map((employee) =>
+      employee.id === employeeId ? updated : employee,
+    ),
+  );
+
+  return updated;
+}
+
   async function handleDeactivate(employee: Employee) {
     try {
       const updated = await employeeService.deactivate(employee.id);
@@ -262,14 +324,18 @@ function AdminEmployees() {
         <AdminEmployeeDetailsPage
           employee={viewingEmployee}
           departments={departments}
+          salaryStructures={salaryStructures}
           onBack={() => setViewingEmployee(undefined)}
           onEdit={openEditForm}
           onDeactivate={handleDeactivate}
+          onUpdateEmployee={handleUpdateEmployee}
         />
 
         {isFormOpen && (
           <AdminEmployeeForm
             departments={departments}
+            salaryStructures={salaryStructures}
+            managers={managers}
             initialEmployee={editingEmployee}
             isSubmitting={isSubmitting}
             errorMessage={formError}
@@ -405,6 +471,8 @@ function AdminEmployees() {
       {isFormOpen && (
         <AdminEmployeeForm
           departments={departments}
+          salaryStructures={salaryStructures}
+          managers={managers}
           initialEmployee={editingEmployee}
           isSubmitting={isSubmitting}
           errorMessage={formError}

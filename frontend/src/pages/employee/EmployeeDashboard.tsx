@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { api } from "../../services/api";
+import {
+  announcementService,
+  type EmployeeAnnouncement,
+} from "../../services/announcementService";
 
 interface User {
   id: string;
@@ -55,24 +59,6 @@ const leaveRequests = [
     date: "Sep 18 - Sep 19",
     type: "Earned Leave",
     status: "Approved",
-  },
-];
-
-const announcements = [
-  {
-    title: "Independence Day Holiday",
-    description: "Office will remain closed on August 15.",
-    date: "Aug 10",
-  },
-  {
-    title: "Updated Leave Policy",
-    description: "Please review the updated employee leave policy.",
-    date: "Aug 08",
-  },
-  {
-    title: "Monthly Town Hall",
-    description: "Join the company town hall this Friday.",
-    date: "Aug 05",
   },
 ];
 
@@ -153,6 +139,27 @@ function EmployeeDashboard() {
       })
       .catch(() => setTodayAttendance(null));
   }, [user?.employee_id]);
+
+  const [announcements, setAnnouncements] = useState<EmployeeAnnouncement[]>(
+    [],
+  );
+
+  useEffect(() => {
+    let isMounted = true;
+
+    announcementService
+      .list({ page_size: 3 })
+      .then((result) => {
+        if (isMounted) setAnnouncements(result.announcements);
+      })
+      .catch(() => {
+        if (isMounted) setAnnouncements([]);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   function formatTime(value: string | null) {
     if (!value) {
@@ -516,26 +523,37 @@ function EmployeeDashboard() {
               </div>
 
               <div className="mt-5 space-y-4">
-                {announcements.map((announcement) => (
-                  <div
-                    key={announcement.title}
-                    className="rounded-xl border border-gray-100 bg-gray-50 p-4"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <h3 className="text-sm font-semibold text-gray-800">
-                        {announcement.title}
-                      </h3>
+                {announcements.length === 0 ? (
+                  <p className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-6 text-center text-xs text-gray-500">
+                    No announcements available.
+                  </p>
+                ) : (
+                  announcements.map((announcement) => (
+                    <div
+                      key={announcement.id}
+                      className="rounded-xl border border-gray-100 bg-gray-50 p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <h3 className="text-sm font-semibold text-gray-800">
+                          {announcement.title}
+                        </h3>
 
-                      <span className="shrink-0 text-xs text-gray-400">
-                        {announcement.date}
-                      </span>
+                        <span className="shrink-0 text-xs text-gray-400">
+                          {new Date(
+                            `${announcement.publish_date}T00:00:00`,
+                          ).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "2-digit",
+                          })}
+                        </span>
+                      </div>
+
+                      <p className="mt-2 text-xs leading-5 text-gray-500">
+                        {announcement.description}
+                      </p>
                     </div>
-
-                    <p className="mt-2 text-xs leading-5 text-gray-500">
-                      {announcement.description}
-                    </p>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
           </section>

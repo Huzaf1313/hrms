@@ -28,6 +28,22 @@ function DashboardLayout({
   onLogout,
 }: DashboardLayoutProps) {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [openEmployeeFormOnMount, setOpenEmployeeFormOnMount] = useState(false);
+
+  function handleNavigate(page: string) {
+    // Consume the "create employee" intent so it only applies to the very
+    // next mount of the Employees page.
+    if (page !== "Employees") {
+      setOpenEmployeeFormOnMount(false);
+    }
+
+    onNavigate(page);
+  }
+
+  function handleCreateEmployee() {
+    setOpenEmployeeFormOnMount(true);
+    onNavigate("Employees");
+  }
 
   useEffect(() => {
     let isMounted = true;
@@ -51,14 +67,14 @@ function DashboardLayout({
     <div className="flex min-h-screen bg-[#f5f7fb]">
       <Sidebar
         activePage={activePage}
-        onNavigate={onNavigate}
+        onNavigate={handleNavigate}
       />
 
       <main className="min-w-0 flex-1">
         <Header onLogout={onLogout} pageTitle={activePage} />
 
         {activePage === "Employees" ? (
-          <AdminEmployees />
+          <AdminEmployees autoOpenCreateForm={openEmployeeFormOnMount} />
         ) : activePage === "Attendance" ? (
           <AdminAttendance />
         ) : activePage === "Leave" ? (
@@ -68,7 +84,7 @@ function DashboardLayout({
         ) : activePage === "Payroll" ? (
           <AdminPayroll />
         ) : activePage === "Announcement" ? (
-          <AdminAnnouncements />
+          <AdminAnnouncements onCreateEmployee={handleCreateEmployee} />
         ) : activePage === "Settings" ? (
           <AdminSettings />
         ) : (

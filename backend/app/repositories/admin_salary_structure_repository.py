@@ -8,10 +8,7 @@ class AdminSalaryStructureRepository:
 
     async def create(self, structure_data: dict):
         result = await self.collection.insert_one(structure_data)
-
-        return await self.collection.find_one(
-            {"_id": result.inserted_id}
-        )
+        return await self.collection.find_one({"_id": result.inserted_id})
 
     async def get_by_id(self, structure_id: str):
         if not ObjectId.is_valid(structure_id):
@@ -19,6 +16,11 @@ class AdminSalaryStructureRepository:
 
         return await self.collection.find_one(
             {"_id": ObjectId(structure_id)}
+        )
+
+    async def get_by_name(self, name: str):
+        return await self.collection.find_one(
+            {"name": name}
         )
 
     async def get_all(self, filters: dict, skip: int, limit: int):
@@ -58,7 +60,8 @@ class AdminSalaryStructureRepository:
             "name": deduction.get("name", ""),
             "type": deduction.get("type", "deduction"),
             "calculation_method": deduction.get(
-                "calculation_method", "percentage_of_basic"
+                "calculation_method",
+                "percentage_of_basic",
             ),
             "percentage": deduction.get("percentage"),
             "fixed_amount": deduction.get("fixed_amount"),

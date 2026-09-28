@@ -10,8 +10,6 @@ export type EmploymentType =
   | "contract"
   | "intern";
 
-export type SalaryStructure = "basic" | "standard" | "professional";
-
 export interface EmergencyContact {
   name: string;
   relationship: string;
@@ -71,7 +69,7 @@ export interface Employee {
   employment_type: EmploymentType;
   work_location?: string;
   reporting_manager?: string;
-  salary_structure?: SalaryStructure | "";
+  salary_structure?: string;
   salary?: string;
 
   // Additional Information
@@ -104,7 +102,7 @@ export interface EmployeeCreate {
   employment_type: EmploymentType;
   work_location?: string;
   reporting_manager?: string;
-  salary_structure?: SalaryStructure | "";
+  salary_structure?: string;
   salary?: string;
 
   emergency_contact?: EmergencyContact;
@@ -127,7 +125,7 @@ export interface EmployeeUpdate {
   employment_type?: EmploymentType;
   work_location?: string;
   reporting_manager?: string;
-  salary_structure?: SalaryStructure | "";
+  salary_structure?: string;
   salary?: string;
 
   emergency_contact?: EmergencyContact;

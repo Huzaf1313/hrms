@@ -5,7 +5,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-
+from app.api.v1.admin_payslip import router as admin_payslip_router
 from app.api.v1.admin_leaves import router as leaves_router
 from app.api.v1.admin_attendance import router as attendance_router
 from app.api.v1.auth import router as auth_router
@@ -226,5 +226,10 @@ app.include_router(
 
 app.include_router(
     employee_announcement_router,
+    prefix="/api/v1",
+)
+
+app.include_router(
+    admin_payslip_router,
     prefix="/api/v1",
 )

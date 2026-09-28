@@ -15,6 +15,7 @@ pymongo==4.17.0
 pwdlib[argon2]==0.2.1
 PyJWT==2.10.1
 python-dotenv==1.2.2
+python-multipart==0.0.32
 reportlab
 starlette==1.6.0
 typing-inspection==0.4.4
