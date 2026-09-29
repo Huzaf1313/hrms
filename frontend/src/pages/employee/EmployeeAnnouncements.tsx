@@ -61,8 +61,27 @@ function EmployeeAnnouncements() {
         const response = await api.get<EmployeeAnnouncementsResponse>(
           "/employee-announcements"
         );
-
         setAnnouncements(response.announcements || []);
+        const announcements = response.announcements || [];
+
+        const readIds = JSON.parse(
+          localStorage.getItem("employee_read_announcement_ids") || "[]",
+        ) as string[];
+
+        const updatedReadIds = Array.from(
+          new Set([
+            ...readIds,
+            ...announcements.map((announcement) => announcement.id),
+          ]),
+        );
+
+        localStorage.setItem(
+          "employee_read_announcement_ids",
+          JSON.stringify(updatedReadIds),
+        );
+
+        window.dispatchEvent(new Event("announcements-read"));
+
       } catch (err) {
         console.error("Failed to fetch employee announcements:", err);
         setError("Unable to load announcements. Please try again.");
@@ -73,7 +92,6 @@ function EmployeeAnnouncements() {
 
     fetchAnnouncements();
   }, []);
-
   const getCategoryGroup = (category: string) => {
     const normalizedCategory = category.toLowerCase();
 

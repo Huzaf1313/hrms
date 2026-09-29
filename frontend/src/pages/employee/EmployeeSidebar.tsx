@@ -120,7 +120,7 @@ function EmployeeSidebar({
   const location = useLocation();
 
   return (
-    <aside className="flex min-h-screen w-[250px] shrink-0 flex-col bg-[#0d1e3e] px-4 py-6">
+    <aside className="fixed inset-y-0 left-0 z-40 flex w-[250px] flex-col bg-[#0d1e3e] px-4 py-6">
       {/* Logo */}
       <button
         type="button"

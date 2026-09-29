@@ -629,21 +629,6 @@ if (
             </div>
 
             <div className="flex flex-wrap gap-3">
-
-              <button
-                type="button"
-                className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition hover:border-[#2563eb] hover:bg-[#f5f8f5]"
-              >
-                Attendance Calendar
-              </button>
-
-              <button
-                type="button"
-                className="rounded-xl bg-[#2563eb] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1d4ed8]"
-              >
-                Download Report
-              </button>
-
             </div>
           </section>
 
@@ -727,11 +712,6 @@ if (
                   <p className="mt-3 text-2xl font-bold text-[#17213a]">
                     {absentDays}
                   </p>
-
-                  <p className="mt-2 text-xs text-gray-400">
-                    Recorded absences
-                  </p>
-
                 </div>
 
                 {/* Late */}
@@ -744,11 +724,6 @@ if (
                   <p className="mt-3 text-2xl font-bold text-[#17213a]">
                     {lateDays}
                   </p>
-
-                  <p className="mt-2 text-xs text-gray-400">
-                    Late clock-ins
-                  </p>
-
                 </div>
 
                 {/* Leave */}
@@ -761,11 +736,6 @@ if (
                   <p className="mt-3 text-2xl font-bold text-[#17213a]">
                     {leaveDays}
                   </p>
-
-                  <p className="mt-2 text-xs text-gray-400">
-                    Approved leave days
-                  </p>
-
                 </div>
 
                 {/* Working Hours */}
@@ -1507,24 +1477,63 @@ if (
                       calendarMonth === today.getMonth() &&
                       calendarYear === today.getFullYear();
 
+                    const dateKey = `${calendarYear}-${String(
+                      calendarMonth + 1,
+                    ).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+
+                    const calendarDate = new Date(
+                      calendarYear,
+                      calendarMonth,
+                      day,
+                    );
+
+                    const dayOfWeek = calendarDate.getDay();
+
+                    const isWeeklyOff =
+                      dayOfWeek === 0 || dayOfWeek === 6;
+
+                    const isOnLeave =
+                      approvedLeaveDates.has(dateKey);
+
                     const status =
                       attendance?.status?.toLowerCase();
 
-                    let statusClass =
-                      "text-gray-700";
+                    const isLate =
+                      attendance?.check_in
+                        ? (() => {
+                            const checkInIST = getISTDateParts(
+                              new Date(attendance.check_in),
+                            );
 
-                    if (status === "present") {
+                            const checkInMinutes =
+                              checkInIST.hour * 60 + checkInIST.minute;
+
+                            const shiftStartMinutes = 9 * 60 + 30;
+
+                            return checkInMinutes > shiftStartMinutes;
+                          })()
+                        : false;
+
+                    let statusClass = "text-gray-700";
+
+                    if (isWeeklyOff) {
                       statusClass =
-                        "bg-green-100 text-green-700";
-                    } else if (status === "late") {
+                        "bg-gray-200 text-gray-600";
+                    } else if (isOnLeave) {
+                      statusClass =
+                        "bg-purple-100 text-purple-700";
+                    } else if (isLate) {
                       statusClass =
                         "bg-orange-100 text-orange-700";
+                    } else if (status === "present") {
+                      statusClass =
+                        "bg-green-100 text-green-700";
                     } else if (status === "absent") {
                       statusClass =
                         "bg-red-100 text-red-700";
-                    } else if (status === "on leave") {
+                    } else if (!attendance) {
                       statusClass =
-                        "bg-purple-100 text-purple-700";
+                        "bg-red-100 text-red-700";
                     }
 
                     return (

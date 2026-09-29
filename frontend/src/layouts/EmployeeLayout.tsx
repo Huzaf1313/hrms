@@ -1,14 +1,19 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Bell, ChevronDown, LogOut, Menu } from "lucide-react";
+import { api } from "../services/api";
 
 import EmployeeSidebar from "../pages/employee/EmployeeSidebar";
 import DatePicker from "../components/DatePicker";
+
 
 const pageTitles: Record<string, string> = {
   "/employee/dashboard": "Dashboard",
   "/employee/profile": "My Profile",
   "/employee/attendance": "My Attendance",
+  "/employee/leave": "My Leave",
+  "/employee/payroll": "My Payslip",
+  "/employee/documents": "My Documents",
   "/employee/announcements": "Announcements",
   "/employee/help": "Help & Support",
 };
@@ -31,7 +36,50 @@ function EmployeeLayout({ onLogout }: { onLogout: () => void }) {
 
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
+  const [unreadAnnouncementCount, setUnreadAnnouncementCount] = useState(0);
+
   const user = useMemo(() => readUser(), []);
+
+  useEffect(() => {
+  const fetchUnreadAnnouncements = async () => {
+    try {
+      const response = await api.get<{
+        announcements: { id: string }[];
+        total: number;
+      }>("/employee-announcements");
+
+      const readIds = JSON.parse(
+        localStorage.getItem("employee_read_announcement_ids") || "[]",
+      ) as string[];
+
+      const unreadCount = response.announcements.filter(
+        (announcement) => !readIds.includes(announcement.id),
+      ).length;
+
+      setUnreadAnnouncementCount(unreadCount);
+    } catch (error) {
+      console.error("Failed to fetch announcement notifications:", error);
+    }
+  };
+
+  fetchUnreadAnnouncements();
+
+  const handleAnnouncementsRead = () => {
+    setUnreadAnnouncementCount(0);
+  };
+
+  window.addEventListener("announcements-read", handleAnnouncementsRead);
+
+  const interval = window.setInterval(fetchUnreadAnnouncements, 30000);
+
+  return () => {
+    window.clearInterval(interval);
+    window.removeEventListener(
+      "announcements-read",
+      handleAnnouncementsRead,
+    );
+  };
+}, []);
 
   const fullName = user?.full_name ?? "Employee";
 
@@ -45,10 +93,10 @@ function EmployeeLayout({ onLogout }: { onLogout: () => void }) {
   const pageTitle = pageTitles[location.pathname] ?? "Dashboard";
 
   return (
-    <div className="flex min-h-screen bg-[#f5f7fb]">
-      <EmployeeSidebar onLogout={onLogout} />
+    <div className="min-h-screen bg-[#f5f7fb]">
+    <EmployeeSidebar onLogout={onLogout} />
 
-      <div className="min-w-0 flex-1">
+    <div className="ml-[250px] min-w-0">
         <header className="sticky top-0 z-30 flex h-[72px] items-center justify-between gap-4 border-b border-gray-200 bg-white px-6">
           <div className="flex min-w-0 items-center gap-4">
             <button
@@ -59,9 +107,8 @@ function EmployeeLayout({ onLogout }: { onLogout: () => void }) {
               <Menu className="h-5 w-5" />
             </button>
 
-            <p className="truncate text-sm text-gray-500">
-              Employee Portal <span className="mx-1.5 text-gray-300">/</span>
-              <span className="font-semibold text-gray-900">{pageTitle}</span>
+            <p className="truncate text-sm font-semibold text-gray-900">
+              {pageTitle}
             </p>
           </div>
 
@@ -73,11 +120,12 @@ function EmployeeLayout({ onLogout }: { onLogout: () => void }) {
             >
               <Bell className="h-5 w-5" />
 
-              <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#ef4444] px-1 text-[9px] font-bold text-white">
-                3
-              </span>
+              {unreadAnnouncementCount > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#ef4444] px-1 text-[9px] font-bold text-white">
+                  {unreadAnnouncementCount > 99 ? "99+" : unreadAnnouncementCount}
+                </span>
+              )}
             </button>
-
             <DatePicker />
 
             <div className="relative">

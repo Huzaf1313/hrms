@@ -122,13 +122,8 @@ function EmployeeProfile() {
             onClick={() => navigate("/employee/dashboard")}
             className="mb-4 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50"
           >
-            ← Back to Dashboard
+              ←
           </button>
-
-          <p className="text-sm font-medium text-[#2563eb]">
-            Employee Portal
-          </p>
-
           <h1 className="mt-1 text-3xl font-bold tracking-tight text-[#171b1d] sm:text-4xl">
             My Profile
           </h1>
@@ -331,11 +326,6 @@ function EmployeeProfile() {
             profile information.
           </p>
         </div>
-
-        {/* Footer */}
-        <footer className="py-8 text-center text-xs text-gray-400">
-          © 2026 HRMS. All rights reserved. · Employee Portal
-        </footer>
       </div>
     </div>
   );
