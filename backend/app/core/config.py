@@ -11,6 +11,12 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
+    EMAIL_HOST: str
+    EMAIL_PORT: int = 465
+    EMAIL_USER: str
+    EMAIL_PASSWORD: str
+    EMAIL_FROM: str
+
     # Local directory (relative to the backend working directory) where
     # uploaded files (e.g. announcement attachments) are stored, and served
     # from at /{UPLOAD_DIR}/... — see the StaticFiles mount in main.py.

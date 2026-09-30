@@ -10,12 +10,85 @@ from app.core.roles import UserRole
 from app.core.security import hash_password, verify_password
 from app.repositories.user_repository import UserRepository
 from app.services.session_service import SessionService
+from app.services.email_service import EmailService
 
 
 class UserService:
     def __init__(self):
         self.repository = UserRepository()
         self.session_service = SessionService()
+        self.email_service = EmailService()
+
+    async def create_verified_user(
+        self,
+        registration_data: dict,
+    ):
+        email = registration_data["email"].lower().strip()
+
+        existing_user = await self.repository.get_by_email(email)
+
+        if existing_user:
+            raise AppException(
+                "User with this email already exists",
+                409,
+            )
+
+        allowed_registration_roles = {
+            UserRole.HR_ADMIN,
+            UserRole.MANAGER,
+        }
+
+        role = UserRole(registration_data["role"])
+
+        if role not in allowed_registration_roles:
+            raise AppException(
+                "This role cannot be selected during public registration",
+                403,
+            )
+
+        now = datetime.utcnow()
+
+        user_data = {
+            "full_name": registration_data["full_name"].strip(),
+            "email": email,
+            "phone_number": registration_data["phone_number"].strip(),
+            "password_hash": registration_data["password_hash"],
+            "company_name": registration_data.get(
+                "company_name",
+                "",
+            ).strip(),
+            "company_address": registration_data.get(
+                "company_address",
+                "",
+            ).strip(),
+            "reference": registration_data.get(
+                "reference",
+                "",
+            ).strip(),
+            "role": role.value,
+            "is_active": True,
+            "is_locked": False,
+            "failed_login_attempts": 0,
+            "created_at": now,
+            "updated_at": now,
+        }
+
+        user = await self.repository.create(user_data)
+
+        self.email_service.send_html_email(
+            to_email=email,
+            subject=f"Welcome to {user_data['company_name']}",
+            template_name="emails/welcome_email.html",
+            template_data={
+                "employee_name": user_data["full_name"],
+                "company_name": "AarMarks Media Pvt Ltd.",
+                "hr_team": "HR Team",
+            },
+        )
+
+        user.pop("password_hash", None)
+
+        return user
 
     async def register_user(
         self,
