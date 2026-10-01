@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { api, ApiError } from "../../services/api";
+import { formatShiftTime, shiftService } from "../../services/shiftService";
+import type { Shift } from "../../types/shift";
 
 import EmployeeAttendanceRegularizationModal from "./EmployeeAttendanceRegularizationModal";
 
@@ -23,13 +25,93 @@ interface AttendanceRecord {
   id: string;
   employee_id: string;
   date: string;
+  /**
+   * The read endpoint (/employees/{id}/attendance) returns display-formatted
+   * times, while an immediate punch in/out response returns raw ISO values
+   * under check_in / check_out. Both shapes land here, so resolve via the
+   * helpers below rather than assuming one.
+   */
+  in_time?: string | null;
+  out_time?: string | null;
   check_in: string | null;
   check_out: string | null;
   status: string;
   total_hours: number | null;
   remarks: string | null;
+  shift_id?: string | null;
+  shift?: string | null;
+  shift_start?: string | null;
+  shift_end?: string | null;
+  shift_duration_minutes?: number | null;
+  worked_minutes?: number | null;
+  overtime_minutes?: number;
+  overtime_display?: string | null;
+  late_minutes?: number;
+  late_display?: string | null;
+  is_overtime?: boolean;
+  is_late?: boolean;
+  is_overnight?: boolean;
   created_at: string | null;
   updated_at: string | null;
+}
+
+function resolveCheckIn(
+  record: AttendanceRecord | null | undefined,
+): string | null {
+  if (!record) return null;
+
+  return record.in_time ?? resolveCheckIn(record) ?? null;
+}
+
+function resolveCheckOut(
+  record: AttendanceRecord | null | undefined,
+): string | null {
+  if (!record) return null;
+
+  return record.out_time ?? resolveCheckOut(record) ?? null;
+}
+
+/** "09:30 AM" or "18:30" or an ISO string -> minutes since midnight, or
+ *  null when it cannot be read. ISO values are converted to IST because
+ *  shift times are business-local. */
+function clockMinutes(value: string | null | undefined): number | null {
+  if (!value) return null;
+
+  const text = value.trim();
+
+  const ampm = text.match(/^(\d{1,2}):(\d{2})\s*([AP])M$/i);
+
+  if (ampm) {
+    let hours = parseInt(ampm[1], 10) % 12;
+
+    if (ampm[3].toUpperCase() === "P") hours += 12;
+
+    return hours * 60 + parseInt(ampm[2], 10);
+  }
+
+  const plain = text.match(/^(\d{1,2}):(\d{2})$/);
+
+  if (plain) {
+    return parseInt(plain[1], 10) * 60 + parseInt(plain[2], 10);
+  }
+
+  const parsed = new Date(text);
+
+  if (Number.isNaN(parsed.getTime())) return null;
+
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Kolkata",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(parsed);
+
+  const read = (type: string) =>
+    Number(parts.find((part) => part.type === type)?.value ?? NaN);
+
+  if (Number.isNaN(read("hour"))) return null;
+
+  return read("hour") * 60 + read("minute");
 }
 
 interface RegularizationRequest {
@@ -116,8 +198,16 @@ function EmployeeAttendance() {
   const [isRegularizationModalOpen, setIsRegularizationModalOpen] = useState(false);
   const [showAllHistory, setShowAllHistory] = useState(false);
   const [regularizationRequests, setRegularizationRequests] = useState<RegularizationRequest[]>([]);
+  const [myShift, setMyShift] = useState<Shift | null>(null);
   const [showAllRequests, setShowAllRequests] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+
+useEffect(() => {
+  shiftService
+    .myShift()
+    .then(setMyShift)
+    .catch(() => setMyShift(null));
+}, []);
   
 useEffect(() => {
   async function loadAttendance() {
@@ -326,21 +416,41 @@ const presentDays = currentMonthRecords.filter(
 
 const lateDays = currentMonthRecords.filter(
   (record) => {
-    if (!record.check_in) {
+    if (!resolveCheckIn(record)) {
       return false;
     }
 
-    const checkInIST = getISTDateParts(
-      new Date(record.check_in),
+    // Prefer the server's measurement, which is taken against the employee's
+    // real shift. Fall back to comparing shift start against check-in for
+    // records that predate lateness tracking.
+    if (record.late_minutes !== null && record.late_minutes !== undefined) {
+      return record.late_minutes > 0;
+    }
+
+    if (record.is_late) {
+      return true;
+    }
+
+    const checkInMinutes = clockMinutes(resolveCheckIn(record));
+    const shiftStartMinutes = clockMinutes(
+      record.shift_start ?? myShift?.start_time ?? null,
     );
 
-    const checkInMinutes =
-      checkInIST.hour * 60 + checkInIST.minute;
-
-    const shiftStartMinutes = 9 * 60 + 30;
+    if (checkInMinutes === null || shiftStartMinutes === null) {
+      return false;
+    }
 
     return checkInMinutes > shiftStartMinutes;
   },
+).length;
+
+const totalOvertimeMinutes = currentMonthRecords.reduce(
+  (sum, record) => sum + (record.overtime_minutes ?? 0),
+  0,
+);
+
+const overtimeDays = currentMonthRecords.filter(
+  (record) => (record.overtime_minutes ?? 0) > 0,
 ).length;
 
 const leaveDays = approvedLeaveDates.size;
@@ -410,18 +520,21 @@ const todayRecordForHours =
 let workingHours = completedWorkingHours;
 
 if (
-  todayRecordForHours?.check_in &&
-  !todayRecordForHours.check_out
+  resolveCheckIn(todayRecordForHours) &&
+  !resolveCheckOut(todayRecordForHours)
 ) {
-  const checkIn = new Date(
-    todayRecordForHours.check_in,
-  );
+  // The live check-in value can be a display string ("09:30 AM") or an ISO
+  // timestamp, depending on whether the record came from a reload or a fresh
+  // punch. Only the ISO form can be turned into an elapsed duration.
+  const checkIn = new Date(todayRecordForHours!.check_in ?? "");
 
-  const liveHours =
-    (today.getTime() - checkIn.getTime()) /
-    (1000 * 60 * 60);
+  if (!Number.isNaN(checkIn.getTime())) {
+    const liveHours =
+      (today.getTime() - checkIn.getTime()) /
+      (1000 * 60 * 60);
 
-  workingHours += Math.max(liveHours, 0);
+    workingHours += Math.max(liveHours, 0);
+  }
 }
 
     const todayRecord = attendanceRecords.find(
@@ -490,8 +603,8 @@ if (
     const todayStatus = todayRecord?.status || "Not Marked";
 
     const isCurrentlyAtWork =
-    Boolean(todayRecord?.check_in) &&
-    !todayRecord?.check_out;
+    Boolean(resolveCheckIn(todayRecord)) &&
+    !resolveCheckOut(todayRecord);
 
     const handleCheckIn = async () => {
         if (!employeeId) {
@@ -547,14 +660,14 @@ if (
                 return;
             }
 
-            if (!todayRecord.check_in) {
+            if (!resolveCheckIn(todayRecord)) {
                 setActionError(
                 "Check-in time is missing for today's attendance.",
                 );
                 return;
             }
 
-            if (todayRecord.check_out) {
+            if (resolveCheckOut(todayRecord)) {
                 setActionError(
                 "You have already checked out for today.",
                 );
@@ -566,17 +679,14 @@ if (
                 setActionError(null);
 
                 const checkOutTime = new Date();
-                const checkInTime = new Date(todayRecord.check_in);
 
-                const totalHours =
-                (checkOutTime.getTime() - checkInTime.getTime()) /
-                (1000 * 60 * 60);
-
+                // total_hours is intentionally not sent: the backend measures
+                // worked time and overtime from the real shift, and stays
+                // authoritative for overnight punches.
                 const attendance = await api.put<AttendanceRecord>(
                 `/employee-attendance/${todayRecord.id}`,
                 {
                     check_out: checkOutTime.toISOString(),
-                    total_hours: Number(totalHours.toFixed(2)),
                 },
                 );
 
@@ -726,6 +836,26 @@ if (
                   </p>
                 </div>
 
+                {/* Overtime */}
+                <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+
+                  <p className="text-sm font-medium text-gray-500">
+                    Overtime
+                  </p>
+
+                  <p className="mt-3 text-2xl font-bold text-amber-600">
+                    {totalOvertimeMinutes > 0
+                      ? formatDuration(totalOvertimeMinutes / 60)
+                      : "0h"}
+                  </p>
+
+                  <p className="mt-2 text-xs text-gray-400">
+                    {overtimeDays} day
+                    {overtimeDays === 1 ? "" : "s"} this month
+                  </p>
+
+                </div>
+
                 {/* Leave */}
                 <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
 
@@ -806,7 +936,7 @@ if (
                 </p>
 
                 <p className="mt-2 text-xl font-bold text-[#17213a]">
-                {formatTime(todayRecord?.check_in ?? null)}
+                {formatTime(resolveCheckIn(todayRecord) ?? null)}
                 </p>
 
             </div>
@@ -819,7 +949,7 @@ if (
                 </p>
 
                 <p className="mt-2 text-xl font-bold text-[#17213a]">
-                {formatTime(todayRecord?.check_out ?? null)}
+                {formatTime(resolveCheckOut(todayRecord) ?? null)}
                 </p>
 
             </div>
@@ -884,7 +1014,7 @@ if (
                             >
                                 {isActionLoading ? "Checking In..." : "Check In"}
                                 </button>
-                            ) : !todayRecord.check_out ? (
+                            ) : !resolveCheckOut(todayRecord) ? (
                                 <button
                                 type="button"
                                 onClick={handleCheckOut}
@@ -908,19 +1038,35 @@ if (
                 {/* Shift & Workplace Info */}
                   <div className="mt-5 border-t border-gray-100 pt-4">
                     <div className="flex flex-col gap-2 text-xs text-gray-500 sm:flex-row sm:items-center sm:justify-between">
-                      
                       <div>
                         <span className="font-semibold text-gray-600">
-                          General Shift:
+                          {myShift?.name ?? todayRecord?.shift ?? "No"} Shift:
                         </span>{" "}
-                        09:30 AM – 06:30 PM
+                        {myShift
+                          ? `${formatShiftTime(myShift.start_time)} – ${formatShiftTime(
+                              myShift.end_time,
+                            )}${
+                              myShift.is_overnight
+                                ? " (ends next day)"
+                                : ""
+                            }`
+                          : "No shift assigned"}
                       </div>
+
+                      {todayRecord && (todayRecord.overtime_minutes ?? 0) > 0 && (
+                        <div>
+                          <span className="font-semibold text-amber-600">
+                            Overtime today:
+                          </span>{" "}
+                          {todayRecord.overtime_display}
+                        </div>
+                      )}
 
                       <div>
                         <span className="font-semibold text-gray-600">
                           Workplace:
                         </span>{" "}
-                        Main Office
+                        {user?.work_location ?? "Main Office"}
                       </div>
 
                     </div>
@@ -1104,22 +1250,32 @@ if (
 
                             <p className="mt-1 text-xs text-gray-500">
                               Check-In:{" "}
-                              {record.check_in
-                                ? formatTime(record.check_in)
+                              {resolveCheckIn(record)
+                                ? formatTime(resolveCheckIn(record))
                                 : "--"}
                             </p>
 
                             <p className="mt-1 text-xs text-gray-500">
                               Check-Out:{" "}
-                              {record.check_out
-                                ? formatTime(record.check_out)
+                              {resolveCheckOut(record)
+                                ? formatTime(resolveCheckOut(record))
                                 : "--"}
                             </p>
 
                             <p className="mt-2 text-xs text-gray-400">
+                              Shift: {record.shift ?? "General"}
+                            </p>
+
+                            <p className="mt-1 text-xs text-gray-400">
                               Total Hours:{" "}
                               {formatDuration(record.total_hours)}
                             </p>
+
+                            {(record.overtime_minutes ?? 0) > 0 && (
+                              <p className="mt-1 text-xs font-semibold text-amber-600">
+                                Overtime: {record.overtime_display}
+                              </p>
+                            )}
                           </div>
 
                           <span
@@ -1319,7 +1475,7 @@ if (
                 <div className="relative flex flex-col items-center">
                   <span
                     className={`h-4 w-4 rounded-full ring-4 ${
-                      todayRecord?.check_in
+                      resolveCheckIn(todayRecord)
                         ? "bg-green-500 ring-green-100"
                         : "bg-gray-300 ring-gray-100"
                     }`}
@@ -1336,20 +1492,20 @@ if (
                       </p>
 
                       <p className="mt-1 text-xs text-gray-400">
-                        {todayRecord?.check_in
-                          ? formatTime(todayRecord.check_in)
+                        {resolveCheckIn(todayRecord)
+                          ? formatTime(resolveCheckIn(todayRecord))
                           : "--:-- --"}
                       </p>
                     </div>
 
                     <span
                       className={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${
-                        todayRecord?.check_in
+                        resolveCheckIn(todayRecord)
                           ? "bg-green-100 text-green-700"
                           : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {todayRecord?.check_in
+                      {resolveCheckIn(todayRecord)
                         ? "Web Portal"
                         : "Not yet punched in"}
                     </span>
@@ -1364,7 +1520,7 @@ if (
                 <div className="flex flex-col items-center">
                   <span
                     className={`h-4 w-4 rounded-full ring-4 ${
-                      todayRecord?.check_out
+                      resolveCheckOut(todayRecord)
                         ? "bg-green-500 ring-green-100"
                         : "bg-gray-300 ring-gray-100"
                     }`}
@@ -1379,20 +1535,20 @@ if (
                       </p>
 
                       <p className="mt-1 text-xs text-gray-400">
-                        {todayRecord?.check_out
-                          ? formatTime(todayRecord.check_out)
+                        {resolveCheckOut(todayRecord)
+                          ? formatTime(resolveCheckOut(todayRecord))
                           : "--:-- --"}
                       </p>
                     </div>
 
                     <span
                       className={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${
-                        todayRecord?.check_out
+                        resolveCheckOut(todayRecord)
                           ? "bg-green-100 text-green-700"
                           : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {todayRecord?.check_out
+                      {resolveCheckOut(todayRecord)
                         ? "Web Portal"
                         : "Not yet punched out"}
                     </span>

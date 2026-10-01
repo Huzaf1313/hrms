@@ -2,6 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { api } from "../../services/api";
+import {
+  announcementService,
+  type EmployeeAnnouncement,
+} from "../../services/announcementService";
 
 interface User {
   id: string;
@@ -921,9 +925,39 @@ const attendanceChart = useMemo(() => {
                 Recent Announcements
               </h2>
 
-              <p className="mt-1 text-sm text-gray-500">
-                Latest company updates
-              </p>
+              <div className="mt-5 space-y-4">
+                {announcements.length === 0 ? (
+                  <p className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-6 text-center text-xs text-gray-500">
+                    No announcements available.
+                  </p>
+                ) : (
+                  announcements.map((announcement) => (
+                    <div
+                      key={announcement.id}
+                      className="rounded-xl border border-gray-100 bg-gray-50 p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <h3 className="text-sm font-semibold text-gray-800">
+                          {announcement.title}
+                        </h3>
+
+                        <span className="shrink-0 text-xs text-gray-400">
+                          {new Date(
+                            `${announcement.publish_date}T00:00:00`,
+                          ).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "2-digit",
+                          })}
+                        </span>
+                      </div>
+
+                      <p className="mt-2 text-xs leading-5 text-gray-500">
+                        {announcement.description}
+                      </p>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
 
             <button

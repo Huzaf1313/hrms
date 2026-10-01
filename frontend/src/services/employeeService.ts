@@ -16,6 +16,32 @@ export const employeeService = {
     return api.get<Employee[]>("/employees", { ...params });
   },
 
+  // The API caps a single page at 100 and returns no total count, so keep
+  // requesting pages until one comes back short.
+  async listAll(
+    params: Omit<GetEmployeesParams, "page" | "limit"> = {},
+  ): Promise<Employee[]> {
+    const pageSize = 100;
+    const collected: Employee[] = [];
+    let page = 1;
+
+    for (;;) {
+      const batch = await api.get<Employee[]>("/employees", {
+        ...params,
+        page,
+        limit: pageSize,
+      });
+
+      collected.push(...batch);
+
+      if (batch.length < pageSize || page >= 20) break;
+
+      page += 1;
+    }
+
+    return collected;
+  },
+
   get(employeeId: string) {
     return api.get<Employee>(`/employees/${employeeId}`);
   },

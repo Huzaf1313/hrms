@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Bell,
   CalendarDays,
@@ -6,235 +6,121 @@ import {
   ChevronRight,
   Search,
   SlidersHorizontal,
+  Paperclip,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 import { api } from "../../services/api";
 
+import {
+  announcementService,
+  type EmployeeAnnouncement,
+} from "../../services/announcementService";
+import { ApiError } from "../../services/api";
+
 const categories = [
   "All",
-  "Company",
+  "Company News",
   "HR & Policy",
   "Events",
   "IT & System",
 ];
 
-interface Announcement {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  priority: string;
-  status: string;
-  published_at: string;
-  created_by: string | null;
-  created_at: string;
-  updated_at: string;
-  is_important: boolean;
-}
+const priorityStyles: Record<string, string> = {
+  Urgent: "bg-red-100 text-red-700",
+  Important: "bg-amber-100 text-amber-700",
+  Normal: "bg-slate-100 text-slate-600",
+};
 
-interface EmployeeAnnouncementsResponse {
-  announcements: Announcement[];
-  total: number;
-  page: number;
-  page_size: number;
-  total_pages: number;
-}
+function formatDate(value?: string | null): string {
+  if (!value) return "—";
 
-const PAGE_SIZE = 10;
+  const parsed = new Date(`${value}T00:00:00`);
+
+  if (Number.isNaN(parsed.getTime())) return "—";
+
+  return parsed.toLocaleDateString("en-US", {
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+  });
+}
 
 function EmployeeAnnouncements() {
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterDate, setFilterDate] = useState("30");
   const [currentPage, setCurrentPage] = useState(1);
 
+  const [announcements, setAnnouncements] = useState<EmployeeAnnouncement[]>([]);
+  const [important, setImportant] = useState<EmployeeAnnouncement[]>([]);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const activeCategory =
+    selectedCategory !== "All" ? selectedCategory : filterCategory;
+
+  const loadAnnouncements = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const result = await announcementService.list({
+        page: currentPage,
+        page_size: 10,
+        category: activeCategory === "all" ? undefined : activeCategory,
+        search: searchQuery.trim() || undefined,
+      });
+
+      setAnnouncements(result.announcements);
+      setTotal(result.total);
+      setTotalPages(result.total_pages);
+    } catch (requestError) {
+      setError(
+        requestError instanceof ApiError
+          ? requestError.message
+          : "Could not load announcements.",
+      );
+      setAnnouncements([]);
+      setTotal(0);
+      setTotalPages(0);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [activeCategory, currentPage, searchQuery]);
+
   useEffect(() => {
-    const fetchAnnouncements = async () => {
-      try {
-        setLoading(true);
-        setError("");
+    const timer = window.setTimeout(() => {
+      void loadAnnouncements();
+    }, 250);
 
-        const response = await api.get<EmployeeAnnouncementsResponse>(
-          "/employee-announcements"
-        );
-        setAnnouncements(response.announcements || []);
-        const announcements = response.announcements || [];
+    return () => window.clearTimeout(timer);
+  }, [loadAnnouncements]);
 
-        const readIds = JSON.parse(
-          localStorage.getItem("employee_read_announcement_ids") || "[]",
-        ) as string[];
+  useEffect(() => {
+    let isMounted = true;
 
-        const updatedReadIds = Array.from(
-          new Set([
-            ...readIds,
-            ...announcements.map((announcement) => announcement.id),
-          ]),
-        );
+    announcementService
+      .list({ pinned: true, page_size: 5 })
+      .then((result) => {
+        if (isMounted) setImportant(result.announcements);
+      })
+      .catch(() => {
+        if (isMounted) setImportant([]);
+      });
 
-        localStorage.setItem(
-          "employee_read_announcement_ids",
-          JSON.stringify(updatedReadIds),
-        );
-
-        window.dispatchEvent(new Event("announcements-read"));
-
-      } catch (err) {
-        console.error("Failed to fetch employee announcements:", err);
-        setError("Unable to load announcements. Please try again.");
-      } finally {
-        setLoading(false);
-      }
+    return () => {
+      isMounted = false;
     };
-
-    fetchAnnouncements();
   }, []);
-  const getCategoryGroup = (category: string) => {
-    const normalizedCategory = category.toLowerCase();
 
-    if (normalizedCategory.includes("company")) {
-      return "Company";
-    }
+  const from = total === 0 ? 0 : (currentPage - 1) * 10 + 1;
+  const to = Math.min(currentPage * 10, total);
 
-    if (
-      normalizedCategory.includes("hr") ||
-      normalizedCategory.includes("policy")
-    ) {
-      return "HR & Policy";
-    }
-
-    if (normalizedCategory.includes("event")) {
-      return "Events";
-    }
-
-    if (
-      normalizedCategory.includes("it") ||
-      normalizedCategory.includes("system")
-    ) {
-      return "IT & System";
-    }
-
-    return category;
-  };
-
-  const filteredAnnouncements = useMemo(() => {
-    const now = new Date();
-
-    return announcements.filter((announcement) => {
-      // Category tabs
-      if (
-        selectedCategory !== "All" &&
-        getCategoryGroup(announcement.category) !== selectedCategory
-      ) {
-        return false;
-      }
-
-      // Sidebar category filter
-      if (filterCategory !== "all") {
-        const categoryMap: Record<string, string> = {
-          company: "Company",
-          hr: "HR & Policy",
-          events: "Events",
-          it: "IT & System",
-        };
-
-        if (
-          getCategoryGroup(announcement.category) !==
-          categoryMap[filterCategory]
-        ) {
-          return false;
-        }
-      }
-
-      // Search
-      if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase().trim();
-
-        const matchesTitle = announcement.title
-          .toLowerCase()
-          .includes(query);
-
-        const matchesDescription = announcement.description
-          .toLowerCase()
-          .includes(query);
-
-        const matchesCategory = announcement.category
-          .toLowerCase()
-          .includes(query);
-
-        if (!matchesTitle && !matchesDescription && !matchesCategory) {
-          return false;
-        }
-      }
-
-      // Date filter
-      if (filterDate !== "all") {
-        const publishedDate = new Date(announcement.published_at);
-        const days = Number(filterDate);
-
-        const differenceInMilliseconds =
-          now.getTime() - publishedDate.getTime();
-
-        const differenceInDays =
-          differenceInMilliseconds / (1000 * 60 * 60 * 24);
-
-        if (differenceInDays > days || differenceInDays < 0) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-  }, [
-    announcements,
-    selectedCategory,
-    filterCategory,
-    filterDate,
-    searchQuery,
-  ]);
-
-  const totalPages = Math.max(
-    1,
-    Math.ceil(filteredAnnouncements.length / PAGE_SIZE)
-  );
-
-  const paginatedAnnouncements = filteredAnnouncements.slice(
-    (currentPage - 1) * PAGE_SIZE,
-    currentPage * PAGE_SIZE
-  );
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [selectedCategory, filterCategory, filterDate, searchQuery]);
-
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
-    }
-  }, [currentPage, totalPages]);
-
-  const importantAnnouncements = filteredAnnouncements.filter(
-    (announcement) => announcement.is_important
-  );
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-
-    if (Number.isNaN(date.getTime())) {
-      return dateString;
-    }
-
-    return date.toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-  };
-
-  const clearFilters = () => {
+  const resetFilters = () => {
     setFilterCategory("all");
     setFilterDate("30");
     setSelectedCategory("All");
@@ -264,7 +150,10 @@ function EmployeeAnnouncements() {
               <input
                 type="text"
                 value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
+                onChange={(event) => {
+                  setSearchQuery(event.target.value);
+                  setCurrentPage(1);
+                }}
                 placeholder="Search announcements..."
                 className="h-10 w-full rounded-lg border border-gray-200 bg-white pl-9 pr-4 text-sm outline-none transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:w-64"
               />
@@ -278,9 +167,11 @@ function EmployeeAnnouncements() {
             >
               <Bell className="h-5 w-5" />
 
-              <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
-                3
-              </span>
+              {important.length > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
+                  {important.length}
+                </span>
+              )}
             </button>
           </div>
         </div>
@@ -293,7 +184,10 @@ function EmployeeAnnouncements() {
             <button
               key={category}
               type="button"
-              onClick={() => setSelectedCategory(category)}
+              onClick={() => {
+                setSelectedCategory(category);
+                setCurrentPage(1);
+              }}
               className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
                 selectedCategory === category
                   ? "bg-blue-600 text-white shadow-sm"
@@ -323,39 +217,18 @@ function EmployeeAnnouncements() {
             </div>
           </div>
 
-          {/* Loading */}
-          {loading && (
-            <div className="flex min-h-[360px] items-center justify-center px-6 py-12">
-              <div className="text-center">
-                <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-blue-600" />
-                <p className="text-sm text-gray-500">
-                  Loading announcements...
-                </p>
-              </div>
+          {error && (
+            <div className="flex items-start gap-2 border-b border-red-100 bg-red-50 px-5 py-3 text-sm text-red-700">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              {error}
             </div>
           )}
 
-          {/* Error */}
-          {!loading && error && (
-            <div className="flex min-h-[360px] items-center justify-center px-6 py-12">
-              <div className="max-w-sm text-center">
-                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
-                  <Bell className="h-6 w-6 text-red-500" />
-                </div>
-
-                <h3 className="text-base font-semibold text-gray-900">
-                  Unable to load announcements
-                </h3>
-
-                <p className="mt-2 text-sm leading-6 text-gray-500">
-                  {error}
-                </p>
-              </div>
+          {isLoading ? (
+            <div className="flex min-h-[360px] items-center justify-center">
+              <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
             </div>
-          )}
-
-          {/* Empty State */}
-          {!loading && !error && paginatedAnnouncements.length === 0 && (
+          ) : announcements.length === 0 ? (
             <div className="flex min-h-[360px] items-center justify-center px-6 py-12">
               <div className="max-w-sm text-center">
                 <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-blue-50">
@@ -367,88 +240,87 @@ function EmployeeAnnouncements() {
                 </h3>
 
                 <p className="mt-2 text-sm leading-6 text-gray-500">
-                  No announcements match your current filters.
+                  Announcements published by HR for you will appear here.
                 </p>
               </div>
             </div>
-          )}
+          ) : (
+            <ul className="divide-y divide-gray-100">
+              {announcements.map((announcement) => (
+                <li key={announcement.id} className="px-5 py-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-[11px] font-semibold text-blue-700">
+                      {announcement.category}
+                    </span>
 
-          {/* Announcement List */}
-          {!loading && !error && paginatedAnnouncements.length > 0 && (
-            <div className="divide-y divide-gray-100">
-              {paginatedAnnouncements.map((announcement) => (
-                <article
-                  key={announcement.id}
-                  className="px-5 py-5 transition hover:bg-gray-50"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0 flex-1">
-                      <div className="mb-2 flex flex-wrap items-center gap-2">
-                        <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-medium text-blue-700">
-                          {getCategoryGroup(announcement.category)}
-                        </span>
+                    <span
+                      className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
+                        priorityStyles[announcement.priority] ??
+                        priorityStyles.Normal
+                      }`}
+                    >
+                      {announcement.priority}
+                    </span>
 
-                        {announcement.is_important && (
-                          <span className="rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-medium text-red-600">
-                            Important
-                          </span>
-                        )}
-
-                        {announcement.priority &&
-                          announcement.priority.toLowerCase() !== "normal" && (
-                            <span className="rounded-full bg-yellow-50 px-2.5 py-1 text-[11px] font-medium text-yellow-700">
-                              {announcement.priority}
-                            </span>
-                          )}
-                      </div>
-
-                      <h3 className="text-base font-semibold text-gray-900">
-                        {announcement.title}
-                      </h3>
-
-                      <p className="mt-2 text-sm leading-6 text-gray-600">
-                        {announcement.description}
-                      </p>
-
-                      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
-                        <span>
-                          Published {formatDate(announcement.published_at)}
-                        </span>
-
-                        {announcement.created_by && (
-                          <span>
-                            By {announcement.created_by}
-                          </span>
-                        )}
-                      </div>
-                    </div>
+                    {announcement.pinned && (
+                      <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700">
+                        Pinned
+                      </span>
+                    )}
                   </div>
-                </article>
+
+                  <h3 className="mt-2 text-[15px] font-semibold text-gray-900">
+                    {announcement.title}
+                  </h3>
+
+                  <p className="mt-1 text-sm leading-relaxed text-gray-500">
+                    {announcement.description}
+                  </p>
+
+                  <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-400">
+                    <span className="flex items-center gap-1">
+                      <CalendarDays className="h-3.5 w-3.5" />
+                      {formatDate(announcement.publish_date)}
+                    </span>
+
+                    <span>By {announcement.author_name}</span>
+
+                    {announcement.expiry_date && (
+                      <span>Expires {formatDate(announcement.expiry_date)}</span>
+                    )}
+
+                    {announcement.attachment && (
+                      <a
+                        href={`http://localhost:8000${announcement.attachment.url}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center gap-1 font-medium text-blue-600 hover:underline"
+                      >
+                        <Paperclip className="h-3.5 w-3.5" />
+                        {announcement.attachment.filename}
+                      </a>
+                    )}
+                  </div>
+                </li>
               ))}
-            </div>
+            </ul>
           )}
 
           {/* Pagination */}
-          {!loading && !error && filteredAnnouncements.length > 0 && (
-            <div className="flex items-center justify-between border-t border-gray-100 px-5 py-4">
-              <p className="text-xs text-gray-500">
-                Showing{" "}
-                {(currentPage - 1) * PAGE_SIZE + 1} -{" "}
-                {Math.min(
-                  currentPage * PAGE_SIZE,
-                  filteredAnnouncements.length
-                )}{" "}
-                of {filteredAnnouncements.length} announcements
-              </p>
+          <div className="flex items-center justify-between border-t border-gray-100 px-5 py-4">
+            <p className="text-xs text-gray-500">
+              {total === 0
+                ? "Showing 0 announcements"
+                : `Showing ${from}-${to} of ${total} announcements`}
+            </p>
 
+            {totalPages > 1 && (
               <div className="flex items-center gap-1">
                 <button
                   type="button"
                   disabled={currentPage === 1}
                   onClick={() =>
-                    setCurrentPage((previous) =>
-                      Math.max(1, previous - 1)
-                    )
+                    setCurrentPage((previous) => Math.max(1, previous - 1))
                   }
                   className={`flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 ${
                     currentPage === 1
@@ -460,29 +332,28 @@ function EmployeeAnnouncements() {
                   <ChevronRight className="h-4 w-4 rotate-180" />
                 </button>
 
-                {Array.from(
-                  { length: totalPages },
-                  (_, index) => index + 1
-                ).map((page) => (
-                  <button
-                    key={page}
-                    type="button"
-                    onClick={() => setCurrentPage(page)}
-                    className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold ${
-                      currentPage === page
-                        ? "bg-blue-600 text-white"
-                        : "border border-gray-200 text-gray-600 transition hover:bg-gray-50"
-                    }`}
-                  >
-                    {page}
-                  </button>
-                ))}
+                {Array.from({ length: totalPages }, (_, index) => index + 1).map(
+                  (page) => (
+                    <button
+                      key={page}
+                      type="button"
+                      onClick={() => setCurrentPage(page)}
+                      className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold ${
+                        currentPage === page
+                          ? "bg-blue-600 text-white"
+                          : "border border-gray-200 text-gray-600 transition hover:bg-gray-50"
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ),
+                )}
 
                 <button
                   type="button"
                   onClick={() =>
                     setCurrentPage((previous) =>
-                      Math.min(totalPages, previous + 1)
+                      Math.min(totalPages, previous + 1),
                     )
                   }
                   disabled={currentPage === totalPages}
@@ -496,8 +367,8 @@ function EmployeeAnnouncements() {
                   <ChevronRight className="h-4 w-4" />
                 </button>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </section>
 
         {/* Right Sidebar */}
@@ -521,16 +392,18 @@ function EmployeeAnnouncements() {
                 <div className="relative">
                   <select
                     value={filterCategory}
-                    onChange={(event) =>
-                      setFilterCategory(event.target.value)
-                    }
+                    onChange={(event) => {
+                      setFilterCategory(event.target.value);
+                      setSelectedCategory("All");
+                      setCurrentPage(1);
+                    }}
                     className="h-10 w-full appearance-none rounded-lg border border-gray-200 bg-white px-3 pr-9 text-sm text-gray-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                   >
                     <option value="all">All Categories</option>
-                    <option value="company">Company</option>
-                    <option value="hr">HR & Policy</option>
-                    <option value="events">Events</option>
-                    <option value="it">IT & System</option>
+                    <option value="Company News">Company News</option>
+                    <option value="HR & Policy">HR &amp; Policy</option>
+                    <option value="Events">Events</option>
+                    <option value="IT & System">IT &amp; System</option>
                   </select>
 
                   <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -561,10 +434,9 @@ function EmployeeAnnouncements() {
                 </div>
               </div>
 
-              {/* Clear Filters */}
               <button
                 type="button"
-                onClick={clearFilters}
+                onClick={resetFilters}
                 className="h-10 w-full rounded-lg border border-gray-200 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
               >
                 Clear Filter
@@ -580,37 +452,35 @@ function EmployeeAnnouncements() {
               </h2>
 
               <p className="mt-1 text-xs text-gray-500">
-                Flagged notices will appear here.
+                Pinned notices will appear here.
               </p>
             </div>
 
-            {importantAnnouncements.length === 0 ? (
+            {important.length === 0 ? (
               <div className="flex min-h-[120px] items-center justify-center rounded-lg bg-gray-50 px-4 py-6 text-center">
                 <div>
                   <CalendarDays className="mx-auto mb-2 h-5 w-5 text-gray-400" />
-
                   <p className="text-xs text-gray-500">
                     No important announcements available.
                   </p>
                 </div>
               </div>
             ) : (
-              <div className="space-y-3">
-                {importantAnnouncements.slice(0, 3).map((announcement) => (
-                  <div
+              <ul className="space-y-2">
+                {important.map((announcement) => (
+                  <li
                     key={announcement.id}
-                    className="rounded-lg border border-gray-100 bg-gray-50 p-3"
+                    className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2"
                   >
-                    <h3 className="text-xs font-semibold text-gray-900">
+                    <p className="text-xs font-semibold text-gray-800">
                       {announcement.title}
-                    </h3>
-
-                    <p className="mt-1 text-[11px] leading-5 text-gray-500">
-                      {formatDate(announcement.published_at)}
                     </p>
-                  </div>
+                    <p className="mt-0.5 text-[11px] text-gray-400">
+                      {formatDate(announcement.publish_date)}
+                    </p>
+                  </li>
                 ))}
-              </div>
+              </ul>
             )}
           </section>
         </aside>

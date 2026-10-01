@@ -61,6 +61,10 @@ class EmployeeCreate(BaseModel):
     salary_structure: str | None = None
     salary: str | None = None
 
+    # Shift assignment. Drives the shift length used for overtime.
+    shift_id: str | None = None
+
+
     # Additional Information
     emergency_contact: EmergencyContact | None = None
     bank_information: BankInformation | None = None
@@ -91,10 +95,14 @@ class EmployeeUpdate(BaseModel):
     salary_structure: str | None = None
     salary: str | None = None
 
+    # Shift assignment. Drives the shift length used for overtime.
+    shift_id: str | None = None
+
     emergency_contact: EmergencyContact | None = None
     bank_information: BankInformation | None = None
 
 class EmployeeCredentials(BaseModel):
+
     email: EmailStr
     temporary_password: str
 
@@ -127,6 +135,10 @@ class EmployeeResponse(BaseModel):
     reporting_manager: str | None = None
     salary_structure: str | None = None
     salary: str | None = None
+
+    # Shift assignment. Drives the shift length used for overtime.
+    shift_id: str | None = None
+
 
     # Additional Information
     emergency_contact: EmergencyContact | None = None

@@ -4,6 +4,7 @@ import { Bell, ChevronDown, LogOut, Menu } from "lucide-react";
 import { api } from "../services/api";
 
 import EmployeeSidebar from "../pages/employee/EmployeeSidebar";
+import ErrorBoundary from "../components/ErrorBoundary";
 import DatePicker from "../components/DatePicker";
 
 
@@ -180,7 +181,11 @@ function EmployeeLayout({ onLogout }: { onLogout: () => void }) {
           </div>
         </header>
 
-        <Outlet />
+        {/* Scoped so a crash in one employee page leaves the header and
+            sidebar usable. */}
+        <ErrorBoundary label={pageTitle}>
+          <Outlet />
+        </ErrorBoundary>
       </div>
     </div>
   );

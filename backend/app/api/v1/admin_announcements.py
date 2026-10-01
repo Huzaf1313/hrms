@@ -33,6 +33,8 @@ async def create_announcement(
     audience: AnnouncementAudience = Form(AnnouncementAudience.ALL_EMPLOYEES),
     description: str = Form(...),
     pinned: bool = Form(False),
+    target_departments: list[str] = Form(default_factory=list),
+    target_employees: list[str] = Form(default_factory=list),
     attachment: UploadFile | None = File(None),
     current_user: dict = Depends(require_permission(Permission.ANNOUNCEMENT_MANAGE)),
 ):
@@ -45,6 +47,8 @@ async def create_announcement(
         audience=audience,
         description=description,
         pinned=pinned,
+        target_departments=target_departments,
+        target_employees=target_employees,
     )
 
     announcement = await service.create_announcement(
@@ -70,7 +74,7 @@ async def get_announcements(
     pinned: bool | None = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
-    current_user: dict = Depends(require_permission(Permission.ANNOUNCEMENT_READ)),
+    current_user: dict = Depends(require_permission(Permission.ANNOUNCEMENT_MANAGE)),
 ):
     announcements, _total = await service.get_announcements(
         category=category,
@@ -93,7 +97,7 @@ async def get_announcements(
 )
 async def get_announcement(
     announcement_id: str,
-    current_user: dict = Depends(require_permission(Permission.ANNOUNCEMENT_READ)),
+    current_user: dict = Depends(require_permission(Permission.ANNOUNCEMENT_MANAGE)),
 ):
     announcement = await service.get_announcement(announcement_id)
 
@@ -118,6 +122,8 @@ async def update_announcement(
     audience: AnnouncementAudience | None = Form(None),
     description: str | None = Form(None),
     pinned: bool | None = Form(None),
+    target_departments: list[str] = Form(default_factory=list),
+    target_employees: list[str] = Form(default_factory=list),
     clear_expiry: bool = Form(False),
     remove_attachment: bool = Form(False),
     attachment: UploadFile | None = File(None),
@@ -132,6 +138,8 @@ async def update_announcement(
         "audience": audience,
         "description": description,
         "pinned": pinned,
+        "target_departments": target_departments,
+        "target_employees": target_employees,
     }
 
     announcement = await service.update_announcement(

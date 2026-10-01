@@ -39,6 +39,8 @@ class AdminAnnouncementCreate(BaseModel):
     audience: AnnouncementAudience = AnnouncementAudience.ALL_EMPLOYEES
     description: str = Field(min_length=1, max_length=5000)
     pinned: bool = False
+    target_departments: list[str] = Field(default_factory=list)
+    target_employees: list[str] = Field(default_factory=list)
 
 
 class AdminAnnouncementUpdate(BaseModel):
@@ -50,6 +52,8 @@ class AdminAnnouncementUpdate(BaseModel):
     audience: AnnouncementAudience | None = None
     description: str | None = Field(default=None, max_length=5000)
     pinned: bool | None = None
+    target_departments: list[str] | None = None
+    target_employees: list[str] | None = None
 
 
 class AdminAnnouncementResponse(BaseModel):
@@ -62,6 +66,8 @@ class AdminAnnouncementResponse(BaseModel):
     audience: AnnouncementAudience
     description: str
     pinned: bool
+    target_departments: list[str] = Field(default_factory=list)
+    target_employees: list[str] = Field(default_factory=list)
     attachment: AttachmentInfo | None = None
     author_id: str
     author_name: str
