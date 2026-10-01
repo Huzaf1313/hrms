@@ -7,6 +7,7 @@ interface HeaderProps {
   onLogout: () => void;
   onToggleSidebar?: () => void;
   pageTitle?: string;
+  collapsed?: boolean;
 }
 
 function readUser() {
@@ -34,7 +35,12 @@ function roleDisplay(role?: string): string {
   }
 }
 
-function Header({ onLogout, onToggleSidebar, pageTitle = "Dashboard" }: HeaderProps) {
+function Header({
+  onLogout,
+  onToggleSidebar,
+  pageTitle = "Dashboard",
+  collapsed = false,
+}: HeaderProps) {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   const user = useMemo(() => readUser(), []);
@@ -49,27 +55,23 @@ function Header({ onLogout, onToggleSidebar, pageTitle = "Dashboard" }: HeaderPr
 
   return (
     <header className="sticky top-0 z-30 flex h-[72px] items-center justify-between gap-4 border-b border-gray-200 bg-white px-6">
-      {/* Left: menu + breadcrumb */}
+      {/* Left: menu + page title */}
       <div className="flex min-w-0 items-center gap-4">
-        <button
-          type="button"
-          onClick={onToggleSidebar}
-          className="flex h-10 w-10 items-center justify-center rounded-lg text-gray-600 transition hover:bg-gray-100"
-          aria-label="Toggle menu"
-        >
-          <Menu className="h-5 w-5" />
-        </button>
-
-        {pageTitle === "Dashboard" ? (
-          <p className="truncate text-sm font-semibold text-gray-900">
-            Dashboard
-          </p>
-        ) : (
-          <p className="truncate text-sm text-gray-500">
-            Dashboard <span className="mx-1.5 text-gray-300">/</span>
-            <span className="font-semibold text-gray-900">{pageTitle}</span>
-          </p>
+        {onToggleSidebar && (
+          <button
+            type="button"
+            onClick={onToggleSidebar}
+            className="flex h-10 w-10 items-center justify-center rounded-lg text-gray-600 transition hover:bg-gray-100"
+            aria-label="Toggle menu"
+            aria-expanded={!collapsed}
+          >
+            <Menu className="h-5 w-5" />
+          </button>
         )}
+
+        <p className="truncate text-sm font-semibold text-gray-900">
+          {pageTitle}
+        </p>
       </div>
 
       {/* Right: search, bell, date, profile */}

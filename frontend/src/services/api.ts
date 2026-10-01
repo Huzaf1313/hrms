@@ -225,56 +225,71 @@ if (
 return payload as T;
 }
 
+function unwrapEnvelope<T>(payload: unknown): T {
+  if (payload !== null && typeof payload === "object" && "data" in payload && "success" in payload) {
+    return (payload as { data: T }).data;
+  }
+
+  return payload as T;
+}
+
+function errorMessage(payload: unknown, status: number): string {
+  if (payload !== null && typeof payload === "object") {
+    const record = payload as { detail?: unknown; message?: unknown };
+
+    if (typeof record.detail === "string") return record.detail;
+    if (typeof record.message === "string") return record.message;
+  }
+
+  return `Request failed with status ${status}`;
+}
+
 async function requestForm<T>(
   path: string,
   options: FormRequestOptions,
 ): Promise<T> {
-  const token = getAccessToken();
-  const headers: Record<string, string> = {};
+  const send = async (token: string | null): Promise<Response> => {
+    const headers: Record<string, string> = {};
 
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
 
-  let response: Response;
+    try {
+      return await fetch(`${API_BASE_URL}${path}`, {
+        method: options.method ?? "POST",
+        headers,
+        body: options.body,
+      });
+    } catch {
+      throw new ApiError(
+        "Could not reach the server. Check your connection and that the backend is running.",
+        0,
+      );
+    }
+  };
 
-  try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
-      method: options.method ?? "POST",
-      headers,
-      body: options.body,
-    });
-  } catch {
-    throw new ApiError(
-      "Could not reach the server. Check your connection and that the backend is running.",
-      0,
-    );
+  let response: Response = await send(getAccessToken());
+
+  // Access tokens are short lived. Refresh once and replay, matching the
+  // behaviour of request(), so an expired token never blocks a multipart post.
+  if (response.status === 401) {
+    const newAccessToken = await refreshAccessToken();
+
+    response = await send(newAccessToken);
   }
 
   const payload = await response.json().catch(() => null);
 
   if (!response.ok) {
-    const message =
-      payload?.detail ??
-      payload?.message ??
-      `Request failed with status ${response.status}`;
-    throw new ApiError(message, response.status);
+    throw new ApiError(errorMessage(payload, response.status), response.status);
   }
 
   if (!payload) {
     throw new ApiError("Received an empty response from the server.", response.status);
   }
 
-  if (
-    typeof payload === "object" &&
-    payload !== null &&
-    "data" in payload &&
-    "success" in payload
-  ) {
-    return payload.data as T;
-  }
-
-  return payload as T;
+  return unwrapEnvelope<T>(payload);
 }
 
 export const api = {

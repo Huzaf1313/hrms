@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
-  Building2,
+  /*Building2,*/
   CalendarCheck,
   CalendarDays,
   Wallet,
@@ -14,6 +14,7 @@ interface SidebarProps {
   activePage: string;
   onNavigate: (page: string) => void;
   onLogout?: () => void; // Added optional onLogout prop just in case you want to use it here later
+  collapsed: boolean;
 }
 
 interface NavItem {
@@ -36,7 +37,7 @@ const sections: NavSection[] = [
     title: "Organization",
     items: [
       { label: "Employees", icon: Users, page: "Employees" },
-      { label: "Departments", icon: Building2 },
+      /*{ label: "Departments", icon: Building2 },*/
     ],
   },
   {
@@ -56,11 +57,15 @@ const sections: NavSection[] = [
   },
 ];
 
-function Sidebar({ activePage, onNavigate }: SidebarProps) {
+function Sidebar({ activePage, onNavigate, collapsed }: SidebarProps) {
   const navigate = useNavigate();
 
   return (
-    <aside className="sticky top-0 flex h-screen w-[250px] shrink-0 flex-col overflow-hidden bg-[#0d1e3e] px-4 py-6">
+    <aside
+      className={`sticky top-0 flex h-screen shrink-0 flex-col overflow-hidden bg-[#0d1e3e] px-4 py-6 transition-[width] duration-300 ease-in-out ${
+        collapsed ? "w-[76px]" : "w-[250px]"
+      }`}
+    >
       {/* Logo */}
       <button
         type="button"
@@ -68,25 +73,41 @@ function Sidebar({ activePage, onNavigate }: SidebarProps) {
           onNavigate("Dashboard");
           navigate("/dashboard");
         }}
-        className="mb-8 flex items-center gap-3 px-2 text-left"
+        title={collapsed ? "HRMS" : undefined}
+        className={`mb-8 flex items-center rounded-xl text-left transition-[justify-content] duration-300 ${
+          collapsed ? "h-10 w-10 shrink-0 justify-center p-0" : "gap-3 px-2"
+        }`}
       >
-        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#2563eb]">
+        <span
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#2563eb] ${
+            collapsed ? "mx-auto" : ""
+          }`}
+        >
           <Users className="h-5 w-5 text-white" />
         </span>
 
-        <span>
-          <span className="block text-xl font-bold text-white">HRMS</span>
-          <span className="block text-xs text-slate-400">Admin Portal</span>
-        </span>
+        {!collapsed && (
+          <span>
+            <span className="block text-xl font-bold text-white">HRMS</span>
+            <span className="block text-xs text-slate-400">Admin Portal</span>
+          </span>
+        )}
       </button>
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto">
         {sections.map((section) => (
           <div key={section.title} className="mb-5">
-            <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-widest text-slate-500">
-              {section.title}
-            </p>
+            {!collapsed ? (
+              <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-widest text-slate-500">
+                {section.title}
+              </p>
+            ) : (
+              <div
+                className="mx-auto mb-2 h-px w-8 bg-white/10"
+                aria-hidden="true"
+              />
+            )}
 
             <div className="flex flex-col gap-1">
               {section.items.map((item) => {
@@ -104,7 +125,11 @@ function Sidebar({ activePage, onNavigate }: SidebarProps) {
                       onNavigate(item.page);
                       if (item.page === "Dashboard") navigate("/dashboard");
                     }}
-                    className={`flex h-[46px] items-center gap-3 rounded-xl px-3 text-left text-[15px] transition ${
+                    title={collapsed ? item.label : undefined}
+                    aria-label={collapsed ? item.label : undefined}
+                    className={`flex h-[46px] shrink-0 items-center rounded-xl text-left transition-[justify-content,padding,color,background-color] duration-300 ${
+                      collapsed ? "w-full justify-center px-0" : "gap-3 px-3"
+                    } text-[15px] ${
                       isActive
                         ? "bg-[#2563eb] font-semibold text-white shadow-lg shadow-blue-900/30"
                         : isDisabled
@@ -122,7 +147,7 @@ function Sidebar({ activePage, onNavigate }: SidebarProps) {
                       }`}
                     />
 
-                    <span>{item.label}</span>
+                    {!collapsed && <span>{item.label}</span>}
                   </button>
                 );
               })}
@@ -132,7 +157,9 @@ function Sidebar({ activePage, onNavigate }: SidebarProps) {
       </nav>
 
       {/* Footer */}
-      <p className="px-3 pt-4 text-[11px] text-slate-600">v1.0 • HRMS</p>
+      {!collapsed && (
+        <p className="px-3 pt-4 text-[11px] text-slate-600">v1.0 • HRMS</p>
+      )}
     </aside>
   );
 }

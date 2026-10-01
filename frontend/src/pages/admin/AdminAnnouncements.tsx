@@ -29,8 +29,20 @@ import {
   ListOrdered,
   Link,
   X,
+  Building2,
+  Users,
+  Check,
+  ChevronDown,
+  UserPlus,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 import { api, ApiError } from "../../services/api";
+import { departmentService } from "../../services/departmentService";
+import { employeeService } from "../../services/employeeService";
+import type { Department } from "../../types/department";
+import type { Employee } from "../../types/employee";
+
 
 // ---- Types ------------------------------------------------------------------
 
@@ -59,6 +71,9 @@ interface Announcement {
   expiryDate: string | null;
   audience: Audience;
   pinned: boolean;
+  createdAt: string;
+  targetDepartments: string[];
+  targetEmployees: string[];
   attachment?: {
     filename: string;
     url: string;
@@ -67,55 +82,6 @@ interface Announcement {
   } | null;
 }
 
-interface PinnedItem {
-  id: string;
-  category: Category;
-  title: string;
-  date: string;
-}
-
-interface RecentItem {
-  id: string;
-  category: Category;
-  title: string;
-  date: string;
-}
-
-const pinnedAnnouncements: PinnedItem[] = [
-  {
-    id: "p1",
-    category: "HR & Policy",
-    title: "Updated Leave Policy",
-    date: "May 01, 2026",
-  },
-  {
-    id: "p2",
-    category: "Company News",
-    title: "Holiday Calendar 2026",
-    date: "Apr 25, 2026",
-  },
-];
-
-const recentAnnouncements: RecentItem[] = [
-  {
-    id: "r1",
-    category: "IT & System",
-    title: "System Maintenance",
-    date: "Sep 16, 2026",
-  },
-  {
-    id: "r2",
-    category: "Company News",
-    title: "Welcome to Our New HRMS Platform!",
-    date: "May 05, 2026",
-  },
-  {
-    id: "r3",
-    category: "Events",
-    title: "Annual Team Building Event",
-    date: "Apr 28, 2026",
-  },
-];
 
 const tabs: ("All" | Category)[] = [
   "All",
@@ -124,6 +90,19 @@ const tabs: ("All" | Category)[] = [
   "Events",
   "IT & System",
 ];
+
+// ---- Quick filter options -----------------------------------------------------
+
+type QuickCategory = "All Categories" | Category;
+
+type DateRangeKey = "Last 7 Days" | "Last 30 Days" | "Last 90 Days" | "All Time";
+
+const dateRangeDays: Record<DateRangeKey, number | null> = {
+  "Last 7 Days": 7,
+  "Last 30 Days": 30,
+  "Last 90 Days": 90,
+  "All Time": null,
+};
 
 // ---- Style helpers -----------------------------------------------------------
 
@@ -163,6 +142,12 @@ const statusStyles: Record<Status, string> = {
   INFO: "bg-orange-100 text-orange-700",
 };
 
+const audienceStyles: Record<Audience, string> = {
+  "All Employees": "bg-slate-100 text-slate-600",
+  "Department-wise": "bg-blue-50 text-blue-700",
+  Custom: "bg-purple-50 text-purple-700",
+};
+
 const dotStyles: Record<Category, string> = {
   "Company News": "bg-blue-500",
   "HR & Policy": "bg-purple-500",
@@ -170,14 +155,382 @@ const dotStyles: Record<Category, string> = {
   "IT & System": "bg-orange-500",
 };
 
+// ---- Date helpers ------------------------------------------------------------
+
+function formatDateTime(value?: string | null): string {
+  if (!value) return "—";
+
+  const parsed = new Date(value);
+
+  if (Number.isNaN(parsed.getTime())) return "—";
+
+  return parsed.toLocaleString("en-US", {
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
+// ---- Draft persistence ------------------------------------------------------
+
+const DRAFT_STORAGE_KEY = "hrms_announcement_draft";
+
+interface AnnouncementDraft {
+  title: string;
+  category: Category | "";
+  priority: Priority;
+  publishDate: string;
+  expiryDate: string;
+  audience: Audience;
+  description: string;
+  isPinned: boolean;
+  selectedDepartments: string[];
+  selectedEmployees: string[];
+  isAddEmployeeMode?: boolean;
+}
+
+function readDraft(): AnnouncementDraft | null {
+  try {
+    const raw = window.sessionStorage.getItem(DRAFT_STORAGE_KEY);
+
+    return raw ? (JSON.parse(raw) as AnnouncementDraft) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeDraft(draft: AnnouncementDraft) {
+  try {
+    window.sessionStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+  } catch {
+    // Storage unavailable (private mode / quota) - the draft simply will not
+    // survive navigation. Publishing still works as normal.
+  }
+}
+
+function clearDraft() {
+  try {
+    window.sessionStorage.removeItem(DRAFT_STORAGE_KEY);
+  } catch {
+    // Ignore - nothing to clean up.
+  }
+}
+
+// A draft only exists in the sense that it is worth resuming once the admin has
+// actually typed something. Merely having opened the form writes a draft, so
+// trusting "a draft is present" would force the create form open on every later
+// visit and bury the announcement the user actually came to read.
+function hasDraftContent(draft: AnnouncementDraft | null): boolean {
+  if (!draft) return false;
+
+  return draft.title.trim().length > 0 || draft.description.trim().length > 0;
+}
+
+function formatDateOnly(value?: string | null): string {
+  if (!value) return "—";
+
+  const parsed = new Date(`${value}T00:00:00`);
+
+  if (Number.isNaN(parsed.getTime())) return "—";
+
+  return parsed.toLocaleDateString("en-US", {
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+  });
+}
+
+/** Newest-first sort key. Falls back to createdAt, then to 0, so records
+ * with missing or malformed dates sort last instead of dropping out. */
+function announcementTimestamp(announcement: Announcement): number {
+  const published = Date.parse(announcement.publishDate);
+
+  if (!Number.isNaN(published)) {
+    return published;
+  }
+
+  const created = Date.parse(announcement.createdAt);
+
+  return Number.isNaN(created) ? 0 : created;
+}
+
+// ---- Multi-select dropdown ---------------------------------------------------
+
+interface MultiSelectOption {
+  value: string;
+  label: string;
+  hint?: string;
+}
+
+interface MultiSelectProps {
+  label: string;
+  placeholder: string;
+  options: MultiSelectOption[];
+  selected: string[];
+  onChange: (next: string[]) => void;
+  isLoading?: boolean;
+  emptyText?: string;
+  onAddNew?: () => void;
+  addNewLabel?: string;
+}
+
+function MultiSelect({
+  label,
+  placeholder,
+  options,
+  selected,
+  onChange,
+  isLoading = false,
+  emptyText = "No options available",
+  onAddNew,
+  addNewLabel,
+}: MultiSelectProps) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const toggle = (value: string) => {
+    onChange(
+      selected.includes(value)
+        ? selected.filter((item) => item !== value)
+        : [...selected, value],
+    );
+  };
+
+  const selectedLabels = options
+    .filter((option) => selected.includes(option.value))
+    .map((option) => option.label);
+
+  return (
+    <div className="mb-5">
+      <label className="mb-2 block text-sm font-semibold text-slate-800">
+        {label}
+      </label>
+
+      <div className="relative">
+        {isOpen && (
+          <button
+            type="button"
+            aria-label="Close dropdown"
+            className="fixed inset-0 z-10 cursor-default"
+            onClick={() => setIsOpen(false)}
+          />
+        )}
+
+        <button
+          type="button"
+          onClick={() => setIsOpen((previous) => !previous)}
+          className="relative z-20 flex w-full items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 text-left text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-500/10"
+          aria-expanded={isOpen}
+        >
+          <span
+            className={
+              selectedLabels.length > 0 ? "text-slate-700" : "text-slate-400"
+            }
+          >
+            {selectedLabels.length === 0
+              ? placeholder
+              : selectedLabels.length <= 2
+                ? selectedLabels.join(", ")
+                : `${selectedLabels.length} selected`}
+          </span>
+
+          <ChevronDown
+            className={`h-4 w-4 shrink-0 text-slate-400 transition ${
+              isOpen ? "rotate-180" : ""
+            }`}
+          />
+        </button>
+
+        {isOpen && (
+          <div className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+            {isLoading ? (
+              <p className="flex items-center gap-2 px-4 py-3 text-sm text-slate-400">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Loading...
+              </p>
+            ) : options.length === 0 ? (
+              <p className="px-4 py-3 text-sm text-slate-400">{emptyText}</p>
+            ) : (
+              options.map((option) => {
+                const isSelected = selected.includes(option.value);
+
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => toggle(option.value)}
+                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-slate-700 transition hover:bg-slate-50"
+                  >
+                    <span
+                      className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
+                        isSelected
+                          ? "border-blue-600 bg-blue-600 text-white"
+                          : "border-slate-300"
+                      }`}
+                    >
+                      {isSelected && <Check className="h-3 w-3" />}
+                    </span>
+
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate">{option.label}</span>
+
+                      {option.hint && (
+                        <span className="block truncate text-xs text-slate-400">
+                          {option.hint}
+                        </span>
+                      )}
+                    </span>
+                  </button>
+                );
+              })
+            )}
+
+            {onAddNew && (
+              <div className="mt-1 border-t border-slate-100 p-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsOpen(false);
+                    onAddNew();
+                  }}
+                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-semibold text-blue-600 transition hover:bg-blue-50"
+                >
+                  <Plus className="h-4 w-4" />
+                  {addNewLabel ?? "Add new"}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {selectedLabels.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {options
+            .filter((option) => selected.includes(option.value))
+            .map((option) => (
+              <span
+                key={option.value}
+                className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700"
+              >
+                {option.label}
+                <button
+                  type="button"
+                  onClick={() => toggle(option.value)}
+                  className="text-blue-400 transition hover:text-blue-700"
+                  aria-label={`Remove ${option.label}`}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---- Confirmation dialog ---------------------------------------------------
+
+function ConfirmDialog({
+  title,
+  message,
+  confirmLabel,
+  isWorking,
+  onConfirm,
+  onCancel,
+  tone = "primary",
+  icon,
+}: {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  isWorking: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+  tone?: "primary" | "danger";
+  icon?: ReactNode;
+}) {
+  const isDanger = tone === "danger";
+
+  return (
+    <div
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/40 p-6"
+      onClick={onCancel}
+    >
+      <div
+        className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl"
+        onClick={(event) => event.stopPropagation()}
+        role="alertdialog"
+        aria-modal="true"
+        aria-label={title}
+      >
+        <div className={icon ? "flex items-start gap-3" : undefined}>
+          {icon && (
+            <span
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
+                isDanger ? "bg-red-100" : "bg-blue-50"
+              }`}
+            >
+              {icon}
+            </span>
+          )}
+
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold text-slate-900">{title}</h2>
+            <p className="mt-1 text-sm text-slate-500">{message}</p>
+          </div>
+        </div>
+
+        <div className="mt-6 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={isWorking}
+            className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-60"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={isWorking}
+            className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60 ${
+              isDanger
+                ? "bg-red-600 hover:bg-red-700"
+                : "bg-[#2563eb] hover:bg-[#1d4ed8]"
+            }`}
+          >
+            {isWorking && <Loader2 className="h-4 w-4 animate-spin" />}
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ---- Page --------------------------------------------------------------------
 
-export default function AdminAnnouncements() {
+interface AdminAnnouncementsProps {
+  onCreateEmployee?: () => void;
+}
+
+export default function AdminAnnouncements({
+  onCreateEmployee,
+}: AdminAnnouncementsProps = {}) {
   // List state
   const [activeTab, setActiveTab] =
     useState<(typeof tabs)[number]>("All");
 
+
   const [search, setSearch] = useState("");
+
+  const [quickCategory, setQuickCategory] = useState<QuickCategory>("All Categories");
+  const [quickDateRange, setQuickDateRange] = useState<DateRangeKey>("All Time");
 
   const [announcementList, setAnnouncementList] = useState<Announcement[]>([]);
   const [selectedAnnouncement, setSelectedAnnouncement] =
@@ -185,29 +538,74 @@ export default function AdminAnnouncements() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // Restore any in-progress draft. Required because navigating to the
+  // Employees page unmounts this component. Read once, then used as the
+  // initial value for each piece of form state.
+  const [restoredDraft] = useState<AnnouncementDraft | null>(readDraft);
+
   // Create form state
+  // The page always opens on the list. An unfinished announcement is offered
+  // as a banner instead of force-opening the form over the top of it.
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [restoredDraftAvailable, setRestoredDraftAvailable] = useState(
+    () => hasDraftContent(restoredDraft),
+  );
   const [editingAnnouncement, setEditingAnnouncement] =
     useState<Announcement | null>(null);
 
-  const [title, setTitle] = useState("");
-  const [category, setCategory] = useState<Category | "">("");
-  const [priority, setPriority] = useState<Priority>("Important");
-
-  const [publishDate, setPublishDate] = useState(
-    new Date().toISOString().split("T")[0]
+  const [title, setTitle] = useState(restoredDraft?.title ?? "");
+  const [category, setCategory] = useState<Category | "">(
+    restoredDraft?.category ?? "",
+  );
+  const [priority, setPriority] = useState<Priority>(
+    restoredDraft?.priority ?? "Important",
   );
 
-  const [expiryDate, setExpiryDate] = useState("");
+  const [publishDate, setPublishDate] = useState(
+    restoredDraft?.publishDate ?? new Date().toISOString().split("T")[0],
+  );
 
-  const [audience, setAudience] =
-    useState<Audience>("All Employees");
+  const [expiryDate, setExpiryDate] = useState(restoredDraft?.expiryDate ?? "");
 
-  const [description, setDescription] = useState("");
+  const [audience, setAudience] = useState<Audience>(
+    restoredDraft?.audience ?? "All Employees",
+  );
+
+  const [description, setDescription] = useState(
+    restoredDraft?.description ?? "",
+  );
 
   const [attachment, setAttachment] = useState<File | null>(null);
 
-  const [isPinned, setIsPinned] = useState(true);
+  const [isPinned, setIsPinned] = useState(restoredDraft?.isPinned ?? true);
+
+  const [selectedDepartments, setSelectedDepartments] = useState<string[]>(
+    restoredDraft?.selectedDepartments ?? [],
+  );
+  const [selectedEmployees, setSelectedEmployees] = useState<string[]>(
+    restoredDraft?.selectedEmployees ?? [],
+  );
+
+  // Audience target options
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [isLoadingOptions, setIsLoadingOptions] = useState(true);
+  const [isAddingDepartment, setIsAddingDepartment] = useState(false);
+  const [newDepartmentName, setNewDepartmentName] = useState("");
+  const [isCreatingDepartment, setIsCreatingDepartment] = useState(false);
+  const [isAddEmployeeMode, setIsAddEmployeeMode] = useState(
+    restoredDraft?.isAddEmployeeMode ?? false,
+  );
+
+  // Confirmation dialogs, replacing browser alert()/confirm() popups.
+  const [pendingDelete, setPendingDelete] = useState<Announcement | null>(
+    null,
+  );
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isConfirmingPublish, setIsConfirmingPublish] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+
 
   const mapAnnouncement = (item: {
     id: string;
@@ -220,6 +618,9 @@ export default function AdminAnnouncements() {
     audience: Audience;
     pinned: boolean;
     author_name: string;
+    created_at: string;
+    target_departments?: string[] | null;
+    target_employees?: string[] | null;
     attachment?: Announcement["attachment"];
   }): Announcement => ({
     id: item.id,
@@ -243,8 +644,220 @@ export default function AdminAnnouncements() {
     audience: item.audience,
     pinned: item.pinned,
     author: item.author_name || "HR Team",
+    createdAt: item.created_at,
+    targetDepartments: item.target_departments ?? [],
+    targetEmployees: item.target_employees ?? [],
     attachment: item.attachment,
   });
+
+  // ---- Persist draft --------------------------------------------------------
+
+  // Must be defined before the "add new employee" handler below, which
+  // persists synchronously before navigating away.
+  const currentDraft: AnnouncementDraft = {
+    title,
+    category,
+    priority,
+    publishDate,
+    expiryDate,
+    audience,
+    description,
+    isPinned,
+    selectedDepartments,
+    selectedEmployees,
+    isAddEmployeeMode,
+  };
+
+  useEffect(() => {
+    // Edits are deliberately not persisted: this key is the "unfinished new
+    // announcement" slot, and restoring an edited announcement into an empty
+    // create form would publish it as a duplicate.
+    if (!showCreateForm || editingAnnouncement) return;
+
+    writeDraft(currentDraft);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showCreateForm, editingAnnouncement, ...Object.values(currentDraft)]);
+
+  // ---- Label helpers ------------------------------------------------------
+
+  const departmentNameById = (id: string) =>
+    departments.find((department) => department.id === id)?.name ?? "Unknown";
+
+  const employeeNameById = (id: string) => {
+    const employee = employees.find((item) => item.id === id);
+
+    if (!employee) return "Unknown";
+
+    const fullName = `${employee.first_name} ${employee.last_name}`.trim();
+
+    return fullName || employee.email;
+  };
+
+  // Resolved audience, so an admin can see exactly who receives the post.
+  const audienceNames = (a: Announcement): string[] => {
+    if (a.audience === "All Employees") return [];
+
+    if (a.audience === "Department-wise") {
+      return a.targetDepartments.map(departmentNameById);
+    }
+
+    return a.targetEmployees.map(employeeNameById);
+  };
+
+  const audienceLabel = (a: Announcement) => {
+    if (a.audience === "All Employees") return "Everyone";
+
+    const names = audienceNames(a);
+
+    if (names.length === 0) return "No recipients selected";
+
+    return `${names.length} ${a.audience === "Department-wise" ? "department" : "employee"}${names.length === 1 ? "" : "s"}`;
+  };
+
+  const audienceTooltip = (a: Announcement) => {
+    if (a.audience === "All Employees") {
+      return "Visible to every employee";
+    }
+
+    const names = audienceNames(a);
+
+    if (names.length === 0) {
+      return "No recipients are selected, so nobody will see this";
+    }
+
+    return "Only: " + names.join(", ");
+  };
+
+  // Human summary of who will receive the announcement being published.
+  const publishConfirmationMessage = () => {
+    if (audience === "All Employees") {
+      return `"${title.trim() || "This announcement"}" will be visible to every employee.`;
+    }
+
+    const names =
+      audience === "Department-wise"
+        ? selectedDepartments.map(departmentNameById)
+        : selectedEmployees.map(employeeNameById);
+
+    if (names.length === 0) {
+      return "No recipients are selected, so nobody will see this announcement.";
+    }
+
+    const heading =
+      audience === "Department-wise"
+        ? names.length === 1
+          ? "department"
+          : "departments"
+        : names.length === 1
+          ? "employee"
+          : "employees";
+
+    return (
+      `"${title.trim() || "This announcement"}" will be sent to ` +
+      `${names.length} ${heading}: ${names.join(", ")}.`
+    );
+  };
+
+  const departmentOptions: MultiSelectOption[] = useMemo(
+    () =>
+      departments.map((department) => ({
+        value: department.id,
+        label: department.name,
+      })),
+    [departments],
+  );
+
+  const employeeOptions: MultiSelectOption[] = useMemo(
+    () =>
+      employees.map((employee) => ({
+        value: employee.id,
+        label:
+          `${employee.first_name} ${employee.last_name}`.trim() ||
+          employee.email,
+        hint: employee.email,
+      })),
+    [employees],
+  );
+
+  // ---- Load audience target options ---------------------------------------
+
+  useEffect(() => {
+    let isMounted = true;
+
+    Promise.allSettled([
+      departmentService.listAll(),
+      employeeService.listAll({ status: "active" }),
+    ])
+      .then(([departmentResult, employeeResult]) => {
+        if (!isMounted) return;
+
+        if (departmentResult.status === "fulfilled") {
+          setDepartments(departmentResult.value);
+        }
+
+        if (employeeResult.status === "fulfilled") {
+          setEmployees(employeeResult.value);
+        }
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingOptions(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // ---- Create a new department inline -------------------------------------
+
+  const handleCreateDepartment = async () => {
+    const name = newDepartmentName.trim();
+
+    if (name.length < 2) {
+      setError("Department name must be at least 2 characters.");
+      return;
+    }
+
+    if (
+      departments.some(
+        (department) =>
+          department.name.trim().toLowerCase() === name.toLowerCase(),
+      )
+    ) {
+      setError(`"${name}" already exists.`);
+      return;
+    }
+
+    try {
+      setIsCreatingDepartment(true);
+      setError("");
+
+      const created = await departmentService.create({ name });
+
+      setDepartments((previous) => [...previous, created]);
+      setSelectedDepartments((previous) => [...previous, created.id]);
+      setNewDepartmentName("");
+      setIsAddingDepartment(false);
+    } catch (requestError: unknown) {
+      setError(
+        requestError instanceof ApiError
+          ? requestError.message
+          : "Could not create the department.",
+      );
+    } finally {
+      setIsCreatingDepartment(false);
+    }
+  };
+
+  // ---- Audience change ----------------------------------------------------
+
+  const handleAudienceChange = (next: Audience) => {
+    setAudience(next);
+
+    if (next !== "Department-wise") setSelectedDepartments([]);
+    if (next !== "Custom") setSelectedEmployees([]);
+  };
+
 
   useEffect(() => {
     let isMounted = true;
@@ -279,9 +892,13 @@ export default function AdminAnnouncements() {
   // ---- Filter announcements -----------------------------------------------
 
   const filtered = useMemo(() => {
+    const days = dateRangeDays[quickDateRange];
+    const cutoff =
+      days === null ? null : new Date().getTime() - days * 86400000;
+
     return announcementList.filter((a) => {
       const matchesTab =
-        activeTab === "All" || a.category === activeTab;
+        quickCategory === "All Categories" || a.category === quickCategory;
 
       const searchText = search.toLowerCase();
 
@@ -289,15 +906,85 @@ export default function AdminAnnouncements() {
         a.title.toLowerCase().includes(searchText) ||
         a.description.toLowerCase().includes(searchText);
 
-      return matchesTab && matchesSearch;
+      // An unparseable or missing publish date is kept rather than silently
+      // dropped, so bad data never hides announcements from the list.
+      let matchesDate = true;
+
+      if (cutoff !== null) {
+        const published = Date.parse(a.publishDate);
+
+        matchesDate = Number.isNaN(published) || published >= cutoff;
+      }
+
+      return matchesTab && matchesSearch && matchesDate;
     });
-  }, [activeTab, search, announcementList]);
+  }, [quickCategory, search, quickDateRange, announcementList]);
+
+  const hasActiveQuickFilters =
+    quickDateRange !== "All Time" || quickCategory !== "All Categories";
+
+  // ---- Sidebar lists ---------------------------------------------------------
+
+  const SIDEBAR_PREVIEW_COUNT = 5;
+
+  const pinnedItems = useMemo(
+    () => announcementList.filter((a) => a.pinned),
+    [announcementList],
+  );
+
+  // Recent deliberately excludes pinned entries so the two sidebar cards do
+  // not show the same announcement twice.
+  const recentItems = useMemo(
+    () =>
+      announcementList
+        .filter((a) => !a.pinned)
+        .sort((a, b) => announcementTimestamp(b) - announcementTimestamp(a)),
+    [announcementList],
+  );
+
+  const [sidebarModal, setSidebarModal] = useState<"pinned" | "recent" | null>(null);
+
+  // Reading an announcement and composing one are mutually exclusive, so
+  // viewing always hides the create form. The draft is left in storage on
+  // purpose - it still resumes the next time this page mounts.
+  function openAnnouncement(announcement: Announcement) {
+    setSidebarModal(null);
+    setShowCreateForm(false);
+    setSelectedAnnouncement(announcement);
+  }
+
+  // The tab strip and the Quick Filters category select are two views of the
+  // same filter, so every change has to move both.
+  function handleCategoryFilterChange(next: QuickCategory) {
+    setQuickCategory(next);
+    setActiveTab(next === "All Categories" ? "All" : next);
+  }
+
+  function handleClearQuickFilters() {
+    setQuickCategory("All Categories");
+    setQuickDateRange("All Time");
+    setActiveTab("All");
+  }
 
   // ---- Open create form ----------------------------------------------------
 
   const handleCreateAnnouncement = () => {
     setEditingAnnouncement(null);
+    setRestoredDraftAvailable(false);
     setShowCreateForm(true);
+  };
+
+  // Bring back the unfinished announcement without discarding it.
+  const handleResumeDraft = () => {
+    setEditingAnnouncement(null);
+    setRestoredDraftAvailable(false);
+    setShowCreateForm(true);
+  };
+
+  const handleDiscardDraft = () => {
+    clearDraft();
+    resetForm();
+    setRestoredDraftAvailable(false);
   };
 
   const handleEditAnnouncement = (announcement: Announcement) => {
@@ -311,26 +998,42 @@ export default function AdminAnnouncements() {
     setDescription(announcement.description);
     setAttachment(null);
     setIsPinned(announcement.pinned);
+    setSelectedDepartments(announcement.targetDepartments);
+    setSelectedEmployees(announcement.targetEmployees);
     setSelectedAnnouncement(null);
+    // Editing must not be mistaken for a resumed draft on the next visit.
+    setRestoredDraftAvailable(false);
     setShowCreateForm(true);
   };
 
-  const handleDeleteAnnouncement = async (announcement: Announcement) => {
-    if (!window.confirm(`Delete "${announcement.title}"?`)) return;
+
+  const requestDeleteAnnouncement = (announcement: Announcement) => {
+    setPendingDelete(announcement);
+  };
+
+  const handleDeleteAnnouncement = async () => {
+    if (!pendingDelete) return;
+
+    const announcement = pendingDelete;
 
     try {
+      setIsDeleting(true);
       setError("");
       await api.delete(`/announcements/${announcement.id}`);
       setAnnouncementList((previous) =>
         previous.filter((item) => item.id !== announcement.id),
       );
       setSelectedAnnouncement(null);
+      setPendingDelete(null);
     } catch (requestError: unknown) {
       setError(
         requestError instanceof ApiError
           ? requestError.message
           : "Could not delete the announcement.",
       );
+      setPendingDelete(null);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -346,34 +1049,60 @@ export default function AdminAnnouncements() {
     setDescription("");
     setAttachment(null);
     setIsPinned(true);
+    setSelectedDepartments([]);
+    setSelectedEmployees([]);
+    setNewDepartmentName("");
+    setIsAddingDepartment(false);
+    setIsAddEmployeeMode(false);
   };
 
   // ---- Cancel form ---------------------------------------------------------
 
   const handleCancel = () => {
+    clearDraft();
     resetForm();
     setEditingAnnouncement(null);
+    setRestoredDraftAvailable(false);
     setShowCreateForm(false);
   };
 
+
   // ---- Publish announcement -----------------------------------------------
 
-  const handlePublish = async () => {
+  // Step 1: validate, then ask for confirmation.
+  const handlePublishClick = () => {
+    setError("");
+
     if (!title.trim()) {
-      alert("Please enter an announcement title.");
+      setError("Please enter an announcement title.");
       return;
     }
 
     if (!category) {
-      alert("Please select a category.");
+      setError("Please select a category.");
       return;
     }
 
     if (!description.trim()) {
-      alert("Please enter the announcement description.");
+      setError("Please enter the announcement description.");
       return;
     }
 
+    if (audience === "Department-wise" && selectedDepartments.length === 0) {
+      setError("Please select at least one department.");
+      return;
+    }
+
+    if (audience === "Custom" && selectedEmployees.length === 0) {
+      setError("Please select at least one employee.");
+      return;
+    }
+
+    setIsConfirmingPublish(true);
+  };
+
+  // Step 2: the user confirmed, so actually send it.
+  const handlePublish = async () => {
     const formData = new FormData();
     formData.append("title", title.trim());
     formData.append("category", category);
@@ -383,14 +1112,25 @@ export default function AdminAnnouncements() {
     formData.append("audience", audience);
     formData.append("description", description.trim());
     formData.append("pinned", String(isPinned));
+    selectedDepartments.forEach((id) =>
+      formData.append("target_departments", id),
+    );
+    selectedEmployees.forEach((id) =>
+      formData.append("target_employees", id),
+    );
     if (editingAnnouncement) {
       formData.append("clear_expiry", String(!expiryDate));
     }
     if (attachment) formData.append("attachment", attachment);
 
+    const wasEditing = editingAnnouncement !== null;
+    const publishedTitle = title.trim();
+
     try {
+      setIsPublishing(true);
       setError("");
-      const saved = editingAnnouncement
+
+      const saved = wasEditing
         ? await api.putForm<Parameters<typeof mapAnnouncement>[0]>(
             `/announcements/${editingAnnouncement.id}`,
             formData,
@@ -399,28 +1139,46 @@ export default function AdminAnnouncements() {
             "/announcements",
             formData,
           );
+
       const savedAnnouncement = mapAnnouncement(saved);
+
       setAnnouncementList((previous) =>
-        editingAnnouncement
+        wasEditing
           ? previous.map((item) =>
               item.id === savedAnnouncement.id ? savedAnnouncement : item,
             )
           : [savedAnnouncement, ...previous],
       );
-      alert(
-        editingAnnouncement
-          ? "Announcement updated successfully!"
-          : "Announcement published successfully!",
-      );
+
+      setIsConfirmingPublish(false);
+      clearDraft();
       resetForm();
       setEditingAnnouncement(null);
+      setRestoredDraftAvailable(false);
       setShowCreateForm(false);
+
+      setSuccessMessage(
+        `"${publishedTitle}" was ${wasEditing ? "updated" : "published"} successfully.`,
+      );
+
+      window.setTimeout(() => setSuccessMessage(""), 6000);
     } catch (requestError: unknown) {
+      setIsConfirmingPublish(false);
+
+      if (requestError instanceof ApiError && requestError.status === 403) {
+        setError(
+          "You do not have permission to publish announcements. Only HR Admin and Manager accounts can create them.",
+        );
+        return;
+      }
+
       setError(
         requestError instanceof ApiError
           ? requestError.message
           : "Could not publish the announcement.",
       );
+    } finally {
+      setIsPublishing(false);
     }
   };
 
@@ -470,6 +1228,13 @@ export default function AdminAnnouncements() {
             </p>
           </div>
         </div>
+
+        {error && (
+          <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
 
         {/* Main grid -------------------------------------------------------- */}
 
@@ -621,7 +1386,7 @@ export default function AdminAnnouncements() {
                       name="audience"
                       value={item}
                       checked={audience === item}
-                      onChange={() => setAudience(item)}
+                      onChange={() => handleAudienceChange(item)}
                       className="h-4 w-4 accent-blue-600"
                     />
 
@@ -630,6 +1395,120 @@ export default function AdminAnnouncements() {
                 ))}
               </div>
             </div>
+
+            {/* Department targets ------------------------------------------ */}
+
+            {audience === "Department-wise" && (
+              <>
+                {isAddingDepartment ? (
+                  <div className="mb-5 rounded-lg border border-blue-100 bg-blue-50/50 p-4">
+                    <label className="mb-2 block text-sm font-semibold text-slate-800">
+                      New department
+                    </label>
+
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <input
+                        type="text"
+                        value={newDepartmentName}
+                        autoFocus
+                        onChange={(event) =>
+                          setNewDepartmentName(event.target.value)
+                        }
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault();
+                            void handleCreateDepartment();
+                          }
+                        }}
+                        placeholder="e.g. Customer Success"
+                        className="flex-1 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-500/10"
+                      />
+
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          disabled={isCreatingDepartment}
+                          onClick={() => void handleCreateDepartment()}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {isCreatingDepartment ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Plus className="h-4 w-4" />
+                          )}
+                          Add
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsAddingDepartment(false);
+                            setNewDepartmentName("");
+                          }}
+                          className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <MultiSelect
+                    label="Departments"
+                    placeholder="Select departments"
+                    options={departmentOptions}
+                    selected={selectedDepartments}
+                    onChange={setSelectedDepartments}
+                    isLoading={isLoadingOptions}
+                    emptyText="No departments found"
+                    onAddNew={() => setIsAddingDepartment(true)}
+                    addNewLabel="Add new department"
+                  />
+                )}
+              </>
+            )}
+
+            {/* Employee targets --------------------------------------------- */}
+
+            {audience === "Custom" && (
+              <>
+                <MultiSelect
+                  label="Employees"
+                  placeholder="Select employees"
+                  options={employeeOptions}
+                  selected={selectedEmployees}
+                  onChange={setSelectedEmployees}
+                  isLoading={isLoadingOptions}
+                  emptyText="No active employees found"
+                  onAddNew={
+                    onCreateEmployee
+                      ? () => {
+                          // Persist synchronously - this component unmounts as
+                          // soon as the navigation below is processed.
+                          writeDraft({
+                            ...currentDraft,
+                            isAddEmployeeMode: true,
+                          });
+                          onCreateEmployee();
+                        }
+                      : undefined
+                  }
+                  addNewLabel="Add new employee"
+                />
+
+                {isAddEmployeeMode && (
+                  <div className="-mt-3 mb-5 flex flex-wrap items-center gap-3 rounded-lg border border-amber-100 bg-amber-50/60 px-4 py-3 text-sm text-amber-800">
+                    <UserPlus className="h-4 w-4 shrink-0" />
+
+                    <span className="flex-1">
+                      Your draft is saved. Create the employee on the Employees
+                      page, then return here - the list refreshes automatically
+                      and the new employee will be available to select.
+                    </span>
+                  </div>
+                )}
+              </>
+            )}
 
             {/* Description -------------------------------------------------- */}
 
@@ -787,7 +1666,6 @@ export default function AdminAnnouncements() {
 
                 Pin this announcement{" "}
                 <span className="text-xs text-slate-400">
-                  (keep it on top)
                 </span>
               </label>
 
@@ -802,7 +1680,7 @@ export default function AdminAnnouncements() {
 
                 <button
                   type="button"
-                  onClick={handlePublish}
+                  onClick={handlePublishClick}
                   className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
                 >
                    {editingAnnouncement ? (
@@ -810,7 +1688,7 @@ export default function AdminAnnouncements() {
                    ) : (
                      <Send className="h-4 w-4" />
                    )}
-                   {editingAnnouncement ? "Save Changes" : "Publish Announcement"}
+                   {editingAnnouncement ? "Save Changes" : "Announcement"}
                 </button>
               </div>
             </div>
@@ -934,6 +1812,17 @@ export default function AdminAnnouncements() {
             </div>
           </div>
         </div>
+
+        {isConfirmingPublish && (
+          <ConfirmDialog
+            title={editingAnnouncement ? "Update this announcement?" : "Publish this announcement?"}
+            message={publishConfirmationMessage()}
+            confirmLabel={editingAnnouncement ? "Update" : "Publish"}
+            isWorking={isPublishing}
+            onConfirm={() => void handlePublish()}
+            onCancel={() => setIsConfirmingPublish(false)}
+          />
+        )}
       </div>
     );
   }
@@ -981,6 +1870,39 @@ export default function AdminAnnouncements() {
         </div>
       )}
 
+      {successMessage && (
+        <div className="mb-4 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
+          <Check className="h-4 w-4 shrink-0" />
+          {successMessage}
+        </div>
+      )}
+
+      {restoredDraftAvailable && !showCreateForm && (
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+          <FileText className="h-4 w-4 shrink-0 text-amber-600" />
+
+          <p className="min-w-0 flex-1 text-sm font-medium text-amber-800">
+            You have an unfinished announcement.
+          </p>
+
+          <button
+            type="button"
+            onClick={handleResumeDraft}
+            className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-700"
+          >
+            Resume
+          </button>
+
+          <button
+            type="button"
+            onClick={handleDiscardDraft}
+            className="rounded-lg border border-amber-300 px-3 py-1.5 text-xs font-semibold text-amber-800 transition hover:bg-amber-100"
+          >
+            Discard
+          </button>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_300px]">
         {/* Main column ------------------------------------------------------ */}
 
@@ -992,7 +1914,7 @@ export default function AdminAnnouncements() {
               <button
                 key={tab}
                 type="button"
-                onClick={() => setActiveTab(tab)}
+                onClick={() => handleCategoryFilterChange(tab === "All" ? "All Categories" : tab)}
                 className={`-mb-px border-b-2 pb-3 text-sm font-medium transition ${
                   activeTab === tab
                     ? "border-blue-600 text-blue-600"
@@ -1042,36 +1964,71 @@ export default function AdminAnnouncements() {
                       {style.icon}
                     </span>
 
-                    <div className="min-w-0 flex-1">
-                      <div className="mb-1.5 flex items-center justify-between gap-2">
-                        <span
-                          className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${style.badge}`}
-                        >
-                          {a.category}
-                        </span>
-
-                        {a.status && (
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-1.5 flex flex-wrap items-center gap-2">
                           <span
-                            className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${statusStyles[a.status]}`}
+                            className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${style.badge}`}
                           >
-                            {a.status}
+                            {a.category}
                           </span>
-                        )}
-                      </div>
 
-                      <h3 className="mb-1 text-[15px] font-semibold text-slate-900">
-                        {a.title}
-                      </h3>
+                          <span
+                            className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
+                              audienceNames(a).length === 0 &&
+                              a.audience !== "All Employees"
+                                ? "bg-red-100 text-red-700"
+                                : audienceStyles[a.audience]
+                            }`}
+                            title={audienceTooltip(a)}
+                          >
+                            {audienceLabel(a)}
+                          </span>
 
-                      <p className="mb-3 text-sm leading-relaxed text-slate-500">
-                        {a.description}
-                      </p>
+                          {a.status && (
+                            <span
+                              className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${statusStyles[a.status]}`}
+                            >
+                              {a.status}
+                            </span>
+                          )}
+                        </div>
+
+                        <h3 className="mb-1 text-[15px] font-semibold text-slate-900">
+                          {a.title}
+                        </h3>
+
+                        <p className="mb-3 text-sm leading-6 text-slate-500">
+                          {audienceNames(a).length > 0 && (
+                            <span className="mb-1 flex flex-wrap items-center gap-1.5">
+                              <span className="font-medium text-slate-600">
+                                To:
+                              </span>
+
+                              {audienceNames(a).map((name) => (
+                                <span
+                                  key={name}
+                                  className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-600"
+                                >
+                                  {name}
+                                </span>
+                              ))}
+                            </span>
+                          )}
+
+                          {a.description}
+                        </p>
+
 
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4 text-xs text-slate-400">
-                          <span className="flex items-center gap-1">
-                            <Calendar className="h-3.5 w-3.5" />
-                            {a.date}
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-400">
+                          <span
+                            className="flex items-center gap-1"
+                            title={
+                              "Publishes on " + formatDateOnly(a.publishDate)
+                            }
+                          >
+                            <Clock className="h-3.5 w-3.5" />
+                            {formatDateTime(a.createdAt)}
                           </span>
 
                           <span className="flex items-center gap-1">
@@ -1079,6 +2036,7 @@ export default function AdminAnnouncements() {
                             By {a.author}
                           </span>
                         </div>
+
 
                         <div className="flex items-center gap-3">
                           <button
@@ -1092,7 +2050,7 @@ export default function AdminAnnouncements() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => void handleDeleteAnnouncement(a)}
+                            onClick={() => requestDeleteAnnouncement(a)}
                             className="rounded-lg p-1.5 text-slate-500 hover:bg-red-50 hover:text-red-600"
                             title="Delete announcement"
                             aria-label="Delete announcement"
@@ -1101,7 +2059,7 @@ export default function AdminAnnouncements() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => setSelectedAnnouncement(a)}
+                            onClick={() => openAnnouncement(a)}
                             className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700"
                           >
                             View Details
@@ -1117,7 +2075,9 @@ export default function AdminAnnouncements() {
 
             {!isLoading && filtered.length === 0 && (
               <div className="rounded-xl border border-dashed border-slate-200 bg-white p-8 text-center text-sm text-slate-400">
-                No announcements match your search.
+                {hasActiveQuickFilters
+                  ? "No announcements match the selected filters."
+                  : "No announcements match your search."}
               </div>
             )}
           </div>
@@ -1177,32 +2137,52 @@ export default function AdminAnnouncements() {
               Category
             </label>
 
-            <select className="mb-4 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30">
+            <select
+              value={quickCategory}
+              onChange={(event) =>
+                handleCategoryFilterChange(event.target.value as QuickCategory)
+              }
+              className="mb-4 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+            >
               <option>All Categories</option>
               <option>Company News</option>
-              <option>HR & Policy</option>
+              <option>HR &amp; Policy</option>
               <option>Events</option>
-              <option>IT & System</option>
+              <option>IT &amp; System</option>
             </select>
 
             <label className="mb-1.5 block text-xs font-medium text-slate-500">
               Date Range
             </label>
 
-            <select className="mb-4 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30">
-              <option>Last 30 Days</option>
-              <option>Last 7 Days</option>
-              <option>Last 90 Days</option>
+            <select
+              value={quickDateRange}
+              onChange={(event) =>
+                setQuickDateRange(event.target.value as DateRangeKey)
+              }
+              className="mb-4 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+            >
               <option>All Time</option>
+              <option>Last 7 Days</option>
+              <option>Last 30 Days</option>
+              <option>Last 90 Days</option>
             </select>
 
             <button
               type="button"
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+              onClick={handleClearQuickFilters}
+              disabled={!hasActiveQuickFilters}
+              className="w-full rounded-lg border border-slate-200 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              <Filter className="h-4 w-4" />
-              Apply
+              Clear Filters
             </button>
+
+            {hasActiveQuickFilters && (
+              <p className="mt-3 text-xs text-slate-400">
+                Showing {filtered.length} of {announcementList.length}{" "}
+                announcements
+              </p>
+            )}
           </div>
 
           {/* Pinned */}
@@ -1214,42 +2194,53 @@ export default function AdminAnnouncements() {
                 Pinned Announcements
               </h3>
 
-              <button
-                type="button"
-                className="text-xs font-semibold text-blue-600 hover:text-blue-700"
-              >
-                View All
-              </button>
+              {pinnedItems.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSidebarModal("pinned")}
+                  className="text-xs font-semibold text-blue-600 hover:text-blue-700"
+                >
+                  View All
+                </button>
+              )}
             </div>
 
-            <div className="flex flex-col gap-3">
-              {pinnedAnnouncements.map((p) => {
-                const style = categoryStyles[p.category];
+            {pinnedItems.length === 0 ? (
+              <p className="text-xs text-slate-400">
+                No pinned announcements.
+              </p>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {pinnedItems.slice(0, SIDEBAR_PREVIEW_COUNT).map((p) => {
+                  const style = categoryStyles[p.category];
 
-                return (
-                  <div
-                    key={p.id}
-                    className="flex items-center gap-2.5"
-                  >
-                    <span
-                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${style.iconBg}`}
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => openAnnouncement(p)}
+                      className="flex items-center gap-2.5 rounded-lg text-left transition hover:bg-slate-50"
                     >
-                      {style.icon}
-                    </span>
+                      <span
+                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${style.iconBg}`}
+                      >
+                        {style.icon}
+                      </span>
 
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-slate-800">
-                        {p.title}
-                      </p>
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-medium text-slate-800">
+                          {p.title}
+                        </span>
 
-                      <p className="text-xs text-slate-400">
-                        {p.date}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                        <span className="block text-xs text-slate-400">
+                          {formatDateOnly(p.publishDate)}
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Recent */}
@@ -1261,39 +2252,122 @@ export default function AdminAnnouncements() {
                 Recent Announcements
               </h3>
 
-              <button
-                type="button"
-                className="text-xs font-semibold text-blue-600 hover:text-blue-700"
-              >
-                View All
-              </button>
-            </div>
-
-            <div className="flex flex-col gap-3">
-              {recentAnnouncements.map((r) => (
-                <div
-                  key={r.id}
-                  className="flex items-start gap-2.5"
+              {recentItems.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSidebarModal("recent")}
+                  className="text-xs font-semibold text-blue-600 hover:text-blue-700"
                 >
-                  <span
-                    className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${dotStyles[r.category]}`}
-                  />
-
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-slate-800">
-                      {r.title}
-                    </p>
-
-                    <p className="text-xs text-slate-400">
-                      {r.date}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                  View All
+                </button>
+              )}
             </div>
+
+            {recentItems.length === 0 ? (
+              <p className="text-xs text-slate-400">
+                No recent announcements.
+              </p>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {recentItems.slice(0, SIDEBAR_PREVIEW_COUNT).map((r) => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => openAnnouncement(r)}
+                    className="flex items-start gap-2.5 rounded-lg text-left transition hover:bg-slate-50"
+                  >
+                    <span
+                      className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${dotStyles[r.category]}`}
+                    />
+
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-medium text-slate-800">
+                        {r.title}
+                      </span>
+
+                      <span className="block text-xs text-slate-400">
+                        {formatDateOnly(r.publishDate)}
+                      </span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
+
+      {sidebarModal && (
+        <div
+          className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/40 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="sidebar-modal-title"
+          onClick={() => setSidebarModal(null)}
+        >
+          <div
+            className="max-h-[80vh] w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+              <h2
+                id="sidebar-modal-title"
+                className="text-base font-semibold text-slate-900"
+              >
+                {sidebarModal === "pinned"
+                  ? "Pinned Announcements"
+                  : "Recent Announcements"}
+              </h2>
+
+              <button
+                type="button"
+                onClick={() => setSidebarModal(null)}
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-50"
+                aria-label="Close"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="max-h-[60vh] overflow-y-auto p-5">
+              <div className="flex flex-col gap-2">
+                {(sidebarModal === "pinned" ? pinnedItems : recentItems).map(
+                  (item) => {
+                    const style = categoryStyles[item.category];
+
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => openAnnouncement(item)}
+                        className="flex items-center gap-3 rounded-xl border border-slate-100 p-3 text-left transition hover:bg-slate-50"
+                      >
+                        <span
+                          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${style.iconBg}`}
+                        >
+                          {style.icon}
+                        </span>
+
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-medium text-slate-800">
+                            {item.title}
+                          </span>
+
+                          <span className="block text-xs text-slate-400">
+                            {item.category} • {formatDateOnly(item.publishDate)}
+                          </span>
+                        </span>
+
+                        {item.pinned && <Pin className="h-4 w-4 shrink-0 text-blue-500" />}
+                      </button>
+                    );
+                  },
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {selectedAnnouncement && (
         <div
@@ -1333,6 +2407,13 @@ export default function AdminAnnouncements() {
                 <Calendar className="h-4 w-4" />
                 Published {selectedAnnouncement.date}
               </span>
+              <span
+                className="flex items-center gap-1.5"
+                title="Announcement created at this time"
+              >
+                <Clock className="h-4 w-4" />
+                Created {formatDateTime(selectedAnnouncement.createdAt)}
+              </span>
               <span className="flex items-center gap-1.5">
                 <User className="h-4 w-4" />
                 By {selectedAnnouncement.author}
@@ -1349,7 +2430,11 @@ export default function AdminAnnouncements() {
             <div className="mt-6 grid grid-cols-1 gap-3 border-t border-slate-100 pt-4 text-sm sm:grid-cols-2">
               <div>
                 <p className="text-xs text-slate-400">Audience</p>
-                <p className="font-medium text-slate-700">{selectedAnnouncement.audience}</p>
+                <p className="font-medium text-slate-700">
+                  {selectedAnnouncement.audience === "All Employees"
+                    ? "All Employees (everyone)"
+                    : audienceLabel(selectedAnnouncement)}
+                </p>
               </div>
               <div>
                 <p className="text-xs text-slate-400">Expiry date</p>
@@ -1357,7 +2442,56 @@ export default function AdminAnnouncements() {
                   {selectedAnnouncement.expiryDate || "No expiry date"}
                 </p>
               </div>
+
+              {selectedAnnouncement.audience === "Department-wise" && (
+                <div className="sm:col-span-2">
+                  <p className="text-xs text-slate-400">Departments</p>
+
+                  {selectedAnnouncement.targetDepartments.length === 0 ? (
+                    <p className="font-medium text-slate-700">
+                      No departments selected
+                    </p>
+                  ) : (
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {selectedAnnouncement.targetDepartments.map((id) => (
+                        <span
+                          key={id}
+                          className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700"
+                        >
+                          <Building2 className="h-3 w-3" />
+                          {departmentNameById(id)}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {selectedAnnouncement.audience === "Custom" && (
+                <div className="sm:col-span-2">
+                  <p className="text-xs text-slate-400">Employees</p>
+
+                  {selectedAnnouncement.targetEmployees.length === 0 ? (
+                    <p className="font-medium text-slate-700">
+                      No employees selected
+                    </p>
+                  ) : (
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {selectedAnnouncement.targetEmployees.map((id) => (
+                        <span
+                          key={id}
+                          className="inline-flex items-center gap-1.5 rounded-full bg-purple-50 px-2.5 py-1 text-xs font-medium text-purple-700"
+                        >
+                          <Users className="h-3 w-3" />
+                          {employeeNameById(id)}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
+
 
             {selectedAnnouncement.attachment && (
               <a
@@ -1373,6 +2507,19 @@ export default function AdminAnnouncements() {
             )}
           </div>
         </div>
+      )}
+
+      {pendingDelete && (
+        <ConfirmDialog
+          title="Delete this announcement?"
+          message={`"${pendingDelete.title}" will be removed permanently and will no longer be visible to its audience.`}
+          confirmLabel="Delete"
+          isWorking={isDeleting}
+          tone="danger"
+          icon={<Trash2 className="h-5 w-5 text-red-600" />}
+          onConfirm={() => void handleDeleteAnnouncement()}
+          onCancel={() => setPendingDelete(null)}
+        />
       )}
     </div>
   );

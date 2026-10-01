@@ -1,41 +1,48 @@
-from datetime import datetime
-from typing import Any
+from datetime import date, datetime
+from enum import Enum
 
-from pydantic import BaseModel
-
-
-class EmployeeAnnouncementCreate(BaseModel):
-    title: str
-    description: str
-    category: str
-    priority: str = "normal"
-    status: str = "published"
-    published_at: datetime | None = None
-    is_important: bool = False
+from pydantic import BaseModel, Field
 
 
-class EmployeeAnnouncementUpdate(BaseModel):
-    title: str | None = None
-    description: str | None = None
-    category: str | None = None
-    priority: str | None = None
-    status: str | None = None
-    published_at: datetime | None = None
-    is_important: bool | None = None
+class AnnouncementCategory(str, Enum):
+    COMPANY_NEWS = "Company News"
+    HR_POLICY = "HR & Policy"
+    EVENTS = "Events"
+    IT_SYSTEM = "IT & System"
+
+
+class AnnouncementPriority(str, Enum):
+    NORMAL = "Normal"
+    IMPORTANT = "Important"
+    URGENT = "Urgent"
+
+
+class AnnouncementAudience(str, Enum):
+    ALL_EMPLOYEES = "All Employees"
+    DEPARTMENT_WISE = "Department-wise"
+    CUSTOM = "Custom"
+
+
+class AttachmentInfo(BaseModel):
+    filename: str
+    url: str
+    content_type: str | None = None
+    size: int | None = None
 
 
 class EmployeeAnnouncementResponse(BaseModel):
     id: str
     title: str
     description: str
-    category: str
-    priority: str
-    status: str
-    published_at: Any
-    created_by: str | None = None
-    created_at: Any
-    updated_at: Any
-    is_important: bool
+    category: AnnouncementCategory
+    priority: AnnouncementPriority
+    audience: AnnouncementAudience
+    publish_date: date
+    expiry_date: date | None = None
+    pinned: bool
+    author_name: str
+    attachment: AttachmentInfo | None = None
+    created_at: datetime
 
 
 class EmployeeAnnouncementsResponse(BaseModel):

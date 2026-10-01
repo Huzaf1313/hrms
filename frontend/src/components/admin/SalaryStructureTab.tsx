@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Pencil, Plus, Trash2, X } from "lucide-react";
 import {
+  salaryBandFor,
   salaryStructureService,
   type Earning,
   type SalaryStructure,
@@ -24,6 +25,7 @@ function StructureCard({
   onDelete: (structure: SalaryStructure) => void;
 }) {
   const gross = grossOf(structure);
+  const band = salaryBandFor(structure);
 
   return (
     <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
@@ -32,6 +34,15 @@ function StructureCard({
       <div className="mt-4">
         <p className="text-[11px] font-medium text-slate-400">Salary Range</p>
         <p className="text-sm font-semibold text-slate-700">{structure.range}</p>
+      </div>
+
+      <div className="mt-3 rounded-lg bg-slate-50 px-3 py-2">
+        <p className="text-[11px] font-medium text-slate-400">Allowed Salary Amount</p>
+        <p className="text-sm font-semibold text-slate-700">
+          {band.min !== null ? formatCurrency(band.min) : "No min"}
+          {" – "}
+          {band.max !== null ? formatCurrency(band.max) : "No max"}
+        </p>
       </div>
 
       <div className="mt-4 border-t border-slate-100 pt-4">
@@ -103,8 +114,27 @@ function EditStructureModal({
 }) {
   const [name, setName] = useState(structure.name);
   const [range, setRange] = useState(structure.range);
+  const [minSalary, setMinSalary] = useState(
+    structure.min_salary != null ? String(structure.min_salary) : "",
+  );
+  const [maxSalary, setMaxSalary] = useState(
+    structure.max_salary != null ? String(structure.max_salary) : "",
+  );
   const [earnings, setEarnings] = useState<Earning[]>(structure.earnings);
   const [saving, setSaving] = useState(false);
+  const [bandError, setBandError] = useState<string | null>(null);
+
+  const parsedMin = minSalary.trim() === "" ? null : Number(minSalary);
+  const parsedMax = maxSalary.trim() === "" ? null : Number(maxSalary);
+
+  const bandInvalid =
+    (parsedMin !== null && !Number.isFinite(parsedMin)) ||
+    (parsedMax !== null && !Number.isFinite(parsedMax)) ||
+    (parsedMin !== null &&
+      parsedMax !== null &&
+      Number.isFinite(parsedMin) &&
+      Number.isFinite(parsedMax) &&
+      parsedMax < parsedMin);
 
   function updateAmount(index: number, value: string) {
     const amount = value === "" ? 0 : Number(value) || 0;
@@ -135,9 +165,30 @@ function EditStructureModal({
   const gross = earnings.reduce((sum, earning) => sum + earning.amount, 0);
 
   async function handleSave() {
+    if (bandInvalid) {
+      setBandError(
+        parsedMax !== null &&
+          parsedMin !== null &&
+          Number.isFinite(parsedMax) &&
+          Number.isFinite(parsedMin) &&
+          parsedMax < parsedMin
+          ? "Maximum salary cannot be lower than the minimum salary."
+          : "Min and max salary must be valid numbers.",
+      );
+      return;
+    }
+
+    setBandError(null);
     setSaving(true);
     try {
-      await onSave({ ...structure, name, range, earnings });
+      await onSave({
+        ...structure,
+        name,
+        range,
+        min_salary: parsedMin,
+        max_salary: parsedMax,
+        earnings,
+      });
     } finally {
       setSaving(false);
     }
@@ -179,6 +230,38 @@ function EditStructureModal({
               onChange={(event) => setRange(event.target.value)}
               className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
             />
+            <p className="mt-1 text-[11px] text-slate-400">Label only. Use the min/max below to enforce limits.</p>
+          </div>
+
+          <div>
+            <p className="mb-1 text-xs font-semibold text-slate-600">Allowed Salary Amount</p>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                value={minSalary}
+                onChange={(event) => {
+                  setMinSalary(event.target.value);
+                  setBandError(null);
+                }}
+                placeholder="Min"
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+              <span className="text-sm text-slate-400">to</span>
+              <input
+                type="number"
+                value={maxSalary}
+                onChange={(event) => {
+                  setMaxSalary(event.target.value);
+                  setBandError(null);
+                }}
+                placeholder="Max"
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+            </div>
+            <p className="mt-1 text-[11px] text-slate-400">
+              Employees can only be assigned a salary inside this band. Leave max empty for no upper limit.
+            </p>
+            {bandError && <p className="mt-1 text-[11px] text-rose-600">{bandError}</p>}
           </div>
 
           <div>
@@ -286,6 +369,8 @@ function SalaryStructureTab() {
     const payload = {
       name: updated.name.trim(),
       range: updated.range.trim(),
+      min_salary: updated.min_salary ?? null,
+      max_salary: updated.max_salary ?? null,
       earnings: updated.earnings,
     };
     let saved: SalaryStructure;

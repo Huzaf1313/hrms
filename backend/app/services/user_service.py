@@ -12,10 +12,40 @@ from app.repositories.user_repository import UserRepository
 from app.services.session_service import SessionService
 
 
+def resolve_full_name(user: dict) -> str:
+    """Login accounts store full_name; employee records store
+    first_name/last_name - support both shapes."""
+    if user.get("full_name"):
+        return user["full_name"]
+
+    return " ".join(
+        part
+        for part in [
+            user.get("first_name", ""),
+            user.get("last_name", ""),
+        ]
+        if part
+    ).strip()
+
+
 class UserService:
     def __init__(self):
         self.repository = UserRepository()
         self.session_service = SessionService()
+
+    async def list_manager_accounts(self):
+        """Accounts that can be picked as an employee's reporting manager."""
+        users = await self.repository.get_admin_accounts()
+
+        return [
+            {
+                "id": str(user["_id"]),
+                "full_name": resolve_full_name(user),
+                "email": user["email"],
+                "role": user["role"],
+            }
+            for user in users
+        ]
 
     async def register_user(
         self,

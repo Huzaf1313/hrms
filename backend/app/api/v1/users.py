@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, status
+from pydantic import BaseModel, EmailStr
 
 from app.api.deps import get_current_user, require_permission
-from app.core.roles import Permission
+from app.core.roles import Permission, UserRole
+from app.schemas.common import APIResponse
 from app.schemas.user import UserCreate, UserResponse
-from app.services.user_service import UserService
+from app.services.user_service import UserService, resolve_full_name
 
 
 router = APIRouter(
@@ -15,20 +17,29 @@ router = APIRouter(
 user_service = UserService()
 
 
-def resolve_full_name(user: dict) -> str:
-    """Login accounts store full_name; employee records store
-    first_name/last_name - support both shapes."""
-    if user.get("full_name"):
-        return user["full_name"]
+class ManagerAccount(BaseModel):
+    id: str
+    full_name: str
+    email: EmailStr
+    role: UserRole
 
-    return " ".join(
-        part
-        for part in [
-            user.get("first_name", ""),
-            user.get("last_name", ""),
-        ]
-        if part
-    ).strip()
+
+@router.get(
+    "/managers",
+    response_model=APIResponse[list[ManagerAccount]],
+)
+async def list_manager_accounts(
+    current_user: dict = Depends(
+        require_permission(Permission.USERS_READ)
+    ),
+):
+    managers = await user_service.list_manager_accounts()
+
+    return APIResponse(
+        success=True,
+        message="Reporting managers retrieved successfully",
+        data=managers,
+    )
 
 
 @router.get(

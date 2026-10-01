@@ -56,7 +56,8 @@ function AdminEmployeeTable({
   onEdit,
   onDeactivate,
   onDelete,
-}: AdminEmployeeTableProps) {
+}: 
+  AdminEmployeeTableProps) {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   function departmentName(departmentId: string): string {

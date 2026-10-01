@@ -43,6 +43,12 @@ class Permission(str, Enum):
     ATTENDANCE_UPDATE = "attendance.update"
     ATTENDANCE_APPROVE = "attendance.approve"
 
+    # Shifts
+    SHIFT_READ = "shift.read"
+    SHIFT_CREATE = "shift.create"
+    SHIFT_UPDATE = "shift.update"
+    SHIFT_DELETE = "shift.delete"
+
     # Leave
     LEAVE_READ = "leave.read"
     LEAVE_CREATE = "leave.create"
@@ -120,6 +126,9 @@ EMPLOYEE_PERMISSIONS = {
     Permission.ATTENDANCE_READ,
     Permission.ATTENDANCE_CREATE,
 
+    # Shifts (own shift only - routes scope this down to the caller)
+    Permission.SHIFT_READ,
+
     # Leave
     Permission.LEAVE_READ,
     Permission.LEAVE_CREATE,
@@ -142,13 +151,11 @@ EMPLOYEE_PERMISSIONS = {
     # Payslips
     Permission.PAYSLIPS_READ,
 
-    # Announcements
-    Permission.ANNOUNCEMENT_READ,
-
     # Own Profile
     Permission.SELF_PROFILE_READ,
     Permission.SELF_PROFILE_UPDATE,
 }
+
 
 
 ROLE_PERMISSIONS: dict[UserRole, set[Permission]] = {

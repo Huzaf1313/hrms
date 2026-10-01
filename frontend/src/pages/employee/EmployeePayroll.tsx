@@ -12,7 +12,6 @@ import {
   Landmark,
   ShieldCheck,
   Wallet,
-  X,
 } from "lucide-react";
 import { api, downloadFile } from "../../services/api";
 
@@ -279,7 +278,7 @@ const salaryComponents: SalaryComponent[] = latestPayroll
 
     const link = document.createElement("a");
     link.href = downloadUrl;
-    link.download = `payslip_${payslip.month.replace(/\s+/g, "_")}.pdf`;
+     link.download = `payslip_${payslip.month.replace(/\s+/g, "_")}.pdf`;
 
     document.body.appendChild(link);
     link.click();
@@ -900,43 +899,10 @@ const salaryComponents: SalaryComponent[] = latestPayroll
 
       {/* Payslip View Modal */}
       {selectedPayslip && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) {
-              setSelectedPayslip(null);
-            }
-          }}
-        >
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedPayslip(null); }}>
           <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">Payslip Details</h2>
-                <p className="mt-0.5 text-sm text-slate-500">{selectedPayslip.month}</p>
-              </div>
-              <button type="button" onClick={() => setSelectedPayslip(null)} className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700" aria-label="Close">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="space-y-5 p-5">
-              <div className="rounded-xl bg-slate-50 p-4">
-                <div className="flex items-center justify-between"><span className="text-sm text-slate-500">Net Salary</span><span className="text-xl font-bold text-slate-900">{formatCurrency(selectedPayslip.amount)}</span></div>
-                <div className="mt-3 flex items-center justify-between border-t border-slate-200 pt-3"><span className="text-sm text-slate-500">Paid On</span><span className="text-sm font-semibold text-slate-700">{selectedPayslip.paidOn}</span></div>
-                <div className="mt-3 flex items-center justify-between"><span className="text-sm text-slate-500">Status</span><span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700"><CircleCheck className="h-3.5 w-3.5" />{selectedPayslip.status}</span></div>
-              </div>
-
-              <div>
-                <h3 className="text-sm font-bold text-slate-800">Salary Summary</h3>
-                <div className="mt-3 space-y-3">
-                  <div className="flex justify-between text-sm"><span className="text-slate-500">Gross Salary</span><span className="font-semibold text-slate-800">{formatCurrency(grossSalary)}</span></div>
-                  <div className="flex justify-between text-sm"><span className="text-slate-500">Total Deductions</span><span className="font-semibold text-slate-800">{formatCurrency(totalDeductions)}</span></div>
-                  <div className="flex justify-between border-t border-slate-100 pt-3 text-sm"><span className="font-semibold text-slate-700">Net Salary</span><span className="font-bold text-blue-600">{formatCurrency(netSalary)}</span></div>
-                </div>
-              </div>
-
-              <button type="button" onClick={() => handleDownloadPayslip(selectedPayslip)} className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"><ArrowDownToLine className="h-4 w-4" />Download Payslip</button>
-            </div>
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4"><div><h2 className="text-lg font-bold text-slate-900">Payslip Details</h2><p className="mt-0.5 text-sm text-slate-500">{selectedPayslip.month}</p></div><button type="button" onClick={() => setSelectedPayslip(null)} className="h-9 w-9 rounded-lg text-slate-400" aria-label="Close">x</button></div>
+            <div className="space-y-5 p-5"><div className="rounded-xl bg-slate-50 p-4"><div className="flex items-center justify-between"><span className="text-sm text-slate-500">Net Salary</span><span className="text-xl font-bold text-slate-900">{formatCurrency(selectedPayslip.amount)}</span></div><div className="mt-3 flex items-center justify-between border-t border-slate-200 pt-3"><span className="text-sm text-slate-500">Paid On</span><span className="text-sm font-semibold text-slate-700">{selectedPayslip.paidOn}</span></div><div className="mt-3 flex items-center justify-between"><span className="text-sm text-slate-500">Status</span><span className="text-sm font-semibold text-emerald-700">{selectedPayslip.status}</span></div></div><div><h3 className="text-sm font-bold text-slate-800">Salary Summary</h3><div className="mt-3 space-y-3"><div className="flex justify-between text-sm"><span className="text-slate-500">Gross Salary</span><span className="font-semibold text-slate-800">{formatCurrency(grossSalary)}</span></div><div className="flex justify-between text-sm"><span className="text-slate-500">Total Deductions</span><span className="font-semibold text-slate-800">{formatCurrency(totalDeductions)}</span></div><div className="flex justify-between border-t border-slate-100 pt-3 text-sm"><span className="font-semibold text-slate-700">Net Salary</span><span className="font-bold text-blue-600">{formatCurrency(netSalary)}</span></div></div></div><button type="button" onClick={() => handleDownloadPayslip(selectedPayslip)} className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white"><ArrowDownToLine className="h-4 w-4" />Download Payslip</button></div>
           </div>
         </div>
       )}

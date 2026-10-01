@@ -3,6 +3,7 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Bell, ChevronDown, LogOut, Menu } from "lucide-react";
 
 import EmployeeSidebar from "../pages/employee/EmployeeSidebar";
+import ErrorBoundary from "../components/ErrorBoundary";
 import DatePicker from "../components/DatePicker";
 
 const pageTitles: Record<string, string> = {
@@ -132,7 +133,11 @@ function EmployeeLayout({ onLogout }: { onLogout: () => void }) {
           </div>
         </header>
 
-        <Outlet />
+        {/* Scoped so a crash in one employee page leaves the header and
+            sidebar usable. */}
+        <ErrorBoundary label={pageTitle}>
+          <Outlet />
+        </ErrorBoundary>
       </div>
     </div>
   );

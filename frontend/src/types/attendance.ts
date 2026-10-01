@@ -21,15 +21,26 @@ export interface AttendanceRecord {
   id: string;
   employee: AttendanceEmployee;
   date: string;
+  shift_id?: string | null;
   shift: string;
   shift_start?: string | null;
   shift_end?: string | null;
+  shift_duration_minutes?: number | null;
   in_time?: string | null;
   out_time?: string | null;
   working_hours?: string | null;
   check_in?: string | null;
   check_out?: string | null;
   total_hours?: number | string | null;
+  /** Numeric source of truth. working_hours above is display-only text. */
+  worked_minutes?: number | null;
+  overtime_minutes?: number;
+  overtime_display?: string | null;
+  late_minutes?: number;
+  late_display?: string | null;
+  is_overtime?: boolean;
+  is_late?: boolean;
+  is_overnight?: boolean;
   status: AttendanceStatus;
   is_regularized: boolean;
   notes?: string | null;
@@ -50,6 +61,10 @@ export interface AttendanceDepartmentPresence {
   present_percentage: number;
 }
 
+export interface AttendanceOptions {
+  work_locations: string[];
+}
+
 export interface AttendanceSummary {
   date: string;
   total_employees: number;
@@ -62,5 +77,8 @@ export interface AttendanceSummary {
   absent_count: number;
   absent_percentage: number;
   missing_punch_count: number;
+  overtime_employee_count?: number;
+  overtime_total_minutes?: number;
+  overtime_total_display?: string | null;
   department_presence: AttendanceDepartmentPresence[];
 }

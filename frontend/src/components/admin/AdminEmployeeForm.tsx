@@ -3,9 +3,20 @@ import type { ChangeEvent, FormEvent } from "react";
 
 import type { Department } from "../../types/department";
 import type { Employee, EmployeeCreate } from "../../types/employee";
+import type { Shift } from "../../types/shift";
+import { formatDuration, formatShiftTime } from "../../services/shiftService";
+import {
+  LEGACY_SALARY_STRUCTURE_LABELS,
+  salaryBandFor,
+  type SalaryStructure,
+} from "../../services/admin_salary_structure_service";
+import type { ManagerAccount } from "../../services/userService";
 
 interface AdminEmployeeFormProps {
   departments: Department[];
+  salaryStructures: SalaryStructure[];
+  managers: ManagerAccount[];
+  shifts: Shift[];
   initialEmployee?: Employee;
   isSubmitting: boolean;
   errorMessage: string | null;
@@ -40,6 +51,7 @@ function toFormState(employee?: Employee): EmployeeCreate {
       reporting_manager: "",
       salary_structure: "",
       salary: "",
+      shift_id: "",
     };
   }
 
@@ -61,11 +73,15 @@ function toFormState(employee?: Employee): EmployeeCreate {
     reporting_manager: employee.reporting_manager ?? "",
     salary_structure: employee.salary_structure ?? "",
     salary: employee.salary ?? "",
+    shift_id: employee.shift_id ?? "",
   };
 }
 
 function AdminEmployeeForm({
   departments,
+  salaryStructures,
+  managers,
+  shifts,
   initialEmployee,
   isSubmitting,
   errorMessage,
@@ -80,20 +96,92 @@ function AdminEmployeeForm({
 
   const [showPassword, setShowPassword] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [salaryError, setSalaryError] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [lastInitialEmployee, setLastInitialEmployee] = useState(
-    initialEmployee,
-  );
+  const [lastInitialEmployee, setLastInitialEmployee] =
+    useState(initialEmployee);
 
   if (lastInitialEmployee !== initialEmployee) {
     setLastInitialEmployee(initialEmployee);
     setForm(toFormState(initialEmployee));
     setPhotoPreview(null);
+    setSalaryError(null);
   }
 
   const isEditMode = Boolean(initialEmployee);
+
+  const selectedStructure = salaryStructures.find(
+    (structure) => structure.name === form.salary_structure,
+  );
+
+  // Tolerates a stale or missing prop: a parent running an older module can
+  // pass undefined, and an unguarded .find()/.map() there blanks the form.
+  const availableShifts: Shift[] = Array.isArray(shifts) ? shifts : [];
+
+  const selectedShift = availableShifts.find(
+    (shift) => shift.id === form.shift_id,
+  );
+
+  const legacyStructureName =
+    form.salary_structure &&
+    !selectedStructure &&
+    LEGACY_SALARY_STRUCTURE_LABELS[form.salary_structure]
+      ? form.salary_structure
+      : null;
+
+  const salaryBand = salaryBandFor(selectedStructure);
+
+  const currentManager = form.reporting_manager?.trim() ?? "";
+
+  const managerIsListed = managers.some(
+    (manager) =>
+      manager.full_name.trim().toLowerCase() === currentManager.toLowerCase(),
+  );
+
+  const unmatchedManager =
+    currentManager !== "" && !managerIsListed ? currentManager : null;
+
+  function validateSalary(): boolean {
+    if (!form.salary_structure) {
+      setSalaryError(null);
+      return true;
+    }
+
+    const { min, max } = salaryBand;
+
+    if (min === null && max === null) {
+      setSalaryError(null);
+      return true;
+    }
+
+    const raw = form.salary?.trim() ?? "";
+
+    if (raw === "" || !Number.isFinite(Number(raw))) {
+      setSalaryError(null);
+      return true;
+    }
+
+    const amount = Number(raw);
+
+    if (min !== null && amount < min) {
+      setSalaryError(
+        `Salary must be at least ₹${min.toLocaleString("en-IN")} for ${selectedStructure?.name}.`,
+      );
+      return false;
+    }
+
+    if (max !== null && amount > max) {
+      setSalaryError(
+        `Salary cannot be more than ₹${max.toLocaleString("en-IN")} for ${selectedStructure?.name}.`,
+      );
+      return false;
+    }
+
+    setSalaryError(null);
+    return true;
+  }
 
   function updateField<K extends keyof EmployeeCreate>(
     key: K,
@@ -164,6 +252,10 @@ function AdminEmployeeForm({
 
     setPasswordError(null);
 
+    if (!validateSalary()) {
+      return;
+    }
+
     const payload: EmployeeCreate = {
       ...form,
       password: !isEditMode && password ? password : undefined,
@@ -172,6 +264,7 @@ function AdminEmployeeForm({
       address: form.address || undefined,
       work_location: form.work_location || undefined,
       reporting_manager: form.reporting_manager || undefined,
+      shift_id: form.shift_id || undefined,
     };
 
     if (isEditMode && !form.password) {
@@ -315,6 +408,54 @@ function AdminEmployeeForm({
               ))}
             </select>
           </div>
+
+{/* SHIFT */}
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
+                Shift
+              </label>
+
+              <select
+                value={form.shift_id ?? ""}
+                onChange={(event) =>
+                  updateField("shift_id", event.target.value)
+                }
+                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10 disabled:cursor-not-allowed disabled:bg-gray-50"
+              >
+                <option value="">
+                  {availableShifts.length === 0
+                    ? "No shifts available yet"
+                    : "No shift assigned"}
+                </option>
+                {availableShifts.map((shift) => (
+                  <option key={shift.id} value={shift.id}>
+                    {shift.name} ({formatShiftTime(shift.start_time)} -{" "}
+                    {formatShiftTime(shift.end_time)},{" "}
+                    {formatDuration(shift.duration_minutes)})
+                  </option>
+                ))}
+              </select>
+
+              {availableShifts.length === 0 ? (
+                <p className="mt-1.5 text-xs font-medium text-amber-600">
+                  No shifts exist yet. Run{" "}
+                  <code className="rounded bg-amber-50 px-1">
+                    python seed_shifts.py
+                  </code>{" "}
+                  in the backend folder, or add one from Attendance &rarr;
+                  Manage Shifts. Overtime cannot be calculated until a shift
+                  exists.
+                </p>
+              ) : (
+                <p className="mt-1.5 text-xs text-gray-500">
+                  {selectedShift
+                    ? `Overtime is worked time beyond this ${formatDuration(
+                        selectedShift.duration_minutes,
+                      )} shift.`
+                    : "Assign a shift so attendance can be measured against it."}
+                </p>
+              )}
+            </div>
 
           {/* FIRST NAME */}
           <div>
@@ -558,14 +699,35 @@ function AdminEmployeeForm({
               Reporting Manager
             </label>
 
-            <input
+            <select
               value={form.reporting_manager ?? ""}
               onChange={(event) =>
                 updateField("reporting_manager", event.target.value)
               }
-              placeholder="Manager name"
-              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
-            />
+              className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
+            >
+              <option value="">Select reporting manager</option>
+
+              {unmatchedManager && (
+                <option value={unmatchedManager}>
+                  {unmatchedManager} (legacy)
+                </option>
+              )}
+
+              {managers.map((manager) => (
+                <option key={manager.id} value={manager.full_name}>
+                  {manager.full_name}
+                </option>
+              ))}
+            </select>
+
+            <p className="mt-1.5 text-xs text-gray-400">
+              {managers.length === 0
+                ? "No HR or manager accounts available"
+                : unmatchedManager
+                  ? "Previously typed manually — please re-select a current account"
+                  : "HR and manager accounts only"}
+            </p>
           </div>
 
           {/* SALARY STRUCTURE */}
@@ -578,7 +740,7 @@ function AdminEmployeeForm({
               <select
                 value={form.salary_structure ?? ""}
                 onChange={(event) => {
-                  updateField("salary_structure", event.target.value as EmployeeCreate["salary_structure"]);
+                  updateField("salary_structure", event.target.value);
                   updateField("salary", "");
                 }}
                 className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#456b54] focus:ring-2 focus:ring-[#456b54]/10"
@@ -586,15 +748,26 @@ function AdminEmployeeForm({
                 <option value="" disabled>
                   Select Salary Structure
                 </option>
-                <option value="basic">Structure A – Basic</option>
-                <option value="standard">Structure B – Standard</option>
-                <option value="professional">Structure C – Professional</option>
+
+                {legacyStructureName && (
+                  <option value={legacyStructureName}>
+                    {LEGACY_SALARY_STRUCTURE_LABELS[legacyStructureName]} (legacy)
+                  </option>
+                )}
+
+                {salaryStructures.map((structure) => (
+                  <option key={structure.id} value={structure.name}>
+                    {structure.name}
+                  </option>
+                ))}
               </select>
 
               <p className="mt-1.5 text-xs text-gray-400">
-                {form.salary_structure === "basic" && "Below ₹10,000"}
-                {form.salary_structure === "standard" && "₹10,000 – ₹20,000"}
-                {form.salary_structure === "professional" && "Above ₹20,000"}
+                {selectedStructure
+                  ? `Range: ${selectedStructure.range} · Gross: ₹${selectedStructure.gross_salary.toLocaleString("en-IN")}`
+                  : legacyStructureName
+                    ? "Previously hardcoded structure — please re-assign a current one"
+                    : "Choose a structure from Payroll → Salary Structure"}
               </p>
             </div>
 
@@ -603,75 +776,40 @@ function AdminEmployeeForm({
                 Salary Amount
               </label>
 
-                <input
-                  type="number"
-                  min={
-                    form.salary_structure === "standard"
-                      ? 10000
-                      : form.salary_structure === "professional"
-                        ? 20001
-                        : 1
-                  }
-                  max={
-                    form.salary_structure === "basic"
-                      ? 9999
-                      : form.salary_structure === "standard"
-                        ? 20000
-                        : undefined
-                  }
-                  required={Boolean(form.salary_structure)}
-                  value={form.salary ?? ""}
-                  onChange={(event) => {
-                    const value = event.target.value;
-                    const salary = Number(value);
-
-                    if (
-                      value !== "" &&
-                      form.salary_structure === "basic" &&
-                      salary >= 10000
-                    ) {
-                      return;
-                    }
-
-                    if (
-                      value !== "" &&
-                      form.salary_structure === "standard" &&
-                      salary > 20000
-                    ) {
-                      return;
-                    }
-
-                    updateField("salary", value);
-                  }}
-                  onBlur={() => {
-                    const salary = Number(form.salary);
-
-                    if (
-                      !form.salary ||
-                      !Number.isFinite(salary) ||
-                      (form.salary_structure === "basic" && salary < 1) ||
-                      (form.salary_structure === "standard" &&
-                        salary < 10000) ||
-                      (form.salary_structure === "professional" &&
-                        salary <= 20000)
-                    ) {
-                      updateField("salary", "");
-                    }
-                  }}
+              <input
+                type="number"
+                min={salaryBand.min ?? undefined}
+                max={salaryBand.max ?? undefined}
+                required={Boolean(form.salary_structure)}
+                value={form.salary ?? ""}
+                onChange={(event) => {
+                  updateField("salary", event.target.value);
+                  setSalaryError(null);
+                }}
+                onBlur={validateSalary}
                 placeholder="Enter salary"
                 disabled={!form.salary_structure}
-                className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#456b54] focus:ring-2 focus:ring-[#456b54]/10 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                aria-invalid={Boolean(salaryError)}
+                className={`w-full rounded-xl border px-4 py-3 text-sm outline-none transition focus:ring-2 disabled:bg-gray-100 disabled:cursor-not-allowed ${
+                  salaryError
+                    ? "border-red-400 focus:border-red-500 focus:ring-red-500/10"
+                    : "border-gray-200 focus:border-[#456b54] focus:ring-[#456b54]/10"
+                }`}
               />
 
-              <p className="mt-1.5 text-xs text-gray-400">
-                {!form.salary_structure
-                  ? "Select a salary structure first"
-                  : form.salary_structure === "basic"
-                    ? "Allowed: ₹1 – ₹9,999"
-                    : form.salary_structure === "standard"
-                      ? "Allowed: ₹10,000 – ₹20,000"
-                      : "Allowed: ₹20,001 and above"}
-              </p>
+              {salaryError ? (
+                <p className="mt-1.5 text-xs text-red-600">{salaryError}</p>
+              ) : (
+                <p className="mt-1.5 text-xs text-gray-400">
+                  {!form.salary_structure
+                    ? "Select a salary structure first"
+                    : salaryBand.min === null && salaryBand.max === null
+                      ? "No salary limits set on this structure"
+                      : salaryBand.max === null
+                        ? `Minimum ₹${salaryBand.min?.toLocaleString("en-IN")} · Structure gross: ₹${selectedStructure?.gross_salary.toLocaleString("en-IN")}`
+                        : `Allowed ₹${salaryBand.min?.toLocaleString("en-IN")} – ₹${salaryBand.max.toLocaleString("en-IN")}`}
+                </p>
+              )}
             </div>
           </div>
 

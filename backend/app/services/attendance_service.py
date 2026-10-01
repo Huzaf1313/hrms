@@ -6,6 +6,7 @@ from app.core.exceptions import AppException
 from app.repositories.attendance_repository import AttendanceRepository
 from app.repositories.department_repository import DepartmentRepository
 from app.repositories.employee_repository import EmployeeRepository
+from app.repositories.shift_repository import ShiftRepository
 from app.schemas.attendance import (
     AttendanceListResponse,
     AttendanceResponse,
@@ -13,6 +14,13 @@ from app.schemas.attendance import (
     DepartmentPresence,
     EmployeeSummary,
     MyAttendanceStatus,
+)
+from app.services.attendance_calculation import (
+    compute_work_metrics,
+    format_minutes_compact,
+    format_minutes_display,
+    parse_instant,
+    shift_duration_minutes,
 )
 from app.utils.filtering import build_filter
 from app.utils.pagination import PaginationParams
@@ -46,48 +54,27 @@ def business_today() -> date:
     return datetime.now(IST).date()
 
 
-def calculate_working_hours(in_time: str | None, out_time: str | None) -> str | None:
-    if not in_time or not out_time:
+def calculate_working_hours(
+    in_time: str | None,
+    out_time: str | None,
+    shift_duration: int | None = None,
+    shift_start: str | None = None,
+) -> str | None:
+    """Display string such as "9H 14M". Delegates to the shared calculator so
+    overnight shifts are measured correctly."""
+    metrics = compute_work_metrics(
+        in_time,
+        out_time,
+        shift_duration=shift_duration,
+        shift_start=shift_start,
+    )
+
+    if metrics.worked_minutes is None:
         return None
 
-    def parse_time(value: str | datetime) -> datetime | None:
-        if isinstance(value, datetime):
-            if value.tzinfo is not None:
-                return value.astimezone(timezone.utc).replace(tzinfo=None)
-            return value
+    hours, remainder = divmod(metrics.worked_minutes, 60)
 
-        text = value.strip()
-
-        for time_format in ("%I:%M %p", "%H:%M"):
-            try:
-                return datetime.strptime(text, time_format)
-            except ValueError:
-                pass
-
-        try:
-            iso_text = text if text.endswith("Z") or "+" in text else f"{text}Z"
-            parsed = datetime.fromisoformat(iso_text.replace("Z", "+00:00"))
-            if parsed.tzinfo is not None:
-                return parsed.astimezone(timezone.utc).replace(tzinfo=None)
-            return parsed
-        except ValueError:
-            return None
-
-    start = parse_time(in_time)
-    end = parse_time(out_time)
-
-    if not start or not end:
-        return None
-
-    delta = end - start
-
-    if delta.total_seconds() <= 0:
-        return None
-
-    hours, remainder = divmod(int(delta.total_seconds()), 3600)
-    minutes = remainder // 60
-
-    return f"{hours}H {minutes}M"
+    return f"{hours}H {remainder}M"
 
 def format_punch_time(value) -> str | None:
     if value is None:
@@ -143,18 +130,147 @@ def format_total_hours(value) -> str | None:
     return str(value)
 
 
+def record_shift_duration(record: dict) -> int | None:
+    """Shift length for a stored record.
+
+    Records written after overtime tracking carry shift_duration_minutes.
+    Older ones only have the raw shift times, so the duration is derived from
+    them rather than being lost.
+    """
+    stored = record.get("shift_duration_minutes")
+
+    if stored is not None:
+        return stored
+
+    return shift_duration_minutes(
+        record.get("shift_start"),
+        record.get("shift_end"),
+    )
+
+
+def record_has_overtime(record: dict) -> bool:
+    """Whether a stored attendance document has overtime, for filtering.
+
+    Records written before overtime tracking have no stored minutes, so they
+    are measured on the fly against their snapshotted shift.
+    """
+    stored = record.get("overtime_minutes")
+
+    if stored is not None:
+        return stored > 0
+
+    metrics = compute_work_metrics(
+        record.get("in_time") or record.get("check_in"),
+        record.get("out_time") or record.get("check_out"),
+        shift_duration=record_shift_duration(record),
+        shift_start=record.get("shift_start"),
+    )
+
+    return metrics.overtime_minutes > 0
+
+
+def record_overtime_minutes(record: dict) -> int:
+    stored = record.get("overtime_minutes")
+
+    if stored is not None:
+        return stored
+
+    metrics = compute_work_metrics(
+        record.get("in_time") or record.get("check_in"),
+        record.get("out_time") or record.get("check_out"),
+        shift_duration=record_shift_duration(record),
+        shift_start=record.get("shift_start"),
+    )
+
+    return metrics.overtime_minutes
+
+
 class AttendanceService:
     def __init__(self):
         self.repository = AttendanceRepository()
         self.employee_repository = EmployeeRepository()
         self.department_repository = DepartmentRepository()
+        self.shift_repository = ShiftRepository()
 
     async def _get_employee(self, employee_id: str):
         employee = await self.employee_repository.get_by_id(employee_id)
+
         if employee:
             return employee
 
         return await self.employee_repository.get_by_employee_id(employee_id)
+
+    async def _shift_by_id(self, shift_id: str | None) -> dict | None:
+        if not shift_id:
+            return None
+
+        return await self.shift_repository.get_by_id(shift_id)
+
+    async def _resolve_shift(
+        self,
+        employee: dict | None,
+        data: dict,
+        existing: dict | None = None,
+    ) -> dict:
+        """Decide which shift applies to a record, in priority order:
+
+        1. An explicit ``shift_id`` on the request (a one-day override such as
+           a shift swap).
+        2. The shift already snapshotted on the record being re-marked, so a
+           second edit does not silently discard the original shift.
+        3. The employee's own assigned ``shift_id``.
+        4. Explicit ``shift_start`` / ``shift_end`` times on the request, or
+           failing that on the existing record.
+        5. The legacy free-text ``shift`` label, which carries no duration and
+           therefore yields zero overtime rather than a guess.
+
+        The result is snapshotted onto the attendance document so that later
+        edits to a shift never rewrite historical records.
+        """
+        shift = await self._shift_by_id(data.get("shift_id"))
+
+        if shift is None and existing:
+            shift = await self._shift_by_id(existing.get("shift_id"))
+
+        if shift is None and employee:
+            shift = await self._shift_by_id(employee.get("shift_id"))
+
+        if shift:
+            start_time = shift.get("start_time")
+            end_time = shift.get("end_time")
+
+            return {
+                "shift_id": str(shift["_id"]),
+                "shift": shift.get("name", "General"),
+                "shift_start": start_time,
+                "shift_end": end_time,
+                "shift_duration_minutes": shift_duration_minutes(
+                    start_time, end_time
+                ),
+            }
+
+        shift_start = data.get("shift_start") or (
+            existing.get("shift_start") if existing else None
+        )
+        shift_end = data.get("shift_end") or (
+            existing.get("shift_end") if existing else None
+        )
+
+        shift_name = data.get("shift")
+
+        if not shift_name and existing:
+            shift_name = existing.get("shift")
+
+        return {
+            "shift_id": None,
+            "shift": shift_name or "General",
+            "shift_start": shift_start,
+            "shift_end": shift_end,
+            "shift_duration_minutes": shift_duration_minutes(
+                shift_start, shift_end
+            ),
+        }
+
 
     async def _build_employee_summary_map(
         self,
@@ -192,10 +308,33 @@ class AttendanceService:
         in_time = attendance.get("in_time") or attendance.get("check_in")
         out_time = attendance.get("out_time") or attendance.get("check_out")
         working_hours = attendance.get("working_hours")
+
         if working_hours is None:
             working_hours = attendance.get("total_hours")
-        if working_hours is None:
-            working_hours = calculate_working_hours(in_time, out_time)
+
+        # Numeric minutes are the source of truth. Records written before
+        # overtime tracking have none, so fall back to measuring on the fly.
+        worked_minutes = attendance.get("worked_minutes")
+        overtime_minutes = attendance.get("overtime_minutes") or 0
+        late_minutes = attendance.get("late_minutes") or 0
+        is_overnight = attendance.get("is_overnight", False)
+
+        shift_duration = record_shift_duration(attendance)
+
+        if worked_minutes is None:
+            metrics = compute_work_metrics(
+                in_time,
+                out_time,
+                shift_duration=shift_duration,
+                shift_start=attendance.get("shift_start"),
+            )
+            worked_minutes = metrics.worked_minutes
+            overtime_minutes = metrics.overtime_minutes
+            late_minutes = metrics.late_minutes
+            is_overnight = metrics.is_overnight
+
+        if working_hours is None and worked_minutes is not None:
+            working_hours = format_minutes_display(worked_minutes)
 
         employee_summary = EmployeeSummary(
             id=str(employee["_id"]) if employee else attendance["employee_id"],
@@ -212,9 +351,11 @@ class AttendanceService:
             id=str(attendance["_id"]),
             employee=employee_summary,
             date=attendance["date"].date(),
+            shift_id=attendance.get("shift_id"),
             shift=attendance.get("shift", "General"),
             shift_start=attendance.get("shift_start"),
             shift_end=attendance.get("shift_end"),
+            shift_duration_minutes=shift_duration,
             in_time=format_punch_time(
                 in_time
             ),
@@ -222,10 +363,19 @@ class AttendanceService:
                 out_time
             ),
             working_hours=format_total_hours(working_hours),
+            worked_minutes=worked_minutes,
+            overtime_minutes=overtime_minutes,
+            overtime_display=format_minutes_compact(overtime_minutes),
+            late_minutes=late_minutes,
+            late_display=format_minutes_compact(late_minutes),
+            is_overtime=overtime_minutes > 0,
+            is_late=late_minutes > 0,
+            is_overnight=bool(is_overnight),
             status=(attendance.get("status") or "present").lower(),
             is_regularized=attendance.get("is_regularized", False),
             notes=attendance.get("notes"),
         )
+
 
     async def mark_attendance(self, data: dict, marked_by: str | None = None):
         employee = await self._get_employee(data["employee_id"])
@@ -240,21 +390,38 @@ class AttendanceService:
             attendance_date=attendance_date,
         )
 
-        working_hours = calculate_working_hours(
-            data.get("in_time"),
-            data.get("out_time"),
+        # Re-marking an existing day keeps the shift already on the record
+        # unless the request overrides it.
+        shift = await self._resolve_shift(employee, data, existing=existing)
+
+        in_time = data.get("in_time")
+        out_time = data.get("out_time")
+
+        metrics = compute_work_metrics(
+            in_time,
+            out_time,
+            shift_duration=shift["shift_duration_minutes"],
+            shift_start=shift["shift_start"],
+        )
+
+        working_hours = (
+            f"{metrics.worked_minutes // 60}H {metrics.worked_minutes % 60}M"
+            if metrics.worked_minutes is not None
+            else None
         )
 
         record = {
             "employee_id": employee["employee_id"],
             "department_id": employee["department_id"],
             "date": attendance_date,
-            "shift": data.get("shift", "General"),
-            "shift_start": data.get("shift_start"),
-            "shift_end": data.get("shift_end"),
-            "in_time": data.get("in_time"),
-            "out_time": data.get("out_time"),
+            **shift,
+            "in_time": in_time,
+            "out_time": out_time,
             "working_hours": working_hours,
+            "worked_minutes": metrics.worked_minutes,
+            "overtime_minutes": metrics.overtime_minutes,
+            "late_minutes": metrics.late_minutes,
+            "is_overnight": metrics.is_overnight,
             "status": data["status"].lower() if data.get("status") else "present",
             "notes": data.get("notes"),
             "updated_at": datetime.utcnow(),
@@ -331,11 +498,29 @@ class AttendanceService:
         status: str | None,
         search: str | None,
         pagination: PaginationParams,
+        shift_id: str | None = None,
+        overtime_only: bool = False,
+        work_location: str | None = None,
     ) -> AttendanceListResponse:
         selected_date = attendance_date or business_today()
         date_filter = {"date": to_datetime(selected_date)}
+
+        employee_filters = build_filter({"department_id": department_id})
+
+        # Strip before testing: "   " is truthy in Python and would otherwise
+        # filter on a literal-blank value and match no employees.
+        location_filter = (work_location or "").strip()
+
+        if location_filter:
+            # Anchored and case-insensitive so "kolhapur" matches "Kolhapur"
+            # while a stray "." stays a literal instead of a wildcard.
+            employee_filters["work_location"] = {
+                "$regex": f"^{re.escape(location_filter)}$",
+                "$options": "i",
+            }
+
         employees = await self.employee_repository.get_all(
-            filters=build_filter({"department_id": department_id}),
+            filters=employee_filters,
             skip=0,
             limit=1000,
         )
@@ -383,7 +568,14 @@ class AttendanceService:
             if status and record["status"] != status.lower():
                 continue
 
+            if shift_id and record.get("shift_id") != shift_id:
+                continue
+
+            if overtime_only and not record_has_overtime(record):
+                continue
+
             roster.append((record, employee))
+
 
         total = len(roster)
         page_roster = roster[pagination.skip : pagination.skip + pagination.limit]
@@ -414,6 +606,22 @@ class AttendanceService:
             page=pagination.page,
             limit=pagination.limit,
         )
+
+    async def get_work_locations(self) -> list[str]:
+        """Distinct work locations across all employees, for the filter.
+
+        Reads the employee collection directly, matching how this service
+        already uses employee_repository.collection for counts.
+        """
+        values = await self.employee_repository.collection.distinct(
+            "work_location",
+            {
+                "employee_id": {"$exists": True},
+                "work_location": {"$nin": [None, ""]},
+            },
+        )
+
+        return sorted(value for value in values if isinstance(value, str) and value.strip())
 
     async def get_employee_attendance(
         self,
@@ -454,18 +662,58 @@ class AttendanceService:
             if value is not None
         }
 
+        employee = await self._get_employee(attendance["employee_id"])
+
+        # A shift change re-derives the duration, which changes overtime.
+        shift_changed = any(
+            key in update_data
+            for key in ("shift_id", "shift", "shift_start", "shift_end")
+        )
+
+        if shift_changed:
+            shift = await self._resolve_shift(employee, update_data, existing=attendance)
+
+            update_data.update(shift)
+        else:
+            shift = {
+                "shift_id": attendance.get("shift_id"),
+                "shift": attendance.get("shift") or "General",
+                "shift_start": attendance.get("shift_start"),
+                "shift_end": attendance.get("shift_end"),
+                "shift_duration_minutes": attendance.get(
+                    "shift_duration_minutes"
+                ),
+            }
+
         in_time = update_data.get("in_time", attendance.get("in_time"))
         out_time = update_data.get("out_time", attendance.get("out_time"))
 
-        if "in_time" in update_data or "out_time" in update_data:
-            update_data["working_hours"] = calculate_working_hours(in_time, out_time)
+        times_changed = "in_time" in update_data or "out_time" in update_data
+
+        if times_changed or shift_changed:
+            metrics = compute_work_metrics(
+                in_time,
+                out_time,
+                shift_duration=shift["shift_duration_minutes"],
+                shift_start=shift["shift_start"],
+            )
+
+            update_data["working_hours"] = (
+                f"{metrics.worked_minutes // 60}H "
+                f"{metrics.worked_minutes % 60}M"
+                if metrics.worked_minutes is not None
+                else None
+            )
+            update_data["worked_minutes"] = metrics.worked_minutes
+            update_data["overtime_minutes"] = metrics.overtime_minutes
+            update_data["late_minutes"] = metrics.late_minutes
+            update_data["is_overnight"] = metrics.is_overnight
 
         update_data["is_regularized"] = True
         update_data["updated_at"] = datetime.utcnow()
 
         updated = await self.repository.update(attendance_id, update_data)
 
-        employee = await self._get_employee(updated["employee_id"])
         department = (
             await self.department_repository.get_by_id(updated["department_id"])
             if updated.get("department_id")
@@ -531,6 +779,9 @@ class AttendanceService:
         employees_by_id = {
             employee["employee_id"]: employee for employee in employees
         }
+        overtime_employee_count = 0
+        overtime_total_minutes = 0
+
         for record in attendance_records:
             employee = employees_by_id.get(record["employee_id"])
             dept_id = record.get("department_id") or (
@@ -541,6 +792,10 @@ class AttendanceService:
                 present_by_department[dept_id] = (
                     present_by_department.get(dept_id, 0) + 1
                 )
+
+            if record_has_overtime(record):
+                overtime_employee_count += 1
+                overtime_total_minutes += record_overtime_minutes(record)
 
         departments = await self.department_repository.get_all(
             filters={},
@@ -585,5 +840,127 @@ class AttendanceService:
             absent_count=absent_count,
             absent_percentage=pct(absent_count),
             missing_punch_count=missing_punch_count,
+            overtime_employee_count=overtime_employee_count,
+            overtime_total_minutes=overtime_total_minutes,
+            overtime_total_display=format_minutes_compact(
+                overtime_total_minutes
+            ),
             department_presence=department_presence,
         )
+
+    async def get_overtime_report(
+        self,
+        start_date: date,
+        end_date: date,
+        department_id: str | None = None,
+        shift_id: str | None = None,
+    ) -> list[dict]:
+        """Per-employee overtime totals across a date range.
+
+        Hours only - converting overtime to money is deliberately out of
+        scope here and belongs to payroll.
+        """
+        start = to_datetime(start_date)
+        end = to_datetime(end_date)
+
+        employees = await self.employee_repository.get_all(
+            filters=build_filter({"department_id": department_id}),
+            skip=0,
+            limit=10000,
+        )
+
+        employee_ids = [employee["employee_id"] for employee in employees]
+
+        if not employee_ids:
+            return []
+
+        filters = {
+            "date": {"$gte": start, "$lte": end},
+            "employee_id": {"$in": employee_ids},
+        }
+
+        if shift_id:
+            filters["shift_id"] = shift_id
+
+        records = await self.repository.get_all(
+            filters=filters,
+            skip=0,
+            limit=100000,
+        )
+
+        totals: dict[str, dict] = {}
+
+        for record in records:
+            # Applied in Python rather than as a Mongo filter so that records
+            # predating stored overtime minutes are measured the same way the
+            # attendance list filter measures them.
+            if not record_has_overtime(record):
+                continue
+
+            employee_id = record["employee_id"]
+
+            entry = totals.setdefault(
+                employee_id,
+                {
+                    "employee_id": employee_id,
+                    "first_name": "",
+                    "last_name": "",
+                    "department_id": record.get("department_id"),
+                    "shift_names": set(),
+                    "days_with_overtime": 0,
+                    "overtime_minutes": 0,
+                },
+            )
+
+            minutes = record_overtime_minutes(record)
+
+            if minutes <= 0:
+                continue
+
+            entry["days_with_overtime"] += 1
+            entry["overtime_minutes"] += minutes
+
+            if record.get("shift"):
+                entry["shift_names"].add(record["shift"])
+
+        rows = []
+
+        for employee_id, entry in totals.items():
+            employee = next(
+                (
+                    candidate
+                    for candidate in employees
+                    if candidate["employee_id"] == employee_id
+                ),
+                None,
+            )
+
+            if employee:
+                entry["first_name"] = employee.get("first_name", "")
+                entry["last_name"] = employee.get("last_name", "")
+                entry["department_id"] = (
+                    entry["department_id"] or employee.get("department_id")
+                )
+
+            rows.append(
+                {
+                    "employee_id": entry["employee_id"],
+                    "first_name": entry["first_name"],
+                    "last_name": entry["last_name"],
+                    "department_id": entry["department_id"],
+                    "shift_names": sorted(entry["shift_names"]),
+                    "days_with_overtime": entry["days_with_overtime"],
+                    "overtime_minutes": entry["overtime_minutes"],
+                    "overtime_display": format_minutes_compact(
+                        entry["overtime_minutes"]
+                    ),
+                }
+            )
+
+        rows.sort(
+            key=lambda row: row["overtime_minutes"],
+            reverse=True,
+        )
+
+        return rows
+

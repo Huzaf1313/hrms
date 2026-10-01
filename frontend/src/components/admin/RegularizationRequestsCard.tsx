@@ -30,6 +30,8 @@ const statusStyles: Record<RegularizationStatus, string> = {
   Rejected: "bg-rose-50 text-rose-600",
 };
 
+const MAX_VISIBLE_REQUESTS = 4;
+
 const mockRequests: RegularizationRequest[] = [
   {
     id: "1",
@@ -192,7 +194,7 @@ function RegularizationRequestsCard({
       </div>
 
       <div className="flex flex-1 flex-col divide-y divide-gray-100">
-        {requests.map((request) => (
+        {requests.slice(0, MAX_VISIBLE_REQUESTS).map((request) => (
           <button
             key={request.id}
             type="button"
@@ -220,6 +222,14 @@ function RegularizationRequestsCard({
             {/* Header */}
             <div className="flex items-center justify-between border-b border-gray-100 p-5">
               <h2 className="text-lg font-bold text-[#17213a]">Request Details</h2>
+              <button
+                type="button"
+                onClick={closeModal}
+                aria-label="Close request details"
+                className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
 
             {/* Scrollable body */}
@@ -327,17 +337,10 @@ function RegularizationRequestsCard({
               </div>
             </div>
 
-                     {/* Footer actions */}
+                    {/* Footer actions */}
             <div className="border-t border-gray-100 p-5">
               {selectedRequest.status === "Pending" ? (
                 <div className="flex gap-3">
-                  <button
-                    type="button"
-                    onClick={closeModal}
-                    className="flex-1 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-50"
-                  >
-                    Cancel
-                  </button>
                   <button
                     type="button"
                     onClick={() => reviewRequest("Rejected")}
@@ -356,24 +359,15 @@ function RegularizationRequestsCard({
                   </button>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  <div
-                    className={`flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold ${statusStyles[selectedRequest.status]}`}
-                  >
-                    {selectedRequest.status === "Approved" ? (
-                      <Check className="h-4 w-4" />
-                    ) : (
-                      <X className="h-4 w-4" />
-                    )}
-                    This request has been {selectedRequest.status.toLowerCase()}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={closeModal}
-                    className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-50"
-                  >
-                    Cancel
-                  </button>
+                <div
+                  className={`flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold ${statusStyles[selectedRequest.status]}`}
+                >
+                  {selectedRequest.status === "Approved" ? (
+                    <Check className="h-4 w-4" />
+                  ) : (
+                    <X className="h-4 w-4" />
+                  )}
+                  This request has been {selectedRequest.status.toLowerCase()}
                 </div>
               )}
             </div>

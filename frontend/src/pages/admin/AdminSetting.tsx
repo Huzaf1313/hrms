@@ -8,11 +8,79 @@ import {
   Wallet,
   FileText,
   Pencil,
+  Check,
+  X,
 } from "lucide-react";
 
 // ---- Types ------------------------------------------------------------------
 
 const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+type CardId = "organization" | "workingDays" | "payroll";
+
+interface SettingsData {
+  organization: {
+    companyName: string;
+    address: string;
+    contactEmail: string;
+    phoneNumber: string;
+  };
+  workingDays: string[];
+  payroll: {
+    payrollCycle: string;
+    paymentDate: string;
+  };
+}
+
+const STORAGE_KEY = "hrms_settings";
+
+function freshDefaults(): SettingsData {
+  return {
+    organization: {
+      companyName: "AarMarks Media Pvt. Ltd.",
+      address: "123 Business Street, Bengaluru, KA 560001",
+      contactEmail: "hr@acme.com",
+      phoneNumber: "+91 98765 43210",
+    },
+    workingDays: ["Wed", "Thu", "Fri"],
+    payroll: {
+      payrollCycle: "Monthly",
+      paymentDate: "1",
+    },
+  };
+}
+
+function readSettings(): SettingsData {
+  const defaults = freshDefaults();
+
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+
+    if (!raw) {
+      return defaults;
+    }
+
+    const parsed = JSON.parse(raw) as Partial<SettingsData>;
+
+    return {
+      organization: { ...defaults.organization, ...(parsed.organization ?? {}) },
+      workingDays: Array.isArray(parsed.workingDays) ? parsed.workingDays : defaults.workingDays,
+      payroll: { ...defaults.payroll, ...(parsed.payroll ?? {}) },
+    };
+  } catch {
+    return defaults;
+  }
+}
+
+function writeSettings(data: SettingsData): boolean {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 // ---- Reusable card shell ------------------------------------------------------
 
@@ -41,6 +109,57 @@ function SettingsCard({ icon, iconBg, title, children, action }: SettingsCardPro
   );
 }
 
+/** Pencil button while read-only, Save/Cancel while editing. */
+function EditActions({
+  editing,
+  onEdit,
+  onSave,
+  onCancel,
+  canSave = true,
+}: {
+  editing: boolean;
+  onEdit: () => void;
+  onSave: () => void;
+  onCancel: () => void;
+  canSave?: boolean;
+}) {
+  if (!editing) {
+    return (
+      <button
+        type="button"
+        onClick={onEdit}
+        className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700"
+      >
+        <Pencil className="h-3.5 w-3.5" />
+        Edit
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <button
+        type="button"
+        onClick={onCancel}
+        className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+      >
+        <X className="h-3.5 w-3.5" />
+        Cancel
+      </button>
+
+      <button
+        type="button"
+        onClick={onSave}
+        disabled={!canSave}
+        className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <Check className="h-3.5 w-3.5" />
+        Save
+      </button>
+    </div>
+  );
+}
+
 function Field({ label, value }: { label: string; value: string }) {
   return (
     <div className="mb-3 last:mb-0">
@@ -50,12 +169,24 @@ function Field({ label, value }: { label: string; value: string }) {
   );
 }
 
-function SelectField({ label, value, options }: { label: string; value: string; options: string[] }) {
+function SelectField({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: string[];
+  onChange?: (value: string) => void;
+}) {
   return (
     <div className="mb-3 last:mb-0">
       <label className="block text-xs text-slate-400 mb-1">{label}</label>
       <select
-        defaultValue={value}
+        value={onChange ? value : undefined}
+        defaultValue={onChange ? undefined : value}
+        onChange={onChange ? (event) => onChange(event.target.value) : undefined}
         className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
       >
         {options.map((opt) => (
@@ -70,10 +201,12 @@ function InputField({
   label,
   value,
   hint,
+  onChange,
 }: {
   label: string;
   value: string;
   hint?: string;
+  onChange?: (value: string) => void;
 }) {
   return (
     <div className="mb-3 last:mb-0">
@@ -81,7 +214,9 @@ function InputField({
         {label} {hint && <span className="text-slate-300">({hint})</span>}
       </label>
       <input
-        defaultValue={value}
+        value={onChange ? value : undefined}
+        defaultValue={onChange ? undefined : value}
+        onChange={onChange ? (event) => onChange(event.target.value) : undefined}
         className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
       />
     </div>
@@ -91,13 +226,71 @@ function InputField({
 // ---- Page -----------------------------------------------------------------
 
 export default function AdminSettings() {
-  const [selectedDays, setSelectedDays] = useState<string[]>(["Wed", "Thu", "Fri"]);
+  const [settings, setSettings] = useState<SettingsData>(readSettings);
+  const [draft, setDraft] = useState<SettingsData | null>(null);
+  const [editingCard, setEditingCard] = useState<CardId | null>(null);
+  const [notice, setNotice] = useState("");
+
+  // While editing, the draft is the source of truth for every card's inputs.
+  const view = draft ?? settings;
+  const isEditingOrganization = editingCard === "organization";
+  const isEditingWorkingDays = editingCard === "workingDays";
+  const isEditingPayroll = editingCard === "payroll";
+
+  function startEdit(card: CardId) {
+    setDraft(settings);
+    setEditingCard(card);
+    setNotice("");
+  }
+
+  function cancelEdit() {
+    setDraft(null);
+    setEditingCard(null);
+  }
+
+  function saveEdit() {
+    if (!draft) {
+      return;
+    }
+
+    setSettings(draft);
+    const stored = writeSettings(draft);
+
+    cancelEdit();
+    setNotice(stored ? "Settings saved" : "Saved for this session only");
+    window.setTimeout(() => setNotice(""), 2500);
+  }
 
   function toggleDay(day: string) {
-    setSelectedDays((prev) =>
-      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
-    );
+    if (!draft) {
+      return;
+    }
+
+    setDraft({
+      ...draft,
+      workingDays: draft.workingDays.includes(day)
+        ? draft.workingDays.filter((item) => item !== day)
+        : [...draft.workingDays, day],
+    });
   }
+
+  function updateOrganization(key: keyof SettingsData["organization"], value: string) {
+    if (!draft) {
+      return;
+    }
+
+    setDraft({ ...draft, organization: { ...draft.organization, [key]: value } });
+  }
+
+  function updatePayroll(key: keyof SettingsData["payroll"], value: string) {
+    if (!draft) {
+      return;
+    }
+
+    setDraft({ ...draft, payroll: { ...draft.payroll, [key]: value } });
+  }
+
+  const canSave = view.organization.companyName.trim().length > 0;
 
   return (
     <div className="min-h-screen bg-slate-50 px-6 py-6">
@@ -112,6 +305,13 @@ export default function AdminSettings() {
             Manage your HRMS platform settings and preferences.
           </p>
         </div>
+
+        {notice && (
+          <span className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
+            <Check className="h-3.5 w-3.5" />
+            {notice}
+          </span>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
@@ -121,19 +321,46 @@ export default function AdminSettings() {
             iconBg="bg-blue-50"
             title="Organization Details"
             action={
-              <button
-                type="button"
-                className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700"
-              >
-                <Pencil className="h-3.5 w-3.5" />
-                Edit
-              </button>
+              <EditActions
+                editing={isEditingOrganization}
+                onEdit={() => startEdit("organization")}
+                onSave={saveEdit}
+                onCancel={cancelEdit}
+                canSave={canSave}
+              />
             }
           >
-            <Field label="Company Name" value="AarMarks Media Pvt. Ltd." />
-            <Field label="Address" value="123 Business Street, Bengaluru, KA 560001" />
-            <Field label="Contact Email" value="hr@acme.com" />
-            <Field label="Phone Number" value="+91 98765 43210" />
+            {isEditingOrganization ? (
+              <>
+                <InputField
+                  label="Company Name"
+                  value={view.organization.companyName}
+                  onChange={(value) => updateOrganization("companyName", value)}
+                />
+                <InputField
+                  label="Address"
+                  value={view.organization.address}
+                  onChange={(value) => updateOrganization("address", value)}
+                />
+                <InputField
+                  label="Contact Email"
+                  value={view.organization.contactEmail}
+                  onChange={(value) => updateOrganization("contactEmail", value)}
+                />
+                <InputField
+                  label="Phone Number"
+                  value={view.organization.phoneNumber}
+                  onChange={(value) => updateOrganization("phoneNumber", value)}
+                />
+              </>
+            ) : (
+              <>
+                <Field label="Company Name" value={view.organization.companyName} />
+                <Field label="Address" value={view.organization.address} />
+                <Field label="Contact Email" value={view.organization.contactEmail} />
+                <Field label="Phone Number" value={view.organization.phoneNumber} />
+              </>
+            )}
           </SettingsCard>
 
           {/* Platform Preferences */}
@@ -162,25 +389,40 @@ export default function AdminSettings() {
             iconBg="bg-blue-50"
             title="Working Days & Holidays"
             action={
-              <button
-                type="button"
-                className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700"
-              >
-                <Pencil className="h-3.5 w-3.5" />
-                Edit
-              </button>
+              <EditActions
+                editing={isEditingWorkingDays}
+                onEdit={() => startEdit("workingDays")}
+                onSave={saveEdit}
+                onCancel={cancelEdit}
+                canSave={canSave}
+              />
             }
           >
             <p className="text-xs text-slate-400 mb-2">Work Week</p>
             <div className="flex flex-wrap gap-2 mb-4">
               {weekDays.map((day) => {
-                const isSelected = selectedDays.includes(day);
+                const isSelected = view.workingDays.includes(day);
+
+                if (!isEditingWorkingDays) {
+                  return (
+                    <span
+                      key={day}
+                      className={`inline-flex h-9 w-11 items-center justify-center rounded-lg text-xs font-semibold ${
+                        isSelected ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"
+                      }`}
+                    >
+                      {day}
+                    </span>
+                  );
+                }
+
                 return (
                   <button
                     key={day}
                     type="button"
                     onClick={() => toggleDay(day)}
-                    className={`h-9 w-11 rounded-lg text-xs font-semibold transition ${
+                    aria-pressed={isSelected}
+                    className={`inline-flex h-9 w-11 items-center justify-center rounded-lg text-xs font-semibold transition ${
                       isSelected
                         ? "bg-blue-600 text-white"
                         : "bg-slate-100 text-slate-500 hover:bg-slate-200"
@@ -224,17 +466,35 @@ export default function AdminSettings() {
             iconBg="bg-blue-50"
             title="Payroll Settings"
             action={
-              <button
-                type="button"
-                className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700"
-              >
-                <Pencil className="h-3.5 w-3.5" />
-                Edit
-              </button>
+              <EditActions
+                editing={isEditingPayroll}
+                onEdit={() => startEdit("payroll")}
+                onSave={saveEdit}
+                onCancel={cancelEdit}
+                canSave={canSave}
+              />
             }
           >
-            <SelectField label="Payroll Cycle" value="Monthly" options={["Monthly", "Bi-Weekly", "Weekly"]} />
-            <InputField label="Payment Date" value="1" />
+            {isEditingPayroll ? (
+              <>
+                <SelectField
+                  label="Payroll Cycle"
+                  value={view.payroll.payrollCycle}
+                  options={["Monthly", "Bi-Weekly", "Weekly"]}
+                  onChange={(value) => updatePayroll("payrollCycle", value)}
+                />
+                <InputField
+                  label="Payment Date"
+                  value={view.payroll.paymentDate}
+                  onChange={(value) => updatePayroll("paymentDate", value)}
+                />
+              </>
+            ) : (
+              <>
+                <Field label="Payroll Cycle" value={view.payroll.payrollCycle} />
+                <Field label="Payment Date" value={view.payroll.paymentDate} />
+              </>
+            )}
           </SettingsCard>
 
           {/* Document Settings */}

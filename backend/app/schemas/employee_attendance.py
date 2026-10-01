@@ -61,6 +61,25 @@ class AttendanceResponse(BaseModel):
     status: str
     total_hours: float | str | None = None
     remarks: str | None = None
+
+    # Shift snapshot as it was on the day, so later edits to a shift never
+    # rewrite historical attendance.
+    shift_id: str | None = None
+    shift: str | None = None
+    shift_start: str | None = None
+    shift_end: str | None = None
+    shift_duration_minutes: int | None = None
+
+    # Numeric source of truth. total_hours above is display-oriented.
+    worked_minutes: int | None = None
+    overtime_minutes: int = 0
+    overtime_display: str | None = None
+    late_minutes: int = 0
+    late_display: str | None = None
+    is_overtime: bool = False
+    is_late: bool = False
+    is_overnight: bool = False
+
     created_at: datetime | None = None
     updated_at: datetime | None = None
 
