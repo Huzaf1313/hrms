@@ -21,6 +21,11 @@ import {
 
 import type { Department } from "../../types/department";
 import type { Employee } from "../../types/employee";
+import type { Shift } from "../../types/shift";
+import {
+  formatDuration,
+  formatShiftTime,
+} from "../../services/shiftService";
 import {
   LEGACY_SALARY_STRUCTURE_LABELS,
   type SalaryStructure,
@@ -61,6 +66,7 @@ interface AdminEmployeeDetailsPageProps {
   employee: Employee;
   departments: Department[];
   salaryStructures: SalaryStructure[];
+  shifts: Shift[];
   onBack: () => void;
   onEdit: (employee: Employee) => void;
   onDeactivate: (employee: Employee) => void;
@@ -180,6 +186,7 @@ function AdminEmployeeDetailsPage({
   employee,
   departments,
   salaryStructures,
+  shifts,
   onBack,
   onEdit,
   onDeactivate,
@@ -412,6 +419,14 @@ function AdminEmployeeDetailsPage({
       (department) => department.id === employee.department_id,
     )?.name ?? "—";
 
+  // Tolerates a stale or missing prop: a parent running an older module can
+  // pass undefined, and an unguarded .find() there blanks the whole page.
+  const availableShifts: Shift[] = Array.isArray(shifts) ? shifts : [];
+
+  const assignedShift = employee.shift_id
+    ? (availableShifts.find((shift) => shift.id === employee.shift_id) ?? null)
+    : null;
+
   const initials =
     `${employee.first_name.charAt(0)}${employee.last_name.charAt(0)}`.toUpperCase();
 
@@ -547,6 +562,38 @@ function AdminEmployeeDetailsPage({
                 label="Employment Type"
                 value={employee.employment_type.replace("_", "-")}
               />
+
+              <div>
+                <p className="text-sm text-gray-500">
+                  Shift
+                </p>
+
+                {assignedShift ? (
+                  <>
+                    <p className="mt-1 font-semibold text-gray-800">
+                      {assignedShift.name}
+                    </p>
+
+                    <p className="mt-0.5 text-xs text-gray-500">
+                      {formatShiftTime(assignedShift.start_time)} -{" "}
+                      {formatShiftTime(assignedShift.end_time)}
+                      {assignedShift.is_overnight
+                        ? " (ends next day)"
+                        : ""}
+                    </p>
+
+                    <p className="mt-0.5 text-xs text-gray-400">
+                      Overtime after {formatDuration(
+                        assignedShift.duration_minutes,
+                      )}
+                    </p>
+                  </>
+                ) : (
+                  <p className="mt-1 font-semibold text-amber-600">
+                    No shift assigned
+                  </p>
+                )}
+              </div>
 
               <DetailField
                 label="Joining Date"

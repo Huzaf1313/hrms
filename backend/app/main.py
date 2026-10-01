@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from app.api.v1.admin_payslip import router as admin_payslip_router
 from app.api.v1.admin_leaves import router as leaves_router
 from app.api.v1.admin_attendance import router as attendance_router
+from app.api.v1.shifts import router as shifts_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.departments import router as departments_router
 from app.api.v1.employees import router as employees_router
@@ -55,12 +56,16 @@ from app.repositories.employee_payroll_repository import (
 from app.repositories.admin_announcement_repository import (
     AdminAnnouncementRepository,
 )
+from app.repositories.shift_repository import ShiftRepository
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await connect_to_database()
 
     os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+
+    shift_repository = ShiftRepository()
+    await shift_repository.ensure_indexes()
 
     attendance_repository = EmployeeAttendanceRepository()
     await attendance_repository.ensure_indexes()
@@ -158,6 +163,12 @@ app.include_router(
     attendance_router,
     prefix="/api/v1",
     tags=["Admin Attendance"],
+)
+
+app.include_router(
+    shifts_router,
+    prefix="/api/v1",
+    tags=["Shifts"],
 )
 
 app.include_router(

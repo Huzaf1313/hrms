@@ -9,6 +9,7 @@ from app.repositories.employee_repository import EmployeeRepository
 from app.schemas.attendance import (
     AttendanceListResponse,
     AttendanceMark,
+    AttendanceOptionsResponse,
     AttendanceResponse,
     AttendanceSummaryResponse,
     AttendanceUpdate,
@@ -89,6 +90,9 @@ async def get_attendance_list(
     department_id: str | None = Query(default=None),
     status: str | None = Query(default=None),
     search: str | None = Query(default=None),
+    shift_id: str | None = Query(default=None),
+    overtime: bool = Query(default=False),
+    work_location: str | None = Query(default=None),
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=10, ge=1, le=100),
     current_user: dict | None = Depends(
@@ -103,6 +107,9 @@ async def get_attendance_list(
         status=status,
         search=search,
         pagination=pagination,
+        shift_id=shift_id,
+        overtime_only=overtime,
+        work_location=work_location,
     )
 
     return APIResponse(
@@ -110,6 +117,7 @@ async def get_attendance_list(
         message="Attendance records retrieved successfully",
         data=result,
     )
+
 
 
 @router.get(
@@ -133,6 +141,26 @@ async def get_employee_attendance(
         success=True,
         message="Employee attendance retrieved successfully",
         data=result,
+    )
+
+
+@router.get(
+    "/attendance/options",
+    response_model=APIResponse[AttendanceOptionsResponse],
+)
+async def get_attendance_options(
+    current_user: dict = Depends(
+        require_permission(Permission.ATTENDANCE_READ)
+    ),
+):
+    """Values for the filter dropdowns. Declared before
+    /attendance/{attendance_id} so "options" is never parsed as an id."""
+    work_locations = await service.get_work_locations()
+
+    return APIResponse(
+        success=True,
+        message="Attendance filter options retrieved successfully",
+        data=AttendanceOptionsResponse(work_locations=work_locations),
     )
 
 

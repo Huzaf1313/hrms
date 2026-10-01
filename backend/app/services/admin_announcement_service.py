@@ -1,7 +1,7 @@
 import os
 import shutil
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from fastapi import UploadFile
 
@@ -197,10 +197,10 @@ class AdminAnnouncementService:
         if clear_expiry:
             update_data["expiry_date"] = None
 
-        if "publish_date" in update_data:
+        if isinstance(update_data.get("publish_date"), date):
             update_data["publish_date"] = update_data["publish_date"].isoformat()
 
-        if "expiry_date" in update_data:
+        if update_data.get("expiry_date") is not None:
             update_data["expiry_date"] = update_data["expiry_date"].isoformat()
 
         if "target_departments" in update_data or "target_employees" in update_data:

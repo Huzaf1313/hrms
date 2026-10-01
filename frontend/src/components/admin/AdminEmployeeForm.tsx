@@ -3,6 +3,8 @@ import type { ChangeEvent, FormEvent } from "react";
 
 import type { Department } from "../../types/department";
 import type { Employee, EmployeeCreate } from "../../types/employee";
+import type { Shift } from "../../types/shift";
+import { formatDuration, formatShiftTime } from "../../services/shiftService";
 import {
   LEGACY_SALARY_STRUCTURE_LABELS,
   salaryBandFor,
@@ -14,6 +16,7 @@ interface AdminEmployeeFormProps {
   departments: Department[];
   salaryStructures: SalaryStructure[];
   managers: ManagerAccount[];
+  shifts: Shift[];
   initialEmployee?: Employee;
   isSubmitting: boolean;
   errorMessage: string | null;
@@ -48,6 +51,7 @@ function toFormState(employee?: Employee): EmployeeCreate {
       reporting_manager: "",
       salary_structure: "",
       salary: "",
+      shift_id: "",
     };
   }
 
@@ -69,6 +73,7 @@ function toFormState(employee?: Employee): EmployeeCreate {
     reporting_manager: employee.reporting_manager ?? "",
     salary_structure: employee.salary_structure ?? "",
     salary: employee.salary ?? "",
+    shift_id: employee.shift_id ?? "",
   };
 }
 
@@ -76,6 +81,7 @@ function AdminEmployeeForm({
   departments,
   salaryStructures,
   managers,
+  shifts,
   initialEmployee,
   isSubmitting,
   errorMessage,
@@ -108,6 +114,14 @@ function AdminEmployeeForm({
 
   const selectedStructure = salaryStructures.find(
     (structure) => structure.name === form.salary_structure,
+  );
+
+  // Tolerates a stale or missing prop: a parent running an older module can
+  // pass undefined, and an unguarded .find()/.map() there blanks the form.
+  const availableShifts: Shift[] = Array.isArray(shifts) ? shifts : [];
+
+  const selectedShift = availableShifts.find(
+    (shift) => shift.id === form.shift_id,
   );
 
   const legacyStructureName =
@@ -250,6 +264,7 @@ function AdminEmployeeForm({
       address: form.address || undefined,
       work_location: form.work_location || undefined,
       reporting_manager: form.reporting_manager || undefined,
+      shift_id: form.shift_id || undefined,
     };
 
     if (isEditMode && !form.password) {
@@ -393,6 +408,54 @@ function AdminEmployeeForm({
               ))}
             </select>
           </div>
+
+{/* SHIFT */}
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
+                Shift
+              </label>
+
+              <select
+                value={form.shift_id ?? ""}
+                onChange={(event) =>
+                  updateField("shift_id", event.target.value)
+                }
+                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10 disabled:cursor-not-allowed disabled:bg-gray-50"
+              >
+                <option value="">
+                  {availableShifts.length === 0
+                    ? "No shifts available yet"
+                    : "No shift assigned"}
+                </option>
+                {availableShifts.map((shift) => (
+                  <option key={shift.id} value={shift.id}>
+                    {shift.name} ({formatShiftTime(shift.start_time)} -{" "}
+                    {formatShiftTime(shift.end_time)},{" "}
+                    {formatDuration(shift.duration_minutes)})
+                  </option>
+                ))}
+              </select>
+
+              {availableShifts.length === 0 ? (
+                <p className="mt-1.5 text-xs font-medium text-amber-600">
+                  No shifts exist yet. Run{" "}
+                  <code className="rounded bg-amber-50 px-1">
+                    python seed_shifts.py
+                  </code>{" "}
+                  in the backend folder, or add one from Attendance &rarr;
+                  Manage Shifts. Overtime cannot be calculated until a shift
+                  exists.
+                </p>
+              ) : (
+                <p className="mt-1.5 text-xs text-gray-500">
+                  {selectedShift
+                    ? `Overtime is worked time beyond this ${formatDuration(
+                        selectedShift.duration_minutes,
+                      )} shift.`
+                    : "Assign a shift so attendance can be measured against it."}
+                </p>
+              )}
+            </div>
 
           {/* FIRST NAME */}
           <div>

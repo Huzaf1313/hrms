@@ -17,17 +17,22 @@ import {
   CalendarPlus,
   Settings,
   Users2,
+  Timer,
+  RotateCcw,
 } from "lucide-react";
 import { ApiError } from "../../services/api";
 import { attendanceService } from "../../services/attendanceService";
 import { departmentService } from "../../services/departmentService";
+import { formatShiftTime, shiftService } from "../../services/shiftService";
 import type {
   AttendanceRecord,
   AttendanceStatus,
   AttendanceSummary,
 } from "../../types/attendance";
 import type { Department } from "../../types/department";
+import type { Shift } from "../../types/shift";
 import RegularizationRequestsCard from "../../components/admin/RegularizationRequestsCard";
+import ShiftManagerModal from "../../components/admin/ShiftManagerModal";
 
 const tabs = [
   { label: "All Employees", status: undefined as string | undefined },
@@ -57,6 +62,13 @@ const statusDot: Record<AttendanceStatus, string> = {
   missing_punch: "bg-rose-500",
 };
 
+/** Shared styling so every filter control has an identical height and focus
+ *  treatment. h-10 also keeps the Overtime readout and Clear button aligned. */
+const filterControlClass =
+  "h-10 w-full rounded-full border border-gray-200 bg-white px-4 pr-9 text-sm " +
+  "text-gray-700 transition hover:border-gray-300 " +
+  "focus:border-[#2563eb] focus:outline-none focus:ring-2 focus:ring-[#2563eb]/10";
+
 const quickActions = [
   { label: "Mark Attendance", icon: UserPlus, iconBg: "bg-blue-50", iconColor: "text-blue-600" },
   { label: "Process Regularization", icon: ClipboardEdit, iconBg: "bg-orange-50", iconColor: "text-orange-500" },
@@ -76,6 +88,7 @@ type SortKey =
   | "in_time"
   | "out_time"
   | "working_hours"
+  | "overtime"
   | "status";
 
 type SortDirection = "asc" | "desc";
@@ -88,6 +101,7 @@ const columns: { key: SortKey; label: string }[] = [
   { key: "in_time", label: "In Time" },
   { key: "out_time", label: "Out Time" },
   { key: "working_hours", label: "Working Hours" },
+  { key: "overtime", label: "Overtime" },
   { key: "status", label: "Status" },
 ];
 
@@ -106,17 +120,19 @@ function timeToMinutes(value: string | null | undefined): number {
   return hours * 60 + minutes;
 }
 
-/** "9h 14m" / "9h" / numeric hours -> total minutes, for numeric ordering. */
+/** "9hr 14min" / "9h 14m" / "9H 14M" / numeric hours -> total minutes, for
+ *  numeric ordering. Records predating overtime tracking have no
+ *  worked_minutes, so the text form is still needed as a fallback. */
 function workingHoursToMinutes(value: number | string | null | undefined): number {
   if (value === null || value === undefined || value === "") {
     return Number.NEGATIVE_INFINITY;
   }
   if (typeof value === "number") return value * 60;
 
-  const match = value.match(/(\d+)h(?:\s*(\d+)m)?/);
+  const match = value.match(/(\d+(?:\.\d+)?)\s*h(?:r)?(?:\s*(\d+)\s*m)?/i);
   if (!match) return Number.NEGATIVE_INFINITY;
 
-  const hours = parseInt(match[1], 10);
+  const hours = parseFloat(match[1]);
   const minutes = match[2] ? parseInt(match[2], 10) : 0;
 
   return hours * 60 + minutes;
@@ -137,7 +153,14 @@ function getSortValue(row: AttendanceRecord, key: SortKey): string | number {
     case "out_time":
       return timeToMinutes(row.out_time ?? row.check_out);
     case "working_hours":
+      // Prefer the numeric field: exact, and unaffected by display formatting.
+      if (row.worked_minutes !== null && row.worked_minutes !== undefined) {
+        return row.worked_minutes;
+      }
+
       return workingHoursToMinutes(row.working_hours ?? row.total_hours);
+    case "overtime":
+      return row.overtime_minutes ?? 0;
     case "status":
       return row.status;
     default:
@@ -215,21 +238,27 @@ function AdminAttendance() {
   const [date, setDate] = useState(getToday);
   const [departmentId, setDepartmentId] = useState("");
   const [status, setStatus] = useState("");
+  const [shiftId, setShiftId] = useState("");
+  const [workLocation, setWorkLocation] = useState("");
+  const [workLocations, setWorkLocations] = useState<string[]>([]);
+  const [overtimeOnly, setOvertimeOnly] = useState(false);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [summary, setSummary] = useState<AttendanceSummary | null>(null);
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [shifts, setShifts] = useState<Shift[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [showMarkModal, setShowMarkModal] = useState(false);
+  const [showShiftManager, setShowShiftManager] = useState(false);
   const [markForm, setMarkForm] = useState({
     employee_id: "",
     date: getToday(),
     status: "present" as AttendanceStatus,
-    shift: "General",
+    shift_id: "",
     in_time: "",
     out_time: "",
   });
@@ -242,18 +271,23 @@ function AdminAttendance() {
 
     async function loadAttendance() {
       setError("");
-      const [attendanceResult, summaryResult, departmentsResult] =
+      const [attendanceResult, summaryResult, departmentsResult, shiftsResult, optionsResult] =
         await Promise.allSettled([
           attendanceService.list({
             date,
             department_id: departmentId || undefined,
             status: status || undefined,
             search: search || undefined,
+            shift_id: shiftId || undefined,
+            work_location: workLocation || undefined,
+            overtime: overtimeOnly || undefined,
             page,
             limit,
           }),
           attendanceService.summary(date, departmentId || undefined),
           departmentService.list(),
+          shiftService.listAll(),
+          attendanceService.listOptions(),
         ]);
 
       if (!isCurrent) return;
@@ -285,6 +319,14 @@ function AdminAttendance() {
         setDepartments(departmentsResult.value);
       }
 
+      if (shiftsResult.status === "fulfilled") {
+        setShifts(shiftsResult.value);
+      }
+
+      if (optionsResult.status === "fulfilled") {
+        setWorkLocations(optionsResult.value.work_locations ?? []);
+      }
+
       setIsLoading(false);
     }
 
@@ -293,7 +335,19 @@ function AdminAttendance() {
     return () => {
       isCurrent = false;
     };
-  }, [date, departmentId, limit, page, search, status, attendanceRefreshKey]);
+  }, [
+    date,
+    departmentId,
+    limit,
+    overtimeOnly,
+    page,
+    search,
+    shiftId,
+    status,
+    workLocation,
+    attendanceRefreshKey,
+  ]);
+
 
   function handleSort(key: SortKey) {
     if (sortKey === key) {
@@ -302,6 +356,26 @@ function AdminAttendance() {
       setSortKey(key);
       setSortDirection("asc");
     }
+  }
+
+  // Counts only the filters shown in the filter card. The separate search box
+  // in the table toolbar is cleared by resetFilters but not counted here.
+  const activeFilterCount =
+    [departmentId, workLocation, shiftId, status].filter(Boolean).length +
+    (overtimeOnly ? 1 : 0);
+
+  const overtimeTotalMinutes = summary?.overtime_total_minutes ?? 0;
+  const overtimeStaffCount = summary?.overtime_employee_count ?? 0;
+
+  function resetFilters() {
+    setPage(1);
+    setDepartmentId("");
+    setWorkLocation("");
+    setStatus("");
+    setShiftId("");
+    setOvertimeOnly(false);
+    setSearch("");
+    setActiveTab(0);
   }
 
   async function handleMarkAttendance() {
@@ -322,7 +396,9 @@ function AdminAttendance() {
         employee_id: markForm.employee_id,
         date: markForm.date,
         status: markForm.status,
-        shift: markForm.shift,
+        // Empty means "use the employee's own assigned shift", which lets the
+        // backend resolve the shift and derive overtime from it.
+        shift_id: markForm.shift_id || null,
         in_time: markForm.in_time || undefined,
         out_time: markForm.out_time || undefined,
       });
@@ -333,7 +409,7 @@ function AdminAttendance() {
         employee_id: "",
         date: getToday(),
         status: "present",
-        shift: "General",
+        shift_id: "",
         in_time: "",
         out_time: "",
       });
@@ -344,6 +420,9 @@ function AdminAttendance() {
         department_id: departmentId || undefined,
         status: status || undefined,
         search: search || undefined,
+        shift_id: shiftId || undefined,
+        work_location: workLocation || undefined,
+        overtime: overtimeOnly || undefined,
         page,
         limit,
       });
@@ -389,7 +468,7 @@ function AdminAttendance() {
   };
 
   const summaryCards = [
-    { label: "Total Employees", value: summary?.total_employees ?? "-", sub: null, subStyle: {}, icon: Users, iconBg: "bg-blue-50", iconColor: "text-blue-600" },
+    { label: "Total Employees", value: summary?.total_employees ?? "-", sub: summary ? "100%" : "-", subStyle: { color: "#2563eb" }, icon: Users, iconBg: "bg-blue-50", iconColor: "text-blue-600" },
     { label: "Present Today", value: summary?.present_count ?? "-", sub: summary ? `${summary.present_percentage}%` : "-", subStyle: subColorStyles["Present Today"], icon: UserCheck, iconBg: "bg-emerald-50", iconColor: "text-emerald-600" },
     { label: "Late Today", value: summary?.late_count ?? "-", sub: summary ? `${summary.late_percentage}%` : "-", subStyle: subColorStyles["Late Today"], icon: Clock, iconBg: "bg-orange-50", iconColor: "text-orange-500" },
     { label: "On Leave", value: summary?.on_leave_count ?? "-", sub: summary ? `${summary.on_leave_percentage}%` : "-", subStyle: subColorStyles["On Leave"], icon: CalendarDays, iconBg: "bg-purple-50", iconColor: "text-purple-600" },
@@ -423,6 +502,7 @@ function AdminAttendance() {
         displayPunchTime(row.in_time ?? row.check_in),
         displayPunchTime(row.out_time ?? row.check_out),
         displayWorkingHours(row.working_hours ?? row.total_hours),
+        row.overtime_display ?? "-",
         formatStatus(row.status),
       ])
       .map(
@@ -439,10 +519,11 @@ function AdminAttendance() {
         xmlns="http://www.w3.org/TR/REC-html40">
         <head><meta charset="UTF-8" /></head>
         <body><table>
-          <tr><th>Employee</th><th>Employee ID</th><th>Department</th><th>Shift</th><th>In Time</th><th>Out Time</th><th>Working Hours</th><th>Status</th></tr>
+          <tr><th>Employee</th><th>Employee ID</th><th>Department</th><th>Shift</th><th>In Time</th><th>Out Time</th><th>Working Hours</th><th>Overtime</th><th>Status</th></tr>
           ${rows}
         </table></body>
       </html>`;
+
     const blob = new Blob([workbook], { type: "application/vnd.ms-excel" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -493,7 +574,7 @@ function AdminAttendance() {
               <div className={`mb-4 flex h-10 w-10 items-center justify-center rounded-xl ${card.iconBg}`}>
                 <Icon className={`h-5 w-5 ${card.iconColor}`} />
               </div>
-              <p className="text-sm text-gray-500">{card.label}</p>
+              <p className="text-sm font-bold text-black">{card.label}</p>
               <div className="mt-1 flex items-baseline gap-2">
                 <span className="text-2xl font-bold text-gray-900">{card.value}</span>
                 {card.sub && (
@@ -506,22 +587,23 @@ function AdminAttendance() {
       </div>
 
       {/* Filters */}
-      <div className="mb-6 grid grid-cols-1 gap-3 rounded-3xl bg-white p-5 shadow-sm sm:grid-cols-2 lg:grid-cols-6">
-        <div>
-          <label className="mb-1 block text-xs font-medium text-gray-500">Date</label>
+      <div className="mb-6 grid grid-cols-1 items-end gap-x-3 gap-y-4 rounded-3xl bg-white p-5 shadow-sm sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
+        <div className="min-w-0">
+          <label className="mb-1.5 block text-xs font-medium text-gray-500">Date</label>
           <input
             type="date"
             value={date}
             onChange={(event) => setDate(event.target.value)}
-            className="w-full rounded-full border border-gray-200 px-4 py-2 text-sm focus:border-[#2563eb] focus:outline-none"
+            className="h-10 w-full rounded-full border border-gray-200 bg-white px-4 text-sm text-gray-700 transition hover:border-gray-300 focus:border-[#2563eb] focus:outline-none focus:ring-2 focus:ring-[#2563eb]/10"
           />
         </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium text-gray-500">Department</label>
+
+        <div className="min-w-0">
+          <label className="mb-1.5 block text-xs font-medium text-gray-500">Department</label>
           <select
             value={departmentId}
             onChange={(event) => { setDepartmentId(event.target.value); setPage(1); }}
-            className="w-full rounded-full border border-gray-200 bg-white px-4 py-2 text-sm text-gray-600 focus:border-[#2563eb] focus:outline-none"
+            className={filterControlClass}
           >
             <option value="">All Departments</option>
             {departments.map((department) => (
@@ -529,48 +611,104 @@ function AdminAttendance() {
             ))}
           </select>
         </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium text-gray-500">Location</label>
-          <select className="w-full rounded-full border border-gray-200 bg-white px-4 py-2 text-sm text-gray-600 focus:border-[#2563eb] focus:outline-none">
-            <option>All Locations</option>
+
+        <div className="min-w-0">
+          <label className="mb-1.5 block text-xs font-medium text-gray-500">Location</label>
+          <select
+            value={workLocation}
+            onChange={(event) => { setWorkLocation(event.target.value); setPage(1); }}
+            className={filterControlClass}
+          >
+            <option value="">All Locations</option>
+            {workLocations.map((location) => (
+              <option key={location} value={location}>{location}</option>
+            ))}
           </select>
         </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium text-gray-500">Shift</label>
-          <select className="w-full rounded-full border border-gray-200 bg-white px-4 py-2 text-sm text-gray-600 focus:border-[#2563eb] focus:outline-none">
-            <option>All Shifts</option>
-            <option>General</option>
+
+        <div className="min-w-0">
+          <label className="mb-1.5 block text-xs font-medium text-gray-500">Shift</label>
+          <select
+            value={shiftId}
+            onChange={(event) => { setShiftId(event.target.value); setPage(1); }}
+            className={filterControlClass}
+          >
+            <option value="">All Shifts</option>
+            {shifts.map((shift) => (
+              <option key={shift.id} value={shift.id}>
+                {shift.name}
+                {shift.is_overnight ? " (ends next day)" : ""}
+              </option>
+            ))}
           </select>
         </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium text-gray-500">Status</label>
+
+        <div className="min-w-0">
+          <label className="mb-1.5 block text-xs font-medium text-gray-500">Status</label>
           <select
             value={status}
             onChange={(event) => { setStatus(event.target.value); setPage(1); setActiveTab(0); }}
-            className="w-full rounded-full border border-gray-200 bg-white px-4 py-2 text-sm text-gray-600 focus:border-[#2563eb] focus:outline-none"
+            className={filterControlClass}
           >
             <option value="">All Status</option>
             <option value="present">Present</option>
             <option value="late">Late</option>
             <option value="absent">Absent</option>
             <option value="on_leave">On Leave</option>
-            {/* <option value="missing_punch">Missing Punch</option> */}
           </select>
         </div>
-        <div className="flex items-end gap-2">
+
+        <div className="min-w-0">
+          <label className="mb-1.5 block text-xs font-medium text-gray-500">Overtime</label>
+          <select
+            value={overtimeOnly ? "ot" : ""}
+            onChange={(event) => { setOvertimeOnly(event.target.value === "ot"); setPage(1); setActiveTab(0); }}
+            className={filterControlClass}
+          >
+            <option value="">All Records</option>
+            <option value="ot">Overtime only</option>
+          </select>
+        </div>
+
+        {/* Overtime total for the selected date - fills the row and answers
+            "how much extra time" without opening a report. */}
+        <div className="min-w-0">
+          <label className="mb-1.5 block text-xs font-medium text-gray-500">Overtime Today</label>
+          <div
+            title={`${overtimeTotalMinutes} minutes across ${overtimeStaffCount} employee(s)`}
+            className={`flex h-10 w-full items-center gap-2 rounded-full border px-4 text-sm font-semibold transition ${
+              overtimeTotalMinutes > 0
+                ? "border-amber-200 bg-amber-50 text-amber-700"
+                : "border-gray-200 bg-gray-50 text-gray-400"
+            }`}
+          >
+            <Timer className="h-4 w-4 shrink-0" />
+            <span className="truncate">
+              {summary?.overtime_total_display ?? "0h"}
+              <span className="font-normal opacity-80">
+                {" · "}
+                {overtimeStaffCount} staff
+              </span>
+            </span>
+          </div>
+        </div>
+
+        <div className="min-w-0">
+          <p className="mb-1.5 block text-xs font-medium">
+            {activeFilterCount > 0 ? (
+              <span className="text-amber-600">{activeFilterCount} active</span>
+            ) : (
+              <span>&nbsp;</span>
+            )}
+          </p>
           <button
             type="button"
-            onClick={() => setPage(1)}
-            className="flex-1 rounded-full bg-[#2563eb] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1d4ed8]"
+            onClick={resetFilters}
+            disabled={activeFilterCount === 0}
+            className="inline-flex h-10 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full border border-gray-200 bg-white px-5 text-sm font-medium text-gray-600 transition hover:border-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 xl:w-auto"
           >
-            Apply Filter
-          </button>
-          <button
-            type="button"
-            onClick={() => { setPage(1); setDepartmentId(""); setStatus(""); setSearch(""); setActiveTab(0); }}
-            className="flex-1 rounded-full border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
-          >
-            Reset
+            <RotateCcw className="h-4 w-4 shrink-0" />
+            Clear filters
           </button>
         </div>
       </div>
@@ -646,6 +784,11 @@ function AdminAttendance() {
                 <button
                   key={action.label}
                   type="button"
+                  onClick={
+                    action.label === "Manage Shifts"
+                      ? () => setShowShiftManager(true)
+                      : undefined
+                  }
                   className="flex min-w-0 flex-col items-start gap-2 rounded-2xl border border-gray-100 p-3 text-left hover:bg-gray-50"
                 >
                   <span
@@ -690,7 +833,7 @@ function AdminAttendance() {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[980px] text-left text-sm">
+            <table className="w-full min-w-[1080px] text-left text-sm">
               <thead>
                 <tr className="border-b border-gray-100 text-xs font-bold uppercase tracking-wide text-gray-600">
                   <th className="w-8 pb-3">
@@ -729,11 +872,11 @@ function AdminAttendance() {
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr><td colSpan={9} className="py-10 text-center text-gray-500">Loading attendance...</td></tr>
+                  <tr><td colSpan={10} className="py-10 text-center text-gray-500">Loading attendance...</td></tr>
                 ) : error ? (
-                  <tr><td colSpan={9} className="py-10 text-center text-rose-600">{error}</td></tr>
+                  <tr><td colSpan={10} className="py-10 text-center text-rose-600">{error}</td></tr>
                 ) : sortedRecords.length === 0 ? (
-                  <tr><td colSpan={9} className="py-10 text-center text-gray-500">No attendance records found.</td></tr>
+                  <tr><td colSpan={10} className="py-10 text-center text-gray-500">No attendance records found.</td></tr>
                 ) : sortedRecords.map((row) => (
                   <tr key={row.id} className="border-b border-gray-50 last:border-0">
                     <td className="py-4">
@@ -753,10 +896,24 @@ function AdminAttendance() {
                     <td className="py-4 text-gray-600">{row.employee.department_name ?? "-"}</td>
                     <td className="py-4">
                       <div className="text-gray-700">{row.shift}</div>
+                      {row.is_overnight && (
+                        <div className="mt-0.5 text-[11px] text-violet-600">
+                          Ends next day
+                        </div>
+                      )}
                     </td>
                     <td className="py-4 text-gray-600">{displayPunchTime(row.in_time ?? row.check_in)}</td>
                     <td className="py-4 text-gray-600">{displayPunchTime(row.out_time ?? row.check_out)}</td>
                     <td className="py-4 text-gray-600">{displayWorkingHours(row.working_hours ?? row.total_hours)}</td>
+                    <td className="py-4">
+                      {row.overtime_minutes ? (
+                        <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
+                          {row.overtime_display ?? `${row.overtime_minutes}m`}
+                        </span>
+                      ) : (
+                        <span className="text-gray-300">-</span>
+                      )}
+                    </td>
                     <td className="py-4">
                       <span
                         className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${statusStyles[row.status]}`}
@@ -869,6 +1026,33 @@ function AdminAttendance() {
                 </div>
               </div>
 
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Shift
+                </label>
+                <select
+                  value={markForm.shift_id}
+                  onChange={(e) =>
+                    setMarkForm((prev) => ({
+                      ...prev,
+                      shift_id: e.target.value,
+                    }))
+                  }
+                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-[#2563eb] focus:outline-none"
+                >
+                  <option value="">Employee's assigned shift</option>
+                  {shifts.map((shift) => (
+                    <option key={shift.id} value={shift.id}>
+                      {shift.name} ({formatShiftTime(shift.start_time)} -{" "}
+                      {formatShiftTime(shift.end_time)})
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-gray-500">
+                  Overtime is worked time beyond this shift's length.
+                </p>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="mb-2 block text-sm font-medium text-gray-700">
@@ -929,8 +1113,17 @@ function AdminAttendance() {
           </div>
         </div>
       )}
+
+      {/* Manage Shifts Modal */}
+      {showShiftManager && (
+        <ShiftManagerModal
+          onClose={() => setShowShiftManager(false)}
+          onChanged={() => setAttendanceRefreshKey((current) => current + 1)}
+        />
+      )}
     </div>
   );
 }
 
 export default AdminAttendance;
+

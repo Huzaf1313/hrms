@@ -46,6 +46,7 @@ def serialize_employee(employee: dict) -> EmployeeResponse:
         reporting_manager=employee.get("reporting_manager"),
         salary_structure=employee.get("salary_structure"),
         salary=employee.get("salary"),
+        shift_id=employee.get("shift_id"),
         emergency_contact=employee.get("emergency_contact"),
         bank_information=employee.get("bank_information"),
         status=employee.get("status", "active"),

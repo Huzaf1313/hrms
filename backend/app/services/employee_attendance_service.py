@@ -5,12 +5,70 @@ from app.repositories.employee_attendance_repository import (
     EmployeeAttendanceRepository,
 )
 from app.repositories.employee_repository import EmployeeRepository
+from app.repositories.shift_repository import ShiftRepository
+from app.services.attendance_calculation import (
+    compute_work_metrics,
+    shift_duration_minutes,
+)
 
 
 class EmployeeAttendanceService:
     def __init__(self):
         self.repository = EmployeeAttendanceRepository()
         self.employee_repository = EmployeeRepository()
+        self.shift_repository = ShiftRepository()
+
+    async def _apply_shift_and_metrics(
+        self,
+        employee: dict,
+        record: dict,
+    ) -> dict:
+        """Snapshot the employee's shift onto the record and measure the day.
+
+        Kept in one place so punch-in and punch-out produce identical shift
+        and overtime fields. The snapshot means editing a shift later does not
+        rewrite historical attendance.
+        """
+        shift = None
+        shift_id = employee.get("shift_id")
+
+        if shift_id:
+            shift = await self.shift_repository.get_by_id(shift_id)
+
+        if shift:
+            start_time = shift.get("start_time")
+            end_time = shift.get("end_time")
+        else:
+            start_time = record.get("shift_start")
+            end_time = record.get("shift_end")
+
+        duration = shift_duration_minutes(start_time, end_time)
+
+        metrics = compute_work_metrics(
+            record.get("check_in"),
+            record.get("check_out"),
+            shift_duration=duration,
+            shift_start=start_time,
+        )
+
+        record["shift_id"] = str(shift["_id"]) if shift else record.get("shift_id")
+        record["shift"] = (
+            shift.get("name") if shift else record.get("shift")
+        ) or "General"
+        record["shift_start"] = start_time
+        record["shift_end"] = end_time
+        record["shift_duration_minutes"] = duration
+        record["worked_minutes"] = metrics.worked_minutes
+        record["overtime_minutes"] = metrics.overtime_minutes
+        record["late_minutes"] = metrics.late_minutes
+        record["is_overnight"] = metrics.is_overnight
+
+        # Overtime is hours only in this phase. total_hours stays a plain
+        # duration of hours so existing payroll reads are unaffected.
+        if metrics.worked_minutes is not None:
+            record["total_hours"] = round(metrics.worked_minutes / 60, 2)
+
+        return record
 
     async def create_attendance(self, attendance_data: dict):
         employee_id = attendance_data["employee_id"]
@@ -40,6 +98,11 @@ class EmployeeAttendanceService:
 
         attendance_data["created_at"] = datetime.utcnow()
         attendance_data["updated_at"] = datetime.utcnow()
+
+        attendance_data = await self._apply_shift_and_metrics(
+            employee,
+            attendance_data,
+        )
 
         try:
             return await self.repository.create(attendance_data)
@@ -187,6 +250,37 @@ class EmployeeAttendanceService:
                     "Employee not found",
                     404,
                 )
+
+        employee = await self.employee_repository.get_by_employee_id(
+            attendance["employee_id"]
+        )
+
+        if not employee:
+            employee = await self.employee_repository.get_by_id(
+                attendance["employee_id"]
+            )
+
+        # Punch-out is where worked time and overtime become known.
+        merged = {**attendance, **update_data}
+        update_data = await self._apply_shift_and_metrics(employee, merged)
+
+        # Only the fields this helper is responsible for, not the whole
+        # existing document.
+        for key in (
+            "shift_id",
+            "shift",
+            "shift_start",
+            "shift_end",
+            "shift_duration_minutes",
+            "worked_minutes",
+            "overtime_minutes",
+            "late_minutes",
+            "is_overnight",
+        ):
+            update_data[key] = merged[key]
+
+        if merged.get("worked_minutes") is not None:
+            update_data["total_hours"] = merged["total_hours"]
 
         update_data["updated_at"] = datetime.utcnow()
 

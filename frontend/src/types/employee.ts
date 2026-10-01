@@ -71,6 +71,7 @@ export interface Employee {
   reporting_manager?: string;
   salary_structure?: string;
   salary?: string;
+  shift_id?: string;
 
   // Additional Information
   emergency_contact?: EmergencyContact;
@@ -104,6 +105,7 @@ export interface EmployeeCreate {
   reporting_manager?: string;
   salary_structure?: string;
   salary?: string;
+  shift_id?: string;
 
   emergency_contact?: EmergencyContact;
   bank_information?: BankInformation;
@@ -127,6 +129,7 @@ export interface EmployeeUpdate {
   reporting_manager?: string;
   salary_structure?: string;
   salary?: string;
+  shift_id?: string;
 
   emergency_contact?: EmergencyContact;
   bank_information?: BankInformation;

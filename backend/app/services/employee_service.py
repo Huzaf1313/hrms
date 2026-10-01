@@ -8,6 +8,7 @@ from app.repositories.admin_salary_structure_repository import (
 )
 from app.repositories.department_repository import DepartmentRepository
 from app.repositories.employee_repository import EmployeeRepository
+from app.repositories.shift_repository import ShiftRepository
 from app.services.admin_salary_structure_service import parse_salary_floor
 from app.utils.filtering import build_filter
 from app.utils.pagination import PaginationParams
@@ -18,6 +19,22 @@ class EmployeeService:
         self.repository = EmployeeRepository()
         self.department_repository = DepartmentRepository()
         self.salary_structure_repository = AdminSalaryStructureRepository()
+        self.shift_repository = ShiftRepository()
+
+    async def _validate_shift(self, shift_id: str | None):
+        if not shift_id:
+            return
+
+        shift = await self.shift_repository.get_by_id(shift_id)
+
+        if not shift:
+            raise AppException("Shift not found", 400)
+
+        if not shift.get("is_active", True):
+            raise AppException(
+                "This shift is inactive and cannot be assigned",
+                400,
+            )
 
     async def _validate_salary(
         self,
@@ -98,6 +115,8 @@ class EmployeeService:
             employee_data.get("salary_structure"),
             employee_data.get("salary"),
         )
+
+        await self._validate_shift(employee_data.get("shift_id"))
 
         employee_data["status"] = "active"
         employee_data["full_name"] = (
@@ -245,6 +264,9 @@ class EmployeeService:
                 ),
                 update_data.get("salary", employee.get("salary")),
             )
+
+        if "shift_id" in update_data:
+            await self._validate_shift(update_data["shift_id"])
 
         update_data["updated_at"] = datetime.utcnow()
 

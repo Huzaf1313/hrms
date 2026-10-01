@@ -412,6 +412,7 @@ function AdminLeave() {
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
   const [total, setTotal] = useState(0);
+  const [pageSize, setPageSize] = useState(5);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedRequest, setSelectedRequest] = useState<LeaveRequest | null>(null);
@@ -419,7 +420,7 @@ function AdminLeave() {
   useEffect(() => {
     let cancelled = false;
     Promise.allSettled([
-      leaveService.list({ page, limit: 10, status: statusFilter || undefined, leave_type: leaveTypeFilter || undefined, department_id: departmentFilter || undefined }),
+      leaveService.list({ page, limit: pageSize, status: statusFilter || undefined, leave_type: leaveTypeFilter || undefined, department_id: departmentFilter || undefined }),
       leaveService.summary(),
       departmentService.list(),
     ]).then(([listResult, summaryResult, departmentsResult]) => {
@@ -449,7 +450,7 @@ function AdminLeave() {
       if (!cancelled) setIsLoading(false);
     });
     return () => { cancelled = true; };
-  }, [departmentFilter, leaveTypeFilter, page, statusFilter]);
+  }, [departmentFilter, leaveTypeFilter, page, pageSize, statusFilter]);
 
   const statCards = [
     { label: "Total Leave Requests", value: summary?.total_leave_requests ?? "-", sub: "This Month", icon: CalendarDays, iconBg: "bg-blue-500" },
@@ -491,7 +492,7 @@ function AdminLeave() {
               <div className={`mb-4 flex h-10 w-10 items-center justify-center rounded-xl ${card.iconBg}`}>
                 <Icon className="h-5 w-5 text-white" />
               </div>
-              <p className="text-sm text-gray-500">{card.label}</p>
+              <p className="text-sm font-bold text-black">{card.label}</p>
               <div className="mt-1 text-2xl font-bold text-gray-900">{card.value}</div>
               <p className="mt-1 text-xs text-gray-400">{card.sub}</p>
             </div>
@@ -559,7 +560,7 @@ function AdminLeave() {
           <div className="flex flex-wrap items-center gap-2">
             <select
               value={departmentFilter}
-              onChange={(event) => setDepartmentFilter(event.target.value)}
+              onChange={(event) => { setPage(1); setDepartmentFilter(event.target.value); }}
               className="rounded-full border border-gray-200 bg-white px-4 py-2 text-sm text-gray-600 focus:border-[#2563eb] focus:outline-none"
             >
               <option value="">All Departments</option>
@@ -672,15 +673,38 @@ function AdminLeave() {
 
         {/* Pagination */}
         <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-sm text-gray-500">
-          <span>Showing {total === 0 ? 0 : (page - 1) * 10 + 1} to {Math.min(page * 10, total)} of {total} entries</span>
-          <div className="flex items-center gap-1.5">
-            <button type="button" disabled={page === 1} onClick={() => setPage((current) => current - 1)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 disabled:opacity-40">
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <span className="px-2 font-semibold text-gray-700">{page} / {pages}</span>
-            <button type="button" disabled={page >= pages} onClick={() => setPage((current) => current + 1)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 disabled:opacity-40">
-              <ChevronRight className="h-4 w-4" />
-            </button>
+          <span>
+            Showing {total === 0 ? 0 : (page - 1) * pageSize + 1} to{" "}
+            {Math.min(page * pageSize, total)} of {total} entries
+          </span>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex items-center gap-1.5">
+              <span className="text-xs text-gray-500">Rows per page</span>
+
+              <select
+                value={pageSize}
+                onChange={(event) => {
+                  setPage(1);
+                  setPageSize(Number(event.target.value));
+                }}
+                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-600 focus:border-[#2563eb] focus:outline-none"
+              >
+                {[5, 10, 20].map((size) => (
+                  <option key={size} value={size}>{size}</option>
+                ))}
+              </select>
+            </label>
+
+            <div className="flex items-center gap-1.5">
+              <button type="button" disabled={page === 1} onClick={() => setPage((current) => current - 1)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 disabled:opacity-40">
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <span className="px-2 font-semibold text-gray-700">{page} / {pages}</span>
+              <button type="button" disabled={page >= pages} onClick={() => setPage((current) => current + 1)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 disabled:opacity-40">
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </div>
       </div>

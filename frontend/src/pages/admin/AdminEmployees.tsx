@@ -10,6 +10,7 @@ import {
 } from "../../services/admin_salary_structure_service";
 import { departmentService } from "../../services/departmentService";
 import { employeeService } from "../../services/employeeService";
+import { shiftService } from "../../services/shiftService";
 import {
   userService,
   type ManagerAccount,
@@ -20,6 +21,7 @@ import type {
   EmployeeCreate,
   EmployeeCredentials,
 } from "../../types/employee";
+import type { Shift } from "../../types/shift";
 
 const PAGE_SIZE = 10;
 
@@ -122,6 +124,7 @@ function AdminEmployees({ autoOpenCreateForm = false }: AdminEmployeesProps) {
     [],
   );
   const [managers, setManagers] = useState<ManagerAccount[]>([]);
+  const [shifts, setShifts] = useState<Shift[]>([]);
   const [search, setSearch] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -198,6 +201,13 @@ function AdminEmployees({ autoOpenCreateForm = false }: AdminEmployeesProps) {
       .listManagers()
       .then(setManagers)
       .catch(() => setManagers([]));
+  }, []);
+
+  useEffect(() => {
+    shiftService
+      .listAll()
+      .then(setShifts)
+      .catch(() => setShifts([]));
   }, []);
 
   function openCreateForm() {
@@ -325,6 +335,7 @@ function AdminEmployees({ autoOpenCreateForm = false }: AdminEmployeesProps) {
           employee={viewingEmployee}
           departments={departments}
           salaryStructures={salaryStructures}
+          shifts={shifts}
           onBack={() => setViewingEmployee(undefined)}
           onEdit={openEditForm}
           onDeactivate={handleDeactivate}
@@ -336,6 +347,7 @@ function AdminEmployees({ autoOpenCreateForm = false }: AdminEmployeesProps) {
             departments={departments}
             salaryStructures={salaryStructures}
             managers={managers}
+            shifts={shifts}
             initialEmployee={editingEmployee}
             isSubmitting={isSubmitting}
             errorMessage={formError}
@@ -473,6 +485,7 @@ function AdminEmployees({ autoOpenCreateForm = false }: AdminEmployeesProps) {
           departments={departments}
           salaryStructures={salaryStructures}
           managers={managers}
+          shifts={shifts}
           initialEmployee={editingEmployee}
           isSubmitting={isSubmitting}
           errorMessage={formError}

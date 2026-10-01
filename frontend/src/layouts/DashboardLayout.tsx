@@ -5,6 +5,7 @@ import CelebrationTicker from "../components/CelebrationTicker";
 
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
+import ErrorBoundary from "../components/ErrorBoundary";
 import HiringPipeline from "../components/HiringPipeline";
 import Celebrations from "../components/Celebrations";
 import AdminEmployees from "../pages/admin/AdminEmployees";
@@ -29,6 +30,7 @@ function DashboardLayout({
 }: DashboardLayoutProps) {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [openEmployeeFormOnMount, setOpenEmployeeFormOnMount] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   function handleNavigate(page: string) {
     // Consume the "create employee" intent so it only applies to the very
@@ -68,12 +70,21 @@ function DashboardLayout({
       <Sidebar
         activePage={activePage}
         onNavigate={handleNavigate}
+        collapsed={sidebarCollapsed}
       />
 
       <main className="min-w-0 flex-1">
-        <Header onLogout={onLogout} pageTitle={activePage} />
+        <Header
+          onLogout={onLogout}
+          pageTitle={activePage}
+          collapsed={sidebarCollapsed}
+          onToggleSidebar={() => setSidebarCollapsed((previous) => !previous)}
+        />
 
-        {activePage === "Employees" ? (
+        {/* Scoped so a crash in one admin page leaves the sidebar and header
+            usable, instead of blanking the whole screen. */}
+        <ErrorBoundary label={activePage}>
+          {activePage === "Employees" ? (
           <AdminEmployees autoOpenCreateForm={openEmployeeFormOnMount} />
         ) : activePage === "Attendance" ? (
           <AdminAttendance />
@@ -167,6 +178,7 @@ function DashboardLayout({
             />
           </div>
         )}
+        </ErrorBoundary>
       </main>
     </div>
   );

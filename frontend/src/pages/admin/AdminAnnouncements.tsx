@@ -83,56 +83,6 @@ interface Announcement {
 }
 
 
-interface PinnedItem {
-  id: string;
-  category: Category;
-  title: string;
-  date: string;
-}
-
-interface RecentItem {
-  id: string;
-  category: Category;
-  title: string;
-  date: string;
-}
-
-const pinnedAnnouncements: PinnedItem[] = [
-  {
-    id: "p1",
-    category: "HR & Policy",
-    title: "Updated Leave Policy",
-    date: "May 01, 2026",
-  },
-  {
-    id: "p2",
-    category: "Company News",
-    title: "Holiday Calendar 2026",
-    date: "Apr 25, 2026",
-  },
-];
-
-const recentAnnouncements: RecentItem[] = [
-  {
-    id: "r1",
-    category: "IT & System",
-    title: "System Maintenance",
-    date: "Sep 16, 2026",
-  },
-  {
-    id: "r2",
-    category: "Company News",
-    title: "Welcome to Our New HRMS Platform!",
-    date: "May 05, 2026",
-  },
-  {
-    id: "r3",
-    category: "Events",
-    title: "Annual Team Building Event",
-    date: "Apr 28, 2026",
-  },
-];
-
 const tabs: ("All" | Category)[] = [
   "All",
   "Company News",
@@ -140,6 +90,19 @@ const tabs: ("All" | Category)[] = [
   "Events",
   "IT & System",
 ];
+
+// ---- Quick filter options -----------------------------------------------------
+
+type QuickCategory = "All Categories" | Category;
+
+type DateRangeKey = "Last 7 Days" | "Last 30 Days" | "Last 90 Days" | "All Time";
+
+const dateRangeDays: Record<DateRangeKey, number | null> = {
+  "Last 7 Days": 7,
+  "Last 30 Days": 30,
+  "Last 90 Days": 90,
+  "All Time": null,
+};
 
 // ---- Style helpers -----------------------------------------------------------
 
@@ -256,6 +219,16 @@ function clearDraft() {
   }
 }
 
+// A draft only exists in the sense that it is worth resuming once the admin has
+// actually typed something. Merely having opened the form writes a draft, so
+// trusting "a draft is present" would force the create form open on every later
+// visit and bury the announcement the user actually came to read.
+function hasDraftContent(draft: AnnouncementDraft | null): boolean {
+  if (!draft) return false;
+
+  return draft.title.trim().length > 0 || draft.description.trim().length > 0;
+}
+
 function formatDateOnly(value?: string | null): string {
   if (!value) return "—";
 
@@ -268,6 +241,20 @@ function formatDateOnly(value?: string | null): string {
     day: "2-digit",
     year: "numeric",
   });
+}
+
+/** Newest-first sort key. Falls back to createdAt, then to 0, so records
+ * with missing or malformed dates sort last instead of dropping out. */
+function announcementTimestamp(announcement: Announcement): number {
+  const published = Date.parse(announcement.publishDate);
+
+  if (!Number.isNaN(published)) {
+    return published;
+  }
+
+  const created = Date.parse(announcement.createdAt);
+
+  return Number.isNaN(created) ? 0 : created;
 }
 
 // ---- Multi-select dropdown ---------------------------------------------------
@@ -542,6 +529,9 @@ export default function AdminAnnouncements({
 
   const [search, setSearch] = useState("");
 
+  const [quickCategory, setQuickCategory] = useState<QuickCategory>("All Categories");
+  const [quickDateRange, setQuickDateRange] = useState<DateRangeKey>("All Time");
+
   const [announcementList, setAnnouncementList] = useState<Announcement[]>([]);
   const [selectedAnnouncement, setSelectedAnnouncement] =
     useState<Announcement | null>(null);
@@ -554,8 +544,11 @@ export default function AdminAnnouncements({
   const [restoredDraft] = useState<AnnouncementDraft | null>(readDraft);
 
   // Create form state
-  const [showCreateForm, setShowCreateForm] = useState(
-    () => restoredDraft !== null,
+  // The page always opens on the list. An unfinished announcement is offered
+  // as a banner instead of force-opening the form over the top of it.
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [restoredDraftAvailable, setRestoredDraftAvailable] = useState(
+    () => hasDraftContent(restoredDraft),
   );
   const [editingAnnouncement, setEditingAnnouncement] =
     useState<Announcement | null>(null);
@@ -676,11 +669,14 @@ export default function AdminAnnouncements({
   };
 
   useEffect(() => {
-    if (!showCreateForm) return;
+    // Edits are deliberately not persisted: this key is the "unfinished new
+    // announcement" slot, and restoring an edited announcement into an empty
+    // create form would publish it as a duplicate.
+    if (!showCreateForm || editingAnnouncement) return;
 
     writeDraft(currentDraft);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showCreateForm, ...Object.values(currentDraft)]);
+  }, [showCreateForm, editingAnnouncement, ...Object.values(currentDraft)]);
 
   // ---- Label helpers ------------------------------------------------------
 
@@ -896,9 +892,13 @@ export default function AdminAnnouncements({
   // ---- Filter announcements -----------------------------------------------
 
   const filtered = useMemo(() => {
+    const days = dateRangeDays[quickDateRange];
+    const cutoff =
+      days === null ? null : new Date().getTime() - days * 86400000;
+
     return announcementList.filter((a) => {
       const matchesTab =
-        activeTab === "All" || a.category === activeTab;
+        quickCategory === "All Categories" || a.category === quickCategory;
 
       const searchText = search.toLowerCase();
 
@@ -906,15 +906,85 @@ export default function AdminAnnouncements({
         a.title.toLowerCase().includes(searchText) ||
         a.description.toLowerCase().includes(searchText);
 
-      return matchesTab && matchesSearch;
+      // An unparseable or missing publish date is kept rather than silently
+      // dropped, so bad data never hides announcements from the list.
+      let matchesDate = true;
+
+      if (cutoff !== null) {
+        const published = Date.parse(a.publishDate);
+
+        matchesDate = Number.isNaN(published) || published >= cutoff;
+      }
+
+      return matchesTab && matchesSearch && matchesDate;
     });
-  }, [activeTab, search, announcementList]);
+  }, [quickCategory, search, quickDateRange, announcementList]);
+
+  const hasActiveQuickFilters =
+    quickDateRange !== "All Time" || quickCategory !== "All Categories";
+
+  // ---- Sidebar lists ---------------------------------------------------------
+
+  const SIDEBAR_PREVIEW_COUNT = 5;
+
+  const pinnedItems = useMemo(
+    () => announcementList.filter((a) => a.pinned),
+    [announcementList],
+  );
+
+  // Recent deliberately excludes pinned entries so the two sidebar cards do
+  // not show the same announcement twice.
+  const recentItems = useMemo(
+    () =>
+      announcementList
+        .filter((a) => !a.pinned)
+        .sort((a, b) => announcementTimestamp(b) - announcementTimestamp(a)),
+    [announcementList],
+  );
+
+  const [sidebarModal, setSidebarModal] = useState<"pinned" | "recent" | null>(null);
+
+  // Reading an announcement and composing one are mutually exclusive, so
+  // viewing always hides the create form. The draft is left in storage on
+  // purpose - it still resumes the next time this page mounts.
+  function openAnnouncement(announcement: Announcement) {
+    setSidebarModal(null);
+    setShowCreateForm(false);
+    setSelectedAnnouncement(announcement);
+  }
+
+  // The tab strip and the Quick Filters category select are two views of the
+  // same filter, so every change has to move both.
+  function handleCategoryFilterChange(next: QuickCategory) {
+    setQuickCategory(next);
+    setActiveTab(next === "All Categories" ? "All" : next);
+  }
+
+  function handleClearQuickFilters() {
+    setQuickCategory("All Categories");
+    setQuickDateRange("All Time");
+    setActiveTab("All");
+  }
 
   // ---- Open create form ----------------------------------------------------
 
   const handleCreateAnnouncement = () => {
     setEditingAnnouncement(null);
+    setRestoredDraftAvailable(false);
     setShowCreateForm(true);
+  };
+
+  // Bring back the unfinished announcement without discarding it.
+  const handleResumeDraft = () => {
+    setEditingAnnouncement(null);
+    setRestoredDraftAvailable(false);
+    setShowCreateForm(true);
+  };
+
+  const handleDiscardDraft = () => {
+    clearDraft();
+    resetForm();
+    setRestoredDraftAvailable(false);
   };
 
   const handleEditAnnouncement = (announcement: Announcement) => {
@@ -931,6 +1001,8 @@ export default function AdminAnnouncements({
     setSelectedDepartments(announcement.targetDepartments);
     setSelectedEmployees(announcement.targetEmployees);
     setSelectedAnnouncement(null);
+    // Editing must not be mistaken for a resumed draft on the next visit.
+    setRestoredDraftAvailable(false);
     setShowCreateForm(true);
   };
 
@@ -990,6 +1062,7 @@ export default function AdminAnnouncements({
     clearDraft();
     resetForm();
     setEditingAnnouncement(null);
+    setRestoredDraftAvailable(false);
     setShowCreateForm(false);
   };
 
@@ -1081,6 +1154,7 @@ export default function AdminAnnouncements({
       clearDraft();
       resetForm();
       setEditingAnnouncement(null);
+      setRestoredDraftAvailable(false);
       setShowCreateForm(false);
 
       setSuccessMessage(
@@ -1592,7 +1666,6 @@ export default function AdminAnnouncements({
 
                 Pin this announcement{" "}
                 <span className="text-xs text-slate-400">
-                  (keep it on top)
                 </span>
               </label>
 
@@ -1804,6 +1877,32 @@ export default function AdminAnnouncements({
         </div>
       )}
 
+      {restoredDraftAvailable && !showCreateForm && (
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+          <FileText className="h-4 w-4 shrink-0 text-amber-600" />
+
+          <p className="min-w-0 flex-1 text-sm font-medium text-amber-800">
+            You have an unfinished announcement.
+          </p>
+
+          <button
+            type="button"
+            onClick={handleResumeDraft}
+            className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-700"
+          >
+            Resume
+          </button>
+
+          <button
+            type="button"
+            onClick={handleDiscardDraft}
+            className="rounded-lg border border-amber-300 px-3 py-1.5 text-xs font-semibold text-amber-800 transition hover:bg-amber-100"
+          >
+            Discard
+          </button>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_300px]">
         {/* Main column ------------------------------------------------------ */}
 
@@ -1815,7 +1914,7 @@ export default function AdminAnnouncements({
               <button
                 key={tab}
                 type="button"
-                onClick={() => setActiveTab(tab)}
+                onClick={() => handleCategoryFilterChange(tab === "All" ? "All Categories" : tab)}
                 className={`-mb-px border-b-2 pb-3 text-sm font-medium transition ${
                   activeTab === tab
                     ? "border-blue-600 text-blue-600"
@@ -1960,7 +2059,7 @@ export default function AdminAnnouncements({
                           </button>
                           <button
                             type="button"
-                            onClick={() => setSelectedAnnouncement(a)}
+                            onClick={() => openAnnouncement(a)}
                             className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700"
                           >
                             View Details
@@ -1976,7 +2075,9 @@ export default function AdminAnnouncements({
 
             {!isLoading && filtered.length === 0 && (
               <div className="rounded-xl border border-dashed border-slate-200 bg-white p-8 text-center text-sm text-slate-400">
-                No announcements match your search.
+                {hasActiveQuickFilters
+                  ? "No announcements match the selected filters."
+                  : "No announcements match your search."}
               </div>
             )}
           </div>
@@ -2036,32 +2137,52 @@ export default function AdminAnnouncements({
               Category
             </label>
 
-            <select className="mb-4 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30">
+            <select
+              value={quickCategory}
+              onChange={(event) =>
+                handleCategoryFilterChange(event.target.value as QuickCategory)
+              }
+              className="mb-4 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+            >
               <option>All Categories</option>
               <option>Company News</option>
-              <option>HR & Policy</option>
+              <option>HR &amp; Policy</option>
               <option>Events</option>
-              <option>IT & System</option>
+              <option>IT &amp; System</option>
             </select>
 
             <label className="mb-1.5 block text-xs font-medium text-slate-500">
               Date Range
             </label>
 
-            <select className="mb-4 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30">
-              <option>Last 30 Days</option>
-              <option>Last 7 Days</option>
-              <option>Last 90 Days</option>
+            <select
+              value={quickDateRange}
+              onChange={(event) =>
+                setQuickDateRange(event.target.value as DateRangeKey)
+              }
+              className="mb-4 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+            >
               <option>All Time</option>
+              <option>Last 7 Days</option>
+              <option>Last 30 Days</option>
+              <option>Last 90 Days</option>
             </select>
 
             <button
               type="button"
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+              onClick={handleClearQuickFilters}
+              disabled={!hasActiveQuickFilters}
+              className="w-full rounded-lg border border-slate-200 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              <Filter className="h-4 w-4" />
-              Apply
+              Clear Filters
             </button>
+
+            {hasActiveQuickFilters && (
+              <p className="mt-3 text-xs text-slate-400">
+                Showing {filtered.length} of {announcementList.length}{" "}
+                announcements
+              </p>
+            )}
           </div>
 
           {/* Pinned */}
@@ -2073,42 +2194,53 @@ export default function AdminAnnouncements({
                 Pinned Announcements
               </h3>
 
-              <button
-                type="button"
-                className="text-xs font-semibold text-blue-600 hover:text-blue-700"
-              >
-                View All
-              </button>
+              {pinnedItems.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSidebarModal("pinned")}
+                  className="text-xs font-semibold text-blue-600 hover:text-blue-700"
+                >
+                  View All
+                </button>
+              )}
             </div>
 
-            <div className="flex flex-col gap-3">
-              {pinnedAnnouncements.map((p) => {
-                const style = categoryStyles[p.category];
+            {pinnedItems.length === 0 ? (
+              <p className="text-xs text-slate-400">
+                No pinned announcements.
+              </p>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {pinnedItems.slice(0, SIDEBAR_PREVIEW_COUNT).map((p) => {
+                  const style = categoryStyles[p.category];
 
-                return (
-                  <div
-                    key={p.id}
-                    className="flex items-center gap-2.5"
-                  >
-                    <span
-                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${style.iconBg}`}
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => openAnnouncement(p)}
+                      className="flex items-center gap-2.5 rounded-lg text-left transition hover:bg-slate-50"
                     >
-                      {style.icon}
-                    </span>
+                      <span
+                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${style.iconBg}`}
+                      >
+                        {style.icon}
+                      </span>
 
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-slate-800">
-                        {p.title}
-                      </p>
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-medium text-slate-800">
+                          {p.title}
+                        </span>
 
-                      <p className="text-xs text-slate-400">
-                        {p.date}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                        <span className="block text-xs text-slate-400">
+                          {formatDateOnly(p.publishDate)}
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Recent */}
@@ -2120,39 +2252,122 @@ export default function AdminAnnouncements({
                 Recent Announcements
               </h3>
 
-              <button
-                type="button"
-                className="text-xs font-semibold text-blue-600 hover:text-blue-700"
-              >
-                View All
-              </button>
-            </div>
-
-            <div className="flex flex-col gap-3">
-              {recentAnnouncements.map((r) => (
-                <div
-                  key={r.id}
-                  className="flex items-start gap-2.5"
+              {recentItems.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSidebarModal("recent")}
+                  className="text-xs font-semibold text-blue-600 hover:text-blue-700"
                 >
-                  <span
-                    className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${dotStyles[r.category]}`}
-                  />
-
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-slate-800">
-                      {r.title}
-                    </p>
-
-                    <p className="text-xs text-slate-400">
-                      {r.date}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                  View All
+                </button>
+              )}
             </div>
+
+            {recentItems.length === 0 ? (
+              <p className="text-xs text-slate-400">
+                No recent announcements.
+              </p>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {recentItems.slice(0, SIDEBAR_PREVIEW_COUNT).map((r) => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => openAnnouncement(r)}
+                    className="flex items-start gap-2.5 rounded-lg text-left transition hover:bg-slate-50"
+                  >
+                    <span
+                      className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${dotStyles[r.category]}`}
+                    />
+
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-medium text-slate-800">
+                        {r.title}
+                      </span>
+
+                      <span className="block text-xs text-slate-400">
+                        {formatDateOnly(r.publishDate)}
+                      </span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
+
+      {sidebarModal && (
+        <div
+          className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/40 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="sidebar-modal-title"
+          onClick={() => setSidebarModal(null)}
+        >
+          <div
+            className="max-h-[80vh] w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+              <h2
+                id="sidebar-modal-title"
+                className="text-base font-semibold text-slate-900"
+              >
+                {sidebarModal === "pinned"
+                  ? "Pinned Announcements"
+                  : "Recent Announcements"}
+              </h2>
+
+              <button
+                type="button"
+                onClick={() => setSidebarModal(null)}
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-50"
+                aria-label="Close"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="max-h-[60vh] overflow-y-auto p-5">
+              <div className="flex flex-col gap-2">
+                {(sidebarModal === "pinned" ? pinnedItems : recentItems).map(
+                  (item) => {
+                    const style = categoryStyles[item.category];
+
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => openAnnouncement(item)}
+                        className="flex items-center gap-3 rounded-xl border border-slate-100 p-3 text-left transition hover:bg-slate-50"
+                      >
+                        <span
+                          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${style.iconBg}`}
+                        >
+                          {style.icon}
+                        </span>
+
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-medium text-slate-800">
+                            {item.title}
+                          </span>
+
+                          <span className="block text-xs text-slate-400">
+                            {item.category} • {formatDateOnly(item.publishDate)}
+                          </span>
+                        </span>
+
+                        {item.pinned && <Pin className="h-4 w-4 shrink-0 text-blue-500" />}
+                      </button>
+                    );
+                  },
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {selectedAnnouncement && (
         <div
