@@ -63,6 +63,7 @@ function EmployeePayroll() {
   const [, setLoading] = useState(true);
   const [, setError] = useState("");
   const [latestPayroll, setLatestPayroll] = useState<any | null>(null);
+  const [selectedPayrollId, setSelectedPayrollId] = useState("");
 
   useEffect(() => {
   async function fetchPayroll() {
@@ -129,6 +130,17 @@ const payslips: Payslip[] = payrollData.map((record) => ({
       ? "Processing"
       : "Credited",
 }));
+
+useEffect(() => {
+  if (payslips.length > 0 && !selectedPayrollId) {
+    setSelectedPayrollId(payslips[0].id);
+  }
+}, [payslips, selectedPayrollId]);
+
+const selectedDownloadPayslip =
+  payslips.find((payslip) => payslip.id === selectedPayrollId) ??
+  payslips[0] ??
+  null;
 
 const salaryComponents: SalaryComponent[] = latestPayroll
   ? [
@@ -263,7 +275,7 @@ const salaryComponents: SalaryComponent[] = latestPayroll
     setCurrentPage((page) => Math.min(Math.max(totalPages, 1), page + 1));
   }
 
-  async function handleDownloadPayslip(payslip?: Payslip) {
+async function handleDownloadPayslip(payslip?: Payslip | null) {
   if (!payslip?.id) {
     window.alert("Payslip information is not available.");
     return;
@@ -273,6 +285,25 @@ const salaryComponents: SalaryComponent[] = latestPayroll
     const pdfBlob = await downloadFile(
       `/employee-payslip/${payslip.id}/download`,
     );
+
+    const user = JSON.parse(
+      localStorage.getItem("user") || "{}"
+    );
+
+    const firstName = String(user.first_name ?? "").trim();
+    const lastName = String(user.last_name ?? "").trim();
+
+    const employeeName =
+      [firstName, lastName].filter(Boolean).join("_") ||
+      String(user.name ?? user.full_name ?? "Employee")
+        .trim()
+        .replace(/\s+/g, "_");
+
+    const payrollMonth = String(payslip.month ?? "Payslip")
+      .trim()
+      .replace(/\s+/g, "_");
+
+    const filename = `${employeeName}_Payslip_${payrollMonth}.pdf`;
 
     const downloadUrl = window.URL.createObjectURL(pdfBlob);
 
@@ -285,15 +316,15 @@ const salaryComponents: SalaryComponent[] = latestPayroll
     link.remove();
 
     window.URL.revokeObjectURL(downloadUrl);
-      } catch (error) {
-        const message =
-          error instanceof Error
-            ? error.message
-            : "Unable to download payslip.";
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Unable to download payslip.";
 
-        window.alert(message);
-      }
-    }
+    window.alert(message);
+  }
+}
 
   return (
     <>
@@ -318,9 +349,31 @@ const salaryComponents: SalaryComponent[] = latestPayroll
 
             <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
               <CalendarDays className="h-4 w-4 text-slate-400" />
-              <span className="text-sm font-medium text-slate-700">
-                {latestPayroll?.month ?? "—"}
-              </span>
+
+              <label
+                htmlFor="payroll-month"
+                className="text-xs font-medium text-slate-500"
+              >
+                Month & Year
+              </label>
+
+              <select
+                id="payroll-month"
+                value={selectedPayrollId}
+                onChange={(event) => setSelectedPayrollId(event.target.value)}
+                disabled={payslips.length === 0}
+                className="cursor-pointer bg-transparent text-sm font-semibold text-slate-700 outline-none disabled:cursor-not-allowed disabled:text-slate-400"
+              >
+                {payslips.length === 0 ? (
+                  <option value="">No payroll available</option>
+                ) : (
+                  payslips.map((payslip) => (
+                    <option key={payslip.id} value={payslip.id}>
+                      {payslip.month}
+                    </option>
+                  ))
+                )}
+              </select>
             </div>
           </div>
 
@@ -468,7 +521,7 @@ const salaryComponents: SalaryComponent[] = latestPayroll
 
                 <button
                   type="button"
-                  onClick={() => handleDownloadPayslip(payslips[0])}
+                  onClick={() => handleDownloadPayslip(selectedDownloadPayslip)}
                   className="mt-4 inline-flex items-center gap-2 rounded-lg bg-white px-3.5 py-2 text-sm font-semibold text-[#0d1e3e] transition hover:bg-slate-100"
                 >
                   <ArrowDownToLine className="h-4 w-4" />

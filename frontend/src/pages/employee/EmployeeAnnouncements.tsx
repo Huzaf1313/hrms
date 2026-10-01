@@ -10,6 +10,7 @@ import {
   Loader2,
   AlertCircle,
 } from "lucide-react";
+import { api } from "../../services/api";
 
 import {
   announcementService,
@@ -382,6 +383,7 @@ function EmployeeAnnouncements() {
             </div>
 
             <div className="space-y-4">
+              {/* Category Filter */}
               <div>
                 <label className="mb-1.5 block text-xs font-medium text-gray-600">
                   Category
@@ -408,6 +410,7 @@ function EmployeeAnnouncements() {
                 </div>
               </div>
 
+              {/* Date Filter */}
               <div>
                 <label className="mb-1.5 block text-xs font-medium text-gray-600">
                   Date
@@ -416,7 +419,9 @@ function EmployeeAnnouncements() {
                 <div className="relative">
                   <select
                     value={filterDate}
-                    onChange={(event) => setFilterDate(event.target.value)}
+                    onChange={(event) =>
+                      setFilterDate(event.target.value)
+                    }
                     className="h-10 w-full appearance-none rounded-lg border border-gray-200 bg-white px-3 pr-9 text-sm text-gray-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                   >
                     <option value="30">Last 30 Days</option>
@@ -445,6 +450,7 @@ function EmployeeAnnouncements() {
               <h2 className="text-sm font-semibold text-gray-900">
                 Important
               </h2>
+
               <p className="mt-1 text-xs text-gray-500">
                 Pinned notices will appear here.
               </p>

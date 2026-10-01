@@ -332,32 +332,6 @@ function Login() {
                 {isLoading ? "Signing In..." : "Sign In"}
               </button>
 
-              {/* Divider */}
-              <div className="my-5 flex items-center gap-4">
-                <div className="h-px flex-1 bg-[#e0e3ea]" />
-                <span className="text-sm text-[#7a8498]">
-                  or continue with
-                </span>
-                <div className="h-px flex-1 bg-[#e0e3ea]" />
-              </div>
-
-              {/* Social Login */}
-              <div className="grid grid-cols-2 gap-4">
-                <button
-                  type="button"
-                  className="rounded-xl border border-[#d6dbe6] py-3 font-medium text-[#17213a] transition hover:bg-gray-50"
-                >
-                  Google
-                </button>
-
-                <button
-                  type="button"
-                  className="rounded-xl border border-[#d6dbe6] py-3 font-medium text-[#17213a] transition hover:bg-gray-50"
-                >
-                  Microsoft
-                </button>
-              </div>
-
               {/* Signup */}
               <p className="mt-5 text-center text-sm text-[#52607a]">
                 Don't have an account?{" "}
@@ -369,17 +343,8 @@ function Login() {
                   Sign up
                 </button>
               </p>
-
-              {/* Security */}
-              <div className="mt-8 rounded-xl bg-[#f6f8fc] p-4 text-center text-xs text-[#68758e]">
-                256-bit SSL Encrypted&nbsp;&nbsp; G�� &nbsp;&nbsp;
-                Your data is always secure&nbsp;&nbsp; G�� &nbsp;&nbsp;
-                Enterprise Grade Security
-              </div>
-
             </div>
           </div>
-
         </div>
       </div>
     </div>
@@ -387,4 +352,3 @@ function Login() {
 }
 
 export default Login;
-

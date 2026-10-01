@@ -36,6 +36,12 @@ async def connect_to_database():
         name="unique_employee_attendance_per_day",
     )
 
+    await database["email_otps"].create_index(
+        "expires_at",
+        expireAfterSeconds=0,
+        name="email_otp_ttl",
+    )
+
     print("MongoDB connected successfully")
 
 
