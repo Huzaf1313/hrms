@@ -1637,44 +1637,28 @@ if (
                     const status =
                       attendance?.status?.toLowerCase();
 
-<<<<<<< Updated upstream
-                    let statusClass =
-                      "text-gray-700";
-
-                    if (status === "present") {
-=======
                     const isLate = (() => {
-                        if (!attendance || !resolveCheckIn(attendance)) return false;
+                      if (!attendance || !resolveCheckIn(attendance)) return false;
 
-                        if (attendance.late_minutes != null) return attendance.late_minutes > 0;
-                        if (attendance.is_late) return true;
+                      if (attendance.late_minutes != null) return attendance.late_minutes > 0;
+                      if (attendance.is_late) return true;
 
-                        const inMin = clockMinutes(resolveCheckIn(attendance));
-                        const startMin = clockMinutes(
-                          attendance.shift_start ?? myShift?.start_time ?? null,
-                        );
+                      const inMin = clockMinutes(resolveCheckIn(attendance));
+                      const startMin = clockMinutes(
+                        attendance.shift_start ?? myShift?.start_time ?? null,
+                      );
 
-                        return inMin !== null && startMin !== null && inMin > startMin;
-                      })();
+                      return inMin !== null && startMin !== null && inMin > startMin;
+                    })();
 
                     let statusClass = "text-gray-700";
 
-                    if (isWeeklyOff) {
-                      statusClass =
-                        "bg-gray-200 text-gray-600";
-                    } else if (isOnLeave) {
-                      statusClass =
-                        "bg-purple-100 text-purple-700";
-                    } else if (isLate) {
+                    if (isLate || status === "late") {
                       statusClass =
                         "bg-orange-100 text-orange-700";
                     } else if (status === "present") {
->>>>>>> Stashed changes
                       statusClass =
                         "bg-green-100 text-green-700";
-                    } else if (status === "late") {
-                      statusClass =
-                        "bg-orange-100 text-orange-700";
                     } else if (status === "absent") {
                       statusClass =
                         "bg-red-100 text-red-700";
