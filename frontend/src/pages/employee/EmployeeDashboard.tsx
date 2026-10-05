@@ -943,7 +943,7 @@ const attendanceChart = useMemo(() => {
 
                         <span className="shrink-0 text-xs text-gray-400">
                           {new Date(
-                            `${announcement.publish_date}T00:00:00`,
+                            `${announcement.published_at}T00:00:00`,
                           ).toLocaleDateString("en-US", {
                             month: "short",
                             day: "2-digit",
