@@ -27,6 +27,7 @@ class LeaveResponse(BaseModel):
     leave_type: str
     start_date: date
     end_date: date
+    total_days: int | None = None
     reason: str | None = None
     status: str
     created_at: datetime

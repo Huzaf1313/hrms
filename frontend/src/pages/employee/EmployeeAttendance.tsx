@@ -59,16 +59,14 @@ function resolveCheckIn(
   record: AttendanceRecord | null | undefined,
 ): string | null {
   if (!record) return null;
-
-  return record.in_time ?? resolveCheckIn(record) ?? null;
+  return record.in_time ?? record.check_in ?? null;
 }
 
 function resolveCheckOut(
   record: AttendanceRecord | null | undefined,
 ): string | null {
   if (!record) return null;
-
-  return record.out_time ?? resolveCheckOut(record) ?? null;
+  return record.out_time ?? record.check_out ?? null;
 }
 
 /** "09:30 AM" or "18:30" or an ISO string -> minutes since midnight, or
@@ -223,9 +221,7 @@ useEffect(() => {
 
 if (!user.employee_id) {
   setEmployeeId(null);
-  setError(
-    "Employee ID could not be found for the logged-in user.",
-  );
+  setError("Employee ID could not be found for the logged-in user.");
   return;
 }
 
@@ -257,16 +253,15 @@ const [records, leaveList, requests] = await Promise.all([
   ),
 ]);
 
-console.log("ATTENDANCE RECORDS:", records);
-console.log(
-  "TODAY:",
-  new Date().toString(),
-  new Date().toISOString(),
-);
-console.log("LEAVE DATA:", leaveList.items);
+// console.log("ATTENDANCE RECORDS:", records);
+// console.log(
+//   "TODAY:",
+//   new Date().toString(),
+//   new Date().toISOString(),
+// );
+// console.log("LEAVE DATA:", leaveList.items);
 
-setAttendanceRecords(records);
-setRegularizationRequests(requests);
+
 
 setAttendanceRecords(records);
 setRegularizationRequests(requests);
@@ -548,20 +543,27 @@ if (
     }
 
     function formatTime(value: string | null) {
-        if (!value) {
-            return "--";
-        }
+  if (!value) return "--";
 
-        const utcValue = value.endsWith("Z")
-            ? value
-            : `${value}Z`;
+  const text = value.trim();
 
-        return new Date(utcValue).toLocaleTimeString("en-IN", {
-            timeZone: "Asia/Kolkata",
-            hour: "2-digit",
-            minute: "2-digit",
-        });
-        }
+  // Already a display string such as "09:30 AM" or "18:30"
+  if (/^\d{1,2}:\d{2}(\s*[AP]M)?$/i.test(text)) {
+    return text;
+  }
+
+  // ISO timestamp; assume UTC when no timezone is present
+  const hasTz = /([zZ]|[+-]\d{2}:?\d{2})$/.test(text);
+  const date = new Date(hasTz ? text : `${text}Z`);
+
+  if (Number.isNaN(date.getTime())) return "--";
+
+  return date.toLocaleTimeString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
     const todayStatus = todayRecord?.status || "Not Marked";
 
@@ -1258,7 +1260,11 @@ if (
                             </p>
 
                             <p className="mt-2 text-xs text-gray-400">
-                              Shift: {record.shift ?? "General"}
+                              Shift:{" "}
+                              {record.shift_id ||
+                              record.shift_duration_minutes != null
+                                ? record.shift || "General"
+                                : "No shift assigned"}
                             </p>
 
                             <p className="mt-1 text-xs text-gray-400">
@@ -1631,10 +1637,39 @@ if (
                     const status =
                       attendance?.status?.toLowerCase();
 
+<<<<<<< Updated upstream
                     let statusClass =
                       "text-gray-700";
 
                     if (status === "present") {
+=======
+                    const isLate = (() => {
+                        if (!attendance || !resolveCheckIn(attendance)) return false;
+
+                        if (attendance.late_minutes != null) return attendance.late_minutes > 0;
+                        if (attendance.is_late) return true;
+
+                        const inMin = clockMinutes(resolveCheckIn(attendance));
+                        const startMin = clockMinutes(
+                          attendance.shift_start ?? myShift?.start_time ?? null,
+                        );
+
+                        return inMin !== null && startMin !== null && inMin > startMin;
+                      })();
+
+                    let statusClass = "text-gray-700";
+
+                    if (isWeeklyOff) {
+                      statusClass =
+                        "bg-gray-200 text-gray-600";
+                    } else if (isOnLeave) {
+                      statusClass =
+                        "bg-purple-100 text-purple-700";
+                    } else if (isLate) {
+                      statusClass =
+                        "bg-orange-100 text-orange-700";
+                    } else if (status === "present") {
+>>>>>>> Stashed changes
                       statusClass =
                         "bg-green-100 text-green-700";
                     } else if (status === "late") {

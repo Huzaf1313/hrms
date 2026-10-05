@@ -1,6 +1,7 @@
 from datetime import date, datetime, time, timedelta, timezone
 
 from app.core.exceptions import AppException
+from app.core.working_days import count_working_days
 from app.repositories.employee_leave_repository import (
     EmployeeLeaveRepository,
 )
@@ -27,10 +28,19 @@ class EmployeeLeaveService:
                 400,
             )
 
-        # 2. Calculate total leave days
-        total_days = (
-            end_date - start_date
-        ).days + 1
+        # 2. Calculate leave days. Saturdays and Sundays are predefined
+        # weekly offs, so only working days are deducted from the balance.
+        total_days = count_working_days(
+            start_date,
+            end_date,
+        )
+
+        if total_days == 0:
+            raise AppException(
+                "Selected range falls only on Saturdays or Sundays. "
+                "Please choose at least one working day.",
+                400,
+            )
 
         # 3. Validate leave type
         allowed_leave_types = {

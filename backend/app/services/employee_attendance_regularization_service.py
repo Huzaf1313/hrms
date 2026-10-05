@@ -8,6 +8,12 @@ from app.repositories.employee_attendance_repository import (
 from app.repositories.employee_attendance_regularization_repository import (
     EmployeeAttendanceRegularizationRepository,
 )
+from app.repositories.employee_repository import EmployeeRepository
+from app.repositories.shift_repository import ShiftRepository
+from app.services.attendance_calculation import (
+    compute_work_metrics,
+    shift_duration_minutes,
+)
 
 IST = timezone(timedelta(hours=5, minutes=30))
 
@@ -25,9 +31,122 @@ class EmployeeAttendanceRegularizationService:
 
     def __init__(self):
         self.attendance_repository = EmployeeAttendanceRepository()
+        self.employee_repository = EmployeeRepository()
         self.regularization_repository = (
             EmployeeAttendanceRegularizationRepository()
         )
+
+    async def _recompute_metrics(
+        self,
+        attendance: dict,
+        attendance_update: dict,
+    ) -> dict:
+        """Re-measure a day against its shift once the times are corrected.
+
+        Uses the shift already snapshotted on the record, and only falls back
+        to the employee's currently assigned shift when the record never had
+        one, so approving a correction never rewrites which shift applied.
+        """
+        employee = await self.employee_repository.get_by_employee_id(
+            attendance["employee_id"]
+        )
+
+        if not employee:
+            employee = await self.employee_repository.get_by_id(
+                attendance["employee_id"]
+            )
+
+        shift_start = attendance_update.get(
+            "shift_start"
+        ) or attendance.get("shift_start")
+        shift_end = attendance_update.get(
+            "shift_end"
+        ) or attendance.get("shift_end")
+        shift_id = attendance_update.get(
+            "shift_id"
+        ) or attendance.get("shift_id")
+
+        shift = {}
+
+        if not shift_start or not shift_end:
+            shift = await self._shift_for_employee(employee, shift_id)
+
+            shift_start = shift_start or shift.get("shift_start")
+            shift_end = shift_end or shift.get("shift_end")
+            shift_id = shift_id or shift.get("shift_id")
+
+        duration = shift_duration_minutes(shift_start, shift_end)
+
+        in_time = attendance_update.get("check_in") or attendance.get(
+            "in_time"
+        ) or attendance.get("check_in")
+        out_time = attendance_update.get("check_out") or attendance.get(
+            "out_time"
+        ) or attendance.get("check_out")
+
+        metrics = compute_work_metrics(
+            in_time,
+            out_time,
+            shift_duration=duration,
+            shift_start=shift_start,
+        )
+
+        computed = {
+            "shift_id": str(shift_id) if shift_id else None,
+            "shift": (
+                shift.get("shift")
+                or attendance.get("shift")
+                or "General"
+            ),
+            "shift_start": shift_start,
+            "shift_end": shift_end,
+            "shift_duration_minutes": duration,
+            "worked_minutes": metrics.worked_minutes,
+            "overtime_minutes": metrics.overtime_minutes,
+            "late_minutes": metrics.late_minutes,
+            "is_overnight": metrics.is_overnight,
+        }
+
+        if metrics.worked_minutes is not None:
+            computed["total_hours"] = round(
+                metrics.worked_minutes / 60,
+                2,
+            )
+
+        return computed
+
+    async def _shift_for_employee(
+        self,
+        employee: dict | None,
+        shift_id: str | None,
+    ) -> dict:
+        """Resolve the shift a record should be measured against.
+
+        Deliberately does not fall back to a shift named "General": an
+        employee with no assigned shift has no known shift length, and
+        guessing one would invent overtime out of nothing.
+        """
+        if not shift_id and employee:
+            shift_id = employee.get("shift_id")
+
+        if not shift_id:
+            return {}
+
+        shift_repository = ShiftRepository()
+        shift = await shift_repository.get_by_id(shift_id)
+
+        if not shift:
+            return {}
+
+        start_time = shift.get("start_time")
+        end_time = shift.get("end_time")
+
+        return {
+            "shift_id": str(shift["_id"]),
+            "shift": shift.get("name") or "General",
+            "shift_start": start_time,
+            "shift_end": end_time,
+        }
 
     async def create_request(
         self,
@@ -289,6 +408,17 @@ class EmployeeAttendanceRegularizationService:
             if request.get("requested_check_out") is not None:
                 attendance_update["check_out"] = request["requested_check_out"]
                 attendance_update["out_time"] = request["requested_check_out"]
+
+            # Correcting the punch times invalidates every number derived
+            # from them. Without this the record keeps the worked time and
+            # overtime from before the correction, so approving a missing
+            # check-out silently reports the wrong hours forever.
+            attendance_update.update(
+                await self._recompute_metrics(
+                    attendance,
+                    attendance_update,
+                )
+            )
 
             attendance_update["is_regularized"] = True
             attendance_update["updated_at"] = now

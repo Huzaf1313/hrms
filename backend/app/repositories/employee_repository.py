@@ -64,6 +64,73 @@ class EmployeeRepository:
             {"employee_id": {"$exists": True}}
         )
 
+    async def get_celebration_candidates(
+        self,
+        month_day_values: list[str],
+    ):
+        """Employees whose date_of_birth or joining_date falls on any of the
+        given "MM-DD" strings.
+
+        Both dates are stored as BSON datetimes at midnight (see
+        `api/v1/employees.to_datetime`), so reducing them to a month-day string
+        sidesteps the year and keeps the query index-friendly on the projection.
+
+        Null or missing dates produce a null month-day string, which fails the
+        $in match below - that is how employees without a date_of_birth are
+        excluded without a separate filter.
+        """
+        pipeline = [
+            {
+                "$match": {
+                    "employee_id": {"$exists": True},
+                    # Not "== active": records predating the status field have
+                    # no value at all, and those must still be celebrated.
+                    "status": {"$ne": "inactive"},
+                }
+            },
+            {
+                "$addFields": {
+                    "dob_month_day": {
+                        "$dateToString": {
+                            "format": "%m-%d",
+                            "date": "$date_of_birth",
+                            "onNull": None,
+                        }
+                    },
+                    "joining_month_day": {
+                        "$dateToString": {
+                            "format": "%m-%d",
+                            "date": "$joining_date",
+                            "onNull": None,
+                        }
+                    },
+                }
+            },
+            {
+                "$match": {
+                    "$or": [
+                        {"dob_month_day": {"$in": month_day_values}},
+                        {"joining_month_day": {"$in": month_day_values}},
+                    ]
+                }
+            },
+            {
+                "$project": {
+                    "_id": 1,
+                    "employee_id": 1,
+                    "full_name": 1,
+                    "first_name": 1,
+                    "last_name": 1,
+                    "avatar_url": 1,
+                    "designation": 1,
+                    "date_of_birth": 1,
+                    "joining_date": 1,
+                }
+            },
+        ]
+
+        return await self.collection.aggregate(pipeline).to_list(length=None)
+
     async def update(
         self,
         employee_id: str,

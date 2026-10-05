@@ -8,6 +8,8 @@ import {
   X,
 } from "lucide-react";
 
+import { countWorkingDays } from "../../utils/workingDays";
+
 interface EmployeeLeaveModalProps {
   onClose: () => void;
   onSubmit: (
@@ -51,27 +53,12 @@ function EmployeeLeaveModal({
   const [attachment, setAttachment] = useState<File | null>(null);
   const [error, setError] = useState("");
 
-  const totalDays = useMemo(() => {
-    if (!fromDate || !toDate) {
-      return 0;
-    }
-
-    const start = new Date(`${fromDate}T00:00:00`);
-    const end = new Date(`${toDate}T00:00:00`);
-
-    if (end < start) {
-      return 0;
-    }
-
-    const difference =
-      end.getTime() - start.getTime();
-
-    return (
-      Math.floor(
-        difference / (1000 * 60 * 60 * 24),
-      ) + 1
-    );
-  }, [fromDate, toDate]);
+  // Saturdays and Sundays are predefined weekly offs, so they are never
+  // counted as leave days.
+  const totalDays = useMemo(
+    () => countWorkingDays(fromDate, toDate),
+    [fromDate, toDate],
+  );
 
   const formatDate = (date: string) => {
     if (!date) {
@@ -153,6 +140,13 @@ function EmployeeLeaveModal({
     ) {
       setError(
         "To Date cannot be before From Date.",
+      );
+      return;
+    }
+
+    if (totalDays === 0) {
+      setError(
+        "The selected range falls only on Saturdays or Sundays. Please choose at least one working day.",
       );
       return;
     }
@@ -338,6 +332,12 @@ function EmployeeLeaveModal({
                     : "—"}
                 </span>
               </div>
+
+              <p className="mt-1.5 text-xs text-slate-500">
+                {totalDays === 0
+                  ? "Saturdays and Sundays are weekly offs. Pick at least one working day."
+                  : "Excludes Saturdays and Sundays."}
+              </p>
             </div>
 
             {/* Reason */}

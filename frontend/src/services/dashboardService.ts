@@ -1,9 +1,7 @@
 import { api } from "./api";
+import type { Celebration } from "../types/celebration";
 
-export interface Celebration {
-  name: string;
-  type: string;
-}
+export type { Celebration, CelebrationType } from "../types/celebration";
 
 export interface HiringPipeline {
   applied: number;
