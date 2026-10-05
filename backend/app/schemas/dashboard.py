@@ -2,9 +2,15 @@ from pydantic import BaseModel
 
 
 class Celebration(BaseModel):
+    employee_id: str
     name: str
+    # "birthday" or "anniversary" - the UI maps this to an icon.
     type: str
     message: str
+    avatar_url: str | None = None
+    designation: str | None = None
+    # Completed years, for anniversaries only.
+    years: int | None = None
 
 
 class HiringPipeline(BaseModel):

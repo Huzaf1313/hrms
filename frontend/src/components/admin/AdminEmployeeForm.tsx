@@ -31,6 +31,19 @@ const EMPLOYMENT_TYPES = [
   { value: "intern", label: "Intern" },
 ] as const;
 
+type IdentityField = "first_name" | "last_name" | "phone";
+
+const NAME_DIGIT_PATTERN = /[0-9]/;
+const PHONE_PATTERN = /^[0-9]{10}$/;
+
+function sanitizeName(value: string): string {
+  return value.replace(/[0-9]/g, "");
+}
+
+function sanitizePhone(value: string): string {
+  return value.replace(/[^0-9]/g, "");
+}
+
 function toFormState(employee?: Employee): EmployeeCreate {
   if (!employee) {
     return {
@@ -97,6 +110,9 @@ function AdminEmployeeForm({
   const [showPassword, setShowPassword] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [salaryError, setSalaryError] = useState<string | null>(null);
+  const [identityErrors, setIdentityErrors] = useState<
+    Partial<Record<IdentityField, string>>
+  >({});
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -108,6 +124,7 @@ function AdminEmployeeForm({
     setForm(toFormState(initialEmployee));
     setPhotoPreview(null);
     setSalaryError(null);
+    setIdentityErrors({});
   }
 
   const isEditMode = Boolean(initialEmployee);
@@ -193,6 +210,79 @@ function AdminEmployeeForm({
     }));
   }
 
+  function setIdentityError(field: IdentityField, message?: string) {
+    setIdentityErrors((current) => {
+      if (message) {
+        return { ...current, [field]: message };
+      }
+
+      if (!(field in current)) {
+        return current;
+      }
+
+      const next = { ...current };
+      delete next[field];
+      return next;
+    });
+  }
+
+  function validateIdentityField(
+    field: IdentityField,
+    rawValue?: string,
+  ): string | undefined {
+    const value = (rawValue ?? form[field] ?? "").trim();
+
+    if (value === "") {
+      return undefined;
+    }
+
+    if (field === "phone") {
+      if (/[A-Za-z]/.test(value)) {
+        return "Phone number cannot contain letters";
+      }
+
+      return PHONE_PATTERN.test(value)
+        ? undefined
+        : "Phone number must be exactly 10 digits";
+    }
+
+    return NAME_DIGIT_PATTERN.test(value)
+      ? `${field === "first_name" ? "First" : "Last"} name cannot contain numbers`
+      : undefined;
+  }
+
+  function validateIdentityFields(): boolean {
+    const failures = (["first_name", "last_name", "phone"] as const).map(
+      (field) => [field, validateIdentityField(field)] as const,
+    );
+
+    const nextErrors: Partial<Record<IdentityField, string>> = {};
+
+    for (const [field, message] of failures) {
+      if (message) {
+        nextErrors[field] = message;
+      }
+    }
+
+    setIdentityErrors(nextErrors);
+
+    return Object.keys(nextErrors).length === 0;
+  }
+
+  function handleNameChange(field: "first_name" | "last_name", value: string) {
+    const sanitized = sanitizeName(value);
+
+    updateField(field, sanitized);
+    setIdentityError(field, validateIdentityField(field, sanitized));
+  }
+
+  function handlePhoneChange(value: string) {
+    const sanitized = sanitizePhone(value);
+
+    updateField("phone", sanitized);
+    setIdentityError("phone", validateIdentityField("phone", sanitized));
+  }
+
   function handlePhotoChange(
     event: ChangeEvent<HTMLInputElement>,
   ) {
@@ -229,6 +319,10 @@ function AdminEmployeeForm({
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (!validateIdentityFields()) {
+      return;
+    }
 
     const password = form.password?.trim() ?? "";
 
@@ -467,11 +561,28 @@ function AdminEmployeeForm({
               required
               value={form.first_name}
               onChange={(event) =>
-                updateField("first_name", event.target.value)
+                handleNameChange("first_name", event.target.value)
+              }
+              onBlur={() =>
+                setIdentityError(
+                  "first_name",
+                  validateIdentityField("first_name"),
+                )
               }
               placeholder="First name"
-              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
+              aria-invalid={Boolean(identityErrors.first_name)}
+              className={`w-full rounded-xl border px-4 py-3 text-sm outline-none transition focus:ring-2 ${
+                identityErrors.first_name
+                  ? "border-red-400 focus:border-red-400 focus:ring-red-400/10"
+                  : "border-gray-200 focus:border-[#2563eb] focus:ring-[#2563eb]/10"
+              }`}
             />
+
+            {identityErrors.first_name && (
+              <p className="mt-1.5 text-xs font-medium text-red-600">
+                {identityErrors.first_name}
+              </p>
+            )}
           </div>
 
           {/* LAST NAME */}
@@ -484,11 +595,28 @@ function AdminEmployeeForm({
               required
               value={form.last_name}
               onChange={(event) =>
-                updateField("last_name", event.target.value)
+                handleNameChange("last_name", event.target.value)
+              }
+              onBlur={() =>
+                setIdentityError(
+                  "last_name",
+                  validateIdentityField("last_name"),
+                )
               }
               placeholder="Last name"
-              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
+              aria-invalid={Boolean(identityErrors.last_name)}
+              className={`w-full rounded-xl border px-4 py-3 text-sm outline-none transition focus:ring-2 ${
+                identityErrors.last_name
+                  ? "border-red-400 focus:border-red-400 focus:ring-red-400/10"
+                  : "border-gray-200 focus:border-[#2563eb] focus:ring-[#2563eb]/10"
+              }`}
             />
+
+            {identityErrors.last_name && (
+              <p className="mt-1.5 text-xs font-medium text-red-600">
+                {identityErrors.last_name}
+              </p>
+            )}
           </div>
 
           {/* EMAIL */}
@@ -517,14 +645,32 @@ function AdminEmployeeForm({
 
             <input
               required
-              minLength={10}
+              type="tel"
+              inputMode="numeric"
+              maxLength={10}
               value={form.phone}
-              onChange={(event) =>
-                updateField("phone", event.target.value)
+              onChange={(event) => handlePhoneChange(event.target.value)}
+              onBlur={() =>
+                setIdentityError("phone", validateIdentityField("phone"))
               }
-              placeholder="Phone number"
-              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
+              placeholder="10-digit phone number"
+              aria-invalid={Boolean(identityErrors.phone)}
+              className={`w-full rounded-xl border px-4 py-3 text-sm outline-none transition focus:ring-2 ${
+                identityErrors.phone
+                  ? "border-red-400 focus:border-red-400 focus:ring-red-400/10"
+                  : "border-gray-200 focus:border-[#2563eb] focus:ring-[#2563eb]/10"
+              }`}
             />
+
+            {identityErrors.phone ? (
+              <p className="mt-1.5 text-xs font-medium text-red-600">
+                {identityErrors.phone}
+              </p>
+            ) : (
+              <p className="mt-1.5 text-xs text-gray-400">
+                Exactly 10 digits
+              </p>
+            )}
           </div>
 
           {/* LOGIN CREDENTIALS - create mode only */}

@@ -20,6 +20,8 @@ from app.services.attendance_calculation import (
     format_minutes_compact,
     format_minutes_display,
     parse_instant,
+    resolve_punch_times,
+    resolve_record_metrics,
     shift_duration_minutes,
 )
 from app.utils.filtering import build_filter
@@ -151,38 +153,15 @@ def record_shift_duration(record: dict) -> int | None:
 def record_has_overtime(record: dict) -> bool:
     """Whether a stored attendance document has overtime, for filtering.
 
-    Records written before overtime tracking have no stored minutes, so they
-    are measured on the fly against their snapshotted shift.
+    Measured on the fly from the punch times rather than read off the
+    document, so a record whose overtime was stored as 0 before its shift was
+    known still reports correctly.
     """
-    stored = record.get("overtime_minutes")
-
-    if stored is not None:
-        return stored > 0
-
-    metrics = compute_work_metrics(
-        record.get("in_time") or record.get("check_in"),
-        record.get("out_time") or record.get("check_out"),
-        shift_duration=record_shift_duration(record),
-        shift_start=record.get("shift_start"),
-    )
-
-    return metrics.overtime_minutes > 0
+    return resolve_record_metrics(record).overtime_minutes > 0
 
 
 def record_overtime_minutes(record: dict) -> int:
-    stored = record.get("overtime_minutes")
-
-    if stored is not None:
-        return stored
-
-    metrics = compute_work_metrics(
-        record.get("in_time") or record.get("check_in"),
-        record.get("out_time") or record.get("check_out"),
-        shift_duration=record_shift_duration(record),
-        shift_start=record.get("shift_start"),
-    )
-
-    return metrics.overtime_minutes
+    return resolve_record_metrics(record).overtime_minutes
 
 
 class AttendanceService:
@@ -305,36 +284,31 @@ class AttendanceService:
         employee: dict | None,
         department: dict | None,
     ) -> AttendanceResponse:
-        in_time = attendance.get("in_time") or attendance.get("check_in")
-        out_time = attendance.get("out_time") or attendance.get("check_out")
-        working_hours = attendance.get("working_hours")
+        in_time, out_time = resolve_punch_times(attendance)
 
-        if working_hours is None:
-            working_hours = attendance.get("total_hours")
-
-        # Numeric minutes are the source of truth. Records written before
-        # overtime tracking have none, so fall back to measuring on the fly.
-        worked_minutes = attendance.get("worked_minutes")
-        overtime_minutes = attendance.get("overtime_minutes") or 0
-        late_minutes = attendance.get("late_minutes") or 0
-        is_overnight = attendance.get("is_overnight", False)
+        # Numeric minutes are the source of truth. They are recomputed from the
+        # punch times on every read, because the value stored on the document
+        # is a snapshot from whenever the record was written and goes stale the
+        # moment the times are corrected or a shift is assigned.
+        metrics = resolve_record_metrics(attendance)
+        worked_minutes = metrics.worked_minutes
+        overtime_minutes = metrics.overtime_minutes
+        late_minutes = metrics.late_minutes
+        is_overnight = metrics.is_overnight
 
         shift_duration = record_shift_duration(attendance)
 
-        if worked_minutes is None:
-            metrics = compute_work_metrics(
-                in_time,
-                out_time,
-                shift_duration=shift_duration,
-                shift_start=attendance.get("shift_start"),
-            )
-            worked_minutes = metrics.worked_minutes
-            overtime_minutes = metrics.overtime_minutes
-            late_minutes = metrics.late_minutes
-            is_overnight = metrics.is_overnight
-
-        if working_hours is None and worked_minutes is not None:
+        # Derived from the recomputed minutes rather than read off the record:
+        # the stored working_hours / total_hours go stale for exactly the same
+        # reason overtime does, and showing corrected overtime next to
+        # uncorrected hours would be worse than either being wrong alone.
+        if worked_minutes is not None:
             working_hours = format_minutes_display(worked_minutes)
+        else:
+            working_hours = attendance.get("working_hours")
+
+            if working_hours is None:
+                working_hours = attendance.get("total_hours")
 
         employee_summary = EmployeeSummary(
             id=str(employee["_id"]) if employee else attendance["employee_id"],
@@ -685,8 +659,16 @@ class AttendanceService:
                 ),
             }
 
-        in_time = update_data.get("in_time", attendance.get("in_time"))
-        out_time = update_data.get("out_time", attendance.get("out_time"))
+        # Fall back to the punch fields: employee-created rows store
+        # check_in / check_out and have no in_time / out_time at all. Reading
+        # only the admin fields would measure those rows as "no punch" and
+        # wipe their worked hours and overtime on every shift edit.
+        in_time = update_data.get("in_time") or attendance.get(
+            "in_time"
+        ) or attendance.get("check_in")
+        out_time = update_data.get("out_time") or attendance.get(
+            "out_time"
+        ) or attendance.get("check_out")
 
         times_changed = "in_time" in update_data or "out_time" in update_data
 
@@ -708,6 +690,15 @@ class AttendanceService:
             update_data["overtime_minutes"] = metrics.overtime_minutes
             update_data["late_minutes"] = metrics.late_minutes
             update_data["is_overnight"] = metrics.is_overnight
+
+            # Keep total_hours in step. It is what payroll and the employee
+            # history read, so leaving a stale value behind would show the old
+            # hours next to the corrected ones.
+            if metrics.worked_minutes is not None:
+                update_data["total_hours"] = round(
+                    metrics.worked_minutes / 60,
+                    2,
+                )
 
         update_data["is_regularized"] = True
         update_data["updated_at"] = datetime.utcnow()

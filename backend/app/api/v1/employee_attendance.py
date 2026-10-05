@@ -11,6 +11,11 @@ from app.schemas.employee_attendance import (
     AttendanceResponse,
     AttendanceUpdate,
 )
+from app.services.attendance_calculation import (
+    format_minutes_compact,
+    resolve_record_metrics,
+)
+from app.services.attendance_service import record_shift_duration
 from app.services.employee_attendance_service import (
     EmployeeAttendanceService,
 )
@@ -29,16 +34,37 @@ def serialize_attendance(
     if hasattr(attendance_date, "date"):
         attendance_date = attendance_date.date()
 
+    check_in = attendance.get("check_in") or attendance.get("in_time")
+    check_out = attendance.get("check_out") or attendance.get("out_time")
+
+    # Recomputed on read for the same reason as the admin list: the stored
+    # overtime is a snapshot from when the record was written, so an employee
+    # whose times were later corrected would otherwise keep seeing zero.
+    metrics = resolve_record_metrics(attendance)
+
     return AttendanceResponse(
         id=str(attendance["_id"]),
         employee_id=attendance["employee_id"],
         date=attendance_date,
-        check_in=attendance.get("check_in") or attendance.get("in_time"),
-        check_out=attendance.get("check_out") or attendance.get("out_time"),
+        check_in=check_in,
+        check_out=check_out,
         status=attendance.get("status", "present"),
         total_hours=attendance.get("total_hours")
         or attendance.get("working_hours"),
         remarks=attendance.get("remarks") or attendance.get("notes"),
+        shift_id=attendance.get("shift_id"),
+        shift=attendance.get("shift") or "General",
+        shift_start=attendance.get("shift_start"),
+        shift_end=attendance.get("shift_end"),
+        shift_duration_minutes=record_shift_duration(attendance),
+        worked_minutes=metrics.worked_minutes,
+        overtime_minutes=metrics.overtime_minutes,
+        overtime_display=format_minutes_compact(metrics.overtime_minutes),
+        late_minutes=metrics.late_minutes,
+        late_display=format_minutes_compact(metrics.late_minutes),
+        is_overtime=metrics.overtime_minutes > 0,
+        is_late=metrics.late_minutes > 0,
+        is_overnight=metrics.is_overnight,
         created_at=attendance.get("created_at"),
         updated_at=attendance.get("updated_at"),
     )

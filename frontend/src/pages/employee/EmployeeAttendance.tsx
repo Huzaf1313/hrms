@@ -1265,7 +1265,11 @@ if (
                             </p>
 
                             <p className="mt-2 text-xs text-gray-400">
-                              Shift: {record.shift ?? "General"}
+                              Shift:{" "}
+                              {record.shift_id ||
+                              record.shift_duration_minutes != null
+                                ? record.shift || "General"
+                                : "No shift assigned"}
                             </p>
 
                             <p className="mt-1 text-xs text-gray-400">

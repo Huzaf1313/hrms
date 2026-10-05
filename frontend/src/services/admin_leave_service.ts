@@ -11,6 +11,9 @@ export interface LeaveRequest {
   leave_type: string;
   start_date: string;
   end_date: string;
+  // Working days only, computed by the backend. Saturdays and Sundays are
+  // predefined weekly offs and are never counted.
+  total_days?: number | null;
   reason?: string | null;
   status: LeaveStatus;
   created_at: string;

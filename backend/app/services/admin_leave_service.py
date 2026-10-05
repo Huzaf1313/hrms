@@ -3,6 +3,7 @@ from datetime import date, datetime, time, timedelta, timezone
 from bson import ObjectId
 
 from app.core.exceptions import AppException
+from app.core.working_days import count_working_days
 from app.repositories.department_repository import DepartmentRepository
 from app.repositories.employee_repository import EmployeeRepository
 from app.repositories.leave_repository import LeaveRepository
@@ -53,6 +54,20 @@ class AdminLeaveService:
                 409,
             )
 
+        # Saturdays and Sundays are predefined weekly offs, so only working
+        # days are stored and later deducted from the balance.
+        total_days = count_working_days(
+            start_date,
+            end_date,
+        )
+
+        if total_days == 0:
+            raise AppException(
+                "Selected range falls only on Saturdays or Sundays. "
+                "Please choose at least one working day.",
+                400,
+            )
+
         now = datetime.now(timezone.utc)
 
         document = {
@@ -60,6 +75,7 @@ class AdminLeaveService:
             "leave_type": leave_data["leave_type"],
             "start_date": start_datetime,
             "end_date": end_datetime,
+            "total_days": total_days,
             "reason": leave_data.get("reason"),
             "status": "pending",
             "created_at": now,
@@ -270,6 +286,22 @@ class AdminLeaveService:
             else None
         )
 
+        start_date = document["start_date"].date()
+        end_date = document["end_date"].date()
+
+        # Requests created before working-day counting existed have no stored
+        # total, so derive it from the dates instead of reporting a wrong one.
+        stored_total = document.get("total_days")
+
+        total_days = (
+            int(stored_total)
+            if stored_total
+            else count_working_days(
+                start_date,
+                end_date,
+            )
+        )
+
         return {
             "id": str(document["_id"]),
             "employee_id": document["employee_id"],
@@ -281,8 +313,9 @@ class AdminLeaveService:
             "department_id": department_id,
             "department_name": department.get("name") if department else None,
             "leave_type": document["leave_type"],
-            "start_date": document["start_date"].date(),
-            "end_date": document["end_date"].date(),
+            "start_date": start_date,
+            "end_date": end_date,
+            "total_days": total_days,
             "reason": document.get("reason"),
             "status": str(document.get("status", "pending")).lower(),
             "created_at": document.get("created_at") or document.get("requested_at"),

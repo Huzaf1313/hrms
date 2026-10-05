@@ -30,6 +30,7 @@ import {
   LEGACY_SALARY_STRUCTURE_LABELS,
   type SalaryStructure,
 } from "../../services/admin_salary_structure_service";
+import { countWorkingDays } from "../../utils/workingDays";
 
 const leaveBalanceConfig = [
   {
@@ -250,16 +251,16 @@ function AdminEmployeeDetailsPage({
               leave_type: string;
               start_date: string;
               end_date: string;
+              total_days?: number | null;
             }) => {
-              const start = new Date(leave.start_date);
-              const end = new Date(leave.end_date);
-
-              const millisecondsPerDay = 1000 * 60 * 60 * 24;
-
+              // Working days only. Saturdays and Sundays are predefined
+              // weekly offs, so they never consume leave balance.
               const days =
-                Math.floor(
-                  (end.getTime() - start.getTime()) / millisecondsPerDay,
-                ) + 1;
+                leave.total_days ??
+                countWorkingDays(
+                  leave.start_date,
+                  leave.end_date,
+                );
 
               const type = leaveTypeKey(leave.leave_type);
 

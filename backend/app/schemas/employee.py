@@ -1,6 +1,40 @@
+import re
 from datetime import date
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
+
+NAME_DIGIT_PATTERN = re.compile(r"[0-9]")
+EMPLOYEE_PHONE_PATTERN = re.compile(r"^[0-9]{10}$")
+
+
+def validate_employee_name(value: str | None, field_label: str) -> str | None:
+    if value is None:
+        return None
+
+    value = value.strip()
+
+    if NAME_DIGIT_PATTERN.search(value):
+        raise ValueError(f"{field_label} cannot contain numbers")
+
+    if not value:
+        raise ValueError(f"{field_label} cannot be blank")
+
+    return value
+
+
+def validate_employee_phone(value: str | None) -> str | None:
+    if value is None:
+        return None
+
+    value = value.strip().replace(" ", "").replace("-", "")
+
+    if re.search(r"[A-Za-z]", value):
+        raise ValueError("Phone number cannot contain letters")
+
+    if not EMPLOYEE_PHONE_PATTERN.match(value):
+        raise ValueError("Phone number must be exactly 10 digits")
+
+    return value
 
 
 class EmergencyContact(BaseModel):
@@ -69,6 +103,21 @@ class EmployeeCreate(BaseModel):
     emergency_contact: EmergencyContact | None = None
     bank_information: BankInformation | None = None
 
+    @field_validator("first_name")
+    @classmethod
+    def validate_first_name(cls, value: str) -> str:
+        return validate_employee_name(value, "First name")
+
+    @field_validator("last_name")
+    @classmethod
+    def validate_last_name(cls, value: str) -> str:
+        return validate_employee_name(value, "Last name")
+
+    @field_validator("phone")
+    @classmethod
+    def validate_phone(cls, value: str) -> str:
+        return validate_employee_phone(value)
+
 
 class EmployeeUpdate(BaseModel):
     first_name: str | None = None
@@ -100,6 +149,22 @@ class EmployeeUpdate(BaseModel):
 
     emergency_contact: EmergencyContact | None = None
     bank_information: BankInformation | None = None
+
+    @field_validator("first_name")
+    @classmethod
+    def validate_first_name(cls, value: str | None) -> str | None:
+        return validate_employee_name(value, "First name")
+
+    @field_validator("last_name")
+    @classmethod
+    def validate_last_name(cls, value: str | None) -> str | None:
+        return validate_employee_name(value, "Last name")
+
+    @field_validator("phone")
+    @classmethod
+    def validate_phone(cls, value: str | None) -> str | None:
+        return validate_employee_phone(value)
+
 
 class EmployeeCredentials(BaseModel):
 

@@ -22,6 +22,7 @@ import {
 import { departmentService } from "../../services/departmentService";
 import { leaveService, type LeaveRequest, type LeaveStatus, type LeaveSummary } from "../../services/admin_leave_service";
 import type { Department } from "../../types/department";
+import { countWorkingDays } from "../../utils/workingDays";
 
 const leaveBalances = [
   {
@@ -615,7 +616,7 @@ function AdminLeave() {
                 const name = request.employee_name || request.employee_id;
                 const fromDate = new Date(request.start_date).toLocaleDateString();
                 const toDate = new Date(request.end_date).toLocaleDateString();
-                const days = Math.max(1, Math.round((new Date(request.end_date).getTime() - new Date(request.start_date).getTime()) / 86400000) + 1);
+                const days = request.total_days ?? countWorkingDays(request.start_date, request.end_date);
                 return (
                 <tr key={request.id} className="border-b border-gray-50 last:border-0">
                   <td className="py-4">
@@ -861,16 +862,20 @@ function AdminLeave() {
 
               {/* Total Days */}
               <div className="mb-4 flex items-center justify-between rounded-xl bg-blue-50 px-4 py-3">
-                <span className="text-sm text-gray-700">Total Days</span>
+                <div>
+                  <p className="text-sm text-gray-700">Total Days</p>
+                  <p className="text-xs text-gray-400">
+                    Excludes Saturdays and Sundays
+                  </p>
+                </div>
                 <span className="text-sm font-bold text-[#2563eb]">
-                  {Math.max(
-                    1,
-                    Math.round(
-                      (new Date(selectedRequest.end_date).getTime() -
-                        new Date(selectedRequest.start_date).getTime()) /
-                        86400000,
-                    ) + 1,
-                  )}{" "}
+                  {
+                    selectedRequest.total_days ??
+                    countWorkingDays(
+                      selectedRequest.start_date,
+                      selectedRequest.end_date,
+                    )
+                  }{" "}
                   Day(s)
                 </span>
               </div>
