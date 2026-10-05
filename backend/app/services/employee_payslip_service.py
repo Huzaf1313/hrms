@@ -1,9 +1,8 @@
-from calendar import monthrange
 from datetime import date, datetime
 from io import BytesIO
 
 from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+from reportlab.lib.enums import TA_CENTER, TA_RIGHT
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
@@ -51,6 +50,7 @@ class EmployeePayslipService:
                 404,
             )
 
+        # Make sure the logged-in employee owns this payroll record.
         if payroll["employee_id"] != employee_id:
             raise AppException(
                 "You are not authorized to access this payslip",
@@ -79,6 +79,7 @@ class EmployeePayslipService:
         start_date = self._to_date(
             payroll["pay_period_start"]
         )
+
         end_date = self._to_date(
             payroll["pay_period_end"]
         )
@@ -263,39 +264,87 @@ class EmployeePayslipService:
 
         employee_rows = [
             [
-                Paragraph("<b>Employee Name</b>", normal_style),
-                Paragraph(employee_name or "Not available", normal_style),
-                Paragraph("<b>Employee ID</b>", normal_style),
-                Paragraph(employee.get("employee_id", "Not available"), normal_style),
+                Paragraph(
+                    "<b>Employee Name</b>",
+                    normal_style,
+                ),
+                Paragraph(
+                    employee_name or "Not available",
+                    normal_style,
+                ),
+                Paragraph(
+                    "<b>Employee ID</b>",
+                    normal_style,
+                ),
+                Paragraph(
+                    employee.get(
+                        "employee_id",
+                        "Not available",
+                    ),
+                    normal_style,
+                ),
             ],
             [
-                Paragraph("<b>Designation</b>", normal_style),
-                Paragraph(employee.get("designation", "Not available"), normal_style),
-                Paragraph("<b>Department</b>", normal_style),
                 Paragraph(
-                    department.get("name", "Not available")
+                    "<b>Designation</b>",
+                    normal_style,
+                ),
+                Paragraph(
+                    employee.get(
+                        "designation",
+                        "Not available",
+                    ),
+                    normal_style,
+                ),
+                Paragraph(
+                    "<b>Department</b>",
+                    normal_style,
+                ),
+                Paragraph(
+                    department.get(
+                        "name",
+                        "Not available",
+                    )
                     if department
                     else "Not available",
                     normal_style,
                 ),
             ],
             [
-                Paragraph("<b>Location</b>", normal_style),
-                Paragraph(employee.get("work_location") or "Not available", normal_style),
-                Paragraph("<b>Date of Joining</b>", normal_style),
                 Paragraph(
-                    self._format_date(employee.get("joining_date")),
+                    "<b>Location</b>",
+                    normal_style,
+                ),
+                Paragraph(
+                    employee.get("work_location")
+                    or "Not available",
+                    normal_style,
+                ),
+                Paragraph(
+                    "<b>Date of Joining</b>",
+                    normal_style,
+                ),
+                Paragraph(
+                    self._format_date(
+                        employee.get("joining_date")
+                    ),
                     normal_style,
                 ),
             ],
             [
-                Paragraph("<b>Pay Period</b>", normal_style),
+                Paragraph(
+                    "<b>Pay Period</b>",
+                    normal_style,
+                ),
                 Paragraph(
                     f"{self._format_date(payroll['pay_period_start'])} - "
                     f"{self._format_date(payroll['pay_period_end'])}",
                     normal_style,
                 ),
-                Paragraph("<b>Pay Date</b>", normal_style),
+                Paragraph(
+                    "<b>Pay Date</b>",
+                    normal_style,
+                ),
                 Paragraph(
                     self._format_date(
                         payroll.get("payment", {}).get("paid_on")
@@ -307,16 +356,42 @@ class EmployeePayslipService:
 
         employee_table = Table(
             employee_rows,
-            colWidths=[30 * mm, 55 * mm, 30 * mm, 55 * mm],
+            colWidths=[
+                30 * mm,
+                55 * mm,
+                30 * mm,
+                55 * mm,
+            ],
         )
 
         employee_table.setStyle(
             TableStyle(
                 [
-                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-                    ("TOPPADDING", (0, 0), (-1, -1), 5),
-                    ("LINEBELOW", (0, 0), (-1, -1), 0.25, colors.lightgrey),
+                    (
+                        "VALIGN",
+                        (0, 0),
+                        (-1, -1),
+                        "TOP",
+                    ),
+                    (
+                        "BOTTOMPADDING",
+                        (0, 0),
+                        (-1, -1),
+                        5,
+                    ),
+                    (
+                        "TOPPADDING",
+                        (0, 0),
+                        (-1, -1),
+                        5,
+                    ),
+                    (
+                        "LINEBELOW",
+                        (0, 0),
+                        (-1, -1),
+                        0.25,
+                        colors.lightgrey,
+                    ),
                 ]
             )
         )
@@ -330,13 +405,23 @@ class EmployeePayslipService:
             )
         )
 
-        bank_details = employee.get("bank_information") or {}
-        payroll_bank = payroll.get("bank_details") or {}
+        bank_details = employee.get(
+            "bank_information"
+        ) or {}
+
+        payroll_bank = payroll.get(
+            "bank_details"
+        ) or {}
 
         account_last4 = (
             payroll_bank.get("account_last4")
             or (
-                str(bank_details.get("account_number", ""))[-4:]
+                str(
+                    bank_details.get(
+                        "account_number",
+                        "",
+                    )
+                )[-4:]
                 if bank_details.get("account_number")
                 else ""
             )
@@ -344,14 +429,20 @@ class EmployeePayslipService:
 
         bank_rows = [
             [
-                Paragraph("<b>Bank Name</b>", normal_style),
+                Paragraph(
+                    "<b>Bank Name</b>",
+                    normal_style,
+                ),
                 Paragraph(
                     payroll_bank.get("bank_name")
                     or bank_details.get("bank_name")
                     or "Not available",
                     normal_style,
                 ),
-                Paragraph("<b>Account Number</b>", normal_style),
+                Paragraph(
+                    "<b>Account Number</b>",
+                    normal_style,
+                ),
                 Paragraph(
                     f"**** {account_last4}"
                     if account_last4
@@ -360,25 +451,63 @@ class EmployeePayslipService:
                 ),
             ],
             [
-                Paragraph("<b>PAN</b>", normal_style),
-                Paragraph("Not available", normal_style),
-                Paragraph("<b>UAN</b>", normal_style),
-                Paragraph("Not available", normal_style),
+                Paragraph(
+                    "<b>PAN</b>",
+                    normal_style,
+                ),
+                Paragraph(
+                    "Not available",
+                    normal_style,
+                ),
+                Paragraph(
+                    "<b>UAN</b>",
+                    normal_style,
+                ),
+                Paragraph(
+                    "Not available",
+                    normal_style,
+                ),
             ],
         ]
 
         bank_table = Table(
             bank_rows,
-            colWidths=[30 * mm, 55 * mm, 30 * mm, 55 * mm],
+            colWidths=[
+                30 * mm,
+                55 * mm,
+                30 * mm,
+                55 * mm,
+            ],
         )
 
         bank_table.setStyle(
             TableStyle(
                 [
-                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-                    ("TOPPADDING", (0, 0), (-1, -1), 5),
-                    ("LINEBELOW", (0, 0), (-1, -1), 0.25, colors.lightgrey),
+                    (
+                        "VALIGN",
+                        (0, 0),
+                        (-1, -1),
+                        "TOP",
+                    ),
+                    (
+                        "BOTTOMPADDING",
+                        (0, 0),
+                        (-1, -1),
+                        5,
+                    ),
+                    (
+                        "TOPPADDING",
+                        (0, 0),
+                        (-1, -1),
+                        5,
+                    ),
+                    (
+                        "LINEBELOW",
+                        (0, 0),
+                        (-1, -1),
+                        0.25,
+                        colors.lightgrey,
+                    ),
                 ]
             )
         )
@@ -397,56 +526,150 @@ class EmployeePayslipService:
 
         earnings = [
             ["EARNINGS", "AMOUNT"],
-            ["Basic Salary", self._currency(salary.get("basic", 0))],
-            ["HRA", self._currency(salary.get("hra", 0))],
+            [
+                "Basic Salary",
+                self._currency(
+                    salary.get("basic", 0)
+                ),
+            ],
+            [
+                "HRA",
+                self._currency(
+                    salary.get("hra", 0)
+                ),
+            ],
             [
                 "Special Allowance",
-                self._currency(salary.get("special_allowance", 0)),
+                self._currency(
+                    salary.get("special_allowance", 0)
+                ),
             ],
-            ["Conveyance", self._currency(salary.get("conveyance", 0))],
+            [
+                "Conveyance",
+                self._currency(
+                    salary.get("conveyance", 0)
+                ),
+            ],
             [
                 "Other Allowance",
-                self._currency(salary.get("other_allowance", 0)),
+                self._currency(
+                    salary.get("other_allowance", 0)
+                ),
             ],
-            ["Gross Earnings", self._currency(salary.get("gross", 0))],
+            [
+                "Gross Earnings",
+                self._currency(
+                    salary.get("gross", 0)
+                ),
+            ],
         ]
 
         deduction_rows = [
             ["DEDUCTIONS", "AMOUNT"],
-            ["Provident Fund", self._currency(deductions.get("pf", 0))],
+            [
+                "Provident Fund",
+                self._currency(
+                    deductions.get("pf", 0)
+                ),
+            ],
             [
                 "Professional Tax",
-                self._currency(deductions.get("pt", 0)),
+                self._currency(
+                    deductions.get("pt", 0)
+                ),
             ],
             [
                 "Income Tax / TDS",
-                self._currency(deductions.get("tds", 0)),
+                self._currency(
+                    deductions.get("tds", 0)
+                ),
             ],
-            ["Total Deductions", self._currency(deductions.get("total", 0))],
+            [
+                "Total Deductions",
+                self._currency(
+                    deductions.get("total", 0)
+                ),
+            ],
         ]
 
         salary_table = Table(
             [
                 [
-                    Table(earnings, colWidths=[48 * mm, 35 * mm]),
-                    Table(deduction_rows, colWidths=[48 * mm, 35 * mm]),
+                    Table(
+                        earnings,
+                        colWidths=[
+                            48 * mm,
+                            35 * mm,
+                        ],
+                    ),
+                    Table(
+                        deduction_rows,
+                        colWidths=[
+                            48 * mm,
+                            35 * mm,
+                        ],
+                    ),
                 ]
             ],
-            colWidths=[88 * mm, 88 * mm],
+            colWidths=[
+                88 * mm,
+                88 * mm,
+            ],
         )
 
         for nested_table in salary_table._cellvalues[0]:
             nested_table.setStyle(
                 TableStyle(
                     [
-                        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0d1e3e")),
-                        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-                        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                        ("FONTSIZE", (0, 0), (-1, -1), 8),
-                        ("GRID", (0, 0), (-1, -1), 0.25, colors.lightgrey),
-                        ("ALIGN", (1, 0), (1, -1), "RIGHT"),
-                        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-                        ("TOPPADDING", (0, 0), (-1, -1), 5),
+                        (
+                            "BACKGROUND",
+                            (0, 0),
+                            (-1, 0),
+                            colors.HexColor("#0d1e3e"),
+                        ),
+                        (
+                            "TEXTCOLOR",
+                            (0, 0),
+                            (-1, 0),
+                            colors.white,
+                        ),
+                        (
+                            "FONTNAME",
+                            (0, 0),
+                            (-1, 0),
+                            "Helvetica-Bold",
+                        ),
+                        (
+                            "FONTSIZE",
+                            (0, 0),
+                            (-1, -1),
+                            8,
+                        ),
+                        (
+                            "GRID",
+                            (0, 0),
+                            (-1, -1),
+                            0.25,
+                            colors.lightgrey,
+                        ),
+                        (
+                            "ALIGN",
+                            (1, 0),
+                            (1, -1),
+                            "RIGHT",
+                        ),
+                        (
+                            "BOTTOMPADDING",
+                            (0, 0),
+                            (-1, -1),
+                            5,
+                        ),
+                        (
+                            "TOPPADDING",
+                            (0, 0),
+                            (-1, -1),
+                            5,
+                        ),
                     ]
                 )
             )
@@ -454,7 +677,12 @@ class EmployeePayslipService:
         salary_table.setStyle(
             TableStyle(
                 [
-                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    (
+                        "VALIGN",
+                        (0, 0),
+                        (-1, -1),
+                        "TOP",
+                    ),
                 ]
             )
         )
@@ -463,7 +691,10 @@ class EmployeePayslipService:
 
         story.append(Spacer(1, 10))
 
-        net_salary = payroll.get("net_salary", 0)
+        net_salary = payroll.get(
+            "net_salary",
+            0,
+        )
 
         net_table = Table(
             [
@@ -478,25 +709,47 @@ class EmployeePayslipService:
                     ),
                 ]
             ],
-            colWidths=[88 * mm, 88 * mm],
+            colWidths=[
+                88 * mm,
+                88 * mm,
+            ],
         )
 
         net_table.setStyle(
             TableStyle(
                 [
-                    ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#f1f5f9")),
-                    ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
-                    ("TOPPADDING", (0, 0), (-1, -1), 8),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+                    (
+                        "BACKGROUND",
+                        (0, 0),
+                        (-1, -1),
+                        colors.HexColor("#f1f5f9"),
+                    ),
+                    (
+                        "BOX",
+                        (0, 0),
+                        (-1, -1),
+                        0.5,
+                        colors.HexColor("#cbd5e1"),
+                    ),
+                    (
+                        "TOPPADDING",
+                        (0, 0),
+                        (-1, -1),
+                        8,
+                    ),
+                    (
+                        "BOTTOMPADDING",
+                        (0, 0),
+                        (-1, -1),
+                        8,
+                    ),
                 ]
             )
         )
 
         story.append(net_table)
 
-        story.append(
-            Spacer(1, 5)
-        )
+        story.append(Spacer(1, 5))
 
         story.append(
             Paragraph(
@@ -513,26 +766,70 @@ class EmployeePayslipService:
         )
 
         attendance_rows = [
-            ["Working Days", str(attendance["working_days"])],
-            ["Present Days", str(attendance["present_days"])],
-            ["Paid Leave", str(attendance["paid_leave"])],
-            ["Unpaid Leave", str(attendance["unpaid_leave"])],
-            ["Holidays", str(attendance["holidays"])],
+            [
+                "Working Days",
+                str(attendance["working_days"]),
+            ],
+            [
+                "Present Days",
+                str(attendance["present_days"]),
+            ],
+            [
+                "Paid Leave",
+                str(attendance["paid_leave"]),
+            ],
+            [
+                "Unpaid Leave",
+                str(attendance["unpaid_leave"]),
+            ],
+            [
+                "Holidays",
+                str(attendance["holidays"]),
+            ],
         ]
 
         attendance_table = Table(
             attendance_rows,
-            colWidths=[75 * mm, 35 * mm],
+            colWidths=[
+                75 * mm,
+                35 * mm,
+            ],
         )
 
         attendance_table.setStyle(
             TableStyle(
                 [
-                    ("GRID", (0, 0), (-1, -1), 0.25, colors.lightgrey),
-                    ("ALIGN", (1, 0), (1, -1), "RIGHT"),
-                    ("FONTSIZE", (0, 0), (-1, -1), 8.5),
-                    ("TOPPADDING", (0, 0), (-1, -1), 5),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+                    (
+                        "GRID",
+                        (0, 0),
+                        (-1, -1),
+                        0.25,
+                        colors.lightgrey,
+                    ),
+                    (
+                        "ALIGN",
+                        (1, 0),
+                        (1, -1),
+                        "RIGHT",
+                    ),
+                    (
+                        "FONTSIZE",
+                        (0, 0),
+                        (-1, -1),
+                        8.5,
+                    ),
+                    (
+                        "TOPPADDING",
+                        (0, 0),
+                        (-1, -1),
+                        5,
+                    ),
+                    (
+                        "BOTTOMPADDING",
+                        (0, 0),
+                        (-1, -1),
+                        5,
+                    ),
                 ]
             )
         )
@@ -571,15 +868,34 @@ class EmployeePayslipService:
 
         employer_table = Table(
             employer_rows,
-            colWidths=[88 * mm, 88 * mm],
+            colWidths=[
+                88 * mm,
+                88 * mm,
+            ],
         )
 
         employer_table.setStyle(
             TableStyle(
                 [
-                    ("GRID", (0, 0), (-1, -1), 0.25, colors.lightgrey),
-                    ("TOPPADDING", (0, 0), (-1, -1), 5),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+                    (
+                        "GRID",
+                        (0, 0),
+                        (-1, -1),
+                        0.25,
+                        colors.lightgrey,
+                    ),
+                    (
+                        "TOPPADDING",
+                        (0, 0),
+                        (-1, -1),
+                        5,
+                    ),
+                    (
+                        "BOTTOMPADDING",
+                        (0, 0),
+                        (-1, -1),
+                        5,
+                    ),
                 ]
             )
         )
@@ -595,9 +911,7 @@ class EmployeePayslipService:
             )
         )
 
-        story.append(
-            Spacer(1, 4)
-        )
+        story.append(Spacer(1, 4))
 
         story.append(
             Paragraph(
@@ -619,10 +933,14 @@ class EmployeePayslipService:
         attendance_records: list,
         approved_leaves: list,
     ):
-        total_days = (end_date - start_date).days + 1
+        total_days = (
+            end_date - start_date
+        ).days + 1
 
         attendance_by_date = {
-            EmployeePayslipService._to_date(record.get("date")): record
+            EmployeePayslipService._to_date(
+                record.get("date")
+            ): record
             for record in attendance_records
         }
 
@@ -632,15 +950,24 @@ class EmployeePayslipService:
             leave_start = EmployeePayslipService._to_date(
                 leave.get("start_date")
             )
+
             leave_end = EmployeePayslipService._to_date(
                 leave.get("end_date")
             )
 
-            current = max(leave_start, start_date)
-            last = min(leave_end, end_date)
+            current = max(
+                leave_start,
+                start_date,
+            )
+
+            last = min(
+                leave_end,
+                end_date,
+            )
 
             while current <= last:
                 leave_dates.add(current)
+
                 current = current.fromordinal(
                     current.toordinal() + 1
                 )
@@ -649,7 +976,9 @@ class EmployeePayslipService:
 
         for attendance_date, record in attendance_by_date.items():
             if not (
-                start_date <= attendance_date <= end_date
+                start_date
+                <= attendance_date
+                <= end_date
             ):
                 continue
 
@@ -686,6 +1015,7 @@ class EmployeePayslipService:
         leave_start = EmployeePayslipService._to_date(
             leave.get("start_date")
         )
+
         leave_end = EmployeePayslipService._to_date(
             leave.get("end_date")
         )
@@ -716,8 +1046,14 @@ class EmployeePayslipService:
             return "Not available"
 
         try:
-            converted = EmployeePayslipService._to_date(value)
-            return converted.strftime("%d %b %Y")
+            converted = EmployeePayslipService._to_date(
+                value
+            )
+
+            return converted.strftime(
+                "%d %b %Y"
+            )
+
         except (TypeError, ValueError):
             return "Not available"
 

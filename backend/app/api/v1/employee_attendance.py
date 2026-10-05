@@ -2,8 +2,9 @@ from datetime import date
 
 from fastapi import APIRouter, Depends, Query
 
-from app.api.deps import require_permission
-from app.core.roles import Permission
+from app.api.deps import get_current_user, require_permission
+from app.core.exceptions import AppException
+from app.core.roles import Permission, has_permission
 from app.schemas.common import APIResponse
 from app.schemas.employee_attendance import (
     AttendanceCreate,
@@ -24,10 +25,12 @@ router = APIRouter()
 
 service = EmployeeAttendanceService()
 
+
 def serialize_attendance(
     attendance: dict,
 ) -> AttendanceResponse:
     attendance_date = attendance["date"]
+
     if hasattr(attendance_date, "date"):
         attendance_date = attendance_date.date()
 
@@ -46,7 +49,8 @@ def serialize_attendance(
         check_in=check_in,
         check_out=check_out,
         status=attendance.get("status", "present"),
-        total_hours=attendance.get("total_hours") or attendance.get("working_hours"),
+        total_hours=attendance.get("total_hours")
+        or attendance.get("working_hours"),
         remarks=attendance.get("remarks") or attendance.get("notes"),
         shift_id=attendance.get("shift_id"),
         shift=attendance.get("shift") or "General",
@@ -87,6 +91,7 @@ async def create_attendance(
         message="Attendance created successfully",
         data=serialize_attendance(attendance),
     )
+
 
 @router.get(
     "/employee-attendance/range",
@@ -201,7 +206,6 @@ async def get_attendance_by_date(
     )
 
 
-
 @router.put(
     "/employee-attendance/{attendance_id}",
     response_model=APIResponse[AttendanceResponse],
@@ -209,11 +213,66 @@ async def get_attendance_by_date(
 async def update_attendance(
     attendance_id: str,
     data: AttendanceUpdate,
-    current_user: dict | None = Depends(
-        require_permission(Permission.ATTENDANCE_UPDATE)
-    ),
+    current_user: dict = Depends(get_current_user),
 ):
-    update_data = data.model_dump()
+    role = current_user.get("role")
+
+    # HR Admin / Manager:
+    # Require the normal attendance update permission.
+    if role != "employee":
+        if not has_permission(
+            role,
+            Permission.ATTENDANCE_UPDATE,
+        ):
+            raise AppException(
+                "You do not have permission to perform this action",
+                403,
+            )
+
+    # Get the attendance record before updating it.
+    attendance = await service.get_attendance(
+        attendance_id
+    )
+
+    # Employee:
+    # Only allow the logged-in employee to update
+    # their own attendance record.
+    if role == "employee":
+        current_employee_id = current_user.get("employee_id")
+
+        if not current_employee_id:
+            raise AppException(
+                "Employee ID is missing from the current user",
+                403,
+            )
+
+        if attendance.get("employee_id") != current_employee_id:
+            raise AppException(
+                "You can only update your own attendance",
+                403,
+            )
+
+        update_data = data.model_dump(
+            exclude_none=True
+        )
+
+        # Employees can only perform self-checkout.
+        allowed_fields = {
+            "check_out",
+            "total_hours",
+        }
+
+        if not set(update_data).issubset(allowed_fields):
+            raise AppException(
+                "Employees can only update checkout details",
+                403,
+            )
+
+    else:
+        # HR Admin / Manager can use the full AttendanceUpdate schema.
+        update_data = data.model_dump(
+            exclude_none=True
+        )
 
     attendance = await service.update_attendance(
         attendance_id=attendance_id,

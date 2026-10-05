@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.core.exceptions import AppException
 from app.core.jwt import (
@@ -9,7 +9,9 @@ from app.core.jwt import (
 from app.core.roles import UserRole
 from app.core.security import hash_password, verify_password
 from app.repositories.user_repository import UserRepository
+from app.repositories.otp_repository import OTPRepository
 from app.services.session_service import SessionService
+from app.services.email_service import EmailService
 
 
 def resolve_full_name(user: dict) -> str:
@@ -32,6 +34,78 @@ class UserService:
     def __init__(self):
         self.repository = UserRepository()
         self.session_service = SessionService()
+        self.email_service = EmailService()
+
+    async def create_verified_user(
+        self,
+        registration_data: dict,
+    ):
+        email = registration_data["email"].lower().strip()
+
+        existing_user = await self.repository.get_by_email(email)
+
+        if existing_user:
+            raise AppException(
+                "User with this email already exists",
+                409,
+            )
+
+        allowed_registration_roles = {
+            UserRole.HR_ADMIN,
+            UserRole.MANAGER,
+        }
+
+        role = UserRole(registration_data["role"])
+
+        if role not in allowed_registration_roles:
+            raise AppException(
+                "This role cannot be selected during public registration",
+                403,
+            )
+
+        now = datetime.utcnow()
+
+        user_data = {
+            "full_name": registration_data["full_name"].strip(),
+            "email": email,
+            "phone_number": registration_data["phone_number"].strip(),
+            "password_hash": registration_data["password_hash"],
+            "company_name": registration_data.get(
+                "company_name",
+                "",
+            ).strip(),
+            "company_address": registration_data.get(
+                "company_address",
+                "",
+            ).strip(),
+            "reference": registration_data.get(
+                "reference",
+                "",
+            ).strip(),
+            "role": role.value,
+            "is_active": True,
+            "is_locked": False,
+            "failed_login_attempts": 0,
+            "created_at": now,
+            "updated_at": now,
+        }
+
+        user = await self.repository.create(user_data)
+
+        self.email_service.send_html_email(
+            to_email=email,
+            subject=f"Welcome to {user_data['company_name']}",
+            template_name="emails/welcome_email.html",
+            template_data={
+                "employee_name": user_data["full_name"],
+                "company_name": "AarMarks Media Pvt Ltd.",
+                "hr_team": "HR Team",
+            },
+        )
+
+        user.pop("password_hash", None)
+
+        return user
 
     async def list_manager_accounts(self):
         """Accounts that can be picked as an employee's reporting manager."""
@@ -102,6 +176,78 @@ class UserService:
         user = await self.repository.create(user_data)
 
         return user
+
+    async def reset_password(
+        self,
+        email: str,
+        reset_token: str,
+        new_password: str,
+        confirm_password: str,
+    ):
+        if new_password != confirm_password:
+            raise AppException(
+                "New password and confirm password do not match",
+                400,
+            )
+
+        email = email.lower().strip()
+
+        otp_repository = OTPRepository()
+
+        token_record = await otp_repository.collection.find_one(
+            {
+                "email": email,
+                "purpose": "password_reset_authorized",
+                "reset_token": reset_token,
+            }
+        )
+
+        if not token_record:
+            raise AppException(
+                "Invalid or expired password reset request",
+                400,
+            )
+
+        now = datetime.now(timezone.utc)
+
+        if now >= token_record["expires_at"]:
+            await otp_repository.collection.delete_one(
+                {"_id": token_record["_id"]}
+            )
+
+            raise AppException(
+                "Password reset session has expired. Please request a new OTP.",
+                400,
+            )
+
+        user = await self.repository.get_by_email(email)
+
+        if not user:
+            raise AppException(
+                "Invalid password reset request",
+                400,
+            )
+
+        new_password_hash = hash_password(new_password)
+
+        await self.repository.update(
+            str(user["_id"]),
+            {
+                "password_hash": new_password_hash,
+                "updated_at": datetime.now(timezone.utc),
+                "failed_login_attempts": 0,
+                "is_locked": False,
+            },
+        )
+
+        # Token can only be used once.
+        await otp_repository.collection.delete_one(
+            {"_id": token_record["_id"]}
+        )
+
+        return {
+            "message": "Password reset successfully",
+        }
 
     async def login_user(
         self,

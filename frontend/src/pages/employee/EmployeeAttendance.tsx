@@ -229,7 +229,7 @@ setEmployeeId(user.employee_id);
 
 const [records, leaveList, requests] = await Promise.all([
   api.get<AttendanceRecord[]>(
-    `/employees/${user.employee_id}/attendance`,
+    `/employee-attendance/employees/${user.employee_id}`,
     {
       page: 1,
       limit: 100,
@@ -313,18 +313,53 @@ useEffect(() => {
   };
 }, []);
 
+const getLocalDateKey = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+};
+
+const getISTDateParts = (date: Date) => {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(date);
+
+  const get = (type: string) =>
+    Number(parts.find((part) => part.type === type)?.value ?? 0);
+
+  return {
+    year: get("year"),
+    month: get("month"),
+    day: get("day"),
+    hour: get("hour"),
+    minute: get("minute"),
+  };
+};
+
+const currentTimeIST = getISTDateParts(currentTime);
+const currentMonthKey = `${currentTimeIST.year}-${String(
+  currentTimeIST.month,
+).padStart(2, "0")}`;
+
+const todayDateKey = `${currentTimeIST.year}-${String(
+  currentTimeIST.month,
+).padStart(2, "0")}-${String(
+  currentTimeIST.day,
+).padStart(2, "0")}`;
+
   const currentMonth = new Date();
 
   const currentMonthRecords = attendanceRecords.filter(
-    (record) => {
-      const recordDate = new Date(record.date);
-
-      return (
-        recordDate.getMonth() === currentMonth.getMonth() &&
-        recordDate.getFullYear() === currentMonth.getFullYear()
-      );
-    },
-  );
+  (record) => record.date.startsWith(currentMonthKey),
+);
 
 const today = currentTime;
 
@@ -351,7 +386,11 @@ leaveRequests
         current.getFullYear() === currentMonth.getFullYear()
       ) {
         approvedLeaveDates.add(
-          current.toISOString().split("T")[0],
+          `${current.getFullYear()}-${String(
+            current.getMonth() + 1,
+          ).padStart(2, "0")}-${String(
+            current.getDate(),
+          ).padStart(2, "0")}`,
         );
       }
 
@@ -412,9 +451,17 @@ const overtimeDays = currentMonthRecords.filter(
 const leaveDays = approvedLeaveDates.size;
 
 const attendanceDates = new Set(
-  currentMonthRecords.map(
-    (record) => record.date,
-  ),
+  currentMonthRecords.map((record) => {
+    const date = new Date(record.date);
+
+    // If record.date is already YYYY-MM-DD,
+    // keep it exactly as it is.
+    if (/^\d{4}-\d{2}-\d{2}$/.test(record.date)) {
+      return record.date;
+    }
+
+    return getLocalDateKey(date);
+  }),
 );
 
 let absentDays = 0;
@@ -438,9 +485,7 @@ while (currentDay <= todayOnly) {
     dayOfWeek !== 0 &&
     dayOfWeek !== 6;
 
-  const dateKey = currentDay
-    .toISOString()
-    .split("T")[0];
+  const dateKey = getLocalDateKey(currentDay);
 
   if (
     isWeekday &&
@@ -464,9 +509,7 @@ const completedWorkingHours =
 
 const todayRecordForHours =
   currentMonthRecords.find(
-    (record) =>
-      record.date ===
-      today.toISOString().split("T")[0],
+    (record) => record.date === todayDateKey,
   );
 
 let workingHours = completedWorkingHours;
@@ -489,15 +532,9 @@ if (
   }
 }
 
-    const todayRecord = attendanceRecords.find((record) => {
-    const recordDate = new Date(record.date);
-
-    return (
-        recordDate.getDate() === today.getDate() &&
-        recordDate.getMonth() === today.getMonth() &&
-        recordDate.getFullYear() === today.getFullYear()
+    const todayRecord = attendanceRecords.find(
+      (record) => record.date === todayDateKey,
     );
-    });
 
     const calendarYear = today.getFullYear();
     const calendarMonth = today.getMonth();
@@ -592,7 +629,7 @@ if (
             "/employee-attendance",
             {
                 employee_id: employeeId,
-                date: now.toISOString().split("T")[0],
+                date: getLocalDateKey(now),
                 check_in: now.toISOString(),
                 check_out: null,
                 status: "Present",
@@ -704,21 +741,6 @@ if (
             </div>
 
             <div className="flex flex-wrap gap-3">
-
-              <button
-                type="button"
-                className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition hover:border-[#2563eb] hover:bg-[#f5f8f5]"
-              >
-                Attendance Calendar
-              </button>
-
-              <button
-                type="button"
-                className="rounded-xl bg-[#2563eb] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1d4ed8]"
-              >
-                Download Report
-              </button>
-
             </div>
           </section>
 
@@ -751,48 +773,46 @@ if (
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
 
                 {/* Present */}
-                <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+              <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                <p className="text-sm font-medium text-gray-500">
+                  Present Days
+                </p>
 
-                  <p className="text-sm font-medium text-gray-500">
-                    Present Days
+                <div className="mt-3 flex items-end justify-between">
+                  <p className="text-2xl font-bold text-[#17213a]">
+                    {presentDays}
                   </p>
 
-                  <div className="mt-3 flex items-end justify-between">
-
-                    <p className="text-2xl font-bold text-[#17213a]">
-                      {presentDays}
-                    </p>
-
-                    <span className="text-xs font-medium text-gray-400">
-                      this month
-                    </span>
-
-                  </div>
-
-                  <div className="mt-4 h-2 overflow-hidden rounded-full bg-gray-100">
-
-                    <div
-                      className="h-full rounded-full bg-[#2563eb]"
-                      style={{
-                        width: `${Math.min(
-                          (presentDays /
-                            Math.max(
-                              currentMonthRecords.length,
-                              1,
-                            )) *
-                            100,
-                          100,
-                        )}%`,
-                      }}
-                    />
-
-                  </div>
-
-                  <p className="mt-2 text-xs text-gray-400">
-                    {currentMonthRecords.length} recorded days
-                  </p>
-
+              <span className="text-xs font-medium text-gray-400">
+                this month
+              </span>
                 </div>
+                <div className="mt-4 h-2 overflow-hidden rounded-full bg-gray-100">
+                  <div
+                    className="h-full rounded-full bg-[#2563eb]"
+                    style={{
+                      width: `${Math.min(
+                        (presentDays /
+                          Math.max(
+                            presentDays +
+                              absentDays +
+                              leaveDays,
+                            1,
+                          )) *
+                          100,
+                        100,
+                      )}%`,
+                    }}
+                  />
+                </div>
+
+                <p className="mt-2 text-xs text-gray-400">
+                  {presentDays} of{" "}
+                  {presentDays + absentDays + leaveDays}{" "}
+                  working days
+                </p>
+              </div>
+
 
                 {/* Absent */}
                 <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -804,11 +824,6 @@ if (
                   <p className="mt-3 text-2xl font-bold text-[#17213a]">
                     {absentDays}
                   </p>
-
-                  <p className="mt-2 text-xs text-gray-400">
-                    Recorded absences
-                  </p>
-
                 </div>
 
                 {/* Late */}
@@ -821,11 +836,6 @@ if (
                   <p className="mt-3 text-2xl font-bold text-[#17213a]">
                     {lateDays}
                   </p>
-
-                  <p className="mt-2 text-xs text-gray-400">
-                    Late clock-ins
-                  </p>
-
                 </div>
 
                 {/* Overtime */}
@@ -858,11 +868,6 @@ if (
                   <p className="mt-3 text-2xl font-bold text-[#17213a]">
                     {leaveDays}
                   </p>
-
-                  <p className="mt-2 text-xs text-gray-400">
-                    Approved leave records
-                  </p>
-
                 </div>
 
                 {/* Working Hours */}
@@ -1634,26 +1639,50 @@ if (
                       calendarMonth === today.getMonth() &&
                       calendarYear === today.getFullYear();
 
+                    const dateKey = `${calendarYear}-${String(
+                      calendarMonth + 1,
+                    ).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+
+                    const calendarDate = new Date(
+                      calendarYear,
+                      calendarMonth,
+                      day,
+                    );
+
+                    const dayOfWeek = calendarDate.getDay();
+
+                    const isWeeklyOff =
+                      dayOfWeek === 0 || dayOfWeek === 6;
+
+                    const isOnLeave =
+                      approvedLeaveDates.has(dateKey);
+
                     const status =
                       attendance?.status?.toLowerCase();
 
                     const isLate = (() => {
-                      if (!attendance || !resolveCheckIn(attendance)) return false;
+                        if (!attendance || !resolveCheckIn(attendance)) return false;
 
-                      if (attendance.late_minutes != null) return attendance.late_minutes > 0;
-                      if (attendance.is_late) return true;
+                        if (attendance.late_minutes != null) return attendance.late_minutes > 0;
+                        if (attendance.is_late) return true;
 
-                      const inMin = clockMinutes(resolveCheckIn(attendance));
-                      const startMin = clockMinutes(
-                        attendance.shift_start ?? myShift?.start_time ?? null,
-                      );
+                        const inMin = clockMinutes(resolveCheckIn(attendance));
+                        const startMin = clockMinutes(
+                          attendance.shift_start ?? myShift?.start_time ?? null,
+                        );
 
-                      return inMin !== null && startMin !== null && inMin > startMin;
-                    })();
+                        return inMin !== null && startMin !== null && inMin > startMin;
+                      })();
 
                     let statusClass = "text-gray-700";
 
-                    if (isLate || status === "late") {
+                    if (isWeeklyOff) {
+                      statusClass =
+                        "bg-gray-200 text-gray-600";
+                    } else if (isOnLeave) {
+                      statusClass =
+                        "bg-purple-100 text-purple-700";
+                    } else if (isLate) {
                       statusClass =
                         "bg-orange-100 text-orange-700";
                     } else if (status === "present") {
@@ -1662,9 +1691,9 @@ if (
                     } else if (status === "absent") {
                       statusClass =
                         "bg-red-100 text-red-700";
-                    } else if (status === "on leave") {
+                    } else if (!attendance) {
                       statusClass =
-                        "bg-purple-100 text-purple-700";
+                        "bg-red-100 text-red-700";
                     }
 
                     return (

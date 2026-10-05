@@ -42,20 +42,56 @@ async def download_payslip(
     current_user: dict = Depends(get_current_user),
 ):
     employee = await get_employee_from_user(current_user)
-
     employee_id = employee["employee_id"]
 
+    # Validate the payroll belongs to the logged-in employee
+    payslip_data = await service.get_payslip_data(
+        payroll_id=payroll_id,
+        employee_id=employee_id,
+    )
+
+    # Generate the PDF
     pdf_buffer = await service.generate_payslip_pdf(
         payroll_id=payroll_id,
         employee_id=employee_id,
     )
 
-    filename = f"payslip_{employee_id}_{payroll_id}.pdf"
+    payroll = payslip_data["payroll"]
+
+    # Build filename from the logged-in employee's actual name
+    employee_name = " ".join(
+        filter(
+            None,
+            [
+                employee.get("first_name"),
+                employee.get("last_name"),
+            ],
+        )
+    ).strip()
+
+    if not employee_name:
+        employee_name = employee_id
+
+    # Convert employee name to a filename-safe format
+    employee_name = "_".join(employee_name.split())
+
+    # Use the month stored in the actual payroll record
+    payroll_month = str(
+        payroll.get("month") or "Payslip"
+    ).strip()
+
+    payroll_month = "_".join(payroll_month.split())
+
+    filename = (
+        f"{employee_name}_Payslip_{payroll_month}.pdf"
+    )
 
     return StreamingResponse(
         pdf_buffer,
         media_type="application/pdf",
         headers={
-            "Content-Disposition": f'attachment; filename="{filename}"'
+            "Content-Disposition": (
+                f'attachment; filename="{filename}"'
+            )
         },
     )

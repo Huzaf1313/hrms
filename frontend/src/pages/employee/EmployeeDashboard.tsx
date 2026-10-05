@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { api } from "../../services/api";
 import {
@@ -24,9 +25,57 @@ interface AttendanceRecord {
   check_out: string | null;
   in_time?: string | null;
   out_time?: string | null;
+  status?: string | null;
 }
 
-function normalizeAttendance(record: AttendanceRecord): AttendanceRecord {
+interface LeaveRequest {
+  id: string;
+  leave_type: string;
+  start_date: string;
+  end_date: string;
+  total_days: number;
+  status: string;
+  reason?: string | null;
+  requested_at?: string | null;
+}
+
+interface LeaveListResponse {
+  items: LeaveRequest[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
+interface LeaveBalance {
+  leave_type: string;
+  available: number;
+  allocated: number;
+  used: number;
+}
+
+interface Announcement {
+  id?: string;
+  title: string;
+  description: string;
+  category?: string;
+  priority?: string;
+  status?: string;
+  published_at?: string | null;
+  is_important?: boolean;
+}
+
+interface AnnouncementResponse {
+  announcements: Announcement[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
+function normalizeAttendance(
+  record: AttendanceRecord,
+): AttendanceRecord {
   return {
     ...record,
     check_in: record.check_in ?? record.in_time ?? null,
@@ -44,44 +93,214 @@ function getInitials(name: string) {
     .toUpperCase();
 }
 
-const leaveRequests = [
-  {
-    date: "Aug 25 - Aug 27",
-    type: "Casual Leave",
-    status: "Approved",
-  },
-  {
-    date: "Sep 04",
-    type: "Sick Leave",
-    status: "Pending",
-  },
-  {
-    date: "Sep 18 - Sep 19",
-    type: "Earned Leave",
-    status: "Approved",
-  },
-];
+function getDateKey(value: string | Date) {
+  if (value instanceof Date) {
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, "0");
+    const day = String(value.getDate()).padStart(2, "0");
 
-const holidays = [
-  {
-    date: "15",
-    month: "AUG",
-    name: "Independence Day",
-  },
-  {
-    date: "27",
-    month: "AUG",
-    name: "Ganesh Chaturthi",
-  },
-  {
-    date: "05",
-    month: "SEP",
-    name: "Ganesh Visarjan",
-  },
-];
+    return `${year}-${month}-${day}`;
+  }
+
+  return value.slice(0, 10);
+}
+
+function isWeekday(date: Date) {
+  const day = date.getDay();
+
+  return day !== 0 && day !== 6;
+}
+
+function formatLeaveDate(value: string) {
+  const date = new Date(`${value.slice(0, 10)}T00:00:00`);
+
+  if (Number.isNaN(date.getTime())) {
+    return "--";
+  }
+
+  return date.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function formatAnnouncementDate(value?: string | null) {
+  if (!value) {
+    return "--";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "--";
+  }
+
+  return date.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+  });
+}
+
+function getLeaveStatusClass(status: string) {
+  const normalized = status.toLowerCase();
+
+  if (normalized === "approved") {
+    return "bg-green-100 text-green-700";
+  }
+
+  if (normalized === "rejected") {
+    return "bg-red-100 text-red-700";
+  }
+
+  if (normalized === "cancelled" || normalized === "canceled") {
+    return "bg-gray-100 text-gray-600";
+  }
+
+  return "bg-yellow-100 text-yellow-700";
+}
+
+function getDisplayLeaveStatus(status: string) {
+  const normalized = status.toLowerCase();
+
+  if (normalized === "approved") {
+    return "Approved";
+  }
+
+  if (normalized === "rejected") {
+    return "Rejected";
+  }
+
+  if (normalized === "cancelled" || normalized === "canceled") {
+    return "Cancelled";
+  }
+
+  return "Pending";
+}
+
+function isLateAttendance(record: AttendanceRecord) {
+  if (!record.check_in) {
+    return false;
+  }
+
+  // If backend explicitly marks it as late, trust that.
+  if (record.status?.toLowerCase() === "late") {
+    return true;
+  }
+
+  const value = String(record.check_in).trim();
+
+  // ISO timestamp
+  if (value.includes("T")) {
+    const parsed = new Date(value);
+
+    if (!Number.isNaN(parsed.getTime())) {
+      const istTime = parsed.toLocaleTimeString("en-IN", {
+        timeZone: "Asia/Kolkata",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      });
+
+      const [hours, minutes] = istTime.split(":").map(Number);
+
+      return hours > 9 || (hours === 9 && minutes > 30);
+    }
+  }
+
+  // 12-hour format: 09:45 AM
+  const amPmMatch = value.match(
+    /^(\d{1,2}):(\d{2})\s*([AP]M)$/i
+  );
+
+  if (amPmMatch) {
+    let hours = Number(amPmMatch[1]);
+    const minutes = Number(amPmMatch[2]);
+    const period = amPmMatch[3].toUpperCase();
+
+    if (period === "PM" && hours !== 12) {
+      hours += 12;
+    }
+
+    if (period === "AM" && hours === 12) {
+      hours = 0;
+    }
+
+    return hours > 9 || (hours === 9 && minutes > 30);
+  }
+
+  // 24-hour format: 09:45
+  const timeMatch = value.match(/(\d{1,2}):(\d{2})/);
+
+  if (timeMatch) {
+    const hours = Number(timeMatch[1]);
+    const minutes = Number(timeMatch[2]);
+
+    return hours > 9 || (hours === 9 && minutes > 30);
+  }
+
+  return false;
+}
+
+function isPresentAttendance(record: AttendanceRecord) {
+  const status = record.status?.toLowerCase();
+
+  if (status === "late") {
+    return false;
+  }
+
+  if (
+    status === "present" ||
+    status === "working" ||
+    status === "overtime"
+  ) {
+    return true;
+  }
+
+  return Boolean(record.check_in) && !isLateAttendance(record);
+}
+
+function buildApprovedLeaveDateSet(
+  leaveRequests: LeaveRequest[],
+) {
+  const approvedDates = new Set<string>();
+
+  leaveRequests.forEach((leave) => {
+    if (leave.status.toLowerCase() !== "approved") {
+      return;
+    }
+
+    const start = new Date(
+      `${leave.start_date.slice(0, 10)}T00:00:00`,
+    );
+
+    const end = new Date(
+      `${leave.end_date.slice(0, 10)}T00:00:00`,
+    );
+
+    if (
+      Number.isNaN(start.getTime()) ||
+      Number.isNaN(end.getTime())
+    ) {
+      return;
+    }
+
+    const current = new Date(start);
+
+    while (current <= end) {
+      approvedDates.add(getDateKey(current));
+
+      current.setDate(current.getDate() + 1);
+    }
+  });
+
+  return approvedDates;
+}
 
 function EmployeeDashboard() {
-    const user = useMemo<User | null>(() => {
+  const navigate = useNavigate();
+
+  const user = useMemo<User | null>(() => {
     const storedUser = localStorage.getItem("user");
 
     if (!storedUser) {
@@ -96,7 +315,6 @@ function EmployeeDashboard() {
   }, []);
 
   const employeeName = user?.full_name || "Employee";
-
   const firstName = employeeName.split(" ")[0];
 
   const currentDate = new Date();
@@ -113,53 +331,141 @@ function EmployeeDashboard() {
   const [todayAttendance, setTodayAttendance] =
     useState<AttendanceRecord | null>(null);
 
+  const [attendanceRecords, setAttendanceRecords] = useState<
+    AttendanceRecord[]
+  >([]);
+
+  const [leaveRequests, setLeaveRequests] = useState<
+    LeaveRequest[]
+  >([]);
+
+  const [leaveBalances, setLeaveBalances] = useState<
+    LeaveBalance[]
+  >([]);
+
+  const [announcements, setAnnouncements] = useState<
+    Announcement[]
+  >([]);
+
+  const [loadingLeave, setLoadingLeave] = useState(true);
+  const [loadingAnnouncements, setLoadingAnnouncements] =
+    useState(true);
+
+  const [leaveError, setLeaveError] = useState("");
+  const [announcementError, setAnnouncementError] =
+    useState("");
+
+  /* =========================================================
+     ATTENDANCE
+  ========================================================= */
+
   useEffect(() => {
     if (!user?.employee_id) {
       return;
     }
 
     api
-      .get<AttendanceRecord[]>(`/employee-attendance/employees/${user.employee_id}`, {
-        page: 1,
-        limit: 100,
-      })
+      .get<AttendanceRecord[]>(
+        `/employee-attendance/employees/${user.employee_id}`,
+        {
+          page: 1,
+          limit: 100,
+        },
+      )
       .then((records) => {
-        const today = new Date();
-        const record = records.map(normalizeAttendance).find((item) => {
-          const recordDate = new Date(item.date);
+        const normalizedRecords = records.map(
+          normalizeAttendance,
+        );
 
-          return (
-            recordDate.getDate() === today.getDate() &&
-            recordDate.getMonth() === today.getMonth() &&
-            recordDate.getFullYear() === today.getFullYear()
-          );
-        });
+        setAttendanceRecords(normalizedRecords);
 
-        setTodayAttendance(record ?? null);
-      })
-      .catch(() => setTodayAttendance(null));
-  }, [user?.employee_id]);
+        const todayKey = getDateKey(new Date());
 
-  const [announcements, setAnnouncements] = useState<EmployeeAnnouncement[]>(
-    [],
-  );
+        const today = normalizedRecords.find(
+          (item) => getDateKey(item.date) === todayKey,
+        );
 
-  useEffect(() => {
-    let isMounted = true;
-
-    announcementService
-      .list({ page_size: 3 })
-      .then((result) => {
-        if (isMounted) setAnnouncements(result.announcements);
+        setTodayAttendance(today ?? null);
       })
       .catch(() => {
-        if (isMounted) setAnnouncements([]);
+        setAttendanceRecords([]);
+        setTodayAttendance(null);
       });
+  }, [user?.employee_id]);
 
-    return () => {
-      isMounted = false;
-    };
+  /* =========================================================
+     LEAVE
+  ========================================================= */
+
+  useEffect(() => {
+    if (!user?.employee_id) {
+      setLoadingLeave(false);
+      return;
+    }
+
+    const employeeId = user.employee_id;
+
+    setLoadingLeave(true);
+    setLeaveError("");
+
+    Promise.all([
+      api.get<LeaveListResponse>(
+        `/employee-leave/employees/${employeeId}`,
+        {
+          page: 1,
+          limit: 100,
+        },
+      ),
+      api.get<LeaveBalance[]>(
+        `/employee-leave/employees/${employeeId}/balance`,
+      ),
+    ])
+      .then(([leaveResponse, balanceResponse]) => {
+        setLeaveRequests(leaveResponse.items || []);
+        setLeaveBalances(balanceResponse || []);
+      })
+      .catch(() => {
+        setLeaveRequests([]);
+        setLeaveBalances([]);
+        setLeaveError("Unable to load leave information.");
+      })
+      .finally(() => {
+        setLoadingLeave(false);
+      });
+  }, [user?.employee_id]);
+
+  /* =========================================================
+     ANNOUNCEMENTS
+  ========================================================= */
+
+  useEffect(() => {
+    setLoadingAnnouncements(true);
+    setAnnouncementError("");
+
+    api
+      .get<AnnouncementResponse>("/employee-announcements", {
+        page: 1,
+        page_size: 3,
+      })
+      .then((response) => {
+        setAnnouncements(
+          (response.announcements || []).slice(0, 3),
+        );
+      })
+      .catch(() => {
+        setAnnouncements([]);
+        setAnnouncementError(
+          "Unable to load announcements.",
+        );
+      })
+      .finally(() => {
+        setLoadingAnnouncements(false);
+      });
   }, []);
+
+  /* =========================================================
+     TIME FORMATTER
+  ========================================================= */
 
   function formatTime(value: string | null) {
     if (!value) {
@@ -172,8 +478,12 @@ function EmployeeDashboard() {
       return text;
     }
 
-    const hasTimezone = /(?:Z|[+-]\d{2}:\d{2})$/i.test(text);
-    const parsedValue = new Date(hasTimezone ? text : `${text}Z`);
+    const hasTimezone =
+      /(?:Z|[+-]\d{2}:\d{2})$/i.test(text);
+
+    const parsedValue = new Date(
+      hasTimezone ? text : `${text}Z`,
+    );
 
     return Number.isNaN(parsedValue.getTime())
       ? "--"
@@ -184,343 +494,436 @@ function EmployeeDashboard() {
         });
   }
 
-  return (
-      <main className="min-w-0 flex-1 bg-[#f5f7fb] px-5 py-7 text-[#17213a] sm:px-7 lg:px-10">
-  return (
+  /* =========================================================
+     LEAVE BALANCE
+  ========================================================= */
 
-        {/* =========================================================
-            MAIN CONTENT
-        ========================================================= */}
-          <div className="mb-6 flex items-center justify-end gap-4">
-            {/* Date */}
-            <div className="hidden rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 shadow-sm sm:block">
-              {formattedDate}
+  const getBalanceForType = (type: string) => {
+    const balance = leaveBalances.find(
+      (item) =>
+        item.leave_type.trim().toLowerCase() ===
+        type.trim().toLowerCase(),
+    );
+
+    return balance?.available ?? 0;
+  };
+
+  const totalLeaveBalance = useMemo(() => {
+    return leaveBalances.reduce(
+      (total, balance) =>
+        total + Number(balance.available || 0),
+      0,
+    );
+  }, [leaveBalances]);
+
+  /* =========================================================
+     ATTENDANCE GRAPH
+  ========================================================= */
+
+const attendanceChart = useMemo(() => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const approvedLeaveDates = buildApprovedLeaveDateSet(
+    leaveRequests
+  );
+
+  return Array.from({ length: daysInMonth }, (_, index) => {
+    const day = index + 1;
+    const date = new Date(year, month, day);
+
+    if (!isWeekday(date)) {
+      return null;
+    }
+
+    const dateKey = getDateKey(date);
+
+    const record = attendanceRecords.find(
+      (item) => item.date === dateKey
+    );
+
+    let present = 0;
+    let late = 0;
+    let absent = 0;
+
+    if (record && isLateAttendance(record)) {
+      late = 1;
+    } else if (record && isPresentAttendance(record)) {
+      present = 1;
+    } else if (!approvedLeaveDates.has(dateKey)) {
+      absent = 1;
+    }
+
+    return {
+      day,
+      present,
+      late,
+      absent,
+    };
+  }).filter(
+    (
+      item
+    ): item is {
+      day: number;
+      present: number;
+      late: number;
+      absent: number;
+    } => item !== null
+  );
+}, [attendanceRecords, leaveRequests]);
+
+  const currentMonthLabel = currentDate.toLocaleDateString(
+    "en-IN",
+    {
+      month: "long",
+      year: "numeric",
+    },
+  );
+
+  /* =========================================================
+     RETURN
+  ========================================================= */
+
+  return (
+    <main className="min-w-0 flex-1 bg-[#f5f7fb] px-5 py-7 text-[#17213a] sm:px-7 lg:px-10">
+      {/* =====================================================
+          GREETING
+      ===================================================== */}
+
+      <section className="mb-7">
+        <h1 className="mt-1 text-3xl font-bold tracking-tight text-[#171b1d] sm:text-4xl">
+          Good Morning, {firstName} 👋
+        </h1>
+
+        <p className="mt-2 text-sm text-gray-500">
+          Here's what's happening with your work today.
+        </p>
+      </section>
+
+      {/* =====================================================
+          KPI CARDS
+      ===================================================== */}
+
+      <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+        {/* ===================================================
+            TODAY'S ATTENDANCE
+        =================================================== */}
+
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                Today's Attendance
+              </p>
+
+              <p className="mt-3 text-2xl font-bold text-[#17213a]">
+                {todayAttendance?.check_in
+                  ? "Checked In"
+                  : "Not Marked"}
+              </p>
             </div>
 
-            {/* Notifications */}
-            <button
-              type="button"
-              className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-600 shadow-sm transition hover:bg-gray-50"
-              aria-label="Notifications"
-            >
-              <span className="text-lg">🔔</span>
-
-              <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />
-            </button>
-
-            {/* Profile */}
-            <div className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-3 py-2 shadow-sm">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#dce5df] text-sm font-bold text-[#2563eb]">
-                {initials || "E"}
-              </div>
-
-              <div className="hidden text-left sm:block">
-                <p className="text-sm font-semibold text-gray-800">
-                  {employeeName}
-                </p>
-                <p className="text-xs text-gray-500">
-                  Employee
-                </p>
-              </div>
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-100 text-green-700">
+              ✓
             </div>
           </div>
 
-          {/* Greeting */}
-          <section className="mb-7">
-            <p className="text-sm font-medium text-[#2563eb]">
-              Employee Portal
-            </p>
+          <div className="mt-5 space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-gray-500">
+                Punch In
+              </span>
 
-            <h1 className="mt-1 text-3xl font-bold tracking-tight text-[#171b1d] sm:text-4xl">
-              Good Morning, {firstName} 👋
-            </h1>
-
-            <p className="mt-2 text-sm text-gray-500">
-              Here's what's happening with your work today.
-            </p>
-          </section>
-
-          {/* =======================================================
-              KPI CARDS
-          ======================================================= */}
-          <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-
-            {/* Attendance */}
-            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                    Today's Attendance
-                  </p>
-
-                  <p className="mt-3 text-2xl font-bold text-[#17213a]">
-                    {todayAttendance?.check_in ? "Checked In" : "Not Marked"}
-                  </p>
-                </div>
-
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-100 text-green-700">
-                  ✓
-                </div>
-              </div>
-
-              <div className="mt-5 space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Punch In</span>
-                  <span className="font-semibold text-gray-700">
-                    {formatTime(todayAttendance?.check_in ?? null)}
-                  </span>
-                </div>
-
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Punch Out</span>
-                  <span className="font-semibold text-gray-400">
-                    {formatTime(todayAttendance?.check_out ?? null)}
-                  </span>
-                </div>
-              </div>
-
-              <button className="mt-4 text-sm font-semibold text-[#2563eb] hover:underline">
-                View Details →
-              </button>
+              <span className="font-semibold text-gray-700">
+                {formatTime(
+                  todayAttendance?.check_in ?? null,
+                )}
+              </span>
             </div>
 
-            {/* Leave */}
-            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div className="flex justify-between">
+              <span className="text-gray-500">
+                Punch Out
+              </span>
 
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                    Leave Balance
-                  </p>
-
-                  <p className="mt-3 text-2xl font-bold text-[#17213a]">
-                    14 Days
-                  </p>
-                </div>
-
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-100 text-orange-700">
-                  ◷
-                </div>
-              </div>
-
-              <div className="mt-5 grid grid-cols-3 gap-2 text-center">
-
-                <div className="rounded-lg bg-gray-50 p-2">
-                  <p className="text-lg font-bold">5</p>
-                  <p className="text-[10px] text-gray-500">Casual</p>
-                </div>
-
-                <div className="rounded-lg bg-gray-50 p-2">
-                  <p className="text-lg font-bold">4</p>
-                  <p className="text-[10px] text-gray-500">Sick</p>
-                </div>
-
-                <div className="rounded-lg bg-gray-50 p-2">
-                  <p className="text-lg font-bold">5</p>
-                  <p className="text-[10px] text-gray-500">Earned</p>
-                </div>
-              </div>
-
-              <button className="mt-4 text-sm font-semibold text-[#2563eb] hover:underline">
-                Apply Leave →
-              </button>
+              <span className="font-semibold text-gray-400">
+                {formatTime(
+                  todayAttendance?.check_out ?? null,
+                )}
+              </span>
             </div>
+          </div>
+        </div>
 
-            {/* Payslip */}
-            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+        {/* ===================================================
+            LEAVE BALANCE
+        =================================================== */}
 
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                    My Payslip
-                  </p>
-
-                  <p className="mt-3 text-2xl font-bold text-[#17213a]">
-                    ₹48,750
-                  </p>
-                </div>
-
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
-                  ₹
-                </div>
-              </div>
-
-              <p className="mt-4 text-sm text-gray-500">
-                July 2026 · Take-home salary
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                Leave Balance
               </p>
 
-              <button className="mt-4 text-sm font-semibold text-[#2563eb] hover:underline">
-                View Payslip →
-              </button>
-            </div>
-
-            {/* Performance */}
-            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                    My Performance
-                  </p>
-
-                  <p className="mt-3 text-2xl font-bold text-[#17213a]">
-                    4.5 / 5
-                  </p>
-                </div>
-
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-100 text-purple-700">
-                  ★
-                </div>
-              </div>
-
-              <div className="mt-4 flex gap-1">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <span
-                    key={star}
-                    className={
-                      star <= 4
-                        ? "text-lg text-yellow-500"
-                        : "text-lg text-gray-300"
-                    }
-                  >
-                    ★
-                  </span>
-                ))}
-              </div>
-
-              <p className="mt-2 text-sm font-medium text-green-600">
-                Excellent Performer
+              <p className="mt-3 text-2xl font-bold text-[#17213a]">
+                {loadingLeave
+                  ? "..."
+                  : `${totalLeaveBalance} Days`}
               </p>
             </div>
-          </section>
 
-          {/* =======================================================
-              ATTENDANCE + ANNOUNCEMENTS
-          ======================================================= */}
-          <section className="mt-6 grid gap-6 xl:grid-cols-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-100 text-orange-700">
+              ◷
+            </div>
+          </div>
 
-            {/* Attendance Overview */}
-            <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm xl:col-span-2">
+          <div className="mt-5 grid grid-cols-4 gap-2 text-center">
+            <div className="rounded-lg bg-gray-50 p-2">
+              <p className="text-lg font-bold">
+                {getBalanceForType("Casual Leave")}
+              </p>
 
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-lg font-bold text-[#17213a]">
-                    Attendance Overview
-                  </h2>
+              <p className="text-[10px] text-gray-500">
+                Casual
+              </p>
+            </div>
 
-                  <p className="mt-1 text-sm text-gray-500">
-                    Monthly attendance trend
-                  </p>
+            <div className="rounded-lg bg-gray-50 p-2">
+              <p className="text-lg font-bold">
+                {getBalanceForType("Sick Leave")}
+              </p>
+
+              <p className="text-[10px] text-gray-500">
+                Sick
+              </p>
+            </div>
+
+            <div className="rounded-lg bg-gray-50 p-2">
+              <p className="text-lg font-bold">
+                {getBalanceForType("Earned Leave")}
+              </p>
+
+              <p className="text-[10px] text-gray-500">
+                Earned
+              </p>
+            </div>
+
+            <div className="rounded-lg bg-gray-50 p-2">
+              <p className="text-lg font-bold">
+                {getBalanceForType("Comp Off")}
+              </p>
+
+              <p className="text-[10px] text-gray-500">
+                Comp Off
+              </p>
+            </div>
+          </div>
+
+          {leaveError && (
+            <p className="mt-3 text-xs text-red-500">
+              {leaveError}
+            </p>
+          )}
+        </div>
+
+        {/* ===================================================
+            PAYSLIP
+        =================================================== */}
+
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                My Payslip
+              </p>
+
+              <p className="mt-3 text-2xl font-bold text-[#17213a]">
+                ₹48,750
+              </p>
+            </div>
+
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
+              ₹
+            </div>
+          </div>
+
+          <p className="mt-4 text-sm text-gray-500">
+            July 2026 · Take-home salary
+          </p>
+
+          <button
+            type="button"
+            onClick={() => navigate("/employee/payroll")}
+            className="mt-4 text-sm font-semibold text-[#2563eb] hover:underline"
+          >
+            View Payslip →
+          </button>
+        </div>
+      </section>
+
+      {/* =====================================================
+          ATTENDANCE + ANNOUNCEMENTS
+      ===================================================== */}
+
+      <section className="mt-6 grid gap-6 xl:grid-cols-3">
+        {/* ===================================================
+            ATTENDANCE OVERVIEW
+        =================================================== */}
+
+        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm xl:col-span-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-[#17213a]">
+                Attendance Overview
+              </h2>
+
+              <p className="mt-1 text-sm text-gray-500">
+                Real-time attendance for {currentMonthLabel}
+              </p>
+            </div>
+
+            <div className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-600">
+              {currentMonthLabel}
+            </div>
+          </div>
+
+          {/* Chart */}
+          <div className="mt-8">
+            {attendanceChart.length === 0 ? (
+              <div className="flex h-[230px] items-center justify-center text-sm text-gray-400">
+                No attendance data available.
+              </div>
+            ) : (
+              <div className="relative h-[230px]">
+                {/* Grid */}
+                <div className="absolute inset-0 flex flex-col justify-between">
+                  {[1, 2, 3, 4, 5].map((line) => (
+                    <div
+                      key={line}
+                      className="border-t border-dashed border-gray-200"
+                    />
+                  ))}
                 </div>
 
-                <select className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-600 outline-none">
-                  <option>August 2026</option>
-                  <option>July 2026</option>
-                  <option>June 2026</option>
-                </select>
-              </div>
+                {/* Chart visualization */}
+                <div className="absolute inset-x-0 bottom-6 top-4 flex items-end gap-1 overflow-hidden px-2 sm:gap-2">
+                  {attendanceChart.map((item) => {
+                    const hasAttendance =
+                      item.present || item.late || item.absent;
 
-              {/* Chart */}
-              <div className="mt-8">
-
-                <div className="relative h-[230px]">
-
-                  {/* Grid */}
-                  <div className="absolute inset-0 flex flex-col justify-between">
-                    {[1, 2, 3, 4, 5].map((line) => (
+                    return (
                       <div
-                        key={line}
-                        className="border-t border-dashed border-gray-200"
-                      />
-                    ))}
-                  </div>
-
-                  {/* Chart visualization */}
-                  <div className="absolute inset-x-0 bottom-6 top-4 flex items-end gap-3 px-2">
-
-                    {[
-                      { present: 82, late: 12, absent: 6 },
-                      { present: 88, late: 7, absent: 5 },
-                      { present: 75, late: 15, absent: 10 },
-                      { present: 92, late: 5, absent: 3 },
-                      { present: 86, late: 9, absent: 5 },
-                      { present: 95, late: 3, absent: 2 },
-                      { present: 89, late: 7, absent: 4 },
-                      { present: 93, late: 5, absent: 2 },
-                    ].map((item, index) => (
-                      <div
-                        key={index}
-                        className="flex h-full flex-1 items-end justify-center gap-1"
+                        key={item.day}
+                        className="flex h-full flex-1 items-end justify-center"
+                        title={`${item.day}: ${
+                          item.late
+                            ? "Late"
+                            : item.present
+                              ? "Present"
+                              : item.absent
+                                ? "Absent"
+                                : "Approved Leave / No record"
+                        }`}
                       >
-                        <div
-                          className="w-2 rounded-t-full bg-[#2563eb]"
-                          style={{ height: `${item.present}%` }}
-                        />
-
-                        <div
-                          className="w-2 rounded-t-full bg-orange-400"
-                          style={{ height: `${item.late}%` }}
-                        />
-
-                        <div
-                          className="w-2 rounded-t-full bg-red-400"
-                          style={{ height: `${item.absent}%` }}
-                        />
+                        {hasAttendance ? (
+                          <div className="flex h-full w-full max-w-3 items-end justify-center">
+                            {item.late === 1 ? (
+                              <div className="h-[65%] w-full rounded-t-full bg-orange-400" />
+                            ) : item.present === 1 ? (
+                              <div className="h-[90%] w-full rounded-t-full bg-[#2563eb]" />
+                            ) : item.absent === 1 ? (
+                              <div className="h-[35%] w-full rounded-t-full bg-red-400" />
+                            ) : null}
+                          </div>
+                        ) : (
+                          <div className="h-0 w-full max-w-3" />
+                        )}
                       </div>
-                    ))}
-                  </div>
-
-                  {/* X Axis */}
-                  <div className="absolute bottom-0 left-0 right-0 flex justify-between px-2 text-xs text-gray-400">
-                    <span>Aug 01</span>
-                    <span>Aug 05</span>
-                    <span>Aug 10</span>
-                    <span>Aug 15</span>
-                    <span>Aug 20</span>
-                    <span>Aug 25</span>
-                    <span>Aug 31</span>
-                  </div>
+                    );
+                  })}
                 </div>
 
-                {/* Legend */}
-                <div className="mt-5 flex gap-5 text-xs text-gray-500">
-                  <span className="flex items-center gap-2">
-                    <span className="h-2.5 w-2.5 rounded-full bg-[#2563eb]" />
-                    Present
+                {/* X Axis */}
+                <div className="absolute bottom-0 left-0 right-0 flex justify-between px-2 text-[10px] text-gray-400 sm:text-xs">
+                  <span>
+                    {attendanceChart[0]?.day}
                   </span>
 
-                  <span className="flex items-center gap-2">
-                    <span className="h-2.5 w-2.5 rounded-full bg-orange-400" />
-                    Late
-                  </span>
+                  {attendanceChart.length > 7 && (
+                    <span>
+                      {attendanceChart[
+                        Math.floor(
+                          attendanceChart.length / 4,
+                        )
+                      ]?.day}
+                    </span>
+                  )}
 
-                  <span className="flex items-center gap-2">
-                    <span className="h-2.5 w-2.5 rounded-full bg-red-400" />
-                    Absent
+                  {attendanceChart.length > 14 && (
+                    <span>
+                      {attendanceChart[
+                        Math.floor(
+                          attendanceChart.length / 2,
+                        )
+                      ]?.day}
+                    </span>
+                  )}
+
+                  {attendanceChart.length > 21 && (
+                    <span>
+                      {attendanceChart[
+                        Math.floor(
+                          (attendanceChart.length * 3) / 4,
+                        )
+                      ]?.day}
+                    </span>
+                  )}
+
+                  <span>
+                    {
+                      attendanceChart[
+                        attendanceChart.length - 1
+                      ]?.day
+                    }
                   </span>
                 </div>
               </div>
+            )}
+
+            {/* Legend */}
+            <div className="mt-5 flex flex-wrap gap-5 text-xs text-gray-500">
+              <span className="flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full bg-[#2563eb]" />
+                Present
+              </span>
+
+              <span className="flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full bg-orange-400" />
+                Late
+              </span>
+
+              <span className="flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full bg-red-400" />
+                Absent
+              </span>
             </div>
+          </div>
+        </div>
 
-            {/* Announcements */}
-            <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        {/* ===================================================
+            RECENT ANNOUNCEMENTS
+        =================================================== */}
 
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-lg font-bold text-[#17213a]">
-                    Recent Announcements
-                  </h2>
-
-                  <p className="mt-1 text-sm text-gray-500">
-                    Latest company updates
-                  </p>
-                </div>
-
-                <button className="text-sm font-semibold text-[#2563eb]">
-                  View All
-                </button>
-              </div>
+        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-[#17213a]">
+                Recent Announcements
+              </h2>
 
               <div className="mt-5 space-y-4">
                 {announcements.length === 0 ? (
@@ -540,7 +943,7 @@ function EmployeeDashboard() {
 
                         <span className="shrink-0 text-xs text-gray-400">
                           {new Date(
-                            `${announcement.publish_date}T00:00:00`,
+                            `${announcement.published_at}T00:00:00`,
                           ).toLocaleDateString("en-US", {
                             month: "short",
                             day: "2-digit",
@@ -556,164 +959,201 @@ function EmployeeDashboard() {
                 )}
               </div>
             </div>
-          </section>
 
-          {/* =======================================================
-              BOTTOM WIDGETS
-          ======================================================= */}
-          <section className="mt-6 grid gap-6 xl:grid-cols-3">
+            <button
+              type="button"
+              onClick={() =>
+                navigate("/employee/announcements")
+              }
+              className="text-sm font-semibold text-[#2563eb]"
+            >
+              View All
+            </button>
+          </div>
 
-            {/* Leave Requests */}
-            <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm xl:col-span-2">
+          <div className="mt-5 space-y-4">
+            {loadingAnnouncements ? (
+              <div className="py-8 text-center text-sm text-gray-400">
+                Loading announcements...
+              </div>
+            ) : announcementError ? (
+              <div className="py-8 text-center text-sm text-red-500">
+                {announcementError}
+              </div>
+            ) : announcements.length === 0 ? (
+              <div className="py-8 text-center text-sm text-gray-400">
+                No announcements available.
+              </div>
+            ) : (
+              announcements.map((announcement) => (
+                <div
+                  key={
+                    announcement.id ??
+                    `${announcement.title}-${announcement.published_at}`
+                  }
+                  className="rounded-xl border border-gray-100 bg-gray-50 p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <h3 className="text-sm font-semibold text-gray-800">
+                      {announcement.title}
+                    </h3>
 
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-lg font-bold text-[#17213a]">
-                    My Leave Requests
-                  </h2>
+                    <span className="shrink-0 text-xs text-gray-400">
+                      {formatAnnouncementDate(
+                        announcement.published_at,
+                      )}
+                    </span>
+                  </div>
 
-                  <p className="mt-1 text-sm text-gray-500">
-                    Recent leave applications
+                  <p className="mt-2 line-clamp-2 text-xs leading-5 text-gray-500">
+                    {announcement.description}
                   </p>
                 </div>
+              ))
+            )}
+          </div>
+        </div>
+      </section>
 
-                <button className="rounded-lg bg-[#2563eb] px-4 py-2 text-sm font-semibold text-white hover:bg-[#4d6d59]">
-                  Apply Leave
-                </button>
+      {/* =====================================================
+          MY LEAVE REQUESTS
+      ===================================================== */}
+
+      <section className="mt-6">
+        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div>
+            <h2 className="text-lg font-bold text-[#17213a]">
+              My Leave Requests
+            </h2>
+
+            <p className="mt-1 text-sm text-gray-500">
+              Recent leave applications
+            </p>
+          </div>
+
+          <div className="mt-5 overflow-x-auto">
+            {loadingLeave ? (
+              <div className="py-8 text-center text-sm text-gray-400">
+                Loading leave requests...
               </div>
-
-              <div className="mt-5 overflow-x-auto">
-
-                <table className="w-full min-w-[500px] text-left">
-                  <thead>
-                    <tr className="border-b border-gray-100 text-xs uppercase tracking-wide text-gray-400">
-                      <th className="pb-3 font-semibold">Date</th>
-                      <th className="pb-3 font-semibold">Category</th>
-                      <th className="pb-3 font-semibold">Status</th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    {leaveRequests.map((request) => (
-                      <tr
-                        key={`${request.date}-${request.type}`}
-                        className="border-b border-gray-50 last:border-0"
-                      >
-                        <td className="py-4 text-sm font-medium text-gray-700">
-                          {request.date}
-                        </td>
-
-                        <td className="py-4 text-sm text-gray-500">
-                          {request.type}
-                        </td>
-
-                        <td className="py-4">
-                          <span
-                            className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                              request.status === "Approved"
-                                ? "bg-green-100 text-green-700"
-                                : "bg-yellow-100 text-yellow-700"
-                            }`}
-                          >
-                            {request.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            ) : leaveError ? (
+              <div className="py-8 text-center text-sm text-red-500">
+                {leaveError}
               </div>
-            </div>
-
-            {/* Holidays */}
-            <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-
-              <h2 className="text-lg font-bold text-[#17213a]">
-                Upcoming Holidays
-              </h2>
-
-              <p className="mt-1 text-sm text-gray-500">
-                Upcoming public holidays
-              </p>
-
-              <div className="mt-5 space-y-4">
-                {holidays.map((holiday) => (
-                  <div
-                    key={`${holiday.date}-${holiday.name}`}
-                    className="flex items-center gap-4"
-                  >
-                    <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl bg-[#eef3ef]">
-                      <span className="text-[10px] font-bold text-[#2563eb]">
-                        {holiday.month}
-                      </span>
-
-                      <span className="text-lg font-bold text-[#2563eb]">
-                        {holiday.date}
-                      </span>
-                    </div>
-
-                    <div>
-                      <p className="text-sm font-semibold text-gray-800">
-                        {holiday.name}
-                      </p>
-
-                      <p className="mt-1 text-xs text-gray-400">
-                        Public Holiday
-                      </p>
-                    </div>
-                  </div>
-                ))}
+            ) : leaveRequests.length === 0 ? (
+              <div className="py-8 text-center text-sm text-gray-400">
+                No leave requests available.
               </div>
+            ) : (
+              <table className="w-full min-w-[600px] text-left">
+                <thead>
+                  <tr className="border-b border-gray-100 text-xs uppercase tracking-wide text-gray-400">
+                    <th className="pb-3 font-semibold">
+                      Date
+                    </th>
+
+                    <th className="pb-3 font-semibold">
+                      Category
+                    </th>
+
+                    <th className="pb-3 font-semibold">
+                      Duration
+                    </th>
+
+                    <th className="pb-3 font-semibold">
+                      Status
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {leaveRequests
+                    .slice(0, 5)
+                    .map((request) => {
+                      const status =
+                        getDisplayLeaveStatus(
+                          request.status,
+                        );
+
+                      return (
+                        <tr
+                          key={request.id}
+                          className="border-b border-gray-50 last:border-0"
+                        >
+                          <td className="py-4 text-sm font-medium text-gray-700">
+                            {formatLeaveDate(
+                              request.start_date,
+                            )}
+
+                            {request.start_date.slice(
+                              0,
+                              10,
+                            ) !==
+                              request.end_date.slice(
+                                0,
+                                10,
+                              ) && (
+                              <>
+                                {" "}
+                                -{" "}
+                                {formatLeaveDate(
+                                  request.end_date,
+                                )}
+                              </>
+                            )}
+                          </td>
+
+                          <td className="py-4 text-sm text-gray-500">
+                            {request.leave_type}
+                          </td>
+
+                          <td className="py-4 text-sm text-gray-500">
+                            {request.total_days}{" "}
+                            {request.total_days === 1
+                              ? "day"
+                              : "days"}
+                          </td>
+
+                          <td className="py-4">
+                            <span
+                              className={`rounded-full px-3 py-1 text-xs font-semibold ${getLeaveStatusClass(
+                                request.status,
+                              )}`}
+                            >
+                              {status}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {leaveRequests.length > 5 && (
+            <div className="mt-4 border-t border-gray-100 pt-4 text-right">
+              <button
+                type="button"
+                onClick={() => navigate("/employee/leave")}
+                className="text-sm font-semibold text-[#2563eb] hover:underline"
+              >
+                View All Leave Requests →
+              </button>
             </div>
-          </section>
+          )}
+        </div>
+      </section>
 
-          {/* =======================================================
-              QUICK ACTIONS
-          ======================================================= */}
-          <section className="mt-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+      {/* =====================================================
+          FOOTER
+      ===================================================== */}
 
-            <div>
-              <h2 className="text-lg font-bold text-[#17213a]">
-                Quick Actions
-              </h2>
-
-              <p className="mt-1 text-sm text-gray-500">
-                Frequently used employee actions
-              </p>
-            </div>
-
-            <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-
-              {[
-                ["Apply Leave", "◷"],
-                ["View Payslip", "₹"],
-                ["Mark Attendance", "✓"],
-                ["View Profile", "♙"],
-              ].map(([label, icon]) => (
-                <button
-                  key={label}
-                  type="button"
-                  className="flex items-center gap-3 rounded-xl border border-gray-200 p-4 text-left transition hover:border-[#2563eb] hover:bg-[#f5f8f5]"
-                >
-                  <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#eef3ef] text-lg font-semibold text-[#2563eb]">
-                    {icon}
-                  </span>
-
-                  <span className="text-sm font-semibold text-gray-700">
-                    {label}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </section>
-
-          {/* Footer */}
-          <footer className="mt-8 border-t border-gray-200 py-6 text-center text-xs text-gray-400">
-            © 2026 HRMS. All rights reserved. · Employee Portal
-          </footer>
-      </main>
+      <footer className="mt-8 border-t border-gray-200 py-6 text-center text-xs text-gray-400">
+        © 2026 HRMS. All rights reserved. · Employee Portal
+      </footer>
+    </main>
   );
 }
 
 export default EmployeeDashboard;
-

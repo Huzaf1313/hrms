@@ -92,6 +92,8 @@ class LoginRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=1, max_length=128)
 
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -100,3 +102,41 @@ class TokenResponse(BaseModel):
 
 class RefreshTokenRequest(BaseModel):
     refresh_token: str = Field(min_length=1)
+
+class VerifyOTPRequest(BaseModel):
+    email: EmailStr
+    otp: str = Field(
+        min_length=6,
+        max_length=6,
+    )
+
+class VerifyPasswordResetOTPRequest(BaseModel):
+    email: EmailStr
+    otp: str = Field(
+        min_length=6,
+        max_length=6,
+    )
+
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr
+    reset_token: str = Field(
+        min_length=1,
+    )
+    new_password: str = Field(
+        min_length=8,
+        max_length=128,
+    )
+    confirm_password: str = Field(
+        min_length=8,
+        max_length=128,
+    )
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_new_password(cls, value: str) -> str:
+        return validate_password_strength(value)
+
+    @field_validator("confirm_password")
+    @classmethod
+    def validate_confirm_password(cls, value: str) -> str:
+        return value

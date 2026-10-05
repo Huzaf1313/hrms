@@ -28,19 +28,16 @@ class EmployeeLeaveService:
                 400,
             )
 
-        # 2. Calculate leave days. Saturdays and Sundays are predefined
-        # weekly offs, so only working days are deducted from the balance.
-        total_days = count_working_days(
-            start_date,
-            end_date,
-        )
+        # 2. Calculate total leave days
+        total_days = 0
+        current_date = start_date
 
-        if total_days == 0:
-            raise AppException(
-                "Selected range falls only on Saturdays or Sundays. "
-                "Please choose at least one working day.",
-                400,
-            )
+        while current_date <= end_date:
+            # Monday = 0, Sunday = 6
+            if current_date.weekday() < 5:
+                total_days += 1
+
+            current_date += timedelta(days=1)
 
         # 3. Validate leave type
         allowed_leave_types = {

@@ -53,12 +53,34 @@ function EmployeeLeaveModal({
   const [attachment, setAttachment] = useState<File | null>(null);
   const [error, setError] = useState("");
 
-  // Saturdays and Sundays are predefined weekly offs, so they are never
-  // counted as leave days.
-  const totalDays = useMemo(
-    () => countWorkingDays(fromDate, toDate),
-    [fromDate, toDate],
-  );
+  const totalDays = useMemo(() => {
+    if (!fromDate || !toDate) {
+      return 0;
+    }
+
+    const start = new Date(`${fromDate}T00:00:00`);
+    const end = new Date(`${toDate}T00:00:00`);
+
+    if (end < start) {
+      return 0;
+    }
+
+    let workingDays = 0;
+    const currentDate = new Date(start);
+
+    while (currentDate <= end) {
+      const dayOfWeek = currentDate.getDay();
+
+      // Monday (1) to Friday (5)
+      if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+        workingDays++;
+      }
+
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    return workingDays;
+  }, [fromDate, toDate]);
 
   const formatDate = (date: string) => {
     if (!date) {
