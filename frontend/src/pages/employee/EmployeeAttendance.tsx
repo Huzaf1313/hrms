@@ -59,16 +59,14 @@ function resolveCheckIn(
   record: AttendanceRecord | null | undefined,
 ): string | null {
   if (!record) return null;
-
-  return record.in_time ?? resolveCheckIn(record) ?? null;
+  return record.in_time ?? record.check_in ?? null;
 }
 
 function resolveCheckOut(
   record: AttendanceRecord | null | undefined,
 ): string | null {
   if (!record) return null;
-
-  return record.out_time ?? resolveCheckOut(record) ?? null;
+  return record.out_time ?? record.check_out ?? null;
 }
 
 /** "09:30 AM" or "18:30" or an ISO string -> minutes since midnight, or
@@ -223,9 +221,7 @@ useEffect(() => {
 
 if (!user.employee_id) {
   setEmployeeId(null);
-  setError(
-    "Employee ID could not be found for the logged-in user.",
-  );
+  setError("Employee ID could not be found for the logged-in user.");
   return;
 }
 
@@ -257,16 +253,15 @@ const [records, leaveList, requests] = await Promise.all([
   ),
 ]);
 
-console.log("ATTENDANCE RECORDS:", records);
-console.log(
-  "TODAY:",
-  new Date().toString(),
-  new Date().toISOString(),
-);
-console.log("LEAVE DATA:", leaveList.items);
+// console.log("ATTENDANCE RECORDS:", records);
+// console.log(
+//   "TODAY:",
+//   new Date().toString(),
+//   new Date().toISOString(),
+// );
+// console.log("LEAVE DATA:", leaveList.items);
 
-setAttendanceRecords(records);
-setRegularizationRequests(requests);
+
 
 setAttendanceRecords(records);
 setRegularizationRequests(requests);
@@ -585,20 +580,27 @@ if (
     }
 
     function formatTime(value: string | null) {
-        if (!value) {
-            return "--";
-        }
+  if (!value) return "--";
 
-        const utcValue = value.endsWith("Z")
-            ? value
-            : `${value}Z`;
+  const text = value.trim();
 
-        return new Date(utcValue).toLocaleTimeString("en-IN", {
-            timeZone: "Asia/Kolkata",
-            hour: "2-digit",
-            minute: "2-digit",
-        });
-        }
+  // Already a display string such as "09:30 AM" or "18:30"
+  if (/^\d{1,2}:\d{2}(\s*[AP]M)?$/i.test(text)) {
+    return text;
+  }
+
+  // ISO timestamp; assume UTC when no timezone is present
+  const hasTz = /([zZ]|[+-]\d{2}:?\d{2})$/.test(text);
+  const date = new Date(hasTz ? text : `${text}Z`);
+
+  if (Number.isNaN(date.getTime())) return "--";
+
+  return date.toLocaleTimeString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
     const todayStatus = todayRecord?.status || "Not Marked";
 
@@ -1654,21 +1656,19 @@ if (
                     const status =
                       attendance?.status?.toLowerCase();
 
-                    const isLate =
-                      attendance?.check_in
-                        ? (() => {
-                            const checkInIST = getISTDateParts(
-                              new Date(attendance.check_in),
-                            );
+                    const isLate = (() => {
+                        if (!attendance || !resolveCheckIn(attendance)) return false;
 
-                            const checkInMinutes =
-                              checkInIST.hour * 60 + checkInIST.minute;
+                        if (attendance.late_minutes != null) return attendance.late_minutes > 0;
+                        if (attendance.is_late) return true;
 
-                            const shiftStartMinutes = 9 * 60 + 30;
+                        const inMin = clockMinutes(resolveCheckIn(attendance));
+                        const startMin = clockMinutes(
+                          attendance.shift_start ?? myShift?.start_time ?? null,
+                        );
 
-                            return checkInMinutes > shiftStartMinutes;
-                          })()
-                        : false;
+                        return inMin !== null && startMin !== null && inMin > startMin;
+                      })();
 
                     let statusClass = "text-gray-700";
 

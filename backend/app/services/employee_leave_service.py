@@ -28,9 +28,15 @@ class EmployeeLeaveService:
             )
 
         # 2. Calculate total leave days
-        total_days = (
-            end_date - start_date
-        ).days + 1
+        total_days = 0
+        current_date = start_date
+
+        while current_date <= end_date:
+            # Monday = 0, Sunday = 6
+            if current_date.weekday() < 5:
+                total_days += 1
+
+            current_date += timedelta(days=1)
 
         # 3. Validate leave type
         allowed_leave_types = {

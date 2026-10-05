@@ -63,14 +63,21 @@ function EmployeeLeaveModal({
       return 0;
     }
 
-    const difference =
-      end.getTime() - start.getTime();
+    let workingDays = 0;
+    const currentDate = new Date(start);
 
-    return (
-      Math.floor(
-        difference / (1000 * 60 * 60 * 24),
-      ) + 1
-    );
+    while (currentDate <= end) {
+      const dayOfWeek = currentDate.getDay();
+
+      // Monday (1) to Friday (5)
+      if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+        workingDays++;
+      }
+
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    return workingDays;
   }, [fromDate, toDate]);
 
   const formatDate = (date: string) => {

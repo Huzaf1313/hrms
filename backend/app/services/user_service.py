@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.core.exceptions import AppException
 from app.core.jwt import (
@@ -9,6 +9,7 @@ from app.core.jwt import (
 from app.core.roles import UserRole
 from app.core.security import hash_password, verify_password
 from app.repositories.user_repository import UserRepository
+from app.repositories.otp_repository import OTPRepository
 from app.services.session_service import SessionService
 from app.services.email_service import EmailService
 
@@ -175,6 +176,78 @@ class UserService:
         user = await self.repository.create(user_data)
 
         return user
+
+    async def reset_password(
+        self,
+        email: str,
+        reset_token: str,
+        new_password: str,
+        confirm_password: str,
+    ):
+        if new_password != confirm_password:
+            raise AppException(
+                "New password and confirm password do not match",
+                400,
+            )
+
+        email = email.lower().strip()
+
+        otp_repository = OTPRepository()
+
+        token_record = await otp_repository.collection.find_one(
+            {
+                "email": email,
+                "purpose": "password_reset_authorized",
+                "reset_token": reset_token,
+            }
+        )
+
+        if not token_record:
+            raise AppException(
+                "Invalid or expired password reset request",
+                400,
+            )
+
+        now = datetime.now(timezone.utc)
+
+        if now >= token_record["expires_at"]:
+            await otp_repository.collection.delete_one(
+                {"_id": token_record["_id"]}
+            )
+
+            raise AppException(
+                "Password reset session has expired. Please request a new OTP.",
+                400,
+            )
+
+        user = await self.repository.get_by_email(email)
+
+        if not user:
+            raise AppException(
+                "Invalid password reset request",
+                400,
+            )
+
+        new_password_hash = hash_password(new_password)
+
+        await self.repository.update(
+            str(user["_id"]),
+            {
+                "password_hash": new_password_hash,
+                "updated_at": datetime.now(timezone.utc),
+                "failed_login_attempts": 0,
+                "is_locked": False,
+            },
+        )
+
+        # Token can only be used once.
+        await otp_repository.collection.delete_one(
+            {"_id": token_record["_id"]}
+        )
+
+        return {
+            "message": "Password reset successfully",
+        }
 
     async def login_user(
         self,

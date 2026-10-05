@@ -213,6 +213,21 @@ function getUpcomingDateParts(dateValue: string) {
   };
 }
 
+function normalizeLeaveStatus(status: string): LeaveStatus {
+  switch (status.toLowerCase()) {
+    case "approved":
+      return "Approved";
+    case "pending":
+      return "Pending";
+    case "rejected":
+      return "Rejected";
+    case "cancelled":
+      return "Cancelled";
+    default:
+      return "Pending";
+  }
+}
+
 function mapLeaveRequest(request: BackendLeaveRequest): LeaveRequest {
   return {
     id: request.id,
@@ -221,7 +236,7 @@ function mapLeaveRequest(request: BackendLeaveRequest): LeaveRequest {
     from: formatDate(request.start_date),
     to: formatDate(request.end_date),
     duration: request.total_days,
-    status: request.status,
+    status: normalizeLeaveStatus(request.status),
     reason: request.reason,
     attachmentUrl: request.attachment_url,
     requestedAt: request.requested_at,
@@ -365,6 +380,24 @@ function EmployeeLeave() {
 
   useEffect(() => {
     void fetchLeaveData();
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void fetchLeaveData(false);
+      }
+    };
+
+    document.addEventListener(
+      "visibilitychange",
+      handleVisibilityChange,
+    );
+
+    return () => {
+      document.removeEventListener(
+        "visibilitychange",
+        handleVisibilityChange,
+      );
+    };
   }, [fetchLeaveData]);
 
   const filteredRequests = useMemo(() => {
@@ -583,10 +616,6 @@ function EmployeeLeave() {
                           {balance.allocated} Allocated ·{" "}
                           {balance.used} Used
                         </p>
-                      </div>
-
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50">
-                        <CalendarDays className="h-5 w-5 text-[#2563eb]" />
                       </div>
                     </div>
                   </div>
@@ -856,13 +885,7 @@ function EmployeeLeave() {
                         Your approved upcoming leaves
                       </p>
                     </div>
-
-                    <button
-                      type="button"
-                      className="text-sm font-medium text-[#2563eb] hover:text-blue-800"
-                    >
-                      View Calendar
-                    </button>
+                    
                   </div>
 
                   <div className="divide-y divide-slate-100">

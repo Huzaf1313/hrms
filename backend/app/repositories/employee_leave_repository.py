@@ -183,7 +183,12 @@ class EmployeeLeaveRepository:
             .find(
                 {
                     "employee_id": employee_id,
-                    "status": "Approved",
+                    "status": {
+                        "$in": [
+                            "Approved",
+                            "approved",
+                        ],
+                    },
                     "end_date": {
                         "$gte": from_date
                     },
@@ -211,7 +216,8 @@ class EmployeeLeaveRepository:
                     "status": {
                         "$in": [
                             "Approved",
-                        ]
+                            "approved",
+                        ],
                     },
                 }
             )

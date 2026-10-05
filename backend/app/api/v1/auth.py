@@ -1,12 +1,15 @@
 from fastapi import APIRouter, status
 
 from app.schemas.user import (
+    ForgotPasswordRequest,
     LoginRequest,
     RefreshTokenRequest,
+    ResetPasswordRequest,
     TokenResponse,
     UserCreate,
     UserResponse,
     VerifyOTPRequest,
+    VerifyPasswordResetOTPRequest,
 )
 from app.services.user_service import UserService
 from app.services.otp_service import OTPService
@@ -45,6 +48,46 @@ async def request_registration_otp(user_data: UserCreate):
         company_name=user_data.company_name,
         company_address=user_data.company_address,
         reference=user_data.reference,
+    )
+
+@router.post(
+    "/forgot-password",
+)
+async def forgot_password(
+    request: ForgotPasswordRequest,
+):
+    otp_service = OTPService()
+
+    return await otp_service.create_password_reset_otp(
+        email=request.email,
+    )
+
+@router.post(
+    "/forgot-password/verify-otp",
+)
+async def verify_password_reset_otp(
+    request: VerifyPasswordResetOTPRequest,
+):
+    otp_service = OTPService()
+
+    return await otp_service.verify_password_reset_otp(
+        email=request.email,
+        otp=request.otp,
+    )
+
+@router.post(
+    "/forgot-password/reset-password",
+)
+async def reset_password(
+    request: ResetPasswordRequest,
+):
+    user_service = UserService()
+
+    return await user_service.reset_password(
+        email=request.email,
+        reset_token=request.reset_token,
+        new_password=request.new_password,
+        confirm_password=request.confirm_password,
     )
 
 @router.post(
