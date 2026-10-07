@@ -11,6 +11,7 @@ import AdminRegularizationRequests from "../pages/admin/AdminRegularizationReque
 import AdminPayroll from "../pages/admin/AdminPayroll";
 import AdminAnnouncements from "../pages/admin/AdminAnnouncements";
 import AdminSettings from "../pages/admin/AdminSetting";
+import AdminRecruitment from "../pages/admin/AdminRecruitment";
 import { getDashboardData, type DashboardData } from "../services/dashboardService";
 
 interface DashboardLayoutProps {
@@ -81,26 +82,28 @@ function DashboardLayout({
             usable, instead of blanking the whole screen. */}
         <ErrorBoundary label={activePage}>
           {activePage === "Employees" ? (
-          <AdminEmployees autoOpenCreateForm={openEmployeeFormOnMount} />
-        ) : activePage === "Attendance" ? (
-          <AdminAttendance />
-        ) : activePage === "Leave" ? (
-          <AdminLeave />
-        ) : activePage === "Regularization Requests" ? (
-          <AdminRegularizationRequests />
-        ) : activePage === "Payroll" ? (
-          <AdminPayroll />
-        ) : activePage === "Announcement" ? (
-          <AdminAnnouncements onCreateEmployee={handleCreateEmployee} />
-        ) : activePage === "Settings" ? (
-          <AdminSettings />
-        ) : (
-          <AdminDashboard
-            totalHeadcount={dashboardData?.total_headcount ?? null}
-            celebrations={dashboardData?.celebrations ?? []}
-            onNavigate={handleNavigate}
-          />
-        )}
+            <AdminEmployees autoOpenCreateForm={openEmployeeFormOnMount} />
+          ) : activePage === "Attendance" ? (
+            <AdminAttendance />
+          ) : activePage === "Leave" ? (
+            <AdminLeave />
+          ) : activePage === "Regularization Requests" ? (
+            <AdminRegularizationRequests />
+          ) : activePage === "Payroll" ? (
+            <AdminPayroll />
+          ) : activePage === "Announcement" ? (
+            <AdminAnnouncements onCreateEmployee={handleCreateEmployee} />
+          ) : activePage === "Recruitment" ? (
+            <AdminRecruitment />
+          ) : activePage === "Settings" ? (
+            <AdminSettings />
+          ) : (
+            <AdminDashboard
+              totalHeadcount={dashboardData?.total_headcount ?? null}
+              celebrations={dashboardData?.celebrations ?? []}
+              onNavigate={handleNavigate}
+            />
+          )}
         </ErrorBoundary>
       </main>
     </div>

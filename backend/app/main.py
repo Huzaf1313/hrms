@@ -72,6 +72,11 @@ from app.repositories.admin_announcement_repository import (
 )
 from app.repositories.shift_repository import ShiftRepository
 
+from app.api.v1.recruitment import router as recruitment_router
+from app.repositories.candidate_repository import CandidateRepository
+from app.repositories.job_position_repository import JobPositionRepository
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await connect_to_database()
@@ -95,6 +100,8 @@ async def lifespan(app: FastAPI):
 
     announcement_repository = AdminAnnouncementRepository()
     await announcement_repository.ensure_indexes()
+    await JobPositionRepository().ensure_indexes()
+    await CandidateRepository().ensure_indexes()
 
     yield
 
@@ -256,5 +263,10 @@ app.include_router(
 
 app.include_router(
     admin_payslip_router,
+    prefix="/api/v1",
+)
+
+app.include_router(
+    recruitment_router,
     prefix="/api/v1",
 )
