@@ -70,3 +70,5 @@ $RECYCLE.BIN/
 # ============================================================
 .cache/
 .temp/
+
+backend/private_uploads/

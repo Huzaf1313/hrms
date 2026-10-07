@@ -12,6 +12,7 @@ import AdminPayroll from "../pages/admin/AdminPayroll";
 import AdminAssets from "../pages/admin/AdminAssets";
 import AdminAnnouncements from "../pages/admin/AdminAnnouncements";
 import AdminSettings from "../pages/admin/AdminSetting";
+import AdminRecruitment from "../pages/admin/AdminRecruitment";
 import { getDashboardData, type DashboardData } from "../services/dashboardService";
 
 interface DashboardLayoutProps {
