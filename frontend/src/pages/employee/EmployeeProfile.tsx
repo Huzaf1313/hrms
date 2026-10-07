@@ -911,52 +911,120 @@ export default function EmployeeProfile() {
               )}
             </div>
           </section>
+          </div>
 
-          {/* Account Overview */}
-          <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="border-b border-slate-100 px-6 py-5">
-              <h2 className="text-base font-bold text-slate-900">
-                Account Overview
-              </h2>
+          {/* Account Overview + Bank Information */}
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {/* Account Overview */}
+            <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="border-b border-slate-100 px-6 py-5">
+                <h2 className="text-base font-bold text-slate-900">
+                  Account Overview
+                </h2>
 
-              <p className="mt-1 text-xs text-slate-400">
-                Current account status
-              </p>
-            </div>
+                <p className="mt-1 text-xs text-slate-400">
+                  Current account status
+                </p>
+              </div>
 
-            <div className="px-6 py-3">
-              <StatusRow
-                label="Account status"
-                value={isActive ? "Active" : "Inactive"}
-                active={isActive}
-              />
+              <div className="px-6 py-3">
+                <StatusRow
+                  label="Account status"
+                  value={isActive ? "Active" : "Inactive"}
+                  active={isActive}
+                />
 
-              <StatusRow
-                label="Security status"
-                value={user?.is_locked ? "Locked" : "Secure"}
-                active={!user?.is_locked}
-              />
+                <StatusRow
+                  label="Security status"
+                  value={user?.is_locked ? "Locked" : "Secure"}
+                  active={!user?.is_locked}
+                />
 
-              <StatusRow label="Account role" value={roleLabel} />
+                <StatusRow label="Account role" value={roleLabel} />
 
-              <StatusRow
-                label="Member since"
-                value={formatDate(user?.created_at)}
-              />
+                <StatusRow
+                  label="Member since"
+                  value={formatDate(user?.created_at)}
+                />
 
-              <StatusRow
-                label="Employment"
-                value={formatEmploymentType(employee?.employment_type)}
-              />
+                <StatusRow
+                  label="Employment"
+                  value={formatEmploymentType(employee?.employment_type)}
+                />
 
-              <StatusRow
-                label="Status"
-                value={formatStatus(employee?.status)}
-                active={employee?.status === "active"}
-              />
-            </div>
-          </section>
-        </div>
+                <StatusRow
+                  label="Status"
+                  value={formatStatus(employee?.status)}
+                  active={employee?.status === "active"}
+                />
+              </div>
+            </section>
+
+            {/* Bank Information */}
+            <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
+                <div>
+                  <h2 className="text-base font-bold text-slate-900">
+                    Bank Information
+                  </h2>
+
+                  <p className="mt-1 text-xs text-slate-400">
+                    Your salary and banking details
+                  </p>
+                </div>
+
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 text-slate-500">
+                  <CreditCard size={18} />
+                </div>
+              </div>
+
+              <div className="p-6">
+                {employee?.bank_information ? (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <InfoItem
+                      icon={Building2}
+                      label="Bank Name"
+                      value={employee.bank_information.bank_name}
+                    />
+
+                    <InfoItem
+                      icon={User}
+                      label="Account Holder"
+                      value={employee.bank_information.account_holder_name}
+                    />
+
+                    <InfoItem
+                      icon={CreditCard}
+                      label="Account Number"
+                      value={maskAccountNumber(
+                        employee.bank_information.account_number,
+                      )}
+                    />
+
+                    <InfoItem
+                      icon={ShieldCheck}
+                      label="IFSC Code"
+                      value={employee.bank_information.ifsc_code}
+                    />
+
+                    {employee.bank_information.branch && (
+                      <InfoItem
+                        icon={MapPin}
+                        label="Branch"
+                        value={employee.bank_information.branch}
+                      />
+                    )}
+                  </div>
+                ) : (
+                  <EmptyInformation
+                    icon={CreditCard}
+                    title="Bank information not added"
+                    description="Your bank information has not been provided by HR."
+                  />
+                )}
+              </div>
+            </section>
+          </div>
 
         {/* Employment Information */}
         <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -1026,71 +1094,6 @@ export default function EmployeeProfile() {
             />
 
             <InfoItem icon={Clock3} label="Shift" value={shiftName} />
-          </div>
-        </section>
-
-        {/* Bank Information */}
-        <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
-            <div>
-              <h2 className="text-base font-bold text-slate-900">
-                Bank Information
-              </h2>
-
-              <p className="mt-1 text-xs text-slate-400">
-                Your salary and banking details
-              </p>
-            </div>
-
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 text-slate-500">
-              <CreditCard size={18} />
-            </div>
-          </div>
-
-          <div className="p-6">
-            {employee?.bank_information ? (
-              <div className="grid gap-3 sm:grid-cols-2">
-                <InfoItem
-                  icon={Building2}
-                  label="Bank Name"
-                  value={employee.bank_information.bank_name}
-                />
-
-                <InfoItem
-                  icon={User}
-                  label="Account Holder"
-                  value={employee.bank_information.account_holder_name}
-                />
-
-                <InfoItem
-                  icon={CreditCard}
-                  label="Account Number"
-                  value={maskAccountNumber(
-                    employee.bank_information.account_number,
-                  )}
-                />
-
-                <InfoItem
-                  icon={ShieldCheck}
-                  label="IFSC Code"
-                  value={employee.bank_information.ifsc_code}
-                />
-
-                {employee.bank_information.branch && (
-                  <InfoItem
-                    icon={MapPin}
-                    label="Branch"
-                    value={employee.bank_information.branch}
-                  />
-                )}
-              </div>
-            ) : (
-              <EmptyInformation
-                icon={CreditCard}
-                title="Bank information not added"
-                description="Your bank information has not been provided by HR."
-              />
-            )}
           </div>
         </section>
       </div>
