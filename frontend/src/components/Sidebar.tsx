@@ -7,6 +7,7 @@ import {
   CalendarDays,
   Wallet,
   Megaphone,
+  Package,
   Settings,
 } from "lucide-react";
 
@@ -51,6 +52,7 @@ const sections: NavSection[] = [
     title: "Management",
     items: [
       { label: "Payroll", icon: Wallet, page: "Payroll" },
+      { label: "Assets", icon: Package, page: "Assets" },
       { label: "Announcement", icon: Megaphone, page: "Announcement" },
       { label: "Settings", icon: Settings, page: "Settings" },
     ],

@@ -41,10 +41,13 @@ function targetPageFor(action: (typeof quickActions)[number]): string | null {
 
 interface QuickActionsCardProps {
   onNavigate?: (page: string) => void;
+  /** Sends the admin to the announcement form instead of the list. */
+  onCreateAnnouncement?: () => void;
 }
 
 export default function QuickActionsCard({
   onNavigate,
+  onCreateAnnouncement,
 }: QuickActionsCardProps) {
   return (
     <DashboardCard
@@ -56,15 +59,18 @@ export default function QuickActionsCard({
           const Icon = ICONS[action.icon] ?? Briefcase;
           const targetPage = targetPageFor(action);
 
+          const handleClick =
+            action.icon === "megaphone"
+              ? onCreateAnnouncement
+              : targetPage && onNavigate
+                ? () => onNavigate(targetPage)
+                : undefined;
+
           return (
             <button
               key={action.id}
               type="button"
-              onClick={
-                targetPage && onNavigate
-                  ? () => onNavigate(targetPage)
-                  : undefined
-              }
+              onClick={handleClick}
               className="dashboard-rise group flex flex-col items-center gap-2 rounded-xl border border-gray-100 px-2 py-3 text-center transition hover:border-[#bfdbfe] hover:shadow-sm"
               style={
                 { "--dashboard-delay": `${index * 70}ms` } as CSSProperties

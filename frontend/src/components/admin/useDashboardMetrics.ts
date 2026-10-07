@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { attendanceService } from "../../services/attendanceService";
 import { departmentService } from "../../services/departmentService";
@@ -20,6 +20,12 @@ export interface DashboardMetrics {
   onLeavePercent: number | null;
   pendingLeaveRequests: number | null;
   departmentCounts: DepartmentCount[] | null;
+}
+
+export interface DashboardMetricsState {
+  metrics: DashboardMetrics;
+  /** Re-runs every request, so the KPIs follow admin actions on the page. */
+  refresh: () => void;
 }
 
 const EMPTY_METRICS: DashboardMetrics = {
@@ -52,8 +58,9 @@ function todayKey(): string {
  */
 export function useDashboardMetrics(
   seedTotalEmployees: number | null,
-): DashboardMetrics {
+): DashboardMetricsState {
   const [metrics, setMetrics] = useState<DashboardMetrics>(EMPTY_METRICS);
+  const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -144,7 +151,11 @@ export function useDashboardMetrics(
     return () => {
       active = false;
     };
-  }, [seedTotalEmployees]);
+  }, [seedTotalEmployees, reloadToken]);
 
-  return metrics;
+  const refresh = useCallback(() => {
+    setReloadToken((token) => token + 1);
+  }, []);
+
+  return { metrics, refresh };
 }
