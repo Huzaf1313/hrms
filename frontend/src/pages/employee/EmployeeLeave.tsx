@@ -8,6 +8,7 @@ import {
   FileText,
   Plus,
   XCircle,
+  X,
 } from "lucide-react";
 import EmployeeLeaveModal from "./EmployeeLeaveModal";
 import EmployeeLeaveDetailsModal from "./EmployeeLeaveDetailsModal";
@@ -262,6 +263,7 @@ function EmployeeLeave() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState("");
+  const [actionError, setActionError] = useState("");
 
   const [employeeId, setEmployeeId] = useState<string | null>(null);
 
@@ -451,6 +453,7 @@ function EmployeeLeave() {
 
     setActionLoading(true);
     setError("");
+    setActionError("");
 
     try {
       /*
@@ -475,14 +478,14 @@ function EmployeeLeave() {
       await fetchLeaveData(false);
     } catch (err) {
       if (err instanceof ApiError) {
-        setError(err.message);
+        setActionError(err.message);
       } else {
-        setError(
+        setActionError(
           "Unable to submit the leave request. Please try again.",
         );
       }
     } finally {
-      setActionLoading(false);
+          setActionLoading(false);
     }
   };
 
@@ -552,6 +555,7 @@ function EmployeeLeave() {
                 type="button"
                 onClick={() => {
                   setError("");
+                  setActionError("");
                   setIsApplyLeaveOpen(true);
                 }}
                 disabled={actionLoading}
@@ -960,6 +964,37 @@ function EmployeeLeave() {
           onSubmit={handleLeaveSubmit}
           isSubmitting={actionLoading}
         />
+      )}
+      {actionError && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="flex items-start gap-4">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-50">
+                <X className="h-5 w-5 text-red-600" />
+              </div>
+
+              <div className="flex-1">
+                <h2 className="text-lg font-semibold text-slate-900">
+                  Leave Request
+                </h2>
+
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  {actionError}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setActionError("")}
+                className="rounded-xl bg-[#2563eb] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Leave Details Modal */}

@@ -204,13 +204,6 @@ function AdminEmployeeDetailsPage({
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const [emergencyForm, setEmergencyForm] = useState({
-    name: employee.emergency_contact?.name ?? "",
-    relationship: employee.emergency_contact?.relationship ?? "",
-    phone: employee.emergency_contact?.phone ?? "",
-    address: employee.emergency_contact?.address ?? "",
-  });
-
   const [bankForm, setBankForm] = useState({
     bank_name: employee.bank_information?.bank_name ?? "",
     account_holder_name: employee.bank_information?.account_holder_name ?? "",
@@ -279,19 +272,6 @@ function AdminEmployeeDetailsPage({
     fetchLeaveBalance();
   }, [employee.employee_id]);
 
-  function openEmergencyEdit() {
-    setSaveError(null);
-
-    setEmergencyForm({
-      name: employee.emergency_contact?.name ?? "",
-      relationship: employee.emergency_contact?.relationship ?? "",
-      phone: employee.emergency_contact?.phone ?? "",
-      address: employee.emergency_contact?.address ?? "",
-    });
-
-    setEditSection("emergency");
-  }
-
   function openBankEdit() {
     setSaveError(null);
 
@@ -309,52 +289,6 @@ function AdminEmployeeDetailsPage({
     if (!isSaving) {
       setEditSection(null);
       setSaveError(null);
-    }
-  }
-
-  async function handleSaveEmergency() {
-    if (!emergencyForm.name.trim()) {
-      setSaveError("Emergency contact name is required.");
-      return;
-    }
-
-    if (!emergencyForm.relationship.trim()) {
-      setSaveError("Relationship is required.");
-      return;
-    }
-
-    if (!emergencyForm.phone.trim()) {
-      setSaveError("Emergency contact phone is required.");
-      return;
-    }
-
-    if (emergencyForm.phone.length !== 10) {
-      setSaveError("Phone number must be exactly 10 digits.");
-      return;
-    }
-
-    try {
-      setIsSaving(true);
-      setSaveError(null);
-
-      await onUpdateEmployee(employee.id, {
-        emergency_contact: {
-          name: emergencyForm.name.trim(),
-          relationship: emergencyForm.relationship.trim(),
-          phone: emergencyForm.phone,
-          address: emergencyForm.address.trim(),
-        },
-      });
-
-      setEditSection(null);
-    } catch (error) {
-      setSaveError(
-        error instanceof Error
-          ? error.message
-          : "Failed to update emergency contact.",
-      );
-    } finally {
-      setIsSaving(false);
     }
   }
 
@@ -671,24 +605,16 @@ function AdminEmployeeDetailsPage({
 
             {/* EMERGENCY CONTACT */}
             <div className="rounded-3xl bg-white p-6 shadow-sm">
-              <div className="mb-5 flex items-center justify-between">
-                <h3 className="flex items-center gap-2 text-lg font-semibold text-gray-800">
-                  <ShieldAlert
-                    size={20}
-                    strokeWidth={2}
-                    className="text-gray-700"
-                  />
+              <div className="mb-5 flex items-center gap-2">
+                <ShieldAlert
+                  size={20}
+                  strokeWidth={2}
+                  className="text-gray-700"
+                />
+
+                <h3 className="text-lg font-semibold text-gray-800">
                   Emergency Contact
                 </h3>
-
-                <button
-                  type="button"
-                  onClick={openEmergencyEdit}
-                  className="flex items-center gap-1.5 text-sm font-medium text-[#2563eb] hover:underline"
-                >
-                  <Pencil size={15} strokeWidth={2} />
-                  Edit
-                </button>
               </div>
 
               {employee.emergency_contact ? (
@@ -729,9 +655,15 @@ function AdminEmployeeDetailsPage({
                   )}
                 </div>
               ) : (
-                <p className="text-sm text-gray-500">
-                  No emergency contact on file.
-                </p>
+                <div className="rounded-2xl bg-gray-50 px-4 py-5">
+                  <p className="text-sm font-medium text-gray-700">
+                    No emergency contact on file.
+                  </p>
+
+                  <p className="mt-1 text-xs text-gray-500">
+                    The employee can add their emergency contact from their profile.
+                  </p>
+                </div>
               )}
             </div>
           </div>
@@ -1047,126 +979,8 @@ function AdminEmployeeDetailsPage({
                 <X size={18} />
               </button>
             </div>
-
-            {/* EMERGENCY CONTACT FORM */}
-            {editSection === "emergency" ? (
-              <div className="mt-6 space-y-4">
-                {/* NAME */}
-                <div>
-                  <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                    Name
-                  </label>
-
-                  <input
-                    type="text"
-                    value={emergencyForm.name}
-                    onChange={(event) =>
-                      setEmergencyForm((current) => ({
-                        ...current,
-                        name: event.target.value,
-                      }))
-                    }
-                    className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition focus:border-[#2563eb]"
-                    placeholder="Enter contact name"
-                  />
-                </div>
-
-                {/* RELATIONSHIP */}
-                <div>
-                  <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                    Relationship
-                  </label>
-
-                  <input
-                    type="text"
-                    value={emergencyForm.relationship}
-                    onChange={(event) =>
-                      setEmergencyForm((current) => ({
-                        ...current,
-                        relationship: event.target.value,
-                      }))
-                    }
-                    className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition focus:border-[#2563eb]"
-                    placeholder="e.g. Father, Mother, Spouse"
-                  />
-                </div>
-
-                {/* PHONE */}
-                <div>
-                  <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                    Phone Number
-                  </label>
-
-                  <input
-                    type="tel"
-                    inputMode="numeric"
-                    maxLength={10}
-                    value={emergencyForm.phone}
-                    onChange={(event) => {
-                      const value = event.target.value
-                        .replace(/\D/g, "")
-                        .slice(0, 10);
-
-                      setEmergencyForm((current) => ({
-                        ...current,
-                        phone: value,
-                      }));
-                    }}
-                    className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition focus:border-[#2563eb]"
-                    placeholder="10-digit phone number"
-                  />
-                </div>
-
-                {/* ADDRESS */}
-                <div>
-                  <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                    Address
-                  </label>
-
-                  <textarea
-                    value={emergencyForm.address}
-                    onChange={(event) =>
-                      setEmergencyForm((current) => ({
-                        ...current,
-                        address: event.target.value,
-                      }))
-                    }
-                    rows={3}
-                    className="w-full resize-none rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition focus:border-[#2563eb]"
-                    placeholder="Enter address"
-                  />
-                </div>
-
-                {/* ERROR */}
-                {saveError && (
-                  <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
-                    {saveError}
-                  </div>
-                )}
-
-                {/* ACTIONS */}
-                <div className="flex justify-end gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={closeEditModal}
-                    disabled={isSaving}
-                    className="rounded-full border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Cancel
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleSaveEmergency}
-                    disabled={isSaving}
-                    className="rounded-full bg-[#2563eb] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {isSaving ? "Saving..." : "Save Changes"}
-                  </button>
-                </div>
-              </div>
-            ) : (
-              /* BANK INFORMATION FORM */
+             (
+              {/* BANK INFORMATION FORM */}
               <div className="mt-6 space-y-4">
                 {/* BANK NAME */}
                 <div>
@@ -1286,7 +1100,6 @@ function AdminEmployeeDetailsPage({
                   </button>
                 </div>
               </div>
-            )}
           </div>
         </div>
       )}
@@ -1295,4 +1108,3 @@ function AdminEmployeeDetailsPage({
 }
 
 export default AdminEmployeeDetailsPage;
-              

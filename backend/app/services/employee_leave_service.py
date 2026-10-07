@@ -8,6 +8,13 @@ from app.repositories.employee_leave_repository import (
 
 class EmployeeLeaveService:
 
+    LEAVE_ALLOCATIONS = {
+        "Casual Leave": 12,
+        "Sick Leave": 10,
+        "Earned Leave": 18,
+        "Comp Off": 5,
+    }
+
     def __init__(self):
         self.repository = EmployeeLeaveRepository()
 
@@ -78,7 +85,45 @@ class EmployeeLeaveService:
                 409,
             )
 
-        # 5. Create leave request
+        # 5. Validate leave balance
+        balance_records = (
+            await self.repository.get_balance_records(
+                employee_id=employee_id,
+            )
+        )
+
+        allocations = {
+            "Casual Leave": 12,
+            "Sick Leave": 10,
+            "Earned Leave": 18,
+            "Comp Off": 5,
+        }
+
+        used_days = sum(
+            record.get("total_days", 0)
+            for record in balance_records
+            if record.get("leave_type") == leave_type
+        )
+
+        available_days = max(
+            self.LEAVE_ALLOCATIONS[leave_type] - used_days,
+            0,
+        )
+
+        if total_days > available_days:
+            additional_days = (
+                total_days - available_days
+            )
+
+            raise AppException(
+                f"Insufficient leave balance. You have "
+                f"{available_days} days available, but "
+                f"{total_days} days are requested. "
+                f"{additional_days} additional days are required.",
+                400,
+            )
+
+        # 6. Create leave request
         now = datetime.now(timezone.utc)
 
         leave_data = {
@@ -230,7 +275,7 @@ class EmployeeLeaveService:
 
         balances = []
 
-        for leave_type, allocated in allocations.items():
+        for leave_type, allocated in self.LEAVE_ALLOCATIONS.items():
             leave_used = used[leave_type]
 
             balances.append(
