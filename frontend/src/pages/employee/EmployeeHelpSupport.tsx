@@ -4,7 +4,6 @@ import {
   BookOpen,
   CalendarCheck2,
   ChevronDown,
-  FileText,
   Headphones,
   HelpCircle,
   Laptop,
@@ -13,84 +12,12 @@ import {
   Phone,
   Search,
   UserRound,
-  Wallet,
 } from "lucide-react";
-
-type Ticket = {
-  id: string;
-  subject: string;
-  category: string;
-  status: "In Progress" | "Resolved";
-  createdOn: string;
-};
-
-type HelpTopic = {
-  title: string;
-  description: string;
-  icon: typeof CalendarCheck2;
-};
 
 type FAQ = {
   question: string;
   answer: string;
 };
-
-const tickets: Ticket[] = [
-  {
-    id: "#TKT-1003",
-    subject: "Login issue with HRMS portal",
-    category: "IT & System",
-    status: "In Progress",
-    createdOn: "May 12, 2025",
-  },
-  {
-    id: "#TKT-1002",
-    subject: "Payslip not available for April",
-    category: "Payroll & Salary",
-    status: "Resolved",
-    createdOn: "May 08, 2025",
-  },
-  {
-    id: "#TKT-1001",
-    subject: "Leave balance clarification",
-    category: "Leave & Attendance",
-    status: "Resolved",
-    createdOn: "May 03, 2025",
-  },
-];
-
-const helpTopics: HelpTopic[] = [
-  {
-    title: "Leave & Attendance",
-    description: "How to apply for leave, attendance rules, and more.",
-    icon: CalendarCheck2,
-  },
-  {
-    title: "Payroll & Salary",
-    description: "Salary details, payslips, deductions, and more.",
-    icon: Wallet,
-  },
-  {
-    title: "Documents",
-    description: "Access important documents and certificates.",
-    icon: FileText,
-  },
-  {
-    title: "Performance",
-    description: "Goals, reviews, feedback, and performance queries.",
-    icon: BookOpen,
-  },
-  {
-    title: "Assets",
-    description: "Request or track company assets.",
-    icon: Laptop,
-  },
-  {
-    title: "IT & System",
-    description: "Login issues, software access, and system problems.",
-    icon: Headphones,
-  },
-];
 
 const faqs: FAQ[] = [
   {
@@ -153,20 +80,6 @@ function EmployeeHelpSupport() {
       (faq) =>
         faq.question.toLowerCase().includes(query) ||
         faq.answer.toLowerCase().includes(query),
-    );
-  }, [searchQuery]);
-
-  const filteredTopics = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-
-    if (!query) {
-      return helpTopics;
-    }
-
-    return helpTopics.filter(
-      (topic) =>
-        topic.title.toLowerCase().includes(query) ||
-        topic.description.toLowerCase().includes(query),
     );
   }, [searchQuery]);
 
@@ -330,151 +243,7 @@ function EmployeeHelpSupport() {
         </section>
 
         {/* Main Content */}
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-          <div className="min-w-0">
-            {/* Popular Help Topics */}
-            <section className="mb-7">
-              <div className="mb-4">
-                <h2 className="text-lg font-bold text-gray-900">
-                  Popular Help Topics
-                </h2>
-                <p className="mt-1 text-sm text-gray-500">
-                  Browse common topics to find the information you need.
-                </p>
-              </div>
-
-              {filteredTopics.length > 0 ? (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {filteredTopics.map((topic) => {
-                    const Icon = topic.icon;
-
-                    return (
-                      <button
-                        key={topic.title}
-                        type="button"
-                        onClick={() => setSearchQuery(topic.title)}
-                        className="group rounded-2xl border border-gray-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md"
-                      >
-                        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-[#2563eb]">
-                          <Icon className="h-5 w-5" />
-                        </div>
-
-                        <h3 className="mt-4 text-sm font-bold text-gray-900">
-                          {topic.title}
-                        </h3>
-
-                        <p className="mt-1.5 text-xs leading-5 text-gray-500">
-                          {topic.description}
-                        </p>
-
-                        <span className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-[#2563eb]">
-                          Explore
-                          <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-1" />
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="rounded-2xl border border-dashed border-gray-300 bg-white px-6 py-10 text-center">
-                  <Search className="mx-auto h-7 w-7 text-gray-300" />
-                  <p className="mt-3 text-sm font-semibold text-gray-700">
-                    No help topics found
-                  </p>
-                  <p className="mt-1 text-xs text-gray-500">
-                    Try a different search term.
-                  </p>
-                </div>
-              )}
-            </section>
-
-            {/* Support Tickets */}
-            <section id="support-tickets" className="mb-7">
-              <div className="mb-4 flex items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-lg font-bold text-gray-900">
-                    My Support Tickets
-                  </h2>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Your most recent support requests.
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  className="shrink-0 text-sm font-semibold text-[#2563eb] hover:underline"
-                >
-                  View All
-                </button>
-              </div>
-
-              <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[720px] text-left">
-                    <thead className="border-b border-gray-200 bg-gray-50">
-                      <tr>
-                        <th className="px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                          Ticket ID
-                        </th>
-                        <th className="px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                          Subject
-                        </th>
-                        <th className="px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                          Category
-                        </th>
-                        <th className="px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                          Status
-                        </th>
-                        <th className="px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                          Created On
-                        </th>
-                      </tr>
-                    </thead>
-
-                    <tbody className="divide-y divide-gray-100">
-                      {tickets.map((ticket) => (
-                        <tr
-                          key={ticket.id}
-                          className="transition hover:bg-gray-50"
-                        >
-                          <td className="px-5 py-4 text-sm font-semibold text-[#2563eb]">
-                            {ticket.id}
-                          </td>
-
-                          <td className="px-5 py-4 text-sm font-medium text-gray-800">
-                            {ticket.subject}
-                          </td>
-
-                          <td className="px-5 py-4 text-sm text-gray-600">
-                            {ticket.category}
-                          </td>
-
-                          <td className="px-5 py-4">
-                            <span
-                              className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
-                                ticket.status === "In Progress"
-                                  ? "bg-orange-50 text-orange-600"
-                                  : "bg-green-50 text-green-600"
-                              }`}
-                            >
-                              {ticket.status}
-                            </span>
-                          </td>
-
-                          <td className="px-5 py-4 text-sm text-gray-500">
-                            {ticket.createdOn}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </section>
-          </div>
-
-          {/* Right Sidebar */}
-          <aside className="space-y-6">
+        <div className="mx-auto w-full max-w-5xl space-y-6">
             {/* FAQ */}
             <section
               id="faq-section"
@@ -622,7 +391,6 @@ function EmployeeHelpSupport() {
                 Call Support
               </a>
             </section>
-          </aside>
         </div>
       </div>
     </main>

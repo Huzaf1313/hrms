@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Bell, ChevronDown, LogOut, Menu } from "lucide-react";
-import { api } from "../services/api";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import EmployeeSidebar from "../pages/employee/EmployeeSidebar";
+import EmployeeNotificationDropdown from "../components/employee/EmployeeNotificationDropdown";
 import ErrorBoundary from "../components/ErrorBoundary";
 import DatePicker from "../components/DatePicker";
-
+import { employeeNotificationService } from "../services/employeeNotificationService";
 
 const pageTitles: Record<string, string> = {
   "/employee/dashboard": "Dashboard",
@@ -24,7 +24,10 @@ function readUser() {
     const raw = localStorage.getItem("user");
 
     return raw
-      ? (JSON.parse(raw) as { full_name?: string; employee_id?: string | null })
+      ? (JSON.parse(raw) as {
+          full_name?: string;
+          employee_id?: string | null;
+        })
       : null;
   } catch {
     return null;
@@ -36,51 +39,66 @@ function EmployeeLayout({ onLogout }: { onLogout: () => void }) {
   const location = useLocation();
 
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-
-  const [unreadAnnouncementCount, setUnreadAnnouncementCount] = useState(0);
+  const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
+  const notificationContainerRef = useRef<HTMLDivElement | null>(null);
 
   const user = useMemo(() => readUser(), []);
 
   useEffect(() => {
-  const fetchUnreadAnnouncements = async () => {
-    try {
-      const response = await api.get<{
-        announcements: { id: string }[];
-        total: number;
-      }>("/employee-announcements");
+    const fetchUnreadNotificationCount = async () => {
+      try {
+        const count =
+          await employeeNotificationService.getUnreadCount();
 
-      const readIds = JSON.parse(
-        localStorage.getItem("employee_read_announcement_ids") || "[]",
-      ) as string[];
+        setUnreadNotificationCount(count);
+      } catch (error) {
+        console.error(
+          "Failed to fetch notification count:",
+          error,
+        );
+      }
+    };
 
-      const unreadCount = response.announcements.filter(
-        (announcement) => !readIds.includes(announcement.id),
-      ).length;
+    fetchUnreadNotificationCount();
 
-      setUnreadAnnouncementCount(unreadCount);
-    } catch (error) {
-      console.error("Failed to fetch announcement notifications:", error);
-    }
-  };
-
-  fetchUnreadAnnouncements();
-
-  const handleAnnouncementsRead = () => {
-    setUnreadAnnouncementCount(0);
-  };
-
-  window.addEventListener("announcements-read", handleAnnouncementsRead);
-
-  const interval = window.setInterval(fetchUnreadAnnouncements, 30000);
-
-  return () => {
-    window.clearInterval(interval);
-    window.removeEventListener(
-      "announcements-read",
-      handleAnnouncementsRead,
+    const interval = window.setInterval(
+      fetchUnreadNotificationCount,
+      30000,
     );
-  };
-}, []);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!showNotificationDropdown) {
+      return;
+    }
+
+    const handleOutsideClick = (event: MouseEvent) => {
+      const target = event.target as Node;
+
+      if (
+        notificationContainerRef.current &&
+        !notificationContainerRef.current.contains(target)
+      ) {
+        setShowNotificationDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+    };
+  }, [showNotificationDropdown]);
+
+  useEffect(() => {
+    setShowProfileMenu(false);
+    setShowNotificationDropdown(false);
+  }, [location.pathname]);
 
   const fullName = user?.full_name ?? "Employee";
 
@@ -95,9 +113,9 @@ function EmployeeLayout({ onLogout }: { onLogout: () => void }) {
 
   return (
     <div className="min-h-screen bg-[#f5f7fb]">
-    <EmployeeSidebar onLogout={onLogout} />
+      <EmployeeSidebar onLogout={onLogout} />
 
-    <div className="ml-[250px] min-w-0">
+      <div className="ml-[250px] min-w-0">
         <header className="sticky top-0 z-30 flex h-[72px] items-center justify-between gap-4 border-b border-gray-200 bg-white px-6">
           <div className="flex min-w-0 items-center gap-4">
             <button
@@ -114,25 +132,58 @@ function EmployeeLayout({ onLogout }: { onLogout: () => void }) {
           </div>
 
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              className="relative flex h-10 w-10 items-center justify-center rounded-full text-gray-600 transition hover:bg-gray-100"
-              aria-label="Notifications"
+            {/* Notifications */}
+            <div
+              ref={notificationContainerRef}
+              className="relative"
             >
-              <Bell className="h-5 w-5" />
+              <button
+                type="button"
+                onClick={() =>
+                  setShowNotificationDropdown(
+                    (previous) => !previous,
+                  )
+                }
+                className={`relative flex h-10 w-10 items-center justify-center rounded-full text-gray-600 transition ${
+                  showNotificationDropdown
+                    ? "bg-blue-50 text-blue-600"
+                    : "hover:bg-gray-100"
+                }`}
+                aria-label="Notifications"
+                aria-expanded={showNotificationDropdown}
+              >
+                <Bell className="h-5 w-5" />
 
-              {unreadAnnouncementCount > 0 && (
-                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#ef4444] px-1 text-[9px] font-bold text-white">
-                  {unreadAnnouncementCount > 99 ? "99+" : unreadAnnouncementCount}
-                </span>
+                {unreadNotificationCount > 0 && (
+                  <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#ef4444] px-1 text-[9px] font-bold text-white">
+                    {unreadNotificationCount > 99
+                      ? "99+"
+                      : unreadNotificationCount}
+                  </span>
+                )}
+              </button>
+
+              {showNotificationDropdown && (
+                <EmployeeNotificationDropdown
+                  onClose={() =>
+                    setShowNotificationDropdown(false)
+                  }
+                  onUnreadCountChange={
+                    setUnreadNotificationCount
+                  }
+                />
               )}
-            </button>
+            </div>
+
             <DatePicker />
 
+            {/* Profile */}
             <div className="relative">
               <button
                 type="button"
-                onClick={() => setShowProfileMenu((previous) => !previous)}
+                onClick={() =>
+                  setShowProfileMenu((previous) => !previous)
+                }
                 className="flex items-center gap-2.5 rounded-full py-1 pl-1 pr-2 transition hover:bg-gray-100"
               >
                 <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#2563eb] text-xs font-bold text-white">
@@ -143,6 +194,7 @@ function EmployeeLayout({ onLogout }: { onLogout: () => void }) {
                   <span className="block text-sm font-semibold leading-tight text-gray-900">
                     {fullName}
                   </span>
+
                   <span className="block text-[11px] leading-tight text-gray-500">
                     Employee
                   </span>
