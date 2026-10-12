@@ -17,6 +17,8 @@ const pageTitles: Record<string, string> = {
   "/employee/documents": "My Documents",
   "/employee/announcements": "Announcements",
   "/employee/help": "Help & Support",
+  "/employee/exit": "Exit / Offboarding",
+  "/employee/exit/resignation": "Resignation Request",
 };
 
 function readUser() {

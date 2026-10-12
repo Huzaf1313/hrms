@@ -79,6 +79,13 @@ from app.api.v1.employee_notification import (
 from app.repositories.employee_notification_repository import (
     EmployeeNotificationRepository,
 )
+from app.api.v1.employee_support_tickets import (
+    router as employee_support_tickets_router,
+)
+
+from app.api.v1.employee_exit_requests import router as employee_exit_requests_router
+from app.api.v1.admin_exit_requests import router as admin_exit_requests_router
+from app.repositories.employee_exit_request_repository import ExitRequestRepository
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -106,6 +113,9 @@ async def lifespan(app: FastAPI):
 
     notification_repository = EmployeeNotificationRepository()
     await notification_repository.ensure_indexes()
+
+    exit_request_repository = ExitRequestRepository()
+    await exit_request_repository.ensure_indexes()
 
     yield
 
@@ -275,3 +285,11 @@ app.include_router(
     prefix="/api/v1",
 )
 
+app.include_router(
+    employee_support_tickets_router,
+    prefix="/api/v1",
+)
+
+app.include_router(employee_exit_requests_router, prefix="/api/v1")
+
+app.include_router(admin_exit_requests_router, prefix="/api/v1")

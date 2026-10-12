@@ -8,6 +8,7 @@ import {
   FileText,
   Megaphone,
   CircleHelp,
+  DoorOpen,
   LogOut,
 } from "lucide-react";
 
@@ -100,6 +101,17 @@ const sections: NavSection[] = [
     },
   ],
 },
+{
+  title: "Exit / Offboarding",
+  items: [
+    {
+      label: "Exit / Offboarding",
+      icon: DoorOpen,
+      path: "/employee/exit",
+      matchPrefix: true,
+    },
+  ],
+},
 ];
 
 function isItemActive(
@@ -138,7 +150,7 @@ function EmployeeSidebar({
       </button>
 
       {/* Navigation */}
-      <nav className="flex-1">
+      <nav className="flex-1 overflow-y-auto">
         {sections.map((section, sectionIndex) => (
           <div key={section.title ?? `top-${sectionIndex}`} className="mb-5">
             {section.title && (

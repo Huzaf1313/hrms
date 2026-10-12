@@ -15,6 +15,7 @@ class EmployeeDocumentModel(BaseModel):
     mime_type: str | None = None
 
     uploaded_by: str | None = None
+    source: str | None = None
 
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)

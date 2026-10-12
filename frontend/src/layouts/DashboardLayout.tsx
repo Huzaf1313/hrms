@@ -16,6 +16,7 @@ import AdminPayroll from "../pages/admin/AdminPayroll";
 import AdminAnnouncements from "../pages/admin/AdminAnnouncements";
 import AdminSettings from "../pages/admin/AdminSetting";
 import { getDashboardData, type DashboardData } from "../services/dashboardService";
+import AdminExitRequests from "../pages/admin/AdminExitrequests";
 
 interface DashboardLayoutProps {
   activePage: string;
@@ -94,8 +95,10 @@ function DashboardLayout({
           <AdminRegularizationRequests />
         ) : activePage === "Payroll" ? (
           <AdminPayroll />
-        ) : activePage === "Announcement" ? (
+                ) : activePage === "Announcement" ? (
           <AdminAnnouncements onCreateEmployee={handleCreateEmployee} />
+        ) : activePage === "Exit Requests" ? (
+          <AdminExitRequests />
         ) : activePage === "Settings" ? (
           <AdminSettings />
         ) : (
