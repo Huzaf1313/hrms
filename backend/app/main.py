@@ -73,6 +73,9 @@ from app.repositories.admin_announcement_repository import (
 from app.repositories.shift_repository import ShiftRepository
 
 from app.api.v1.recruitment import router as recruitment_router
+from app.api.v1.assets import router as assets_router
+from app.repositories.asset_repository import AssetRepository
+from app.repositories.asset_request_repository import AssetRequestRepository
 from app.repositories.candidate_repository import CandidateRepository
 from app.repositories.job_position_repository import JobPositionRepository
 
@@ -102,6 +105,8 @@ async def lifespan(app: FastAPI):
     await announcement_repository.ensure_indexes()
     await JobPositionRepository().ensure_indexes()
     await CandidateRepository().ensure_indexes()
+    await AssetRepository().ensure_indexes()
+    await AssetRequestRepository().ensure_indexes()
 
     yield
 
@@ -268,5 +273,10 @@ app.include_router(
 
 app.include_router(
     recruitment_router,
+    prefix="/api/v1",
+)
+
+app.include_router(
+    assets_router,
     prefix="/api/v1",
 )

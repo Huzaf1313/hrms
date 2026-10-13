@@ -96,6 +96,8 @@ function DashboardLayout({
         <ErrorBoundary label={activePage}>
           {activePage === "Employees" ? (
           <AdminEmployees autoOpenCreateForm={openEmployeeFormOnMount} />
+        ) : activePage === "Recruitment" ? (
+          <AdminRecruitment />
         ) : activePage === "Attendance" ? (
           <AdminAttendance />
         ) : activePage === "Leave" ? (
