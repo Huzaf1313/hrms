@@ -10,8 +10,14 @@ from fastapi import UploadFile
  
 from app.core.config import settings
 from app.core.exceptions import AppException
+from app.repositories.department_repository import DepartmentRepository
+from app.repositories.employee_repository import EmployeeRepository
 from app.repositories.employee_exit_request_repository import ExitRequestRepository
-from app.schemas.employee_exit_request import ExitRequestCreate, ExitStatusUpdate
+from app.schemas.employee_exit_request import (
+    EXIT_TYPE_ORDER,
+    ExitRequestCreate,
+    ExitStatusUpdate,
+)
 from app.services.email_service import EmailService
  
 logger = logging.getLogger(__name__)
@@ -43,6 +49,26 @@ class ExitRequestService:
  
     def __init__(self):
         self.repository = ExitRequestRepository()
+        self.department_repository = DepartmentRepository()
+        self.employee_repository = EmployeeRepository()
+
+    async def _department_names(self, department_ids: list[str]) -> dict[str, str]:
+        """Resolve department ids to names in one pass.
+
+        The dashboard groups requests by department and renders the name on
+        every row, so resolving them one at a time would be an N+1 per page of
+        results.
+        """
+
+        names: dict[str, str] = {}
+        seen = {d for d in department_ids if d}
+
+        for department_id in seen:
+            department = await self.department_repository.get_by_id(department_id)
+            if department:
+                names[department_id] = department.get("name") or department_id
+
+        return names
  
     # ------------------------------------------------------------------ files
     @staticmethod
@@ -219,13 +245,42 @@ class ExitRequestService:
         employee_id: str | None = None,
         status: str | None = None,
         search: str | None = None,
+        exit_type: str | None = None,
+        department_id: str | None = None,
+        submitted_from: datetime | None = None,
+        submitted_to: datetime | None = None,
     ):
         skip = (page - 1) * limit
-        records = await self.repository.list(skip, limit, employee_id, status, search)
-        total = await self.repository.count(employee_id, status, search)
- 
+        records = await self.repository.list_requests(
+            skip,
+            limit,
+            employee_id,
+            status,
+            search,
+            exit_type,
+            department_id,
+            submitted_from,
+            submitted_to,
+        )
+        total = await self.repository.count(
+            employee_id,
+            status,
+            search,
+            exit_type,
+            department_id,
+            submitted_from,
+            submitted_to,
+        )
+
+        department_names = await self._department_names(
+            [r.get("department_id") for r in records]
+        )
+
         return {
-            "items": [self._serialize(r) for r in records],
+            "items": [
+                self._serialize(r, department_names.get(r.get("department_id")))
+                for r in records
+            ],
             "total": total,
             "page": page,
             "limit": limit,
@@ -258,15 +313,108 @@ class ExitRequestService:
         return await self.repository.get_by_id(request_id)
  
     # ------------------------------------------------------------------ admin
-    async def summary(self):
-        counts = await self.repository.count_by_status()
+    async def create_admin_request(self, payload) -> dict:
+        """Record a departure HR raised themselves.
+
+        The employee form only ever produces resignations, so without this a
+        termination or a contract end could never exist and the type tabs and
+        donut would be permanently empty.
+        """
+
+        employee = await self.employee_repository.get_by_employee_id(
+            payload.employee_id
+        )
+
+        if not employee:
+            raise AppException("Employee not found", 404)
+
+        if await self.repository.find_active_for_employee(
+            employee["employee_id"], self.ACTIVE_STATUSES
+        ):
+            raise AppException(
+                "This employee already has an active exit request", 409
+            )
+
+        now = datetime.now(timezone.utc)
+
+        name = (
+            employee.get("full_name")
+            or " ".join(
+                part
+                for part in (
+                    employee.get("first_name"),
+                    employee.get("last_name"),
+                )
+                if part
+            )
+            or employee["employee_id"]
+        )
+
+        document = {
+            "employee_id": employee["employee_id"],
+            "employee_name": name,
+            "email": employee.get("email"),
+            "designation": employee.get("designation"),
+            "department_id": employee.get("department_id"),
+            "reporting_manager": employee.get("reporting_manager"),
+            "exit_type": payload.exit_type,
+            "last_working_day": payload.last_working_day,
+            "notice_period_days": payload.notice_period_days,
+            "reason": payload.reason.strip(),
+            "remarks": (payload.remarks or "").strip() or None,
+            "handover_tasks": [t.model_dump() for t in payload.handover_tasks],
+            "attachments": [],
+            "status": "Pending",
+            "submitted_at": now,
+            "reviewed_at": None,
+            "reviewed_by": None,
+            "admin_note": None,
+            "created_at": now,
+            "updated_at": now,
+        }
+
+        return await self.repository.create(document)
+
+    async def summary(self, exit_type: str | None = None):
+        """Headline counts for the dashboard cards and donut.
+
+        Status counts respect `exit_type` when one is given so the KPI row on a
+        single-type tab (Resignations, Terminations) counts only that type,
+        while the type split always reports every type so the overview donut
+        keeps all four slices.
+        """
+
+        if exit_type:
+            counts = await self.repository.count_by_status({"exit_type": exit_type})
+        else:
+            counts = await self.repository.count_by_status()
+
+        total = sum(counts.values())
+        by_type_raw = await self.repository.count_by_type()
+
+        by_department_rows = await self.repository.count_by_department()
+        department_names = await self._department_names(
+            [row["_id"] for row in by_department_rows]
+        )
+
         return {
-            "total": sum(counts.values()),
+            "total": total,
             "pending": counts.get("Pending", 0),
             "in_progress": counts.get("In Progress", 0),
             "completed": counts.get("Completed", 0),
             "rejected": counts.get("Rejected", 0),
             "cancelled": counts.get("Cancelled", 0),
+            "by_type": {t: by_type_raw.get(t, 0) for t in EXIT_TYPE_ORDER},
+            "by_department": [
+                {
+                    "department_id": row["_id"],
+                    "department_name": department_names.get(
+                        row["_id"], "Unassigned"
+                    ),
+                    "count": row["count"],
+                }
+                for row in by_department_rows
+            ],
         }
  
     async def update_status(
@@ -357,7 +505,7 @@ class ExitRequestService:
  
     # -------------------------------------------------------------- serialize
     @staticmethod
-    def _serialize(document: dict):
+    def _serialize(document: dict, department_name: str | None = None):
         if not document:
             return None
  
@@ -372,6 +520,7 @@ class ExitRequestService:
             "email": document.get("email"),
             "designation": document.get("designation"),
             "department_id": document.get("department_id"),
+            "department_name": department_name,
             "reporting_manager": document.get("reporting_manager"),
             "exit_type": document.get("exit_type", "Resignation"),
             "last_working_day": last_day,

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { DependencyList, ReactNode } from "react";
 import {
   BarChart3,
@@ -17,6 +17,7 @@ import {
   RotateCcw,
   Search,
   Settings2,
+  Trash2,
   UserPlus,
   Users,
 } from "lucide-react";
@@ -26,10 +27,15 @@ import {
   ASSET_CATEGORY_ICONS,
   initialsForAsset,
 } from "../../components/admin/assetData";
+import AssetAllocationDetailModal, {
+  type AllocationDetailTarget,
+} from "../../components/admin/assets/AssetAllocationDetailModal";
 import AssetAssignModal from "../../components/admin/assets/AssetAssignModal";
+import AssetDeleteModal from "../../components/admin/assets/AssetDeleteModal";
 import AssetDetailModal from "../../components/admin/assets/AssetDetailModal";
 import AssetFormModal from "../../components/admin/assets/AssetFormModal";
 import AssetReturnModal from "../../components/admin/assets/AssetReturnModal";
+import MarkReturnedModal from "../../components/admin/assets/MarkReturnedModal";
 import NoticePopup, { type Notice } from "../../components/admin/assets/NoticePopup";
 import { assetService } from "../../services/assetService";
 import {
@@ -232,14 +238,20 @@ function SectionTitle({
   );
 }
 
-function ViewAllLink({ onClick }: { onClick?: () => void }) {
+function ViewAllLink({
+  onClick,
+  label = "View All →",
+}: {
+  onClick?: () => void;
+  label?: string;
+}) {
   return (
     <button
       type="button"
       onClick={onClick}
       className="shrink-0 whitespace-nowrap text-[11px] font-semibold text-[#2563eb] hover:underline"
     >
-      View All &rarr;
+      {label}
     </button>
   );
 }
@@ -335,6 +347,9 @@ function Pagination({
 
 const PAGE_SIZE = 7;
 
+/** How many rows "View All Assets" pulls back in one page. */
+const ALL_ASSETS_LIMIT = 100;
+
 interface OverviewFilters {
   search: string;
   category: string;
@@ -348,18 +363,29 @@ function AssetOverview({
   filters,
   onFiltersChange,
   version,
+  showAll,
+  onToggleShowAll,
   onViewAsset,
   onEditAsset,
   onReturnAsset,
+  onDeleteAsset,
 }: {
   filters: OverviewFilters;
   onFiltersChange: (next: OverviewFilters) => void;
   version: number;
+  showAll: boolean;
+  onToggleShowAll: () => void;
   onViewAsset: (asset: Asset) => void;
   onEditAsset: (asset: Asset) => void;
   onReturnAsset: (asset: Asset) => void;
+  onDeleteAsset: (asset: Asset) => void;
 }) {
   const { search, category: categoryFilter, status: statusFilter, page } = filters;
+
+  // "Show all" is a single oversized page rather than a paginated walk, so the
+  // page control collapses out of the way while it is on.
+  const activePage = showAll ? 1 : page;
+  const limit = showAll ? ALL_ASSETS_LIMIT : PAGE_SIZE;
 
   const [menu, setMenu] = useState<{ id: string; top: number; left: number } | null>(
     null,
@@ -371,10 +397,10 @@ function AssetOverview({
         search: search.trim() || undefined,
         category: (categoryFilter || undefined) as AssetCategory | undefined,
         status: (statusFilter || undefined) as AssetStatus | undefined,
-        page,
-        limit: PAGE_SIZE,
+        page: activePage,
+        limit,
       }),
-    [search, categoryFilter, statusFilter, page, version],
+    [search, categoryFilter, statusFilter, activePage, limit, version],
   );
 
   const visibleAssets = data?.items ?? [];
@@ -384,11 +410,11 @@ function AssetOverview({
   // resolved from the loaded page.
   const menuAsset = visibleAssets.find((entry) => entry.id === menu?.id) ?? null;
 
-  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const currentPage = Math.min(page, pageCount);
+  const pageCount = showAll ? 1 : Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const currentPage = Math.min(activePage, pageCount);
 
   const firstRow = total ? (currentPage - 1) * PAGE_SIZE + 1 : 0;
-  const lastRow = Math.min(currentPage * PAGE_SIZE, total);
+  const lastRow = showAll ? total : Math.min(currentPage * PAGE_SIZE, total);
 
   /** Anchored to the viewport so the scroll container cannot clip it. */
   function toggleMenu(id: string, trigger: HTMLButtonElement) {
@@ -399,11 +425,22 @@ function AssetOverview({
 
     const rect = trigger.getBoundingClientRect();
     const menuWidth = 160;
+    const menuHeight = 180;
+
+    const left = Math.min(
+      Math.max(rect.right - menuWidth, 16),
+      Math.max(16, window.innerWidth - menuWidth - 16),
+    );
+
+    const top = Math.min(
+      Math.max(rect.bottom + 4, 16),
+      Math.max(16, window.innerHeight - menuHeight - 16),
+    );
 
     setMenu({
       id,
-      top: rect.bottom + 4,
-      left: Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 16),
+      top,
+      left,
     });
   }
 
@@ -422,6 +459,18 @@ function AssetOverview({
         title="Asset Overview"
         action={
           <div className="flex w-full min-w-0 flex-wrap items-center gap-2 lg:w-auto lg:flex-nowrap">
+            <button
+              type="button"
+              onClick={onToggleShowAll}
+              className={`h-10 shrink-0 whitespace-nowrap rounded-full border px-4 text-xs font-semibold transition ${
+                showAll
+                  ? "border-[#2563eb] bg-[#2563eb] text-white hover:bg-blue-700"
+                  : "border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:text-gray-900"
+              }`}
+            >
+              {showAll ? "Show Less" : "View All Assets"}
+            </button>
+
             <div className="relative">
               <select
                 value={categoryFilter}
@@ -562,6 +611,19 @@ function AssetOverview({
                     setMenu(null);
                   }}
                 />
+                {/* The API refuses to delete an asset somebody still holds, so the
+                    action is withheld rather than offered as a guaranteed 409. */}
+                {!menuAsset.assigned_to_employee_id && (
+                  <MenuItem
+                    icon={Trash2}
+                    label="Delete asset"
+                    tone="danger"
+                    onClick={() => {
+                      onDeleteAsset(menuAsset);
+                      setMenu(null);
+                    }}
+                  />
+                )}
               </>
             )}
           </div>
@@ -635,18 +697,26 @@ function MenuItem({
   icon: Icon,
   label,
   onClick,
+  tone = "default",
 }: {
   icon: typeof Eye;
   label: string;
   onClick: () => void;
+  tone?: "default" | "danger";
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left text-xs font-medium text-gray-600 transition hover:bg-gray-50 hover:text-gray-900"
+      className={`flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left text-xs font-medium transition ${
+        tone === "danger"
+          ? "text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+      }`}
     >
-      <Icon className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+      <Icon
+        className={`h-3.5 w-3.5 shrink-0 ${tone === "danger" ? "text-rose-400" : "text-gray-400"}`}
+      />
       {label}
     </button>
   );
@@ -748,54 +818,67 @@ function AssetCategoriesPanel({
   );
 }
 
-function RecentRequestsPanel({ version }: { version: number }) {
-  const { data, loading, error } = useAssetQuery<Paginated<AssetRequest>>(
-    () => assetService.listRequests({ limit: 3 }),
-    [version],
+const RECENT_ALLOCATION_LIMIT = 5;
+
+const ALL_ALLOCATIONS_LIMIT = 100;
+
+/**
+ * Who was handed what, most recently first.
+ *
+ * This reads the assets that currently have a holder rather than the request
+ * queue: an allocation has happened by the time it shows up here, whereas a
+ * request is only an intention.
+ */
+function RecentAllocationPanel({ version }: { version: number }) {
+  const [showAll, setShowAll] = useState(false);
+  const limit = showAll ? ALL_ALLOCATIONS_LIMIT : RECENT_ALLOCATION_LIMIT;
+
+  const { data, loading, error } = useAssetQuery<Asset[]>(
+    () => assetService.listRecentAllocations(limit),
+    [limit, version],
   );
 
-  const requests = data?.items ?? [];
+  const allocations = data ?? [];
 
   return (
     <div className={`${PANEL_CLASS} flex h-full min-w-0 flex-col`}>
-      <SectionTitle title="Recent Allocation" action={<ViewAllLink />} />
+      <SectionTitle
+        title="Recent Allocation"
+        action={
+          <ViewAllLink
+            onClick={() => setShowAll((previous) => !previous)}
+            label={showAll ? "Show Less ←" : "View All →"}
+          />
+        }
+      />
 
       <PanelState
         loading={loading}
         error={error}
-        empty={requests.length === 0}
-        emptyMessage="No asset requests yet."
+        empty={allocations.length === 0}
+        emptyMessage="Nothing has been allocated yet."
       >
         <ul className="flex flex-1 flex-col gap-2.5">
-          {requests.map((request) => (
+          {allocations.map((asset) => (
             <li
-              key={request.id}
+              key={asset.id}
               className="flex items-center gap-2.5 rounded-2xl border border-gray-100 p-2.5"
             >
-              <PersonAvatar name={request.employee_name} />
+              <PersonAvatar name={asset.assigned_to_name ?? "?"} />
 
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-gray-900">
-                  {request.employee_name}
+                  {asset.assigned_to_name ?? "Unassigned"}
                 </p>
                 <p className="truncate text-[11px] text-gray-400">
-                  {request.request_type === "issue" ? "Issue Request" : "Return Request"}
-                  {request.detail ? ` - ${request.detail}` : ` - ${request.asset_name}`}
+                  {asset.asset_tag} - {asset.name}
                 </p>
                 <p className="mt-0.5 text-[11px] text-gray-400">
-                  {formatDate(request.requested_at)}
+                  Allocated on {formatDate(asset.issue_date)}
                 </p>
               </div>
 
-              <RequestStatusBadge status={request.status} />
-
-              <button
-                type="button"
-                aria-label={`Actions for ${request.request_tag}`}
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-50 hover:text-gray-600"
-              >
-                <MoreVertical className="h-4 w-4" />
-              </button>
+              <AssetStatusBadge status={asset.status} />
             </li>
           ))}
         </ul>
@@ -917,7 +1000,13 @@ type AllocationTab = "employee" | "department";
 
 const ALLOCATION_PAGE_SIZE = 5;
 
-function AssetAllocationPanel({ version }: { version: number }) {
+function AssetAllocationPanel({
+  version,
+  onViewAllocation,
+}: {
+  version: number;
+  onViewAllocation: (target: AllocationDetailTarget) => void;
+}) {
   const [tab, setTab] = useState<AllocationTab>("employee");
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
@@ -1084,6 +1173,7 @@ function AssetAllocationPanel({ version }: { version: number }) {
                   <td className="px-1.5 py-5 text-right">
                     <button
                       type="button"
+                      onClick={() => onViewAllocation({ view: tab, row })}
                       className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-[#2563eb] transition hover:bg-blue-100"
                     >
                       View
@@ -1121,28 +1211,42 @@ function AssetAllocationPanel({ version }: { version: number }) {
 
 function AssetReturnRequestsPanel({
   version,
-  onMarkReturned,
+  onConfirmReturn,
 }: {
   version: number;
-  onMarkReturned: (request: AssetRequest) => Promise<void>;
+  onConfirmReturn: (request: AssetRequest) => void;
 }) {
+  const [showAll, setShowAll] = useState(false);
+  const limit = showAll ? ALL_ALLOCATIONS_LIMIT : 5;
+
   const { data, loading, error } = useAssetQuery<Paginated<AssetRequest>>(
-    () => assetService.listRequests({ request_type: "return", limit: 5 }),
-    [version],
+    () => assetService.listRequests({ request_type: "return", limit }),
+    [limit, version],
   );
 
   const requests = data?.items ?? [];
 
-  // Only offer the action where it will actually succeed: the asset has to
-  // still be held by somebody. `asset_status` is resolved by the API for
-  // exactly this reason.
+  // A return request sits on Pending until the admin confirms receipt, and only
+  // then does the asset actually leave the employee. Both halves have to hold
+  // for the action to be offered: still pending on the request, and still held
+  // by somebody on the asset (`asset_status` is resolved by the API for
+  // exactly this reason).
   const canMarkReturned = (request: AssetRequest) =>
+    request.status === "pending" &&
     request.asset_id !== null &&
     (request.asset_status === "in_use" || request.asset_status === "pending_return");
 
   return (
     <div className={`${PANEL_CLASS} flex h-full min-w-0 flex-col`}>
-      <SectionTitle title="Asset Return Requests" action={<ViewAllLink />} />
+      <SectionTitle
+        title="Asset Return Requests"
+        action={
+          <ViewAllLink
+            onClick={() => setShowAll((previous) => !previous)}
+            label={showAll ? "Show Less ←" : "View All →"}
+          />
+        }
+      />
 
       <PanelState
         loading={loading}
@@ -1179,7 +1283,7 @@ function AssetReturnRequestsPanel({
                     {canMarkReturned(request) ? (
                       <button
                         type="button"
-                        onClick={() => void onMarkReturned(request)}
+                        onClick={() => onConfirmReturn(request)}
                         className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-600 transition hover:bg-emerald-100"
                       >
                         <Check className="h-3 w-3" />
@@ -1208,13 +1312,18 @@ type ModalState =
   | { kind: "assign"; assetId?: string }
   | { kind: "return"; assetId?: string }
   | { kind: "detail"; asset: Asset }
+  | { kind: "allocation"; target: AllocationDetailTarget }
+  | { kind: "delete"; asset: Asset }
+  | { kind: "markReturned"; request: AssetRequest }
   | null;
 
 export default function AdminAssets() {
   const [version, setVersion] = useState(0);
   const [filters, setFilters] = useState<OverviewFilters>(EMPTY_FILTERS);
+  const [showAllAssets, setShowAllAssets] = useState(false);
   const [modal, setModal] = useState<ModalState>(null);
   const [notice, setNotice] = useState<Notice>(null);
+  const overviewRef = useRef<HTMLDivElement>(null);
 
   const { data: stats, error: statsError } = useAssetQuery<AssetStats>(
     () => assetService.getStats(),
@@ -1232,24 +1341,10 @@ export default function AdminAssets() {
     setNotice({ type: "success", text: message });
   }
 
-  async function handleMarkReturned(request: AssetRequest) {
-    if (!request.asset_id) return;
-
-    try {
-      await assetService.returnAsset(request.asset_id);
-      refresh();
-      setNotice({
-        type: "success",
-        text: `${request.asset_name} marked as returned and released by ${
-          request.employee_name
-        }.`,
-      });
-    } catch (cause) {
-      setNotice({
-        type: "error",
-        text: cause instanceof Error ? cause.message : "Unable to mark the asset returned.",
-      });
-    }
+  function handleViewAllAssets() {
+    setShowAllAssets(true);
+    setFilters(EMPTY_FILTERS);
+    overviewRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   // Wrapped in useCallback because the popup restarts its auto-dismiss timer
@@ -1377,26 +1472,34 @@ export default function AdminAssets() {
           Quick Actions share the other half. */}
       <div className="flex flex-col gap-6">
         <div className="grid grid-cols-1 items-stretch gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
-          <AssetOverview
-            filters={filters}
-            onFiltersChange={setFilters}
-            version={version}
-            onViewAsset={(asset) => setModal({ kind: "detail", asset })}
-            onEditAsset={(asset) => setModal({ kind: "form", asset })}
-            onReturnAsset={(asset) => setModal({ kind: "return", assetId: asset.id })}
-          />
+          <div ref={overviewRef} className="min-w-0 scroll-mt-24">
+            <AssetOverview
+              filters={filters}
+              onFiltersChange={setFilters}
+              version={version}
+              showAll={showAllAssets}
+              onToggleShowAll={() => setShowAllAssets((previous) => !previous)}
+              onViewAsset={(asset) => setModal({ kind: "detail", asset })}
+              onEditAsset={(asset) => setModal({ kind: "form", asset })}
+              onReturnAsset={(asset) => setModal({ kind: "return", assetId: asset.id })}
+              onDeleteAsset={(asset) => setModal({ kind: "delete", asset })}
+            />
+          </div>
 
           <div className="grid min-w-0 items-stretch gap-6 xl:grid-rows-[minmax(auto,1fr)_minmax(auto,1fr)]">
             <AssetCategoriesPanel
               categoryCounts={stats?.category_counts ?? []}
               total={stats?.total_assets ?? 0}
             />
-            <RecentRequestsPanel version={version} />
+            <RecentAllocationPanel version={version} />
           </div>
         </div>
 
         <div className="grid grid-cols-1 items-stretch gap-6 xl:grid-cols-2">
-          <AssetAllocationPanel version={version} />
+          <AssetAllocationPanel
+            version={version}
+            onViewAllocation={(target) => setModal({ kind: "allocation", target })}
+          />
 
           {/* Return Requests keeps its natural height, Quick Actions absorbs the
               remainder so the pair matches Asset Allocation's height. `1fr` has a
@@ -1404,13 +1507,13 @@ export default function AdminAssets() {
           <div className="grid min-w-0 items-stretch gap-6 xl:grid-rows-[auto_1fr]">
             <AssetReturnRequestsPanel
               version={version}
-              onMarkReturned={handleMarkReturned}
+              onConfirmReturn={(request) => setModal({ kind: "markReturned", request })}
             />
             <QuickActionsPanel
               onAdd={() => setModal({ kind: "form", asset: null })}
               onAssign={() => setModal({ kind: "assign" })}
               onReturn={() => setModal({ kind: "return" })}
-              onViewAll={() => setFilters(EMPTY_FILTERS)}
+              onViewAll={handleViewAllAssets}
             />
           </div>
         </div>
@@ -1442,6 +1545,29 @@ export default function AdminAssets() {
 
       {modal?.kind === "detail" && (
         <AssetDetailModal asset={modal.asset} onClose={() => setModal(null)} />
+      )}
+
+      {modal?.kind === "allocation" && (
+        <AssetAllocationDetailModal
+          target={modal.target}
+          onClose={() => setModal(null)}
+        />
+      )}
+
+      {modal?.kind === "markReturned" && (
+        <MarkReturnedModal
+          request={modal.request}
+          onClose={() => setModal(null)}
+          onConfirmed={handleSaved}
+        />
+      )}
+
+      {modal?.kind === "delete" && (
+        <AssetDeleteModal
+          asset={modal.asset}
+          onClose={() => setModal(null)}
+          onDeleted={handleSaved}
+        />
       )}
     </div>
   );

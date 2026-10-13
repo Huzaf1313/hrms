@@ -10,6 +10,9 @@ from app.repositories.employee_attendance_regularization_repository import (
 )
 from app.repositories.employee_repository import EmployeeRepository
 from app.repositories.shift_repository import ShiftRepository
+from app.services.employee_notification_service import (
+    EmployeeNotificationService,
+)
 from app.services.attendance_calculation import (
     compute_work_metrics,
     shift_duration_minutes,

@@ -4,6 +4,8 @@ import type {
   ExitRequestList,
   ExitRequestSummary,
   ExitStatus,
+  ExitType,
+  HandoverTask,
 } from "../types/exitRequest";
  
 interface ListParams {
@@ -11,6 +13,22 @@ interface ListParams {
   limit?: number;
   status?: ExitStatus;
   search?: string;
+  /** Restricts to one exit type; drives the single-type tabs. */
+  exit_type?: ExitType;
+  department_id?: string;
+  /** ISO datetimes bounding submitted_at. */
+  submitted_from?: string;
+  submitted_to?: string;
+}
+ 
+export interface AdminExitRequestInput {
+  employee_id: string;
+  exit_type: ExitType;
+  last_working_day: string;
+  reason: string;
+  remarks?: string;
+  notice_period_days?: number;
+  handover_tasks?: { task: string; remarks?: string; status: HandoverTask["status"] }[];
 }
  
 export const exitRequestService = {
@@ -42,8 +60,19 @@ export const adminExitRequestService = {
     return api.get<ExitRequestList>("/admin/exit-requests", { ...params });
   },
  
-  summary() {
-    return api.get<ExitRequestSummary>("/admin/exit-requests/summary");
+  summary(exitType?: ExitType) {
+    return api.get<ExitRequestSummary>("/admin/exit-requests/summary", {
+      exit_type: exitType,
+    });
+  },
+
+  /**
+   * Records a departure HR raised themselves - the only way a Termination,
+   * Contract End or Retirement can exist, since the employee form always
+   * submits a Resignation.
+   */
+  create(data: AdminExitRequestInput) {
+    return api.post<ExitRequest>("/admin/exit-requests", data);
   },
  
   get(id: string) {
@@ -93,4 +122,55 @@ export function saveBlob(blob: Blob, filename: string) {
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
+}
+
+/** Quotes a CSV cell, doubling any embedded quotes. */
+function csvCell(value: unknown): string {
+  const text = value === null || value === undefined ? "" : String(value);
+
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+/**
+ * Exports the rows currently on screen as CSV.
+ *
+ * Built from the loaded page rather than a new server call, so the file always
+ * matches the filters and the page the user was looking at.
+ */
+export function downloadExitCsv(
+  requests: ExitRequest[],
+  filename = "exit-requests.csv",
+) {
+  const headers = [
+    "Employee ID",
+    "Employee",
+    "Department",
+    "Designation",
+    "Exit Type",
+    "Reason",
+    "Last Working Day",
+    "Status",
+    "Submitted On",
+    "Notice Period (days)",
+  ];
+
+  const rows = requests.map((request) => [
+    request.employee_id,
+    request.employee_name,
+    request.department_name,
+    request.designation,
+    request.exit_type,
+    request.reason,
+    request.last_working_day,
+    request.status,
+    request.submitted_at,
+    request.notice_period_days,
+  ]);
+
+  const csv = [headers, ...rows]
+    .map((row) => row.map(csvCell).join(","))
+    .join("\r\n");
+
+  // The BOM is what makes Excel open a UTF-8 CSV without mangling names.
+  saveBlob(new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" }), filename);
 }

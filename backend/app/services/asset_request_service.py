@@ -172,6 +172,53 @@ class AssetRequestService:
 
         return await self.repository.update(request_id, update_data)
 
+    async def complete_return(self, request_id: str, reviewed_by: str | None):
+        """Confirm receipt of an asset and close the request in one step.
+
+        Raising a return request only flags the asset as pending_return; it
+        stays with the employee on purpose. This is where the admin says "yes,
+        I have the laptop back", which is the only event that both frees the
+        asset and takes the request off pending.
+
+        The asset is released before the request is marked approved because
+        `return_asset` is the step that can legitimately fail - it rejects an
+        asset nobody is holding, and that rejection should leave the request
+        pending so the admin still sees an actionable row rather than one
+        already reviewed with the kit still out.
+        """
+
+        request = await self.get_request(request_id)
+
+        if request["request_type"] != AssetRequestType.RETURN.value:
+            raise AppException(
+                "Only a return request can be completed this way",
+                400,
+            )
+
+        if request["status"] != AssetRequestStatus.PENDING.value:
+            raise AppException(
+                "This request has already been reviewed",
+                409,
+            )
+
+        if not request.get("asset_id"):
+            raise AppException(
+                "This request is not linked to an asset",
+                400,
+            )
+
+        await self.asset_service.return_asset(request["asset_id"])
+
+        return await self.repository.update(
+            request_id,
+            {
+                "status": AssetRequestStatus.APPROVED.value,
+                "reviewed_by": reviewed_by,
+                "reviewed_at": _now(),
+                "updated_at": _now(),
+            },
+        )
+
     async def _apply_to_asset(self, request: dict):
         """Move the asset to match an approved request.
 

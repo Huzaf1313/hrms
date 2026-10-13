@@ -1,6 +1,6 @@
 import re
 from datetime import date, datetime, time
- 
+from typing import List
 from bson import ObjectId
 from pymongo import ASCENDING, DESCENDING
  
@@ -53,48 +53,128 @@ class ExitRequestRepository:
         employee_id: str | None = None,
         status: str | None = None,
         search: str | None = None,
+        exit_type: str | None = None,
+        department_id: str | None = None,
+        submitted_from: datetime | None = None,
+        submitted_to: datetime | None = None,
     ) -> dict:
         filters: dict = {}
         if employee_id:
             filters["employee_id"] = employee_id
         if status:
             filters["status"] = status
+        if exit_type:
+            filters["exit_type"] = exit_type
+        if department_id:
+            filters["department_id"] = department_id
+
+        # Inclusive on both ends of the requested window.
+        if submitted_from or submitted_to:
+            window: dict = {}
+            if submitted_from:
+                window["$gte"] = submitted_from
+            if submitted_to:
+                window["$lte"] = submitted_to
+            filters["submitted_at"] = window
+
         if search:
             pattern = {"$regex": re.escape(search.strip()), "$options": "i"}
             filters["$or"] = [{"employee_name": pattern}, {"employee_id": pattern}]
         return filters
- 
-    async def list(
+
+    async def list_requests(
         self,
         skip: int,
         limit: int,
         employee_id: str | None = None,
         status: str | None = None,
         search: str | None = None,
+        exit_type: str | None = None,
+        department_id: str | None = None,
+        submitted_from: datetime | None = None,
+        submitted_to: datetime | None = None,
     ):
+        filters = self._filters(
+            employee_id,
+            status,
+            search,
+            exit_type,
+            department_id,
+            submitted_from,
+            submitted_to,
+        )
         cursor = (
-            self.collection.find(self._filters(employee_id, status, search))
+            self.collection.find(filters)
             .sort("submitted_at", DESCENDING)
             .skip(skip)
             .limit(limit)
         )
         return await cursor.to_list(length=limit)
- 
+
     async def count(
         self,
         employee_id: str | None = None,
         status: str | None = None,
         search: str | None = None,
+        exit_type: str | None = None,
+        department_id: str | None = None,
+        submitted_from: datetime | None = None,
+        submitted_to: datetime | None = None,
     ):
         return await self.collection.count_documents(
-            self._filters(employee_id, status, search)
+            self._filters(
+                employee_id,
+                status,
+                search,
+                exit_type,
+                department_id,
+                submitted_from,
+                submitted_to,
+            )
         )
- 
-    async def count_by_status(self):
+
+    async def count_by_status(self, filters: dict | None = None):
         rows = await self.collection.aggregate(
-            [{"$group": {"_id": "$status", "count": {"$sum": 1}}}]
+            [
+                {"$match": filters or {}},
+                {"$group": {"_id": "$status", "count": {"$sum": 1}}},
+            ]
         ).to_list(length=20)
         return {row["_id"]: row["count"] for row in rows}
+
+    async def count_by_type(self) -> dict[str, int]:
+        """Request count per exit type.
+
+        Documents written before exit_type existed are counted as Resignation,
+        which is what they were: the employee form is the only writer and it
+        always recorded a resignation.
+        """
+
+        rows = await self.collection.aggregate(
+            [
+                {
+                    "$group": {
+                        "_id": {"$ifNull": ["$exit_type", "Resignation"]},
+                        "count": {"$sum": 1},
+                    }
+                }
+            ]
+        ).to_list(length=None)
+
+        return {row["_id"]: row["count"] for row in rows}
+
+    async def count_by_department(self) -> list[dict]:
+        return await self.collection.aggregate(
+            [
+                {
+                    "$group": {
+                        "_id": "$department_id",
+                        "count": {"$sum": 1},
+                    }
+                },
+                {"$sort": {"count": -1}},
+            ]
+        ).to_list(length=None)
  
     async def update_if_status(
         self, request_id: str, expected_status: str, update_data: dict

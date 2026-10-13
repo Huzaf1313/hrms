@@ -4,9 +4,41 @@ export type ExitStatus =
   | "Completed"
   | "Rejected"
   | "Cancelled";
- 
+
 export type HandoverStatus = "Pending" | "In Progress" | "Completed";
- 
+
+/**
+ * The four ways an employee can leave. Only Resignation is raised by the
+ * employee; the rest are recorded by HR from the admin side.
+ */
+export type ExitType = "Resignation" | "Termination" | "Contract End" | "Retirement";
+
+/** Matches EXIT_TYPE_ORDER on the backend. */
+export const EXIT_TYPES: ExitType[] = [
+  "Resignation",
+  "Termination",
+  "Contract End",
+  "Retirement",
+];
+
+export const EXIT_TYPE_META: Record<
+  ExitType,
+  { label: string; color: string; dot: string }
+> = {
+  Resignation: { label: "Resignation", color: "#2563eb", dot: "bg-blue-500" },
+  Termination: { label: "Termination", color: "#ef4444", dot: "bg-rose-500" },
+  "Contract End": { label: "Contract End", color: "#a855f7", dot: "bg-purple-500" },
+  Retirement: { label: "Retirement", color: "#8b5cf6", dot: "bg-violet-500" },
+};
+
+export const EXIT_STATUSES: ExitStatus[] = [
+  "Pending",
+  "In Progress",
+  "Completed",
+  "Rejected",
+  "Cancelled",
+];
+
 // Must match the backend Literals in schemas/exit_request.py.
 export const NOTICE_PERIODS = [15, 30, 60, 90] as const;
  
@@ -60,6 +92,7 @@ export interface ExitRequest {
   email: string | null;
   designation: string | null;
   department_id: string | null;
+  department_name: string | null;
   reporting_manager: string | null;
   exit_type: string;
   last_working_day: string;
@@ -85,6 +118,12 @@ export interface ExitRequestList {
   pages: number;
 }
  
+export interface DepartmentExitCount {
+  department_id: string | null;
+  department_name: string;
+  count: number;
+}
+
 export interface ExitRequestSummary {
   total: number;
   pending: number;
@@ -92,4 +131,7 @@ export interface ExitRequestSummary {
   completed: number;
   rejected: number;
   cancelled: number;
+  /** Always all four types, including zeroes, so the cards keep a stable set. */
+  by_type: Record<ExitType, number>;
+  by_department: DepartmentExitCount[];
 }

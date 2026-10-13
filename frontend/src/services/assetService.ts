@@ -16,6 +16,10 @@ export interface ListAssetsParams {
   status?: AssetStatus;
   category?: AssetCategory;
   search?: string;
+  /** Narrows to one employee's kit, as the allocation View button does. */
+  employee_id?: string;
+  /** Narrows to one department's kit, as the allocation View button does. */
+  department_id?: string;
   page?: number;
   limit?: number;
 }
@@ -53,6 +57,10 @@ export const assetService = {
     return api.get<Paginated<AssetRequest>>("/assets/requests", { ...params });
   },
 
+  listRecentAllocations(limit = 5) {
+    return api.get<Asset[]>("/assets/recent-allocations", { limit });
+  },
+
   getAsset(id: string) {
     return api.get<Asset>(`/assets/${id}`);
   },
@@ -78,6 +86,15 @@ export const assetService = {
 
   returnAsset(id: string) {
     return api.post<Asset>(`/assets/${id}/return`);
+  },
+
+  /**
+   * Admin confirms a return request was received. This frees the asset and
+   * moves the request off pending in one call, so the panel never shows a
+   * request that still reads "Pending" after the asset has been released.
+   */
+  completeReturn(requestId: string) {
+    return api.post<AssetRequest>(`/assets/requests/${requestId}/complete-return`);
   },
 
   createRequest(data: {

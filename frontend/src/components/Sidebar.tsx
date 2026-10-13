@@ -1,15 +1,15 @@
 import { useNavigate } from "react-router-dom";
 import {
-  LayoutDashboard,
-  Users,
-  /*Building2,*/
+  Briefcase,
   CalendarCheck,
   CalendarDays,
-  Wallet,
-  Megaphone,
   DoorOpen,
+  LayoutDashboard,
+  Megaphone,
+  Package,
   Settings,
-  Briefcase,
+  Users,
+  Wallet,
 } from "lucide-react";
 
 interface SidebarProps {
