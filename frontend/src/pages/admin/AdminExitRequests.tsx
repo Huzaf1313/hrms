@@ -105,6 +105,14 @@ function AdminExitRequests() {
     }
   };
 
+  const downloadDoc = async (request: ExitRequest, key: string, name: string) => {
+    try {
+      saveBlob(await adminExitRequestService.downloadDocument(request.id, key), name);
+    } catch (err) {
+      setActionError(errorText(err, "Unable to download the file."));
+    }
+  };
+
   const cards: Array<[string, number | undefined]> = [
     ["Total", summary?.total],
     ["Pending", summary?.pending],
@@ -114,7 +122,7 @@ function AdminExitRequests() {
   ];
 
   return (
-    <div className="space-y-6 px-8 pb-10 pt-8">
+    <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">Exit Requests</h1>
         <p className="text-sm text-slate-500">Review resignation requests and track clearance.</p>
@@ -250,6 +258,29 @@ function AdminExitRequests() {
                         <Download className="h-4 w-4" /> {a.file_name}
                         <span className="text-slate-400">({formatFileSize(a.file_size)})</span>
                       </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {selected.documents.length > 0 && (
+              <div className="mt-5">
+                <h3 className="text-sm font-semibold text-slate-900">Exit documents</h3>
+                <ul className="mt-2 space-y-2">
+                  {selected.documents.map((d) => (
+                    <li key={d.key} className="flex items-center justify-between text-sm">
+                      <span className="text-slate-700">{d.label}</span>
+                      {d.status === "Submitted" ? (
+                        <button
+                          onClick={() => void downloadDoc(selected, d.key, d.file_name ?? d.label)}
+                          className="inline-flex items-center gap-2 text-blue-600 hover:underline"
+                        >
+                          <Download className="h-4 w-4" /> {d.file_name}
+                        </button>
+                      ) : (
+                        <span className="text-slate-400">Not submitted</span>
+                      )}
                     </li>
                   ))}
                 </ul>

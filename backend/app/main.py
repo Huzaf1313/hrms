@@ -304,6 +304,8 @@ app.include_router(
 app.include_router(employee_exit_requests_router, prefix="/api/v1")
 
 app.include_router(admin_exit_requests_router, prefix="/api/v1")
+    
+app.include_router(
     recruitment_router,
     prefix="/api/v1",
 )

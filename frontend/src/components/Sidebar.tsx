@@ -10,6 +10,7 @@ import {
   DoorOpen,
   Settings,
   Briefcase,
+  Package,
 } from "lucide-react";
 
 interface SidebarProps {

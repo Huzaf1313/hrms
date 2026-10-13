@@ -14,6 +14,9 @@ from app.services.attendance_calculation import (
     compute_work_metrics,
     shift_duration_minutes,
 )
+from app.services.employee_notification_service import (
+    EmployeeNotificationService,
+)
 
 IST = timezone(timedelta(hours=5, minutes=30))
 
