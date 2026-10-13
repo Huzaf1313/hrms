@@ -232,6 +232,30 @@ function displayWorkingHours(value: number | string | null | undefined): string 
   return typeof value === "number" ? `${value}h` : value;
 }
 
+// The backend falls back to the label "General" when it cannot find a shift,
+// so a shift name on its own proves nothing. Only a real shift reference means
+// the day has a length to measure overtime against.
+function hasShift(row: AttendanceRecord): boolean {
+  return Boolean(row.shift_id) || row.shift_duration_minutes != null;
+}
+
+function displayShift(row: AttendanceRecord): string {
+  if (!hasShift(row)) return "No shift";
+  return row.shift || "General";
+}
+
+// Three distinct outcomes, which the table used to collapse into one "-":
+// overtime worked, a genuine zero against a real shift, and "cannot tell"
+// because no shift was assigned.
+function displayOvertime(row: AttendanceRecord): { text: string; computable: boolean } {
+  if (!hasShift(row)) return { text: "No shift", computable: false };
+
+  return {
+    text: row.overtime_display ?? `${row.overtime_minutes ?? 0}m`,
+    computable: true,
+  };
+}
+
 function AdminAttendance() {
   const [activeTab, setActiveTab] = useState(0);
   const [search, setSearch] = useState("");
@@ -498,11 +522,11 @@ function AdminAttendance() {
         `${row.employee.first_name} ${row.employee.last_name}`,
         row.employee.employee_code,
         row.employee.department_name ?? "-",
-        row.shift,
+        displayShift(row),
         displayPunchTime(row.in_time ?? row.check_in),
         displayPunchTime(row.out_time ?? row.check_out),
         displayWorkingHours(row.working_hours ?? row.total_hours),
-        row.overtime_display ?? "-",
+        displayOvertime(row).text,
         formatStatus(row.status),
       ])
       .map(
@@ -895,10 +919,15 @@ function AdminAttendance() {
                     <td className="py-4 text-gray-600">{row.employee.employee_code}</td>
                     <td className="py-4 text-gray-600">{row.employee.department_name ?? "-"}</td>
                     <td className="py-4">
-                      <div className="text-gray-700">{row.shift}</div>
+                      <div className="text-gray-700">{displayShift(row)}</div>
                       {row.is_overnight && (
                         <div className="mt-0.5 text-[11px] text-violet-600">
                           Ends next day
+                        </div>
+                      )}
+                      {!hasShift(row) && (
+                        <div className="mt-0.5 text-[11px] text-gray-400">
+                          No shift length
                         </div>
                       )}
                     </td>
@@ -906,13 +935,27 @@ function AdminAttendance() {
                     <td className="py-4 text-gray-600">{displayPunchTime(row.out_time ?? row.check_out)}</td>
                     <td className="py-4 text-gray-600">{displayWorkingHours(row.working_hours ?? row.total_hours)}</td>
                     <td className="py-4">
-                      {row.overtime_minutes ? (
-                        <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
-                          {row.overtime_display ?? `${row.overtime_minutes}m`}
-                        </span>
-                      ) : (
-                        <span className="text-gray-300">-</span>
-                      )}
+                      {(() => {
+                        const overtime = displayOvertime(row);
+
+                        if (!overtime.computable) {
+                          return (
+                            <span className="text-gray-300">No shift</span>
+                          );
+                        }
+
+                        if (row.overtime_minutes && row.overtime_minutes > 0) {
+                          return (
+                            <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
+                              {overtime.text}
+                            </span>
+                          );
+                        }
+
+                        return (
+                          <span className="text-gray-400">{overtime.text}</span>
+                        );
+                      })()}
                     </td>
                     <td className="py-4">
                       <span

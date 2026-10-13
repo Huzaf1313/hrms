@@ -1,0 +1,120 @@
+import { useMemo } from "react";
+
+import CelebrationTicker from "../../components/CelebrationTicker";
+import type { Celebration } from "../../types/celebration";
+
+import AttendanceTrendChart from "../../components/admin/AttendanceTrendChart";
+import BirthdaysAndAnniversariesCard from "../../components/admin/BirthdaysAndAnniversariesCard";
+import DashboardKpiRow from "../../components/admin/DashboardKpiRow";
+import DepartmentDonut from "../../components/admin/DepartmentDonut";
+import PayrollExpenseSummaryCard from "../../components/admin/PayrollExpenseSummaryCard";
+import PendingLeaveRequestsCard from "../../components/admin/PendingLeaveRequestsCard";
+import QuickActionsCard from "../../components/admin/QuickActionsCard";
+import RecentActivityCard from "../../components/admin/RecentActivityCard";
+import RecruitmentFunnel from "../../components/admin/RecruitmentFunnel";
+import UpcomingInterviewsCard from "../../components/admin/UpcomingInterviewsCard";
+import { useDashboardMetrics } from "../../components/admin/useDashboardMetrics";
+
+interface AdminDashboardProps {
+  /** Live values the dashboard endpoint already provides. */
+  totalHeadcount?: number | null;
+  celebrations?: Celebration[];
+  onNavigate: (page: string) => void;
+  /** Opens the announcement create form, used by the quick action. */
+  onCreateAnnouncement?: () => void;
+}
+
+function readUserFirstName(): string {
+  try {
+    const raw = localStorage.getItem("user");
+
+    const user = raw ? (JSON.parse(raw) as { full_name?: string }) : null;
+
+    const fullName = user?.full_name?.trim();
+
+    return fullName ? fullName.split(" ")[0] : "Admin";
+  } catch {
+    return "Admin";
+  }
+}
+
+export default function AdminDashboard({
+  totalHeadcount,
+  celebrations = [],
+  onNavigate,
+  onCreateAnnouncement,
+}: AdminDashboardProps) {
+  const firstName = useMemo(() => readUserFirstName(), []);
+
+  const { metrics, refresh } = useDashboardMetrics(totalHeadcount ?? null);
+
+  return (
+    <div className="px-8 pb-8 pt-6">
+      <div className="mb-5">
+        <h1 className="text-2xl font-bold text-gray-900">
+          Welcome back, {firstName}!{" "}
+          <span aria-hidden="true">👋</span>
+        </h1>
+
+        <p className="mt-1 text-[13px] text-gray-500">
+          Here's what's happening in your organization today.
+        </p>
+      </div>
+
+      {/* Birthdays, anniversaries and daily thought banner */}
+      <div className="mb-4">
+        <CelebrationTicker celebrations={celebrations} />
+      </div>
+
+      <div className="space-y-4">
+        <DashboardKpiRow
+          metrics={metrics}
+          onOpenLeave={() => onNavigate("Leave")}
+          onOpenPayroll={() => onNavigate("Payroll")}
+        />
+
+        <div className="grid grid-cols-12 gap-4">
+          <AttendanceTrendChart />
+          <RecruitmentFunnel />
+          <PayrollExpenseSummaryCard
+            onOpenPayroll={() => onNavigate("Payroll")}
+          />
+        </div>
+
+        <div className="grid grid-cols-12 gap-4">
+          <PendingLeaveRequestsCard
+            onOpenLeave={() => onNavigate("Leave")}
+            onChanged={refresh}
+          />
+          <UpcomingInterviewsCard />
+          <BirthdaysAndAnniversariesCard />
+        </div>
+
+        <div className="grid grid-cols-12 gap-4">
+          <RecentActivityCard />
+          <QuickActionsCard
+            onNavigate={onNavigate}
+            onCreateAnnouncement={onCreateAnnouncement}
+          />
+          <DepartmentDonut counts={metrics.departmentCounts} />
+        </div>
+      </div>
+
+      <div className="mt-6 flex flex-col items-center justify-between gap-2 border-t border-gray-100 pt-4 text-[11px] text-gray-400 sm:flex-row">
+        <p>© 2024 HRMS. All rights reserved.</p>
+
+        <div className="flex items-center gap-3">
+          <button type="button" className="hover:text-gray-600">
+            Privacy Policy
+          </button>
+
+          <span aria-hidden="true">|</span>
+
+          <button type="button" className="hover:text-gray-600">
+            Terms &amp; Conditions
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

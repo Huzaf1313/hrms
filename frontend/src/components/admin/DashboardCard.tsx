@@ -1,0 +1,57 @@
+import type { ReactNode } from "react";
+import { ArrowRight } from "lucide-react";
+
+/** Shared panel styling for every admin dashboard card. */
+export const DASHBOARD_CARD_CLASS =
+  "rounded-2xl border border-gray-100 bg-white p-5 shadow-sm";
+
+interface DashboardCardProps {
+  title: string;
+  eyebrow?: string;
+  action?: ReactNode;
+  /** Grid placement, since the cards sit in a 12-column row. */
+  className?: string;
+  children: ReactNode;
+}
+
+export default function DashboardCard({
+  title,
+  eyebrow,
+  action,
+  className = "",
+  children,
+}: DashboardCardProps) {
+  return (
+    <div className={`${DASHBOARD_CARD_CLASS} ${className}`}>
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-[15px] font-bold text-gray-900">{title}</h2>
+
+          {eyebrow && (
+            <p className="mt-0.5 text-[11px] text-gray-400">{eyebrow}</p>
+          )}
+        </div>
+
+        {action}
+      </div>
+
+      {children}
+    </div>
+  );
+}
+
+export function DashboardViewAllLink({
+  onClick,
+}: {
+  onClick?: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex shrink-0 items-center gap-1 text-[11px] font-semibold text-[#2563eb] hover:underline"
+    >
+      View All <ArrowRight className="h-3 w-3" />
+    </button>
+  );
+}

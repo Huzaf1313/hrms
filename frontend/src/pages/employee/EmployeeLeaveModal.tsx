@@ -8,6 +8,8 @@ import {
   X,
 } from "lucide-react";
 
+import { countWorkingDays } from "../../utils/workingDays";
+
 interface EmployeeLeaveModalProps {
   onClose: () => void;
   onSubmit: (
@@ -160,6 +162,13 @@ function EmployeeLeaveModal({
     ) {
       setError(
         "To Date cannot be before From Date.",
+      );
+      return;
+    }
+
+    if (totalDays === 0) {
+      setError(
+        "The selected range falls only on Saturdays or Sundays. Please choose at least one working day.",
       );
       return;
     }
@@ -345,6 +354,12 @@ function EmployeeLeaveModal({
                     : "—"}
                 </span>
               </div>
+
+              <p className="mt-1.5 text-xs text-slate-500">
+                {totalDays === 0
+                  ? "Saturdays and Sundays are weekly offs. Pick at least one working day."
+                  : "Excludes Saturdays and Sundays."}
+              </p>
             </div>
 
             {/* Reason */}

@@ -86,6 +86,13 @@ from app.api.v1.employee_support_tickets import (
 from app.api.v1.employee_exit_requests import router as employee_exit_requests_router
 from app.api.v1.admin_exit_requests import router as admin_exit_requests_router
 from app.repositories.employee_exit_request_repository import ExitRequestRepository
+from app.api.v1.recruitment import router as recruitment_router
+from app.api.v1.assets import router as assets_router
+from app.repositories.asset_repository import AssetRepository
+from app.repositories.asset_request_repository import AssetRequestRepository
+from app.repositories.candidate_repository import CandidateRepository
+from app.repositories.job_position_repository import JobPositionRepository
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -110,6 +117,10 @@ async def lifespan(app: FastAPI):
 
     announcement_repository = AdminAnnouncementRepository()
     await announcement_repository.ensure_indexes()
+    await JobPositionRepository().ensure_indexes()
+    await CandidateRepository().ensure_indexes()
+    await AssetRepository().ensure_indexes()
+    await AssetRequestRepository().ensure_indexes()
 
     notification_repository = EmployeeNotificationRepository()
     await notification_repository.ensure_indexes()
@@ -293,3 +304,11 @@ app.include_router(
 app.include_router(employee_exit_requests_router, prefix="/api/v1")
 
 app.include_router(admin_exit_requests_router, prefix="/api/v1")
+    recruitment_router,
+    prefix="/api/v1",
+)
+
+app.include_router(
+    assets_router,
+    prefix="/api/v1",
+)

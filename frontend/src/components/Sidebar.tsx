@@ -9,6 +9,7 @@ import {
   Megaphone,
   DoorOpen,
   Settings,
+  Briefcase,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -38,6 +39,7 @@ const sections: NavSection[] = [
     title: "Organization",
     items: [
       { label: "Employees", icon: Users, page: "Employees" },
+      { label: "Recruitment", icon: Briefcase, page: "Recruitment" },
       /*{ label: "Departments", icon: Building2 },*/
     ],
   },
@@ -52,6 +54,7 @@ const sections: NavSection[] = [
     title: "Management",
     items: [
       { label: "Payroll", icon: Wallet, page: "Payroll" },
+      { label: "Assets", icon: Package, page: "Assets" },
       { label: "Announcement", icon: Megaphone, page: "Announcement" },
       { label: "Exit Requests", icon: DoorOpen, page: "Exit Requests" },
       { label: "Settings", icon: Settings, page: "Settings" },
@@ -64,9 +67,8 @@ function Sidebar({ activePage, onNavigate, collapsed }: SidebarProps) {
 
   return (
     <aside
-      className={`sticky top-0 flex h-screen shrink-0 flex-col overflow-hidden bg-[#0d1e3e] px-4 py-6 transition-[width] duration-300 ease-in-out ${
-        collapsed ? "w-[76px]" : "w-[250px]"
-      }`}
+      className={`sticky top-0 flex h-screen shrink-0 flex-col overflow-hidden bg-[#0d1e3e] px-4 py-6 transition-[width] duration-300 ease-in-out ${collapsed ? "w-[76px]" : "w-[250px]"
+        }`}
     >
       {/* Logo */}
       <button
@@ -76,14 +78,12 @@ function Sidebar({ activePage, onNavigate, collapsed }: SidebarProps) {
           navigate("/dashboard");
         }}
         title={collapsed ? "HRMS" : undefined}
-        className={`mb-8 flex items-center rounded-xl text-left transition-[justify-content] duration-300 ${
-          collapsed ? "h-10 w-10 shrink-0 justify-center p-0" : "gap-3 px-2"
-        }`}
+        className={`mb-8 flex items-center rounded-xl text-left transition-[justify-content] duration-300 ${collapsed ? "h-10 w-10 shrink-0 justify-center p-0" : "gap-3 px-2"
+          }`}
       >
         <span
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#2563eb] ${
-            collapsed ? "mx-auto" : ""
-          }`}
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#2563eb] ${collapsed ? "mx-auto" : ""
+            }`}
         >
           <Users className="h-5 w-5 text-white" />
         </span>
@@ -129,24 +129,21 @@ function Sidebar({ activePage, onNavigate, collapsed }: SidebarProps) {
                     }}
                     title={collapsed ? item.label : undefined}
                     aria-label={collapsed ? item.label : undefined}
-                    className={`flex h-[46px] shrink-0 items-center rounded-xl text-left transition-[justify-content,padding,color,background-color] duration-300 ${
-                      collapsed ? "w-full justify-center px-0" : "gap-3 px-3"
-                    } text-[15px] ${
-                      isActive
+                    className={`flex h-[46px] shrink-0 items-center rounded-xl text-left transition-[justify-content,padding,color,background-color] duration-300 ${collapsed ? "w-full justify-center px-0" : "gap-3 px-3"
+                      } text-[15px] ${isActive
                         ? "bg-[#2563eb] font-semibold text-white shadow-lg shadow-blue-900/30"
                         : isDisabled
                           ? "cursor-not-allowed text-slate-600"
                           : "text-slate-300 hover:bg-white/10 hover:text-white"
-                    }`}
+                      }`}
                   >
                     <Icon
-                      className={`h-5 w-5 shrink-0 ${
-                        isActive
-                          ? "text-white"
-                          : isDisabled
-                            ? "text-slate-700"
-                            : "text-slate-400"
-                      }`}
+                      className={`h-5 w-5 shrink-0 ${isActive
+                        ? "text-white"
+                        : isDisabled
+                          ? "text-slate-700"
+                          : "text-slate-400"
+                        }`}
                     />
 
                     {!collapsed && <span>{item.label}</span>}

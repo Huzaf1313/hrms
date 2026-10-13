@@ -235,6 +235,63 @@ def compute_work_metrics(
     return metrics
 
 
+def resolve_punch_times(record: dict) -> tuple:
+    """Pull the punch-in / punch-out values off a stored attendance document.
+
+    Two different field pairs write to the same collection: the employee punch
+    endpoints write ``check_in`` / ``check_out``, the admin mark-attendance and
+    regularisation paths write ``in_time`` / ``out_time``. Readers have to
+    understand both, otherwise half the records measure as "no punch" and lose
+    their overtime.
+    """
+    in_time = record.get("in_time") or record.get("check_in")
+    out_time = record.get("out_time") or record.get("check_out")
+
+    return in_time, out_time
+
+
+def resolve_record_metrics(record: dict) -> WorkMetrics:
+    """Measure a stored attendance document against its shift snapshot.
+
+    This is the read-side counterpart to the write paths. It deliberately
+    recomputes rather than trusting ``overtime_minutes`` on the document,
+    because that field is a snapshot taken when the record was written: if the
+    punch times were later corrected, or a shift was assigned after the fact,
+    the stored value is stale and would keep reporting zero overtime forever.
+
+    Stored values are only used when the punches cannot be measured at all,
+    so a record with unparseable times still shows something sensible.
+    """
+    in_time, out_time = resolve_punch_times(record)
+
+    shift_duration = record.get("shift_duration_minutes")
+
+    if shift_duration is None:
+        shift_duration = shift_duration_minutes(
+            record.get("shift_start"),
+            record.get("shift_end"),
+        )
+
+    metrics = compute_work_metrics(
+        in_time,
+        out_time,
+        shift_duration=shift_duration,
+        shift_start=record.get("shift_start"),
+    )
+
+    if metrics.worked_minutes is not None:
+        return metrics
+
+    # No usable punches: fall back to whatever was written at the time so the
+    # record still renders.
+    metrics.worked_minutes = record.get("worked_minutes")
+    metrics.overtime_minutes = record.get("overtime_minutes") or 0
+    metrics.late_minutes = record.get("late_minutes") or 0
+    metrics.is_overnight = bool(record.get("is_overnight", False))
+
+    return metrics
+
+
 def format_minutes_display(minutes: int | None) -> str | None:
     """615 -> "10hr 15min". Matches the existing working-hours display."""
     if minutes is None:

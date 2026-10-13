@@ -1,8 +1,9 @@
-interface Celebration {
-  name: string;
-  type: string;
-  message?: string;
-}
+import type { Celebration } from "../types/celebration";
+
+const TYPE_LABELS: Record<Celebration["type"], string> = {
+  birthday: "Birthday",
+  anniversary: "Work Anniversary",
+};
 
 interface CelebrationsProps {
   celebrations: Celebration[];
@@ -29,9 +30,9 @@ function Celebrations({ celebrations }: CelebrationsProps) {
         </div>
       ) : (
         <div className="space-y-4">
-          {celebrations.map((celebration, index) => (
+          {celebrations.map((celebration) => (
             <div
-              key={`${celebration.name}-${index}`}
+              key={`${celebration.employee_id}-${celebration.type}`}
               className="rounded-2xl bg-gray-50 p-4"
             >
               <p className="font-semibold text-gray-800">
@@ -39,7 +40,7 @@ function Celebrations({ celebrations }: CelebrationsProps) {
               </p>
 
               <p className="mt-1 text-sm text-gray-500">
-                {celebration.type}
+                {TYPE_LABELS[celebration.type] ?? celebration.type}
               </p>
 
               {celebration.message && (
