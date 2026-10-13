@@ -46,6 +46,10 @@ export const employeeService = {
     return api.get<Employee>(`/employees/${employeeId}`);
   },
 
+  getMyProfile() {
+    return api.get<Employee>("/employees/me");
+  },
+
   create(data: EmployeeCreate) {
     return api.post<Employee>("/employees", data);
   },

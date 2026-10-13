@@ -14,6 +14,7 @@ import AdminAnnouncements from "../pages/admin/AdminAnnouncements";
 import AdminSettings from "../pages/admin/AdminSetting";
 import AdminRecruitment from "../pages/admin/AdminRecruitment";
 import { getDashboardData, type DashboardData } from "../services/dashboardService";
+import AdminExitRequests from "../pages/admin/AdminExitrequests";
 
 interface DashboardLayoutProps {
   activePage: string;

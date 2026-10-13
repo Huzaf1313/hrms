@@ -35,6 +35,7 @@ class EmployeeAttendanceRegularizationService:
         self.regularization_repository = (
             EmployeeAttendanceRegularizationRepository()
         )
+        self.notification_service = EmployeeNotificationService()
 
     async def _recompute_metrics(
         self,
@@ -369,6 +370,7 @@ class EmployeeAttendanceRegularizationService:
             )
 
         normalized_status = decision.strip().capitalize()
+
         if normalized_status not in {"Approved", "Rejected"}:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -382,29 +384,36 @@ class EmployeeAttendanceRegularizationService:
             )
 
         now = datetime.utcnow()
+
         update_data = {
             "status": normalized_status,
             "reviewed_at": now,
             "reviewed_by": reviewed_by,
             "updated_at": now,
         }
+
         if comment is not None:
             update_data["review_comment"] = comment
 
-        if normalized_status == "Approved":
-            attendance = await self.attendance_repository.get_by_id(
-                request["attendance_id"]
-            )
-            if not attendance:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="Linked attendance record not found",
-                )
+        # Get linked attendance record so we can use its date
+        # in the employee notification.
+        attendance = await self.attendance_repository.get_by_id(
+            request["attendance_id"]
+        )
 
+        if not attendance:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Linked attendance record not found",
+            )
+
+        if normalized_status == "Approved":
             attendance_update = {}
+
             if request.get("requested_check_in") is not None:
                 attendance_update["check_in"] = request["requested_check_in"]
                 attendance_update["in_time"] = request["requested_check_in"]
+
             if request.get("requested_check_out") is not None:
                 attendance_update["check_out"] = request["requested_check_out"]
                 attendance_update["out_time"] = request["requested_check_out"]
@@ -422,12 +431,49 @@ class EmployeeAttendanceRegularizationService:
 
             attendance_update["is_regularized"] = True
             attendance_update["updated_at"] = now
+
             await self.attendance_repository.update(
                 request["attendance_id"],
                 attendance_update,
             )
 
-        return await self.regularization_repository.update(
+        updated_request = await self.regularization_repository.update(
             regularization_id,
             update_data,
         )
+
+        # Create employee notification after successful review.
+        notification_type = (
+            "regularization_approved"
+            if normalized_status == "Approved"
+            else "regularization_rejected"
+        )
+
+        attendance_date = attendance.get("date")
+
+        if hasattr(attendance_date, "strftime"):
+            formatted_attendance_date = attendance_date.strftime("%d/%m/%Y")
+        else:
+            formatted_attendance_date = str(attendance_date)
+
+        message = (
+            f"Your attendance regularization request for "
+            f"{formatted_attendance_date} has been "
+            f"{normalized_status.lower()}."
+        )
+
+        if comment:
+            message += f" Note: {comment}"
+
+        await self.notification_service.create(
+            employee_id=str(request["employee_id"]),
+            notification_type=notification_type,
+            title=f"Attendance Regularization {normalized_status}",
+            message=message,
+            target="/employee/attendance",
+            target_id=str(
+                request.get("_id", regularization_id)
+            ),
+        )
+
+        return updated_request

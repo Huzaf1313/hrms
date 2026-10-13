@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     # uploaded files (e.g. announcement attachments) are stored, and served
     # from at /{UPLOAD_DIR}/... — see the StaticFiles mount in main.py.
     UPLOAD_DIR: str = "uploads"
+    PRIVATE_UPLOAD_DIR: str = "private_uploads"
 
     model_config = SettingsConfigDict(
         env_file=".env",

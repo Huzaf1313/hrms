@@ -12,6 +12,10 @@ from app.schemas.admin_announcement import (
     AdminAnnouncementResponse,
     AnnouncementAudience,
 )
+from app.repositories.employee_repository import EmployeeRepository
+from app.services.employee_notification_service import (
+    EmployeeNotificationService,
+)
 
 ATTACHMENT_SUBDIR = "announcements"
 
@@ -49,6 +53,8 @@ def _resolve_targets(
 class AdminAnnouncementService:
     def __init__(self):
         self.repository = AdminAnnouncementRepository()
+        self.employee_repository = EmployeeRepository()
+        self.notification_service = EmployeeNotificationService()
 
     def _serialize(self, announcement: dict) -> AdminAnnouncementResponse:
         return AdminAnnouncementResponse(
@@ -104,6 +110,87 @@ class AdminAnnouncementService:
         if os.path.exists(file_path):
             os.remove(file_path)
 
+    async def _create_employee_notifications(
+        self,
+        announcement: dict,
+    ):
+        audience = announcement.get("audience")
+
+        employee_ids: list[str] = []
+
+        if audience == AnnouncementAudience.ALL_EMPLOYEES.value:
+            employees = await self.employee_repository.get_all(
+                filters={},
+                skip=0,
+                limit=10000,
+            )
+
+            employee_ids = [
+                employee.get("employee_id")
+                for employee in employees
+                if employee.get("employee_id")
+            ]
+
+        elif audience == AnnouncementAudience.DEPARTMENT_WISE.value:
+            target_departments = announcement.get(
+                "target_departments",
+                [],
+            )
+
+            if target_departments:
+                employees = await self.employee_repository.get_all(
+                    filters={
+                        "department_id": {
+                            "$in": target_departments,
+                        }
+                    },
+                    skip=0,
+                    limit=10000,
+                )
+
+                employee_ids = [
+                    employee.get("employee_id")
+                    for employee in employees
+                    if employee.get("employee_id")
+                ]
+
+        elif audience == AnnouncementAudience.CUSTOM.value:
+            employee_ids = [
+                employee_id
+                for employee_id in announcement.get(
+                    "target_employees",
+                    [],
+                )
+                if employee_id
+            ]
+
+        if not employee_ids:
+            return
+
+        notifications = [
+            {
+                "employee_id": employee_id,
+                "type": "announcement",
+                "title": announcement.get(
+                    "title",
+                    "New Announcement",
+                ),
+                "message": announcement.get(
+                    "description",
+                    "A new announcement has been posted.",
+                ),
+                "target": "/employee/announcements",
+                "target_id": str(announcement["_id"]),
+                "is_read": False,
+                "read_at": None,
+            }
+            for employee_id in employee_ids
+        ]
+
+        await self.notification_service.create_many(
+            notifications
+        )
+
     async def create_announcement(
         self,
         data: dict,
@@ -137,6 +224,10 @@ class AdminAnnouncementService:
             data["attachment"] = None
 
         announcement = await self.repository.create(data)
+
+        await self._create_employee_notifications(
+            announcement
+        )
 
         return self._serialize(announcement)
 
