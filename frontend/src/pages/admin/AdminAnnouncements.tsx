@@ -517,10 +517,13 @@ function ConfirmDialog({
 
 interface AdminAnnouncementsProps {
   onCreateEmployee?: () => void;
+  /** Opens straight into the create form, used by the dashboard shortcut. */
+  autoOpenCreateForm?: boolean;
 }
 
 export default function AdminAnnouncements({
   onCreateEmployee,
+  autoOpenCreateForm = false,
 }: AdminAnnouncementsProps = {}) {
   // List state
   const [activeTab, setActiveTab] =
@@ -544,11 +547,12 @@ export default function AdminAnnouncements({
   const [restoredDraft] = useState<AnnouncementDraft | null>(readDraft);
 
   // Create form state
-  // The page always opens on the list. An unfinished announcement is offered
-  // as a banner instead of force-opening the form over the top of it.
-  const [showCreateForm, setShowCreateForm] = useState(false);
+  // The page opens on the list, unless the dashboard asked for the form
+  // directly. An unfinished announcement is offered as a banner instead of
+  // force-opening the form over the top of it.
+  const [showCreateForm, setShowCreateForm] = useState(autoOpenCreateForm);
   const [restoredDraftAvailable, setRestoredDraftAvailable] = useState(
-    () => hasDraftContent(restoredDraft),
+    () => hasDraftContent(restoredDraft) && !autoOpenCreateForm,
   );
   const [editingAnnouncement, setEditingAnnouncement] =
     useState<Announcement | null>(null);

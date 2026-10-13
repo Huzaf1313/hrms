@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   CalendarDays,
   Clock,
@@ -82,20 +82,89 @@ const statusLabel: Record<LeaveStatus, string> = {
 
 // --- Line chart (pure SVG, no external chart library required) --------
 
-const chartDates = ["1 May", "6 May", "11 May", "16 May", "21 May", "26 May", "31 May"];
-const chartSeries = {
-  pending: [12, 20, 15, 28, 18, 30, 22],
-  approved: [8, 14, 10, 18, 12, 20, 16],
-  rejected: [3, 5, 4, 8, 5, 9, 6],
-};
+/**
+ * Pages through every leave request so the monthly chart is not limited to the
+ * five rows the table shows.
+ */
+async function listAllLeaves(): Promise<LeaveRequest[]> {
+  const pageSize = 100;
+  const collected: LeaveRequest[] = [];
 
-function LeaveChart() {
+  for (let page = 1; page <= 20; page += 1) {
+    const response = await leaveService.list({ page, limit: pageSize });
+
+    collected.push(...response.items);
+
+    if (response.items.length < pageSize || page >= response.pages) break;
+  }
+
+  return collected;
+}
+
+/** Counts requests per day of the current month, grouped by status. */
+function buildMonthlySeries(requests: LeaveRequest[]): LeaveChartSeries {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth();
+  const dayCount = new Date(year, month + 1, 0).getDate();
+
+  const series: LeaveChartSeries = {
+    pending: Array<number>(dayCount).fill(0),
+    approved: Array<number>(dayCount).fill(0),
+    rejected: Array<number>(dayCount).fill(0),
+    dayCount,
+    monthLabel: today.toLocaleDateString("en-IN", { month: "long", year: "numeric" }),
+  };
+
+  for (const request of requests) {
+    if (!request.created_at) continue;
+
+    const created = new Date(request.created_at);
+
+    if (
+      Number.isNaN(created.getTime()) ||
+      created.getFullYear() !== year ||
+      created.getMonth() !== month
+    ) {
+      continue;
+    }
+
+    const status = request.status.toLowerCase();
+    const bucket = series[status as "pending" | "approved" | "rejected"];
+
+    // Cancelled and any unknown status are not charted.
+    if (!bucket) continue;
+
+    bucket[created.getDate() - 1] += 1;
+  }
+
+  return series;
+}
+
+export interface LeaveChartSeries {
+  pending: number[];
+  approved: number[];
+  rejected: number[];
+  /** Days in the rendered month, so the axis matches the real month length. */
+  dayCount: number;
+  monthLabel: string;
+}
+
+/** Rounds the axis maximum up to the next multiple of ten, never below ten. */
+function niceMax(values: number[][]): number {
+  const highest = Math.max(0, ...values.flat());
+
+  return Math.max(10, Math.ceil(highest / 10) * 10);
+}
+
+function LeaveChart({ series }: { series: LeaveChartSeries }) {
   const width = 720;
   const height = 220;
   const paddingLeft = 32;
   const paddingBottom = 24;
-  const maxY = 40;
-  const points = chartSeries.pending.length;
+  const points = series.dayCount;
+  const maxY = niceMax([series.pending, series.approved, series.rejected]);
+  const step = maxY / 4;
 
   const xFor = (index: number) =>
     paddingLeft + (index * (width - paddingLeft)) / (points - 1);
@@ -108,58 +177,78 @@ function LeaveChart() {
   const toArea = (values: number[]) =>
     `${toPath(values)} L ${xFor(values.length - 1)} ${height - paddingBottom} L ${xFor(0)} ${height - paddingBottom} Z`;
 
-  const series = [
-    { key: "pending", color: "#f97316", values: chartSeries.pending },
-    { key: "approved", color: "#10b981", values: chartSeries.approved },
-    { key: "rejected", color: "#f43f5e", values: chartSeries.rejected },
+  const lines = [
+    { key: "pending", color: "#f97316", values: series.pending },
+    { key: "approved", color: "#10b981", values: series.approved },
+    { key: "rejected", color: "#f43f5e", values: series.rejected },
   ];
 
+  const gridValues = [0, step, step * 2, step * 3, maxY];
+
+  const hasData = lines.some((line) => line.values.some((value) => value > 0));
+
+  // One label per week keeps the axis readable on a 28-31 day month.
+  const labelEvery = Math.max(1, Math.round(points / 6));
+  const dayLabels = series.dayCount
+    ? Array.from({ length: points }, (_, index) => index + 1).filter(
+        (day) => (day - 1) % labelEvery === 0 || day === points,
+      )
+    : [];
+
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} className="w-full" style={{ height: 240 }}>
-      {[0, 10, 20, 30, 40].map((value) => (
-        <g key={value}>
-          <line
-            x1={paddingLeft}
-            x2={width}
-            y1={yFor(value)}
-            y2={yFor(value)}
-            stroke="#f1f5f4"
-            strokeWidth={1}
+    <div>
+      <svg viewBox={`0 0 ${width} ${height}`} className="w-full" style={{ height: 240 }}>
+        {gridValues.map((value) => (
+          <g key={value}>
+            <line
+              x1={paddingLeft}
+              x2={width}
+              y1={yFor(value)}
+              y2={yFor(value)}
+              stroke="#f1f5f4"
+              strokeWidth={1}
+            />
+            <text x={0} y={yFor(value) + 4} fontSize={11} fill="#9ca3af">
+              {Math.round(value)}
+            </text>
+          </g>
+        ))}
+
+        {lines.map((line) => (
+          <path key={`${line.key}-area`} d={toArea(line.values)} fill={line.color} opacity={0.08} />
+        ))}
+        {lines.map((line) => (
+          <path
+            key={`${line.key}-line`}
+            d={toPath(line.values)}
+            fill="none"
+            stroke={line.color}
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
           />
-          <text x={0} y={yFor(value) + 4} fontSize={11} fill="#9ca3af">
-            {value}
+        ))}
+
+        {dayLabels.map((day) => (
+          <text
+            key={day}
+            x={xFor(day - 1)}
+            y={height - 4}
+            fontSize={11}
+            fill="#9ca3af"
+            textAnchor="middle"
+          >
+            {day}
           </text>
-        </g>
-      ))}
+        ))}
+      </svg>
 
-      {series.map((line) => (
-        <path key={`${line.key}-area`} d={toArea(line.values)} fill={line.color} opacity={0.08} />
-      ))}
-      {series.map((line) => (
-        <path
-          key={`${line.key}-line`}
-          d={toPath(line.values)}
-          fill="none"
-          stroke={line.color}
-          strokeWidth={2}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      ))}
-
-      {chartDates.map((label, index) => (
-        <text
-          key={label}
-          x={xFor(index)}
-          y={height - 4}
-          fontSize={11}
-          fill="#9ca3af"
-          textAnchor="middle"
-        >
-          {label}
-        </text>
-      ))}
-    </svg>
+      {!hasData && (
+        <p className="-mt-2 text-center text-[11px] text-gray-400">
+          No leave requests recorded in {series.monthLabel}.
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -417,6 +506,27 @@ function AdminLeave() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedRequest, setSelectedRequest] = useState<LeaveRequest | null>(null);
+  const [chartRequests, setChartRequests] = useState<LeaveRequest[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    // The chart counts every request of the month, so it needs the full list
+    // rather than the filtered page the table below shows.
+    listAllLeaves()
+      .then((all) => {
+        if (!cancelled) setChartRequests(all);
+      })
+      .catch(() => {
+        if (!cancelled) setChartRequests([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const leaveChartSeries = useMemo(() => buildMonthlySeries(chartRequests), [chartRequests]);
 
   useEffect(() => {
     let cancelled = false;
@@ -519,11 +629,11 @@ function AdminLeave() {
                 </span>
               </div>
               <button className="flex items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs text-gray-600 hover:bg-gray-50">
-                This Month <ChevronDown className="h-3 w-3" />
+                {leaveChartSeries.monthLabel} <ChevronDown className="h-3 w-3" />
               </button>
             </div>
           </div>
-          <LeaveChart />
+          <LeaveChart series={leaveChartSeries} />
         </div>
 
         <div className="rounded-3xl bg-white p-6 shadow-sm lg:col-span-2">

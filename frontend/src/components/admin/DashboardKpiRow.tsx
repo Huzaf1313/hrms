@@ -223,11 +223,11 @@ export default function DashboardKpiRow({
               </span>
 
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[11px] font-medium text-gray-500">
+                <p className="truncate text-[11px] font-semibold text-gray-900">
                   {card.label}
                 </p>
 
-                <p className="mt-1 text-xl font-bold text-gray-900">
+                <p className="mt-1 text-xl font-extrabold tracking-tight text-black">
                   <KpiValue value={card.value} render={card.renderValue} />
                 </p>
 

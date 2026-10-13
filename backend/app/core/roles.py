@@ -75,6 +75,12 @@ class Permission(str, Enum):
     RECRUITMENT_UPDATE = "recruitment.update"
     RECRUITMENT_DELETE = "recruitment.delete"
 
+    # Assets
+    ASSETS_READ = "assets.read"
+    ASSETS_CREATE = "assets.create"
+    ASSETS_UPDATE = "assets.update"
+    ASSETS_DELETE = "assets.delete"
+
     # Performance
     PERFORMANCE_READ = "performance.read"
     PERFORMANCE_CREATE = "performance.create"

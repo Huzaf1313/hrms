@@ -9,8 +9,10 @@ import AdminAttendance from "../pages/admin/AdminAttendance";
 import AdminLeave from "../pages/admin/admin_leave";
 import AdminRegularizationRequests from "../pages/admin/AdminRegularizationRequests";
 import AdminPayroll from "../pages/admin/AdminPayroll";
+import AdminAssets from "../pages/admin/AdminAssets";
 import AdminAnnouncements from "../pages/admin/AdminAnnouncements";
 import AdminSettings from "../pages/admin/AdminSetting";
+import AdminRecruitment from "../pages/admin/AdminRecruitment";
 import { getDashboardData, type DashboardData } from "../services/dashboardService";
 
 interface DashboardLayoutProps {
@@ -26,6 +28,8 @@ function DashboardLayout({
 }: DashboardLayoutProps) {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [openEmployeeFormOnMount, setOpenEmployeeFormOnMount] = useState(false);
+  const [openAnnouncementFormOnMount, setOpenAnnouncementFormOnMount] =
+    useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   function handleNavigate(page: string) {
@@ -35,12 +39,22 @@ function DashboardLayout({
       setOpenEmployeeFormOnMount(false);
     }
 
+    // Same for the announcement form shortcut from the dashboard.
+    if (page !== "Announcement") {
+      setOpenAnnouncementFormOnMount(false);
+    }
+
     onNavigate(page);
   }
 
   function handleCreateEmployee() {
     setOpenEmployeeFormOnMount(true);
     onNavigate("Employees");
+  }
+
+  function handleCreateAnnouncement() {
+    setOpenAnnouncementFormOnMount(true);
+    onNavigate("Announcement");
   }
 
   useEffect(() => {
@@ -82,6 +96,8 @@ function DashboardLayout({
         <ErrorBoundary label={activePage}>
           {activePage === "Employees" ? (
           <AdminEmployees autoOpenCreateForm={openEmployeeFormOnMount} />
+        ) : activePage === "Recruitment" ? (
+          <AdminRecruitment />
         ) : activePage === "Attendance" ? (
           <AdminAttendance />
         ) : activePage === "Leave" ? (
@@ -90,8 +106,13 @@ function DashboardLayout({
           <AdminRegularizationRequests />
         ) : activePage === "Payroll" ? (
           <AdminPayroll />
+        ) : activePage === "Assets" ? (
+          <AdminAssets />
         ) : activePage === "Announcement" ? (
-          <AdminAnnouncements onCreateEmployee={handleCreateEmployee} />
+          <AdminAnnouncements
+            onCreateEmployee={handleCreateEmployee}
+            autoOpenCreateForm={openAnnouncementFormOnMount}
+          />
         ) : activePage === "Settings" ? (
           <AdminSettings />
         ) : (
@@ -99,6 +120,7 @@ function DashboardLayout({
             totalHeadcount={dashboardData?.total_headcount ?? null}
             celebrations={dashboardData?.celebrations ?? []}
             onNavigate={handleNavigate}
+            onCreateAnnouncement={handleCreateAnnouncement}
           />
         )}
         </ErrorBoundary>

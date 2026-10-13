@@ -7,7 +7,6 @@ import AttendanceTrendChart from "../../components/admin/AttendanceTrendChart";
 import BirthdaysAndAnniversariesCard from "../../components/admin/BirthdaysAndAnniversariesCard";
 import DashboardKpiRow from "../../components/admin/DashboardKpiRow";
 import DepartmentDonut from "../../components/admin/DepartmentDonut";
-import HROperationsPromoCard from "../../components/admin/HROperationsPromoCard";
 import PayrollExpenseSummaryCard from "../../components/admin/PayrollExpenseSummaryCard";
 import PendingLeaveRequestsCard from "../../components/admin/PendingLeaveRequestsCard";
 import QuickActionsCard from "../../components/admin/QuickActionsCard";
@@ -21,6 +20,8 @@ interface AdminDashboardProps {
   totalHeadcount?: number | null;
   celebrations?: Celebration[];
   onNavigate: (page: string) => void;
+  /** Opens the announcement create form, used by the quick action. */
+  onCreateAnnouncement?: () => void;
 }
 
 function readUserFirstName(): string {
@@ -41,10 +42,11 @@ export default function AdminDashboard({
   totalHeadcount,
   celebrations = [],
   onNavigate,
+  onCreateAnnouncement,
 }: AdminDashboardProps) {
   const firstName = useMemo(() => readUserFirstName(), []);
 
-  const metrics = useDashboardMetrics(totalHeadcount ?? null);
+  const { metrics, refresh } = useDashboardMetrics(totalHeadcount ?? null);
 
   return (
     <div className="px-8 pb-8 pt-6">
@@ -74,22 +76,27 @@ export default function AdminDashboard({
         <div className="grid grid-cols-12 gap-4">
           <AttendanceTrendChart />
           <RecruitmentFunnel />
-          <DepartmentDonut counts={metrics.departmentCounts} />
           <PayrollExpenseSummaryCard
             onOpenPayroll={() => onNavigate("Payroll")}
           />
         </div>
 
         <div className="grid grid-cols-12 gap-4">
-          <PendingLeaveRequestsCard onOpenLeave={() => onNavigate("Leave")} />
+          <PendingLeaveRequestsCard
+            onOpenLeave={() => onNavigate("Leave")}
+            onChanged={refresh}
+          />
           <UpcomingInterviewsCard />
           <BirthdaysAndAnniversariesCard />
         </div>
 
         <div className="grid grid-cols-12 gap-4">
           <RecentActivityCard />
-          <QuickActionsCard onNavigate={onNavigate} />
-          <HROperationsPromoCard onNavigate={onNavigate} />
+          <QuickActionsCard
+            onNavigate={onNavigate}
+            onCreateAnnouncement={onCreateAnnouncement}
+          />
+          <DepartmentDonut counts={metrics.departmentCounts} />
         </div>
       </div>
 

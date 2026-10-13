@@ -27,31 +27,12 @@ export interface DepartmentShare {
   color: string;
 }
 
-export interface PendingLeaveRow {
-  id: string;
-  employeeName: string;
-  leaveType: string;
-  from: string;
-  to: string;
-  days: number;
-}
-
 export interface InterviewRow {
   id: string;
   candidateName: string;
   position: string;
   dateLabel: string;
   timeLabel: string;
-}
-
-export type CelebrationKind = "birthday" | "anniversary";
-
-export interface CelebrationRow {
-  id: string;
-  name: string;
-  role: string;
-  dateLabel: string;
-  kind: CelebrationKind;
 }
 
 export interface ActivityRow {
@@ -154,49 +135,6 @@ export const departmentShares: DepartmentShare[] = [
   { label: "Others", value: 20, color: DEPARTMENT_COLORS[6] },
 ];
 
-export const pendingLeaveRows: PendingLeaveRow[] = [
-  {
-    id: "leave-1",
-    employeeName: "Rahul Sharma",
-    leaveType: "Casual Leave",
-    from: "20 May 2024",
-    to: "21 May 2024",
-    days: 2,
-  },
-  {
-    id: "leave-2",
-    employeeName: "Priya Singh",
-    leaveType: "Sick Leave",
-    from: "19 May 2024",
-    to: "20 May 2024",
-    days: 2,
-  },
-  {
-    id: "leave-3",
-    employeeName: "Vikash Patel",
-    leaveType: "Earned Leave",
-    from: "22 May 2024",
-    to: "24 May 2024",
-    days: 3,
-  },
-  {
-    id: "leave-4",
-    employeeName: "Neha Verma",
-    leaveType: "Casual Leave",
-    from: "23 May 2024",
-    to: "23 May 2024",
-    days: 1,
-  },
-  {
-    id: "leave-5",
-    employeeName: "Amit Kumar",
-    leaveType: "Privilege Leave",
-    from: "27 May 2024",
-    to: "29 May 2024",
-    days: 3,
-  },
-];
-
 export const interviewRows: InterviewRow[] = [
   {
     id: "interview-1",
@@ -233,20 +171,6 @@ export const interviewRows: InterviewRow[] = [
     dateLabel: "24 May 2024",
     timeLabel: "11:30 AM",
   },
-];
-
-export const birthdayRows: CelebrationRow[] = [
-  { id: "b-1", name: "Rohit Mehta", role: "Backend Developer", dateLabel: "21 May", kind: "birthday" },
-  { id: "b-2", name: "Sneha Patil", role: "HR Manager", dateLabel: "23 May", kind: "birthday" },
-  { id: "b-3", name: "Amit Kumar", role: "Finance Executive", dateLabel: "27 May", kind: "birthday" },
-  { id: "b-4", name: "Pooja Sharma", role: "UI/UX Designer", dateLabel: "29 May", kind: "birthday" },
-  { id: "b-5", name: "Vikram Joshi", role: "Marketing Executive", dateLabel: "31 May", kind: "birthday" },
-];
-
-export const anniversaryRows: CelebrationRow[] = [
-  { id: "a-1", name: "Rahul Sharma", role: "Team Lead", dateLabel: "22 May", kind: "anniversary" },
-  { id: "a-2", name: "Priya Singh", role: "HR Executive", dateLabel: "26 May", kind: "anniversary" },
-  { id: "a-3", name: "Karan Singh", role: "DevOps Engineer", dateLabel: "30 May", kind: "anniversary" },
 ];
 
 export const activityRows: ActivityRow[] = [
