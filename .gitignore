@@ -71,4 +71,5 @@ $RECYCLE.BIN/
 .cache/
 .temp/
 
+# Private employee uploads
 backend/private_uploads/

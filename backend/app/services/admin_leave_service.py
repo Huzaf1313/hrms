@@ -7,7 +7,9 @@ from app.core.working_days import count_working_days
 from app.repositories.department_repository import DepartmentRepository
 from app.repositories.employee_repository import EmployeeRepository
 from app.repositories.leave_repository import LeaveRepository
-
+from app.services.employee_notification_service import (
+    EmployeeNotificationService,
+)
 
 IST = timezone(timedelta(hours=5, minutes=30))
 
@@ -18,6 +20,7 @@ class AdminLeaveService:
         self.repository = LeaveRepository()
         self.employee_repository = EmployeeRepository()
         self.department_repository = DepartmentRepository()
+        self.notification_service = EmployeeNotificationService()
 
     async def create_leave(
         self,
@@ -198,7 +201,46 @@ class AdminLeaveService:
             update_data,
         )
 
-        return await self._serialize(updated)
+        # Create employee notification after successful review
+        normalized_status = str(status).lower()
+
+        if normalized_status in {"approved", "rejected"}:
+            leave_type = leave.get("leave_type", "Leave")
+
+            start_date = leave.get("start_date")
+            end_date = leave.get("end_date")
+
+            def format_leave_date(value):
+                if not value:
+                    return ""
+
+                if hasattr(value, "strftime"):
+                    return value.strftime("%d/%m/%Y")
+
+                return str(value)
+
+            formatted_start_date = format_leave_date(start_date)
+            formatted_end_date = format_leave_date(end_date)
+
+            status_label = normalized_status.capitalize()
+
+            message = (
+                f"Your {leave_type} leave request from "
+                f"{formatted_start_date} to {formatted_end_date} has been "
+                f"{normalized_status}."
+            )
+
+            if admin_note:
+                message += f" Note: {admin_note}"
+
+            await self.notification_service.create(
+                employee_id=str(leave["employee_id"]),
+                notification_type=f"leave_{normalized_status}",
+                title=f"Leave Request {status_label}",
+                message=message,
+                target="/employee/leave",
+                target_id=str(leave.get("_id", leave_id)),
+            )
 
     async def delete_leave(self, leave_id: str):
         leave = await self.repository.get_by_id(leave_id)

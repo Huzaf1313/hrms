@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Archive,
   ChevronLeft,
@@ -11,6 +12,11 @@ import {
   X,
   Loader2,
   ExternalLink,
+  Upload,
+  FileUp,
+  CheckCircle2,
+  AlertCircle,
+  FolderOpen,
 } from "lucide-react";
 import { api, ApiError, downloadFile } from "../../services/api";
 
@@ -26,6 +32,7 @@ interface EmployeeDocument {
   uploaded_by: string | null;
   created_at: string;
   updated_at: string;
+  source?: string | null;
 }
 
 interface EmployeeDocumentSummary {
@@ -38,18 +45,47 @@ interface EmployeeDocumentsResponse {
   summary: EmployeeDocumentSummary;
 }
 
-const DOCUMENTS_PER_PAGE = 7;
+type CategoryTab =
+  | "All Documents"
+  | "Payslips"
+  | "Tax & Payroll"
+  | "Employment"
+  | "Leave & Attendance";
 
-const CATEGORY_TABS = [
+const CATEGORY_TABS: CategoryTab[] = [
   "All Documents",
   "Payslips",
   "Tax & Payroll",
   "Employment",
   "Leave & Attendance",
-  "Other",
-] as const;
+];
 
-type CategoryTab = (typeof CATEGORY_TABS)[number];
+const DOCUMENTS_PER_PAGE = 8;
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+
+const ALLOWED_EXTENSIONS = [
+  ".pdf",
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".webp",
+  ".doc",
+  ".docx",
+  ".xls",
+  ".xlsx",
+];
+
+const UPLOAD_CATEGORIES = [
+  "Education",
+  "Certificates",
+  "Experience",
+  "Identity",
+  "Employment",
+  "Payslips",
+  "Tax & Payroll",
+  "Leave & Attendance",
+  "Other",
+];
 
 export default function EmployeeDocuments() {
   const [documents, setDocuments] = useState<EmployeeDocument[]>([]);
@@ -60,34 +96,28 @@ export default function EmployeeDocuments() {
 
   const [activeTab, setActiveTab] =
     useState<CategoryTab>("All Documents");
-
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [selectedDocument, setSelectedDocument] =
     useState<EmployeeDocument | null>(null);
-
   const [loadingDocument, setLoadingDocument] = useState(false);
+  const [downloadingId, setDownloadingId] = useState<string | null>(
+    null
+  );
 
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [uploadDocumentName, setUploadDocumentName] = useState("");
+  const [uploadCategory, setUploadCategory] = useState("Education");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadValidationError, setUploadValidationError] = useState("");
+  const [uploadNotice, setUploadNotice] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [downloadingId, setDownloadingId] =
-    useState<string | null>(null);
-
-  /*
-   * Fetch employee documents from the real backend.
-   *
-   * The API endpoint:
-   * GET /employee-documents
-   *
-   * Optional query parameters:
-   * search
-   * document_type
-   */
-  const fetchDocuments = async () => {
+  const fetchDocuments = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
@@ -95,14 +125,13 @@ export default function EmployeeDocuments() {
       const documentType =
         activeTab === "All Documents" ? undefined : activeTab;
 
-      const response =
-        await api.get<EmployeeDocumentsResponse>(
-          "/employee-documents",
-          {
-            search: searchTerm.trim() || undefined,
-            document_type: documentType,
-          }
-        );
+      const response = await api.get<EmployeeDocumentsResponse>(
+        "/employee-documents",
+        {
+          search: searchTerm.trim() || undefined,
+          document_type: documentType,
+        }
+      );
 
       setDocuments(response.documents ?? []);
 
@@ -118,73 +147,41 @@ export default function EmployeeDocuments() {
       if (err instanceof ApiError) {
         setError(err.message);
       } else {
-        setError(
-          "Unable to load your documents. Please try again."
-        );
+        setError("Unable to load your documents. Please try again.");
       }
 
       setDocuments([]);
+      setSummary({
+        total_documents: 0,
+        categories: {},
+      });
     } finally {
       setLoading(false);
     }
-  };
-
-  /*
-   * Load documents whenever the selected category changes.
-   *
-   * Search is handled separately with a small debounce below.
-   */
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      fetchDocuments();
-    }, 300);
-
-    return () => window.clearTimeout(timer);
   }, [activeTab, searchTerm]);
 
-  /*
-   * Reset pagination whenever the result set changes.
-   */
+  useEffect(() => {
+    void fetchDocuments();
+  }, [fetchDocuments]);
+
   useEffect(() => {
     setCurrentPage(1);
   }, [activeTab, searchTerm]);
 
-  /*
-   * Backend already filters the data.
-   *
-   * We still keep this memo for pagination and to ensure the
-   * component remains easy to extend later.
-   */
-  const filteredDocuments = useMemo(() => {
-    return documents;
-  }, [documents]);
+  const filteredDocuments = useMemo(() => documents, [documents]);
 
-  /*
-   * Pagination.
-   */
   const totalPages = Math.max(
     1,
-    Math.ceil(
-      filteredDocuments.length / DOCUMENTS_PER_PAGE
-    )
+    Math.ceil(filteredDocuments.length / DOCUMENTS_PER_PAGE)
   );
 
-  const safeCurrentPage = Math.min(
-    currentPage,
-    totalPages
-  );
+  const safeCurrentPage = Math.min(currentPage, totalPages);
 
   const paginatedDocuments = filteredDocuments.slice(
     (safeCurrentPage - 1) * DOCUMENTS_PER_PAGE,
     safeCurrentPage * DOCUMENTS_PER_PAGE
   );
 
-  /*
-   * Recent documents:
-   *
-   * We use the three newest documents rather than inventing
-   * a "recent" field that doesn't exist in the backend.
-   */
   const recentDocuments = useMemo(() => {
     return [...documents]
       .sort(
@@ -195,19 +192,12 @@ export default function EmployeeDocuments() {
       .slice(0, 3).length;
   }, [documents]);
 
-  /*
-   * Format dates consistently.
-   */
   const formatDate = (date: string) => {
-    if (!date) {
-      return "-";
-    }
+    if (!date) return "-";
 
     const parsedDate = new Date(date);
 
-    if (Number.isNaN(parsedDate.getTime())) {
-      return "-";
-    }
+    if (Number.isNaN(parsedDate.getTime())) return "-";
 
     return parsedDate.toLocaleDateString("en-IN", {
       day: "2-digit",
@@ -216,46 +206,27 @@ export default function EmployeeDocuments() {
     });
   };
 
-  /*
-   * Format file sizes returned by the backend.
-   */
   const formatFileSize = (size: number | null) => {
-    if (!size || size <= 0) {
-      return "-";
-    }
-
-    if (size < 1024) {
-      return `${size} B`;
-    }
-
-    if (size < 1024 * 1024) {
-      return `${(size / 1024).toFixed(1)} KB`;
-    }
+    if (!size || size <= 0) return "-";
+    if (size < 1024) return `${size} B`;
+    if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
 
     return `${(size / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  /*
-   * Determine a display-friendly category.
-   */
   const getCategoryLabel = (document: EmployeeDocument) => {
     return document.document_type || "Other";
   };
 
-  /*
-   * Fetch one document from the backend.
-   *
-   * GET /employee-documents/{document_id}
-   */
   const handleView = async (document: EmployeeDocument) => {
     try {
       setOpenMenuId(null);
       setLoadingDocument(true);
+      setError("");
 
-      const response =
-        await api.get<EmployeeDocument>(
-          `/employee-documents/${document.id}`
-        );
+      const response = await api.get<EmployeeDocument>(
+        `/employee-documents/${document.id}`
+      );
 
       setSelectedDocument(response);
     } catch (err) {
@@ -271,39 +242,22 @@ export default function EmployeeDocuments() {
     }
   };
 
-  /*
-   * Download the actual document.
-   *
-   * If file_url is an API-relative path, use the existing
-   * downloadFile helper so the access token and refresh logic
-   * are preserved.
-   *
-   * If file_url is an absolute URL, open/download that URL.
-   */
-  const handleDownload = async (
-    document: EmployeeDocument
-  ) => {
+  const handleDownload = async (document: EmployeeDocument) => {
     try {
       setOpenMenuId(null);
       setDownloadingId(document.id);
       setError("");
 
       if (!document.file_url) {
-        throw new ApiError(
-          "No file is available for this document.",
-          404
-        );
+        setError("No file is available for this document.");
+        return;
       }
 
-      /*
-       * Absolute file URLs are usually storage URLs.
-       */
       if (
         document.file_url.startsWith("http://") ||
         document.file_url.startsWith("https://")
       ) {
         const anchor = window.document.createElement("a");
-
         anchor.href = document.file_url;
         anchor.target = "_blank";
         anchor.rel = "noopener noreferrer";
@@ -315,373 +269,457 @@ export default function EmployeeDocuments() {
         window.document.body.appendChild(anchor);
         anchor.click();
         anchor.remove();
-
         return;
       }
 
-      /*
-       * API-relative file URL.
-       */
-      const blob = await downloadFile(
-        document.file_url
-      );
-
+      const blob = await downloadFile(document.file_url);
       const blobUrl = URL.createObjectURL(blob);
-
       const anchor = window.document.createElement("a");
 
       anchor.href = blobUrl;
       anchor.download =
-        document.file_name ||
-        document.document_name ||
-        "document";
+        document.file_name || document.document_name || "document";
 
       window.document.body.appendChild(anchor);
       anchor.click();
       anchor.remove();
 
-      URL.revokeObjectURL(blobUrl);
+      window.setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
     } catch (err) {
       console.error("Failed to download document:", err);
 
       if (err instanceof ApiError) {
         setError(err.message);
       } else {
-        setError(
-          "Unable to download the document. Please try again."
-        );
+        setError("Unable to download the document. Please try again.");
       }
     } finally {
       setDownloadingId(null);
     }
   };
 
-  /*
-   * Change category.
-   */
   const handleTabChange = (tab: CategoryTab) => {
     setActiveTab(tab);
     setCurrentPage(1);
     setOpenMenuId(null);
   };
 
-  /*
-   * Retry after an error.
-   */
   const handleRetry = () => {
-    fetchDocuments();
+    void fetchDocuments();
   };
 
-  /*
-   * Category count from backend summary.
-   */
   const getCategoryCount = (category: string) => {
+    if (category === "All Documents") {
+      return summary.total_documents;
+    }
+
     return summary.categories?.[category] ?? 0;
   };
 
-  return (
-    <div className="space-y-6 p-6">
-      {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-900">
-          My Documents
-        </h1>
+  const resetUploadForm = () => {
+    setUploadDocumentName("");
+    setUploadCategory("Education");
+    setSelectedFile(null);
+    setUploadValidationError("");
+    setUploadNotice("");
 
-        <p className="mt-1 text-sm text-slate-500">
-          View and manage your employment-related documents.
-        </p>
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const closeUploadModal = () => {
+    setUploadModalOpen(false);
+    resetUploadForm();
+  };
+
+  const handleFileSelection = (file: File | null) => {
+    setUploadValidationError("");
+    setUploadNotice("");
+    setSelectedFile(null);
+
+    if (!file) return;
+
+    const extension = file.name
+      .slice(file.name.lastIndexOf("."))
+      .toLowerCase();
+
+    if (!ALLOWED_EXTENSIONS.includes(extension)) {
+      setUploadValidationError(
+        "Unsupported file type. Please select a PDF, image, Word, or Excel file."
+      );
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+
+      return;
+    }
+
+    if (file.size === 0) {
+      setUploadValidationError(
+        "The selected file is empty. Please choose another file."
+      );
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      setUploadValidationError(
+        "The file exceeds the 10 MB limit. Please select a smaller file."
+      );
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+
+      return;
+    }
+
+    setSelectedFile(file);
+  };
+
+  const handleUploadSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setUploadValidationError("");
+    setUploadNotice("");
+
+    if (!uploadDocumentName.trim()) {
+      setUploadValidationError("Please enter a document name.");
+      return;
+    }
+
+    if (uploadDocumentName.trim().length > 150) {
+      setUploadValidationError(
+        "The document name cannot exceed 150 characters."
+      );
+      return;
+    }
+
+    if (!selectedFile) {
+      setUploadValidationError("Please select a file to continue.");
+      return;
+    }
+
+    // Storage and the backend upload endpoint are not available yet.
+    // Do not display a false success message or create a fake document.
+    setUploadNotice(
+      "Your form is ready, but uploading is not available yet. The backend upload endpoint and company-approved file storage must be configured first. Your document has not been saved."
+    );
+  };
+
+  const openUploadModal = () => {
+    resetUploadForm();
+    setUploadModalOpen(true);
+  };
+
+  return (
+    <div className="space-y-6 p-4 sm:p-6">
+      {/* Page header */}
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+        <div>
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+              <FolderOpen size={23} />
+            </div>
+
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+                My Documents
+              </h1>
+              <p className="mt-1 text-sm text-gray-500">
+                View and manage your employment-related documents.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={openUploadModal}
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+        >
+          <Upload size={17} />
+          Upload Document
+        </button>
       </div>
 
-      {/* Error Banner */}
+      {/* Error banner */}
       {error && (
-        <div className="flex items-start justify-between gap-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
-          <div>
-            <p className="text-sm font-medium text-red-800">
-              Unable to load documents
-            </p>
-
-            <p className="mt-1 text-sm text-red-700">
-              {error}
-            </p>
+        <div
+          role="alert"
+          className="flex flex-col gap-3 rounded-xl border border-red-200 bg-red-50 p-4 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div className="flex items-start gap-3">
+            <AlertCircle
+              size={20}
+              className="mt-0.5 shrink-0 text-red-600"
+            />
+            <p className="text-sm text-red-700">{error}</p>
           </div>
 
           <button
             type="button"
             onClick={handleRetry}
-            className="rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-red-700 shadow-sm ring-1 ring-red-200 hover:bg-red-50"
+            className="self-start rounded-lg border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-100 sm:self-auto"
           >
             Retry
           </button>
         </div>
       )}
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        {/* Total Documents */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      {/* Summary cards */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-500">
+              <p className="text-sm font-medium text-gray-500">
                 Total Documents
               </p>
-
-              <p className="mt-2 text-2xl font-semibold text-slate-900">
+              <p className="mt-2 text-3xl font-bold text-gray-900">
                 {loading ? "—" : summary.total_documents}
               </p>
             </div>
 
-            <div className="rounded-xl bg-slate-100 p-3">
-              <Archive className="h-5 w-5 text-slate-600" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+              <FileText size={23} />
             </div>
           </div>
+          <p className="mt-3 text-xs text-gray-500">
+            Documents currently available to you
+          </p>
         </div>
 
-        {/* Recent Documents */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-500">
+              <p className="text-sm font-medium text-gray-500">
                 Recent Documents
               </p>
-
-              <p className="mt-2 text-2xl font-semibold text-slate-900">
+              <p className="mt-2 text-3xl font-bold text-gray-900">
                 {loading ? "—" : recentDocuments}
               </p>
             </div>
 
-            <div className="rounded-xl bg-slate-100 p-3">
-              <FileText className="h-5 w-5 text-slate-600" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-50 text-purple-600">
+              <Archive size={23} />
             </div>
           </div>
+          <p className="mt-3 text-xs text-gray-500">
+            Most recent 3 documents, or fewer if unavailable
+          </p>
         </div>
 
-        {/* Pending Actions */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-500">
+              <p className="text-sm font-medium text-gray-500">
                 Pending Actions
               </p>
-
-              <p className="mt-2 text-2xl font-semibold text-slate-900">
-                0
-              </p>
-
-              <p className="mt-1 text-xs text-slate-400">
-                No pending status is provided by the API
-              </p>
+              <p className="mt-2 text-3xl font-bold text-gray-900">0</p>
             </div>
 
-            <div className="rounded-xl bg-slate-100 p-3">
-              <Archive className="h-5 w-5 text-slate-600" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+              <CheckCircle2 size={23} />
             </div>
           </div>
+          <p className="mt-3 text-xs text-gray-500">
+            Pending document status is not currently provided by the API
+          </p>
         </div>
       </div>
 
-      {/* Documents Section */}
-      <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-        {/* Search */}
-        <div className="border-b border-slate-200 p-5">
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+      {/* Document list */}
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="border-b border-gray-200 p-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">
+                Your Documents
+              </h2>
+              <p className="mt-1 text-sm text-gray-500">
+                Browse the documents associated with your employee profile.
+              </p>
+            </div>
 
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(event) =>
-                setSearchTerm(event.target.value)
-              }
-              placeholder="Search documents..."
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-10 text-sm text-slate-700 outline-none transition focus:border-slate-400 focus:bg-white"
-            />
-
-            {searchTerm && (
-              <button
-                type="button"
-                onClick={() => setSearchTerm("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
-                title="Clear search"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
+            <div className="relative w-full lg:max-w-sm">
+              <Search
+                size={18}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+              />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Search documents..."
+                aria-label="Search documents"
+                className="w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              />
+            </div>
           </div>
-        </div>
 
-        {/* Category Tabs */}
-        <div className="overflow-x-auto border-b border-slate-200">
-          <div className="flex min-w-max px-5">
+          <div className="mt-5 flex gap-2 overflow-x-auto pb-1">
             {CATEGORY_TABS.map((tab) => {
-              const count =
-                tab === "All Documents"
-                  ? summary.total_documents
-                  : getCategoryCount(tab);
+              const active = activeTab === tab;
 
               return (
                 <button
                   key={tab}
                   type="button"
                   onClick={() => handleTabChange(tab)}
-                  className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition ${
-                    activeTab === tab
-                      ? "border-slate-900 text-slate-900"
-                      : "border-transparent text-slate-500 hover:text-slate-700"
+                  className={`inline-flex shrink-0 items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition ${
+                    active
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900"
                   }`}
                 >
                   {tab}
-
-                  {!loading && count > 0 && (
-                    <span
-                      className={`rounded-full px-1.5 py-0.5 text-[10px] ${
-                        activeTab === tab
-                          ? "bg-slate-900 text-white"
-                          : "bg-slate-100 text-slate-500"
-                      }`}
-                    >
-                      {count}
-                    </span>
-                  )}
+                  <span
+                    className={`rounded-md px-1.5 py-0.5 text-xs ${
+                      active
+                        ? "bg-white/20 text-white"
+                        : "bg-white text-gray-600"
+                    }`}
+                  >
+                    {loading ? "—" : getCategoryCount(tab)}
+                  </span>
                 </button>
               );
             })}
           </div>
         </div>
 
-        {/* Loading */}
         {loading ? (
-          <div className="flex min-h-[350px] items-center justify-center">
-            <div className="flex flex-col items-center gap-3">
-              <Loader2 className="h-7 w-7 animate-spin text-slate-500" />
-
-              <p className="text-sm text-slate-500">
-                Loading documents...
-              </p>
+          <div className="flex min-h-64 flex-col items-center justify-center gap-3 p-8">
+            <Loader2 size={30} className="animate-spin text-blue-600" />
+            <p className="text-sm text-gray-500">Loading your documents...</p>
+          </div>
+        ) : paginatedDocuments.length === 0 ? (
+          <div className="flex min-h-64 flex-col items-center justify-center px-6 py-12 text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 text-gray-400">
+              <FolderOpen size={30} />
             </div>
+            <h3 className="mt-4 text-base font-semibold text-gray-900">
+              No documents found
+            </h3>
+            <p className="mt-2 max-w-md text-sm text-gray-500">
+              {searchTerm.trim()
+                ? "Try another search term or select a different category."
+                : "Documents assigned to your profile will appear here. Employee uploads will be enabled once the storage service is available."}
+            </p>
+
+            {searchTerm.trim() && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm("")}
+                className="mt-4 text-sm font-medium text-blue-600 hover:text-blue-700"
+              >
+                Clear search
+              </button>
+            )}
           </div>
         ) : (
           <>
-            {/* Table */}
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[850px]">
-                <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50">
-                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <table className="w-full min-w-[760px] text-left">
+                <thead className="border-b border-gray-200 bg-gray-50">
+                  <tr>
+                    <th className="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500">
                       Document Name
                     </th>
-
-                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <th className="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500">
                       Category
                     </th>
-
-                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Date
+                    <th className="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                      Date Added
                     </th>
-
-                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <th className="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-gray-500">
                       File
                     </th>
-
-                    <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Action
+                    <th className="px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">
+                      Actions
                     </th>
                   </tr>
                 </thead>
 
-                <tbody>
+                <tbody className="divide-y divide-gray-100">
                   {paginatedDocuments.map((document) => (
                     <tr
                       key={document.id}
-                      className="border-b border-slate-100 last:border-0 hover:bg-slate-50"
+                      className="transition hover:bg-gray-50/80"
                     >
-                      {/* Document Name */}
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="rounded-lg bg-slate-100 p-2">
-                            <FileText className="h-4 w-4 text-slate-600" />
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                            <FileText size={19} />
                           </div>
 
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-medium text-slate-800">
+                            <p className="max-w-xs truncate text-sm font-semibold text-gray-900">
                               {document.document_name}
                             </p>
-
-                            {document.file_name && (
-                              <p className="mt-0.5 truncate text-xs text-slate-400">
-                                {document.file_name}
-                              </p>
-                            )}
+                            <p className="mt-1 text-xs text-gray-500">
+                              {document.source === "employee_upload"
+                                ? "Employee uploaded"
+                                : "Available document"}
+                            </p>
                           </div>
                         </div>
                       </td>
 
-                      {/* Category */}
                       <td className="px-5 py-4">
-                        <span className="text-sm text-slate-600">
+                        <span className="inline-flex rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700">
                           {getCategoryLabel(document)}
                         </span>
                       </td>
 
-                      {/* Date */}
-                      <td className="px-5 py-4">
-                        <p className="text-sm text-slate-600">
-                          {formatDate(document.created_at)}
-                        </p>
+                      <td className="whitespace-nowrap px-5 py-4 text-sm text-gray-600">
+                        {formatDate(document.created_at)}
                       </td>
 
-                      {/* File Info */}
                       <td className="px-5 py-4">
-                        <div>
-                          <p className="text-sm text-slate-600">
-                            {document.mime_type || "File"}
+                        <div className="max-w-48">
+                          <p className="truncate text-sm text-gray-700">
+                            {document.file_name || "File unavailable"}
                           </p>
-
-                          <p className="mt-0.5 text-xs text-slate-400">
+                          <p className="mt-1 text-xs text-gray-500">
                             {formatFileSize(document.file_size)}
                           </p>
                         </div>
                       </td>
 
-                      {/* Actions */}
                       <td className="px-5 py-4">
                         <div className="flex items-center justify-end gap-1">
-                          {/* View */}
                           <button
                             type="button"
-                            title="View document"
-                            onClick={() =>
-                              handleView(document)
-                            }
-                            disabled={loadingDocument}
-                            className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-40"
+                            title="View document details"
+                            aria-label={`View ${document.document_name}`}
+                            onClick={() => void handleView(document)}
+                            className="rounded-lg p-2 text-gray-500 transition hover:bg-blue-50 hover:text-blue-600"
                           >
-                            <Eye className="h-4 w-4" />
+                            <Eye size={18} />
                           </button>
 
-                          {/* Download */}
                           <button
                             type="button"
                             title="Download document"
-                            onClick={() =>
-                              handleDownload(document)
-                            }
-                            disabled={
-                              downloadingId === document.id
-                            }
-                            className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-40"
+                            aria-label={`Download ${document.document_name}`}
+                            disabled={downloadingId === document.id}
+                            onClick={() => void handleDownload(document)}
+                            className="rounded-lg p-2 text-gray-500 transition hover:bg-blue-50 hover:text-blue-600 disabled:opacity-50"
                           >
                             {downloadingId === document.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
+                              <Loader2 size={18} className="animate-spin" />
                             ) : (
-                              <Download className="h-4 w-4" />
+                              <Download size={18} />
                             )}
                           </button>
 
-                          {/* More */}
                           <div className="relative">
                             <button
                               type="button"
                               title="More actions"
+                              aria-label={`More actions for ${document.document_name}`}
+                              aria-expanded={openMenuId === document.id}
                               onClick={() =>
                                 setOpenMenuId((current) =>
                                   current === document.id
@@ -689,60 +727,49 @@ export default function EmployeeDocuments() {
                                     : document.id
                                 )
                               }
-                              className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+                              className="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 hover:text-gray-800"
                             >
-                              <MoreVertical className="h-4 w-4" />
+                              <MoreVertical size={18} />
                             </button>
 
                             {openMenuId === document.id && (
-                              <div className="absolute right-0 z-20 mt-1 w-40 rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
+                              <div className="absolute right-0 top-full z-20 mt-1 w-48 overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
                                 <button
                                   type="button"
-                                  onClick={() =>
-                                    handleView(document)
-                                  }
-                                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                                  onClick={() => void handleView(document)}
+                                  className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
                                 >
-                                  <Eye className="h-4 w-4" />
-                                  View
+                                  <Eye size={16} />
+                                  View details
                                 </button>
 
                                 <button
                                   type="button"
                                   onClick={() =>
-                                    handleDownload(document)
+                                    void handleDownload(document)
                                   }
-                                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                                  className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
                                 >
-                                  <Download className="h-4 w-4" />
+                                  <Download size={16} />
                                   Download
                                 </button>
 
-                                {document.file_url && (
+                                {(document.file_url.startsWith("http://") ||
+                                  document.file_url.startsWith("https://")) && (
                                   <button
                                     type="button"
                                     onClick={() => {
                                       setOpenMenuId(null);
-
-                                      if (
-                                        document.file_url.startsWith(
-                                          "http://"
-                                        ) ||
-                                        document.file_url.startsWith(
-                                          "https://"
-                                        )
-                                      ) {
-                                        window.open(
-                                          document.file_url,
-                                          "_blank",
-                                          "noopener,noreferrer"
-                                        );
-                                      }
+                                      window.open(
+                                        document.file_url,
+                                        "_blank",
+                                        "noopener,noreferrer"
+                                      );
                                     }}
-                                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                                    className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
                                   >
-                                    <ExternalLink className="h-4 w-4" />
-                                    Open File
+                                    <ExternalLink size={16} />
+                                    Open file
                                   </button>
                                 )}
                               </div>
@@ -752,244 +779,432 @@ export default function EmployeeDocuments() {
                       </td>
                     </tr>
                   ))}
-
-                  {/* Empty State */}
-                  {paginatedDocuments.length === 0 && (
-                    <tr>
-                      <td
-                        colSpan={5}
-                        className="px-5 py-16 text-center"
-                      >
-                        <div className="flex flex-col items-center">
-                          <div className="rounded-full bg-slate-100 p-4">
-                            <FileText className="h-6 w-6 text-slate-400" />
-                          </div>
-
-                          <p className="mt-4 text-sm font-medium text-slate-700">
-                            No documents found
-                          </p>
-
-                          <p className="mt-1 text-sm text-slate-500">
-                            {searchTerm
-                              ? "Try changing your search."
-                              : "There are no documents in this category."}
-                          </p>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
                 </tbody>
               </table>
             </div>
 
             {/* Pagination */}
-            {filteredDocuments.length > 0 && (
-              <div className="flex flex-col gap-3 border-t border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm text-slate-500">
-                  Showing{" "}
-                  {(safeCurrentPage - 1) *
-                    DOCUMENTS_PER_PAGE +
-                    1}{" "}
-                  to{" "}
+            <div className="flex flex-col gap-3 border-t border-gray-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-gray-500">
+                Showing{" "}
+                <span className="font-medium text-gray-700">
+                  {(safeCurrentPage - 1) * DOCUMENTS_PER_PAGE + 1}
+                </span>{" "}
+                to{" "}
+                <span className="font-medium text-gray-700">
                   {Math.min(
-                    safeCurrentPage *
-                      DOCUMENTS_PER_PAGE,
+                    safeCurrentPage * DOCUMENTS_PER_PAGE,
                     filteredDocuments.length
-                  )}{" "}
-                  of {filteredDocuments.length} documents
-                </p>
+                  )}
+                </span>{" "}
+                of{" "}
+                <span className="font-medium text-gray-700">
+                  {filteredDocuments.length}
+                </span>{" "}
+                documents
+              </p>
 
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    disabled={safeCurrentPage === 1}
-                    onClick={() =>
-                      setCurrentPage((page) =>
-                        Math.max(1, page - 1)
-                      )
-                    }
-                    className="rounded-lg border border-slate-200 p-2 text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-                    title="Previous page"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={safeCurrentPage <= 1}
+                  onClick={() =>
+                    setCurrentPage((page) => Math.max(1, page - 1))
+                  }
+                  className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ChevronLeft size={16} />
+                  Previous
+                </button>
 
-                  <span className="min-w-[80px] text-center text-sm text-slate-600">
-                    Page {safeCurrentPage} of {totalPages}
-                  </span>
+                <span className="min-w-20 text-center text-sm text-gray-600">
+                  Page {safeCurrentPage} of {totalPages}
+                </span>
 
-                  <button
-                    type="button"
-                    disabled={
-                      safeCurrentPage === totalPages
-                    }
-                    onClick={() =>
-                      setCurrentPage((page) =>
-                        Math.min(
-                          totalPages,
-                          page + 1
-                        )
-                      )
-                    }
-                    className="rounded-lg border border-slate-200 p-2 text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-                    title="Next page"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  disabled={safeCurrentPage >= totalPages}
+                  onClick={() =>
+                    setCurrentPage((page) =>
+                      Math.min(totalPages, page + 1)
+                    )
+                  }
+                  className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Next
+                  <ChevronRight size={16} />
+                </button>
               </div>
-            )}
+            </div>
           </>
         )}
-      </section>
+      </div>
 
-      {/* Document Details Modal */}
-      {selectedDocument && (
+      {/* Document details modal */}
+      {(selectedDocument || loadingDocument) && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
-          onClick={() => setSelectedDocument(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-gray-950/50 p-4"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !loadingDocument) {
+              setSelectedDocument(null);
+            }
+          }}
         >
           <div
-            className="w-full max-w-lg rounded-2xl bg-white shadow-xl"
-            onClick={(event) =>
-              event.stopPropagation()
-            }
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="document-details-title"
+            className="my-auto w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl"
           >
-            {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+            <div className="flex items-start justify-between border-b border-gray-200 px-6 py-5">
               <div>
-                <h2 className="text-lg font-semibold text-slate-900">
+                <h2
+                  id="document-details-title"
+                  className="text-lg font-semibold text-gray-900"
+                >
                   Document Details
                 </h2>
-
-                <p className="mt-0.5 text-xs text-slate-500">
-                  {selectedDocument.file_name ||
-                    selectedDocument.document_name}
+                <p className="mt-1 text-sm text-gray-500">
+                  Information about this document
                 </p>
               </div>
 
               <button
                 type="button"
-                onClick={() =>
-                  setSelectedDocument(null)
-                }
-                className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-                title="Close"
+                aria-label="Close document details"
+                onClick={() => setSelectedDocument(null)}
+                disabled={loadingDocument}
+                className="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 hover:text-gray-800 disabled:opacity-50"
               >
-                <X className="h-5 w-5" />
+                <X size={19} />
               </button>
             </div>
 
-            {/* Modal Body */}
-            <div className="space-y-5 p-5">
-              <div className="flex items-center gap-4 rounded-xl bg-slate-50 p-4">
-                <div className="rounded-xl bg-white p-3 shadow-sm">
-                  <FileText className="h-6 w-6 text-slate-600" />
+            {loadingDocument ? (
+              <div className="flex min-h-52 items-center justify-center gap-3">
+                <Loader2 size={24} className="animate-spin text-blue-600" />
+                <span className="text-sm text-gray-500">
+                  Loading document details...
+                </span>
+              </div>
+            ) : selectedDocument ? (
+              <>
+                <div className="space-y-5 p-6">
+                  <div className="flex items-center gap-4 rounded-xl bg-gray-50 p-4">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
+                      <FileText size={24} />
+                    </div>
+
+                    <div className="min-w-0">
+                      <h3 className="break-words font-semibold text-gray-900">
+                        {selectedDocument.document_name}
+                      </h3>
+                      <p className="mt-1 break-all text-sm text-gray-500">
+                        {selectedDocument.file_name || "No filename available"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div>
+                      <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                        Category
+                      </p>
+                      <p className="mt-1.5 text-sm font-medium text-gray-900">
+                        {getCategoryLabel(selectedDocument)}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                        Date Added
+                      </p>
+                      <p className="mt-1.5 text-sm font-medium text-gray-900">
+                        {formatDate(selectedDocument.created_at)}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                        File Size
+                      </p>
+                      <p className="mt-1.5 text-sm font-medium text-gray-900">
+                        {formatFileSize(selectedDocument.file_size)}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                        File Type
+                      </p>
+                      <p className="mt-1.5 break-all text-sm font-medium text-gray-900">
+                        {selectedDocument.mime_type || "Not provided"}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                        Uploaded By
+                      </p>
+                      <p className="mt-1.5 break-words text-sm font-medium text-gray-900">
+                        {selectedDocument.uploaded_by || "Not specified"}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                        Document Source
+                      </p>
+                      <p className="mt-1.5 text-sm font-medium text-gray-900">
+                        {selectedDocument.source === "employee_upload"
+                          ? "Employee upload"
+                          : "Existing document"}
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="min-w-0">
-                  <h3 className="truncate text-sm font-semibold text-slate-900">
-                    {selectedDocument.document_name}
-                  </h3>
+                <div className="flex flex-col-reverse gap-3 border-t border-gray-200 bg-gray-50 px-6 py-4 sm:flex-row sm:justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDocument(null)}
+                    className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-100"
+                  >
+                    Close
+                  </button>
 
-                  <p className="mt-1 text-xs text-slate-500">
-                    {selectedDocument.document_type ||
-                      "Other"}
+                  <button
+                    type="button"
+                    onClick={() => void handleDownload(selectedDocument)}
+                    disabled={downloadingId === selectedDocument.id}
+                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {downloadingId === selectedDocument.id ? (
+                      <Loader2 size={17} className="animate-spin" />
+                    ) : (
+                      <Download size={17} />
+                    )}
+                    Download
+                  </button>
+                </div>
+              </>
+            ) : null}
+          </div>
+        </div>
+      )}
+
+      {/* Employee upload modal: frontend only until storage is available */}
+      {uploadModalOpen && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-gray-950/60 p-4"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              closeUploadModal();
+            }
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="upload-document-title"
+            className="my-auto w-full max-w-xl overflow-hidden rounded-2xl bg-white shadow-2xl"
+          >
+            <div className="flex items-start justify-between border-b border-gray-200 px-6 py-5">
+              <div className="flex items-start gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                  <FileUp size={23} />
+                </div>
+
+                <div>
+                  <h2
+                    id="upload-document-title"
+                    className="text-lg font-semibold text-gray-900"
+                  >
+                    Upload Document
+                  </h2>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Prepare a document to add to your employee profile.
                   </p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs text-slate-400">
-                    Category
-                  </p>
+              <button
+                type="button"
+                aria-label="Close upload modal"
+                onClick={closeUploadModal}
+                className="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 hover:text-gray-800"
+              >
+                <X size={19} />
+              </button>
+            </div>
 
-                  <p className="mt-1 text-sm font-medium text-slate-700">
-                    {selectedDocument.document_type ||
-                      "Other"}
+            <form onSubmit={handleUploadSubmit}>
+              <div className="space-y-5 p-6">
+                <div>
+                  <label
+                    htmlFor="upload-document-name"
+                    className="mb-2 block text-sm font-medium text-gray-700"
+                  >
+                    Document Name <span className="text-red-500">*</span>
+                  </label>
+
+                  <input
+                    id="upload-document-name"
+                    type="text"
+                    value={uploadDocumentName}
+                    onChange={(event) => {
+                      setUploadDocumentName(event.target.value);
+                      setUploadValidationError("");
+                      setUploadNotice("");
+                    }}
+                    maxLength={150}
+                    placeholder="e.g. 12th Marksheet, Experience Letter"
+                    className="w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  />
+
+                  <p className="mt-1.5 text-xs text-gray-500">
+                    Use a clear name so you can identify the document later.
                   </p>
                 </div>
 
                 <div>
-                  <p className="text-xs text-slate-400">
-                    Uploaded
-                  </p>
+                  <label
+                    htmlFor="upload-document-category"
+                    className="mb-2 block text-sm font-medium text-gray-700"
+                  >
+                    Document Category <span className="text-red-500">*</span>
+                  </label>
 
-                  <p className="mt-1 text-sm font-medium text-slate-700">
-                    {formatDate(
-                      selectedDocument.created_at
+                  <select
+                    id="upload-document-category"
+                    value={uploadCategory}
+                    onChange={(event) => {
+                      setUploadCategory(event.target.value);
+                      setUploadValidationError("");
+                      setUploadNotice("");
+                    }}
+                    className="w-full rounded-lg border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  >
+                    {UPLOAD_CATEGORIES.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="upload-document-file"
+                    className="mb-2 block text-sm font-medium text-gray-700"
+                  >
+                    Select File <span className="text-red-500">*</span>
+                  </label>
+
+                  <input
+                    ref={fileInputRef}
+                    id="upload-document-file"
+                    type="file"
+                    accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx"
+                    onChange={(event) =>
+                      handleFileSelection(event.target.files?.[0] ?? null)
+                    }
+                    className="sr-only"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex w-full flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 px-5 py-7 text-center transition hover:border-blue-400 hover:bg-blue-50/50"
+                  >
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                      <Upload size={23} />
+                    </div>
+
+                    {selectedFile ? (
+                      <>
+                        <span className="mt-3 max-w-full break-all text-sm font-semibold text-gray-900">
+                          {selectedFile.name}
+                        </span>
+                        <span className="mt-1 text-xs text-gray-500">
+                          {formatFileSize(selectedFile.size)} · Click to change file
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="mt-3 text-sm font-semibold text-gray-800">
+                          Click to select a file
+                        </span>
+                        <span className="mt-1 text-xs text-gray-500">
+                          PDF, PNG, JPG, WEBP, DOC, DOCX, XLS, XLSX
+                        </span>
+                        <span className="mt-1 text-xs text-gray-500">
+                          Maximum file size: 10 MB
+                        </span>
+                      </>
                     )}
-                  </p>
+                  </button>
                 </div>
 
-                <div>
-                  <p className="text-xs text-slate-400">
-                    File Name
-                  </p>
+                {uploadValidationError && (
+                  <div
+                    role="alert"
+                    className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+                  >
+                    <AlertCircle size={18} className="mt-0.5 shrink-0" />
+                    <p>{uploadValidationError}</p>
+                  </div>
+                )}
 
-                  <p className="mt-1 truncate text-sm font-medium text-slate-700">
-                    {selectedDocument.file_name || "-"}
-                  </p>
-                </div>
+                {uploadNotice && (
+                  <div
+                    role="status"
+                    className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800"
+                  >
+                    <AlertCircle size={18} className="mt-0.5 shrink-0" />
+                    <p>{uploadNotice}</p>
+                  </div>
+                )}
 
-                <div>
-                  <p className="text-xs text-slate-400">
-                    File Size
-                  </p>
-
-                  <p className="mt-1 text-sm font-medium text-slate-700">
-                    {formatFileSize(
-                      selectedDocument.file_size
-                    )}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-xs text-slate-400">
-                    File Type
-                  </p>
-
-                  <p className="mt-1 text-sm font-medium text-slate-700">
-                    {selectedDocument.mime_type || "-"}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-xs text-slate-400">
-                    Uploaded By
-                  </p>
-
-                  <p className="mt-1 truncate text-sm font-medium text-slate-700">
-                    {selectedDocument.uploaded_by || "-"}
-                  </p>
+                <div className="rounded-lg border border-blue-100 bg-blue-50 p-3.5">
+                  <div className="flex items-start gap-2.5">
+                    <AlertCircle
+                      size={18}
+                      className="mt-0.5 shrink-0 text-blue-600"
+                    />
+                    <div>
+                      <p className="text-sm font-semibold text-blue-900">
+                        Uploading is not enabled yet
+                      </p>
+                      <p className="mt-1 text-xs leading-5 text-blue-800">
+                        This form currently validates your selection only.
+                        Your document will not be stored or added to your
+                        profile until the company-approved storage and backend
+                        upload service are available.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Modal Footer */}
-            <div className="flex justify-end gap-2 border-t border-slate-200 px-5 py-4">
-              <button
-                type="button"
-                onClick={() =>
-                  setSelectedDocument(null)
-                }
-                className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-              >
-                Close
-              </button>
+              <div className="flex flex-col-reverse gap-3 border-t border-gray-200 bg-gray-50 px-6 py-4 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={closeUploadModal}
+                  className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-100"
+                >
+                  Close
+                </button>
 
-              <button
-                type="button"
-                onClick={() =>
-                  handleDownload(selectedDocument)
-                }
-                className="flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
-              >
-                <Download className="h-4 w-4" />
-                Download
-              </button>
-            </div>
+                <button
+                  type="submit"
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-600"
+                >
+                  <Upload size={17} />
+                  Check Upload Details
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

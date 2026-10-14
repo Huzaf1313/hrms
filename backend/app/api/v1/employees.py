@@ -2,8 +2,8 @@ from datetime import date, datetime
 
 from fastapi import APIRouter, Depends, Query
 
-from app.api.deps import require_permission
-from app.core.roles import Permission
+from app.api.deps import get_current_user, require_permission
+from app.core.roles import Permission, has_permission
 from app.schemas.common import APIResponse
 from app.schemas.employee import (
     EmployeeCreate,
@@ -13,6 +13,7 @@ from app.schemas.employee import (
 )
 from app.services.employee_service import EmployeeService
 from app.utils.pagination import PaginationParams
+from app.core.exceptions import AppException
 
 
 router = APIRouter()
@@ -107,6 +108,24 @@ async def get_employees(
         data=[serialize_employee(employee) for employee in employees],
     )
 
+@router.get(
+    "/employees/me",
+    response_model=APIResponse[EmployeeResponse],
+)
+async def get_my_employee_profile(
+    current_user: dict = Depends(get_current_user),
+):
+    if not current_user.get("employee_id"):
+        raise AppException(
+            "Employee profile not found",
+            404,
+        )
+
+    return APIResponse(
+        success=True,
+        message="Employee profile retrieved successfully",
+        data=serialize_employee(current_user),
+    )
 
 @router.get(
     "/employees/{employee_id}",
@@ -132,11 +151,58 @@ async def get_employee(
 async def update_employee(
     employee_id: str,
     data: EmployeeUpdate,
-    current_user: dict = Depends(require_permission(Permission.EMPLOYEES_UPDATE)),
+    current_user: dict = Depends(get_current_user),
 ):
-    update_data = data.model_dump()
-    update_data["date_of_birth"] = to_datetime(update_data.get("date_of_birth"))
-    update_data["joining_date"] = to_datetime(update_data.get("joining_date"))
+    print("🔥 UPDATE EMPLOYEE ENDPOINT HIT")
+    print("Current user:", current_user)
+    print("Employee ID from URL:", employee_id)
+
+    role = current_user.get("role")
+    current_user_id = current_user.get("_id")
+
+    # Employee users can only update their own emergency contact
+    if role == "employee":
+        current_user_id = current_user.get("_id")
+
+        if not current_user_id:
+            raise AppException(
+                "Employee profile not found",
+                404,
+            )
+
+        if str(current_user_id) != str(employee_id):
+            raise AppException(
+                "You can only update your own employee profile",
+                403,
+            )
+
+        update_data = data.model_dump(exclude_unset=True)
+
+        allowed_fields = {"emergency_contact"}
+
+        if not set(update_data).issubset(allowed_fields):
+            raise AppException(
+                "Employees can only update emergency contact details",
+                403,
+            )
+
+    # HR/Admin/Manager continue using normal permissions
+    else:
+        if not has_permission(role, Permission.EMPLOYEES_UPDATE):
+            raise AppException(
+                "You do not have permission to perform this action",
+                403,
+            )
+
+        update_data = data.model_dump()
+
+        update_data["date_of_birth"] = to_datetime(
+            update_data.get("date_of_birth")
+        )
+
+        update_data["joining_date"] = to_datetime(
+            update_data.get("joining_date")
+        )
 
     employee = await service.update_employee(
         employee_id=employee_id,

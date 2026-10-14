@@ -1,3 +1,4 @@
+
 from datetime import datetime
 from typing import Any
 
@@ -24,6 +25,7 @@ class EmployeeDocumentResponse(BaseModel):
     file_size: int | None = None
     mime_type: str | None = None
     uploaded_by: str | None = None
+    source: str | None = None
     created_at: Any
     updated_at: Any
 

@@ -72,6 +72,20 @@ from app.repositories.admin_announcement_repository import (
 )
 from app.repositories.shift_repository import ShiftRepository
 
+from app.api.v1.employee_notification import (
+    router as employee_notification_router,
+)
+
+from app.repositories.employee_notification_repository import (
+    EmployeeNotificationRepository,
+)
+from app.api.v1.employee_support_tickets import (
+    router as employee_support_tickets_router,
+)
+
+from app.api.v1.employee_exit_requests import router as employee_exit_requests_router
+from app.api.v1.admin_exit_requests import router as admin_exit_requests_router
+from app.repositories.employee_exit_request_repository import ExitRequestRepository
 from app.api.v1.recruitment import router as recruitment_router
 from app.api.v1.assets import router as assets_router
 from app.repositories.asset_repository import AssetRepository
@@ -107,6 +121,12 @@ async def lifespan(app: FastAPI):
     await CandidateRepository().ensure_indexes()
     await AssetRepository().ensure_indexes()
     await AssetRequestRepository().ensure_indexes()
+
+    notification_repository = EmployeeNotificationRepository()
+    await notification_repository.ensure_indexes()
+
+    exit_request_repository = ExitRequestRepository()
+    await exit_request_repository.ensure_indexes()
 
     yield
 
@@ -267,10 +287,24 @@ app.include_router(
 )
 
 app.include_router(
+    employee_notification_router,
+    prefix="/api/v1",
+)
+
+app.include_router(
     admin_payslip_router,
     prefix="/api/v1",
 )
 
+app.include_router(
+    employee_support_tickets_router,
+    prefix="/api/v1",
+)
+
+app.include_router(employee_exit_requests_router, prefix="/api/v1")
+
+app.include_router(admin_exit_requests_router, prefix="/api/v1")
+    
 app.include_router(
     recruitment_router,
     prefix="/api/v1",

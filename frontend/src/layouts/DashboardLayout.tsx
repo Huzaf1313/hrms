@@ -14,6 +14,7 @@ import AdminAnnouncements from "../pages/admin/AdminAnnouncements";
 import AdminSettings from "../pages/admin/AdminSetting";
 import AdminRecruitment from "../pages/admin/AdminRecruitment";
 import { getDashboardData, type DashboardData } from "../services/dashboardService";
+import AdminExitRequests from "../pages/admin/AdminExitRequests";
 
 interface DashboardLayoutProps {
   activePage: string;
@@ -113,6 +114,8 @@ function DashboardLayout({
             onCreateEmployee={handleCreateEmployee}
             autoOpenCreateForm={openAnnouncementFormOnMount}
           />
+        ) : activePage === "Exit Requests" ? (
+          <AdminExitRequests />
         ) : activePage === "Settings" ? (
           <AdminSettings />
         ) : (

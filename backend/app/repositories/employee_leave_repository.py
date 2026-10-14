@@ -67,29 +67,17 @@ class EmployeeLeaveRepository:
         )
 
     async def get_by_id(
-        self,
-        leave_id: str,
-    ):
-        print("DEBUG leave_id:", leave_id)
-        print("DEBUG ObjectId valid:", ObjectId.is_valid(leave_id))
-        print("DEBUG collection:", self.collection.name)
+            self,
+            leave_id: str,
+        ):
+            if not ObjectId.is_valid(leave_id):
+                return None
 
-        if not ObjectId.is_valid(leave_id):
-            return None
-
-        object_id = ObjectId(leave_id)
-
-        print("DEBUG ObjectId:", object_id)
-
-        leave = await self.collection.find_one(
-            {
-                "_id": object_id
-            }
-        )
-
-        print("DEBUG MongoDB result:", leave)
-
-        return leave
+            return await self.collection.find_one(
+                {
+                    "_id": ObjectId(leave_id)
+                }
+            )
 
     async def get_by_employee(
         self,

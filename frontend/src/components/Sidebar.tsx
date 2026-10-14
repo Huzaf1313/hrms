@@ -7,9 +7,10 @@ import {
   CalendarDays,
   Wallet,
   Megaphone,
-  Package,
+  DoorOpen,
   Settings,
   Briefcase,
+  Package,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -56,6 +57,7 @@ const sections: NavSection[] = [
       { label: "Payroll", icon: Wallet, page: "Payroll" },
       { label: "Assets", icon: Package, page: "Assets" },
       { label: "Announcement", icon: Megaphone, page: "Announcement" },
+      { label: "Exit Requests", icon: DoorOpen, page: "Exit Requests" },
       { label: "Settings", icon: Settings, page: "Settings" },
     ],
   },
