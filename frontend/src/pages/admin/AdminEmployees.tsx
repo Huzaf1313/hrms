@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import AdminEmployeeDetailsPage from "../../components/admin/AdminEmployeeDetailsPage";
 import AdminEmployeeForm from "../../components/admin/AdminEmployeeForm";
@@ -117,7 +117,27 @@ interface AdminEmployeesProps {
   autoOpenCreateForm?: boolean;
 }
 
-function AdminEmployees({ autoOpenCreateForm = false }: AdminEmployeesProps) {
+interface EmployeeSearchRequest {
+  query: string;
+  requestId: number;
+}
+
+interface EmployeeSelectionRequest {
+  employeeId: string;
+  requestId: number;
+}
+
+interface AdminEmployeesProps {
+  autoOpenCreateForm?: boolean;
+  employeeSearchRequest?: EmployeeSearchRequest;
+  employeeSelectionRequest?: EmployeeSelectionRequest;
+}
+
+function AdminEmployees({
+  autoOpenCreateForm = false,
+  employeeSearchRequest,
+  employeeSelectionRequest,
+}: AdminEmployeesProps) {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [salaryStructures, setSalaryStructures] = useState<SalaryStructure[]>(
@@ -143,6 +163,7 @@ function AdminEmployees({ autoOpenCreateForm = false }: AdminEmployeesProps) {
   } | null>(null);
 
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const lastHandledSearchRequest = useRef<number | null>(null);
 
   async function loadEmployees() {
     setIsLoading(true);
@@ -156,10 +177,57 @@ function AdminEmployees({ autoOpenCreateForm = false }: AdminEmployeesProps) {
         page,
         limit: PAGE_SIZE,
       });
+
       setEmployees(data);
+
+      const request = employeeSearchRequest;
+      const query = request?.query.trim().toLowerCase();
+
+      const shouldHandleRequest =
+        request &&
+        query &&
+        search.trim().toLowerCase() === query &&
+        lastHandledSearchRequest.current !== request.requestId;
+
+      if (shouldHandleRequest && request) {
+        lastHandledSearchRequest.current = request.requestId;
+
+        const normalize = (value: string) =>
+          value.trim().toLowerCase().replace(/\s+/g, " ");
+
+        const normalizedQuery = normalize(request.query);
+
+        const getFullName = (employee: Employee) =>
+          normalize(`${employee.first_name} ${employee.last_name}`);
+
+        // Prefer an exact full-name match.
+        let matchedEmployee = data.find(
+          (employee) => getFullName(employee) === normalizedQuery,
+        );
+
+        // Otherwise, match all search terms against the employee's full name.
+        if (!matchedEmployee) {
+          const searchTerms = normalizedQuery.split(" ");
+
+          matchedEmployee = data.find((employee) => {
+            const fullName = getFullName(employee);
+
+            return searchTerms.every((term) => fullName.includes(term));
+          });
+        }
+
+        if (matchedEmployee) {
+          setViewingEmployee(matchedEmployee);
+        } else {
+          setError(
+            `No employee found matching "${request.query}". Try searching with their full name.`,
+          );
+        }
+      }
     } catch (err) {
       const message =
         err instanceof ApiError ? err.message : "Failed to load employees.";
+
       setError(message);
     } finally {
       setIsLoading(false);
@@ -180,7 +248,13 @@ function AdminEmployees({ autoOpenCreateForm = false }: AdminEmployeesProps) {
       isCancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, departmentFilter, statusFilter, page]);
+  }, [
+        search,
+        departmentFilter,
+        statusFilter,
+        page,
+        employeeSearchRequest?.requestId,
+      ]);
 
   useEffect(() => {
     departmentService
@@ -209,6 +283,53 @@ function AdminEmployees({ autoOpenCreateForm = false }: AdminEmployeesProps) {
       .then(setShifts)
       .catch(() => setShifts([]));
   }, []);
+
+  useEffect(() => {
+    if (!employeeSearchRequest) return;
+
+    setViewingEmployee(undefined);
+    setSearch(employeeSearchRequest.query);
+    setDepartmentFilter("");
+    setStatusFilter("");
+    setPage(1);
+  }, [employeeSearchRequest]);
+
+  useEffect(() => {
+    if (!employeeSelectionRequest) return;
+
+    let cancelled = false;
+
+    setViewingEmployee(undefined);
+    setError(null);
+    setIsLoading(true);
+
+    employeeService
+      .get(employeeSelectionRequest.employeeId)
+      .then((employee) => {
+        if (!cancelled) {
+          setViewingEmployee(employee);
+        }
+      })
+      .catch((err) => {
+        if (cancelled) return;
+
+        const message =
+          err instanceof ApiError
+            ? err.message
+            : "Failed to load the selected employee.";
+
+        setError(message);
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [employeeSelectionRequest]);
 
   function openCreateForm() {
     setEditingEmployee(undefined);

@@ -150,7 +150,7 @@ function EmployeeSidebar({
       </button>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto">
+      <nav className="sidebar-scrollbar flex-1 overflow-y-auto">
         {sections.map((section, sectionIndex) => (
           <div key={section.title ?? `top-${sectionIndex}`} className="mb-5">
             {section.title && (

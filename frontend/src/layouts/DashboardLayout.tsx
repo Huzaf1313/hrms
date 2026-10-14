@@ -32,6 +32,14 @@ function DashboardLayout({
   const [openAnnouncementFormOnMount, setOpenAnnouncementFormOnMount] =
     useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [employeeSearchRequest, setEmployeeSearchRequest] = useState<{
+    query: string;
+    requestId: number;
+  } | undefined>(undefined);
+  const [employeeSelectionRequest, setEmployeeSelectionRequest] = useState<{
+    employeeId: string;
+    requestId: number;
+  } | undefined>(undefined);
 
   function handleNavigate(page: string) {
     // Consume the "create employee" intent so it only applies to the very
@@ -48,6 +56,21 @@ function DashboardLayout({
     onNavigate(page);
   }
 
+  function handleSearchEmployee(query: string) {
+    const trimmedQuery = query.trim();
+
+    if (!trimmedQuery) return;
+
+    setOpenEmployeeFormOnMount(false);
+
+    setEmployeeSearchRequest((current) => ({
+      query: trimmedQuery,
+      requestId: (current?.requestId ?? 0) + 1,
+    }));
+
+    handleNavigate("Employees");
+  }
+
   function handleCreateEmployee() {
     setOpenEmployeeFormOnMount(true);
     onNavigate("Employees");
@@ -56,6 +79,17 @@ function DashboardLayout({
   function handleCreateAnnouncement() {
     setOpenAnnouncementFormOnMount(true);
     onNavigate("Announcement");
+  }
+
+  function handleSelectEmployee(employeeId: string) {
+    setOpenEmployeeFormOnMount(false);
+
+    setEmployeeSelectionRequest((current) => ({
+      employeeId,
+      requestId: (current?.requestId ?? 0) + 1,
+    }));
+
+    handleNavigate("Employees");
   }
 
   useEffect(() => {
@@ -90,13 +124,19 @@ function DashboardLayout({
           pageTitle={activePage}
           collapsed={sidebarCollapsed}
           onToggleSidebar={() => setSidebarCollapsed((previous) => !previous)}
+          onSearchEmployee={handleSearchEmployee}
+          onSelectEmployee={handleSelectEmployee}
         />
 
         {/* Scoped so a crash in one admin page leaves the sidebar and header
             usable, instead of blanking the whole screen. */}
         <ErrorBoundary label={activePage}>
           {activePage === "Employees" ? (
-          <AdminEmployees autoOpenCreateForm={openEmployeeFormOnMount} />
+          <AdminEmployees
+            autoOpenCreateForm={openEmployeeFormOnMount}
+            employeeSearchRequest={employeeSearchRequest}
+            employeeSelectionRequest={employeeSelectionRequest}
+          />
         ) : activePage === "Recruitment" ? (
           <AdminRecruitment />
         ) : activePage === "Attendance" ? (

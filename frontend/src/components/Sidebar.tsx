@@ -98,7 +98,7 @@ function Sidebar({ activePage, onNavigate, collapsed }: SidebarProps) {
       </button>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto">
+      <nav className="sidebar-scrollbar flex-1 overflow-y-auto">
         {sections.map((section) => (
           <div key={section.title} className="mb-5">
             {!collapsed ? (
