@@ -1,13 +1,37 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Eye, EyeOff, ShieldCheck, Briefcase, Check } from "lucide-react";
 import { api, ApiError } from "../services/api";
-import { Circle, Check, Eye, EyeOff } from "lucide-react";
+import { AuthShell } from "../components/auth/AuthShell";
+import { AuthField } from "../components/auth/AuthField";
+import { OtpInput } from "../components/auth/OtpInput";
+import {
+  PasswordStrength,
+  passwordRules,
+} from "../components/auth/PasswordStrength";
 
 type Step = 1 | 2 | 3;
 
-const roles = [
-  { label: "Manager", value: "manager" },
-  { label: "HR", value: "hr_admin" },
+interface RoleOption {
+  label: string;
+  value: string;
+  description: string;
+  icon: typeof Briefcase;
+}
+
+const roles: RoleOption[] = [
+  {
+    label: "Manager",
+    value: "manager",
+    description: "Manage team approvals, attendance, goals, and appraisals",
+    icon: Briefcase,
+  },
+  {
+    label: "HR Administrator",
+    value: "hr_admin",
+    description: "Administer workforce records, payroll, policies, and onboarding",
+    icon: ShieldCheck,
+  },
 ];
 
 interface RegistrationForm {
@@ -25,39 +49,15 @@ const NAME_PATTERN = /^[A-Za-z][A-Za-z .'-]{1,99}$/;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_PATTERN = /^\+?[0-9]{10,15}$/;
 
-const passwordRules = [
-  {
-    label: "At least 8 characters",
-    test: (value: string) => value.length >= 8,
-  },
-  {
-    label: "One uppercase letter",
-    test: (value: string) => /[A-Z]/.test(value),
-  },
-  {
-    label: "One lowercase letter",
-    test: (value: string) => /[a-z]/.test(value),
-  },
-  {
-    label: "One number",
-    test: (value: string) => /[0-9]/.test(value),
-  },
-  {
-    label: "One special character",
-    test: (value: string) => /[^A-Za-z0-9]/.test(value),
-  },
-];
-
 function validateRegistrationForm(
   form: RegistrationForm,
-  step: Step,
+  step: Step
 ): FieldErrors {
   const errors: FieldErrors = {};
 
   if (step === 1) {
     // Full Name
     const name = form.full_name.trim();
-
     if (!name) {
       errors.full_name = "Please enter your full name.";
     } else if (!NAME_PATTERN.test(name)) {
@@ -67,7 +67,6 @@ function validateRegistrationForm(
 
     // Email
     const email = form.email.trim();
-
     if (!email) {
       errors.email = "Please enter your email address.";
     } else if (
@@ -83,22 +82,17 @@ function validateRegistrationForm(
 
     // Phone Number
     const phone = form.phone_number.trim().replace(/[\s-]/g, "");
-
     if (!phone) {
       errors.phone_number = "Please enter your phone number.";
     } else if (!PHONE_PATTERN.test(phone)) {
-      errors.phone_number =
-        "Enter 10 to 15 digits (optional + prefix).";
+      errors.phone_number = "Enter 10 to 15 digits (optional + prefix).";
     }
 
     // Password
     if (!form.password) {
       errors.password = "Please enter a password.";
     } else {
-      const failedRule = passwordRules.find(
-        (rule) => !rule.test(form.password),
-      );
-
+      const failedRule = passwordRules.find((rule) => !rule.test(form.password));
       if (failedRule) {
         errors.password = `Password needs ${failedRule.label.toLowerCase()}.`;
       }
@@ -142,10 +136,7 @@ function Registration() {
     role: "",
   });
 
-  const updateField = (
-    field: keyof RegistrationForm,
-    value: string,
-  ) => {
+  const updateField = (field: keyof RegistrationForm, value: string) => {
     setForm((previous) => ({
       ...previous,
       [field]: value,
@@ -162,11 +153,8 @@ function Registration() {
 
   const validateStep = () => {
     setError("");
-
     const errors = validateRegistrationForm(form, step);
-
     setFieldErrors(errors);
-
     return Object.keys(errors).length === 0;
   };
 
@@ -174,536 +162,441 @@ function Registration() {
     if (!validateStep()) {
       return;
     }
-
     setStep((previous) => (previous + 1) as Step);
   };
 
   const handleBack = () => {
     setError("");
     setSuccess("");
-
     setStep((previous) => (previous - 1) as Step);
   };
 
-const handleRegistration = async () => {
-  if (!validateStep()) return;
+  const handleRegistration = async () => {
+    if (!validateStep()) return;
 
-  setIsLoading(true);
-  setError("");
-  setSuccess("");
+    setIsLoading(true);
+    setError("");
+    setSuccess("");
 
-  try {
-    await api.post("/auth/register/request-otp", {
-      full_name: form.full_name.trim(),
-      email: form.email.trim(),
-      phone_number: form.phone_number.trim(),
-      password: form.password,
-      role: form.role,
-    });
+    try {
+      await api.post("/auth/register/request-otp", {
+        full_name: form.full_name.trim(),
+        email: form.email.trim(),
+        phone_number: form.phone_number.trim(),
+        password: form.password,
+        role: form.role,
+      });
 
-    setSuccess(
-      "OTP sent successfully. Please check your email.",
-    );
-
-    setOtp("");
-    setStep(3);
-  } catch (error: unknown) {
-    setError(
-      error instanceof ApiError
-        ? error.message
-        : "Unable to send OTP. Please try again.",
-    );
-  } finally {
-    setIsLoading(false);
-  }
-};
-
-const handleVerifyOTP = async () => {
-  if (!otp.trim()) {
-    setError("Please enter the OTP.");
-    return;
-  }
-
-  if (!/^\d{6}$/.test(otp.trim())) {
-    setError("OTP must be exactly 6 digits.");
-    return;
-  }
-
-  setIsLoading(true);
-  setError("");
-  setSuccess("");
-
-  try {
-    await api.post("/auth/register/verify-otp", {
-      email: form.email.trim(),
-      otp: otp.trim(),
-    });
-
-    setSuccess(
-      "Registration successful! Redirecting you to the login page...",
-    );
-
-    setTimeout(() => {
-      navigate("/login");
-    }, 1500);
-  } catch (error: unknown) {
-    setError(
-      error instanceof ApiError
-        ? error.message
-        : "Unable to verify OTP. Please try again.",
-    );
-  } finally {
-    setIsLoading(false);
-  }
-};
-
-  const renderInput = (
-    label: string,
-    field: keyof RegistrationForm,
-    type = "text",
-    placeholder = "",
-  ) => {
-    const isPasswordField = type === "password";
-
-    const isPasswordVisible =
-      field === "password"
-        ? showPassword
-        : showConfirmPassword;
-
-    const inputType =
-      isPasswordField && isPasswordVisible
-        ? "text"
-        : type;
-
-    const togglePasswordVisibility = () => {
-      if (field === "password") {
-        setShowPassword((previous) => !previous);
-      } else if (field === "confirm_password") {
-        setShowConfirmPassword((previous) => !previous);
-      }
-    };
-
-    return (
-      <div>
-        <label
-          htmlFor={field}
-          className="mb-2 block text-sm font-semibold text-[#17213a]"
-        >
-          {label}
-        </label>
-
-        <div className="relative">
-          <input
-            id={field}
-            type={inputType}
-            value={form[field]}
-            onChange={(event) =>
-              updateField(field, event.target.value)
-            }
-            placeholder={placeholder}
-            aria-invalid={Boolean(fieldErrors[field])}
-            className={`w-full rounded-xl border px-4 py-4 text-[#17213a] outline-none transition placeholder:text-[#8993a7] focus:ring-2 ${
-              fieldErrors[field]
-                ? "border-red-400 focus:border-red-400 focus:ring-red-400/20"
-                : "border-[#d6dbe6] focus:border-[#2563eb] focus:ring-[#2563eb]/20"
-            } ${isPasswordField ? "pr-12" : ""}`}
-          />
-
-          {isPasswordField && (
-            <button
-              type="button"
-              onClick={togglePasswordVisibility}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-[#68758e] transition hover:text-[#2563eb]"
-              aria-label={
-                isPasswordVisible
-                  ? `Hide ${label.toLowerCase()}`
-                  : `Show ${label.toLowerCase()}`
-              }
-            >
-              {isPasswordVisible ? (
-                <EyeOff size={20} />
-              ) : (
-                <Eye size={20} />
-              )}
-            </button>
-          )}
-        </div>
-
-        {fieldErrors[field] && (
-          <p className="mt-1.5 text-xs font-medium text-red-600">
-            {fieldErrors[field]}
-          </p>
-        )}
-
-        {field === "password" &&
-          form.password.length > 0 && (
-            <ul className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1">
-              {passwordRules.map((rule) => {
-                const passed = rule.test(form.password);
-
-                return (
-                  <li
-                    key={rule.label}
-                    className={`flex items-center gap-1.5 text-[11px] font-medium ${
-                      passed
-                        ? "text-emerald-600"
-                        : "text-gray-400"
-                    }`}
-                  >
-                    {passed ? (
-                      <Check aria-hidden="true" className="h-3 w-3 shrink-0" />
-                    ) : (
-                      <Circle aria-hidden="true" className="h-3 w-3 shrink-0" />
-                    )}
-                    {rule.label}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-      </div>
-    );
+      setSuccess("OTP sent successfully. Please check your email.");
+      setOtp("");
+      setStep(3);
+    } catch (err: unknown) {
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : "Unable to send OTP. Please try again."
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
+  const handleVerifyOTP = async () => {
+    if (!otp.trim()) {
+      setError("Please enter the OTP.");
+      return;
+    }
+
+    if (!/^\d{6}$/.test(otp.trim())) {
+      setError("OTP must be exactly 6 digits.");
+      return;
+    }
+
+    setIsLoading(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      await api.post("/auth/register/verify-otp", {
+        email: form.email.trim(),
+        otp: otp.trim(),
+      });
+
+      setSuccess("Registration successful! Redirecting you to the login page...");
+
+      setTimeout(() => {
+        navigate("/login");
+      }, 1500);
+    } catch (err: unknown) {
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : "Unable to verify OTP. Please try again."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const stepLabels = [
+    { number: 1, title: "Personal Details" },
+    { number: 2, title: "Role Details" },
+    { number: 3, title: "Verification" },
+  ];
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f8faff] via-white to-[#eef2ff] px-4 py-4 sm:px-6">
-      <div className="mx-auto flex min-h-[calc(100vh-2rem)] max-w-6xl items-center justify-center">
-        <div className="grid w-full overflow-hidden rounded-2xl bg-white shadow-2xl lg:grid-cols-2">
+    <AuthShell
+      headline="Build a"
+      accent="Better Workplace."
+      subcopy="Create your HRMS account and get started with smarter workforce management and automated HR operations."
+      features={[
+        "Employee Management",
+        "Attendance & Leave",
+        "Reports & Analytics",
+        "Performance & Goals",
+      ]}
+    >
+      <div className="space-y-4">
+        {/* Step Header */}
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-ink-900">
+            Create Your Account
+          </h1>
+          <p className="mt-1 text-xs text-ink-400">
+            {step === 1 && "Enter your contact and account security credentials"}
+            {step === 2 && "Select the administrative portal role for your account"}
+            {step === 3 && `Enter the verification code sent to ${form.email}`}
+          </p>
+        </div>
 
-          {/* Left Section */}
-          <div className="hidden bg-gradient-to-br from-[#f5f3ff] via-[#eef2ff] to-[#e0e7ff] p-8 lg:block">
-            <div className="flex h-full flex-col justify-center">
+        {/* 3-Step Progress Rail (Fixes previous 2-dot bug) */}
+        <div className="flex items-center justify-between" aria-label="Registration Progress">
+          {stepLabels.map((item, index) => {
+            const isCompleted = step > item.number;
+            const isCurrent = step === item.number;
 
-              {/* Logo */}
-              <div className="mb-8">
-                <h1 className="text-2xl font-bold text-[#17213a]">
-                  HRMS
-                </h1>
-
-                <p className="mt-1 text-sm text-[#4b5875]">
-                  Human Resource Management System
-                </p>
-              </div>
-
-              {/* Heading */}
-              <h2 className="max-w-xl text-4xl font-bold leading-tight text-[#14213d]">
-                Build a{" "}
-                <span className="text-[#2563eb]">
-                  Better Workplace.
-                </span>
-              </h2>
-
-              <p className="mt-4 max-w-xl text-base leading-7 text-[#52607a]">
-                Create your HRMS account and get started with
-                smarter workforce management.
-              </p>
-
-              {/* Features */}
-              <div className="mt-6 grid grid-cols-2 gap-3">
-                {[
-                  "Employee Management",
-                  "Attendance & Leave",
-                  "Reports & Analytics",
-                  "Performance & Goals",
-                ].map((feature) => (
+            return (
+              <div key={item.number} className="flex flex-1 items-center">
+                <div className="flex flex-col items-center">
                   <div
-                    key={feature}
-                    className="rounded-xl bg-white/80 p-3 shadow-sm"
+                    className={`technical-label flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-all duration-200 ${
+                      isCompleted
+                        ? "bg-brand-600 text-white shadow-sm"
+                        : isCurrent
+                        ? "border-2 border-brand-600 bg-surface text-brand-600 shadow-sm"
+                        : "border border-line bg-surface-muted text-ink-300"
+                    }`}
                   >
-                    <p className="text-sm font-semibold text-[#17213a]">
-                      {feature}
-                    </p>
+                    {isCompleted ? <Check className="h-4 w-4 stroke-[2.5]" /> : item.number}
                   </div>
-                ))}
-              </div>
+                  <span
+                    className={`technical-label mt-1 text-[10px] font-semibold tracking-wider ${
+                      isCurrent
+                        ? "text-brand-600"
+                        : isCompleted
+                        ? "text-ink-800"
+                        : "text-ink-300"
+                    }`}
+                  >
+                    {item.title}
+                  </span>
+                </div>
 
-            </div>
+                {index < stepLabels.length - 1 && (
+                  <div
+                    className={`mx-2 mb-4 h-0.5 flex-1 transition-colors duration-200 ${
+                      step > item.number ? "bg-brand-600" : "bg-line"
+                    }`}
+                  />
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Alert Messages */}
+        {error && (
+          <div
+            role="alert"
+            aria-live="polite"
+            className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-medium text-red-700"
+          >
+            {error}
           </div>
+        )}
 
-          {/* Right Section */}
-          <div className="flex items-center justify-center p-6 sm:p-8 lg:p-10">
-            <div className="w-full max-w-lg">
+        {success && (
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs font-medium text-emerald-700">
+            {success}
+          </div>
+        )}
 
-              {/* Header */}
-              <div className="text-center">
-                <h1 className="text-2xl font-bold text-[#17213a]">
-                  HRMS
-                </h1>
+        {/* Step 1: Personal and Security Info */}
+        {step === 1 && (
+          <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2">
+            <AuthField
+              id="register-full-name"
+              label="Full Name"
+              value={form.full_name}
+              onChange={(e) => updateField("full_name", e.target.value)}
+              error={fieldErrors.full_name}
+              placeholder="John Doe"
+              autoComplete="name"
+              disabled={isLoading}
+            />
 
-                <p className="mt-1 text-sm text-[#52607a]">
-                  Human Resource Management System
-                </p>
+            <AuthField
+              id="register-email"
+              label="Work Email"
+              type="email"
+              value={form.email}
+              onChange={(e) => updateField("email", e.target.value)}
+              error={fieldErrors.email}
+              placeholder="name@company.com"
+              autoComplete="email"
+              disabled={isLoading}
+            />
 
-                <h2 className="mt-5 text-2xl font-bold text-[#14213d]">
-                  Create Your Account
-                </h2>
+            <div className="sm:col-span-2">
+              <AuthField
+                id="register-phone"
+                label="Phone Number"
+                type="tel"
+                value={form.phone_number}
+                onChange={(e) => updateField("phone_number", e.target.value)}
+                error={fieldErrors.phone_number}
+                placeholder="+91 9876543210"
+                autoComplete="tel"
+                disabled={isLoading}
+              />
+            </div>
 
-                <p className="mt-2 text-[#52607a]">
-                  Complete the steps below to create your HRMS account
-                </p>
-              </div>
-
-              {/* Step Indicator */}
-              <div className="mt-8 flex items-center justify-center">
-                {[1, 2].map((item) => (
-                  <div
-                    key={item}
-                    className="flex items-center"
-                  >
-                    <div
-                      className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold ${
-                        step >= item
-                          ? "bg-[#2563eb] text-white"
-                          : "bg-[#eef0f5] text-[#8993a7]"
-                      }`}
-                    >
-                      {item}
-                    </div>
-
-                    {item < 2 && (
-                      <div
-                        className={`h-1 w-10 sm:w-16 ${
-                          step > item
-                            ? "bg-[#2563eb]"
-                            : "bg-[#e2e5ec]"
-                        }`}
-                      />
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {/* Step Title */}
-              <div className="mt-5">
-                <h3 className="text-lg font-semibold text-[#17213a]">
-                  {step === 1 && "Personal Details"}
-                  {step === 2 && "Role Details"}
-                </h3>
-
-                <p className="mt-1 text-sm text-[#68758e]">
-                  {step === 1 &&
-                    "Enter your personal information to get started."}
-
-                  {step === 2 &&
-                    "Select the position you are registering for."}
-                </p>
-              </div>
-
-              {/* Error */}
-              {error && (
-                <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                  {error}
-                </div>
-              )}
-
-              {/* Success */}
-              {success && (
-                <div className="mt-4 rounded-xl border border-green-200 bg-green-50 p-3 text-sm text-green-700">
-                  {success}
-                </div>
-              )}
-
-              {/* Step 1 */}
-              {step === 1 && (
-                <div className="mt-4 space-y-4">
-                  {renderInput(
-                    "Full Name",
-                    "full_name",
-                    "text",
-                    "Enter your full name",
-                  )}
-
-                  {renderInput(
-                    "Email Address",
-                    "email",
-                    "email",
-                    "Enter your email address",
-                  )}
-
-                  {renderInput(
-                    "Phone Number",
-                    "phone_number",
-                    "tel",
-                    "Enter your phone number",
-                  )}
-
-                  {renderInput(
-                    "Password",
-                    "password",
-                    "password",
-                    "Create a password",
-                  )}
-
-                  {renderInput(
-                    "Confirm Password",
-                    "confirm_password",
-                    "password",
-                    "Confirm your password",
-                  )}
-                </div>
-              )}
-
-              {/* Step 2 */}
-              {step === 2 && (
-                <div className="mt-6">
-                  <label
-                    htmlFor="role"
-                    className="mb-2 block text-sm font-semibold text-[#17213a]"
-                  >
-                    Select Position
-                  </label>
-
-                  <select
-                    id="role"
-                    value={form.role}
-                    onChange={(event) =>
-                      updateField("role", event.target.value)
-                    }
-                    className="w-full rounded-xl border border-[#d6dbe6] bg-white px-4 py-4 text-[#17213a] outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/20"
-                  >
-                    <option value="">
-                      Select the position you are registering for
-                    </option>
-
-                    {roles.map((role) => (
-                      <option
-                        key={role.value}
-                        value={role.value}
-                      >
-                        {role.label}
-                      </option>
-                    ))}
-                  </select>
-
-                  {fieldErrors.role && (
-                    <p className="mt-1.5 text-xs font-medium text-red-600">
-                      {fieldErrors.role}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* Step 3 - OTP Verification */}
-              {step === 3 && (
-                <div className="space-y-5">
-                  <div>
-                    <label
-                      htmlFor="otp"
-                      className="block text-sm font-medium text-gray-700"
-                    >
-                      Email Verification OTP
-                    </label>
-
-                    <p className="mt-1 text-sm text-gray-500">
-                      Enter the 6-digit OTP sent to{" "}
-                      <span className="font-medium text-gray-700">
-                        {form.email}
-                      </span>
-                    </p>
-
-                    <input
-                      id="otp"
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={6}
-                      value={otp}
-                      onChange={(event) => {
-                        const value = event.target.value
-                          .replace(/\D/g, "")
-                          .slice(0, 6);
-
-                        setOtp(value);
-                        setError("");
-                        setSuccess("");
-                      }}
-                      placeholder="Enter 6-digit OTP"
-                      className="mt-3 block w-full rounded-lg border border-gray-300 px-4 py-3 text-center text-lg tracking-[0.4em] outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                    />
-
-                    <p className="mt-2 text-xs text-gray-500">
-                      The OTP is valid for 5 minutes.
-                    </p>
-                  </div>
-
+            <div className="sm:col-span-1">
+              <AuthField
+                id="register-password"
+                label="Password"
+                type={showPassword ? "text" : "password"}
+                value={form.password}
+                onChange={(e) => updateField("password", e.target.value)}
+                error={fieldErrors.password}
+                placeholder="Create strong password"
+                autoComplete="new-password"
+                disabled={isLoading}
+                icon={
                   <button
                     type="button"
-                    onClick={handleVerifyOTP}
-                    disabled={isLoading || otp.length !== 6}
-                    className="w-full rounded-lg bg-blue-600 px-4 py-3 font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="p-1 text-ink-400 transition-colors hover:text-ink-800"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
                   >
-                    {isLoading ? "Verifying..." : "Verify OTP & Register"}
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
+                }
+              />
+              <PasswordStrength value={form.password} />
+            </div>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setStep(2);
-                      setOtp("");
-                      setError("");
-                      setSuccess("");
-                    }}
-                    disabled={isLoading}
-                    className="w-full text-sm font-medium text-gray-600 hover:text-gray-900"
-                  >
-                    ← Back to Registration
-                  </button>
-                </div>
-              )}
-
-              {/* Navigation */}
-              {step < 3 && (
-                <div className="mt-6 flex gap-3">
-                  {step > 1 && (
-                    <button
-                      type="button"
-                      onClick={handleBack}
-                      disabled={isLoading}
-                      className="w-1/3 rounded-xl border border-[#d6dbe6] py-3 font-semibold text-[#52607a] transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      Back
-                    </button>
-                  )}
-
-                  {step === 1 ? (
-                    <button
-                      type="button"
-                      onClick={handleNext}
-                      disabled={isLoading}
-                      className="w-full rounded-xl bg-[#2563eb] py-4 text-lg font-semibold text-white shadow-lg transition hover:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      Continue
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={handleRegistration}
-                      disabled={isLoading}
-                      className="w-2/3 rounded-xl bg-[#2563eb] py-4 text-lg font-semibold text-white shadow-lg transition hover:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {isLoading ? "Sending OTP..." : "Send OTP"}
-                    </button>
-                  )}
-                </div>
-              )}
-
-              {/* Login */}
-              <p className="mt-6 text-center text-sm text-[#52607a]">
-                Already have an account?{" "}
+            <AuthField
+              id="register-confirm-password"
+              label="Confirm Password"
+              type={showConfirmPassword ? "text" : "password"}
+              value={form.confirm_password}
+              onChange={(e) => updateField("confirm_password", e.target.value)}
+              error={fieldErrors.confirm_password}
+              placeholder="Re-enter password"
+              autoComplete="new-password"
+              disabled={isLoading}
+              icon={
                 <button
                   type="button"
-                  onClick={() => navigate("/login")}
-                  className="font-semibold text-[#2563eb] hover:underline"
+                  onClick={() => setShowConfirmPassword((prev) => !prev)}
+                  className="p-1 text-ink-400 transition-colors hover:text-ink-800"
+                  aria-label={
+                    showConfirmPassword ? "Hide password" : "Show password"
+                  }
                 >
-                  Sign In
+                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
-              </p>
+              }
+            />
+          </div>
+        )}
 
+        {/* Step 2: Role Selection as Selectable Cards */}
+        {step === 2 && (
+          <div className="space-y-3">
+            <label className="technical-label block text-[11px] font-semibold uppercase tracking-wider text-ink-400">
+              Select Position / Role
+            </label>
+
+            <div className="grid gap-3">
+              {roles.map((role) => {
+                const isSelected = form.role === role.value;
+                const IconComponent = role.icon;
+
+                return (
+                  <button
+                    key={role.value}
+                    type="button"
+                    onClick={() => updateField("role", role.value)}
+                    className={`group relative flex items-start gap-4 rounded-xl border p-4 text-left transition-all duration-150 ${
+                      isSelected
+                        ? "border-brand-600 bg-brand-50/30 ring-2 ring-brand-500/20"
+                        : "border-line bg-surface hover:border-brand-500/40 hover:bg-surface-muted"
+                    }`}
+                  >
+                    <div
+                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors ${
+                        isSelected
+                          ? "bg-brand-600 text-white"
+                          : "bg-surface-muted text-ink-600 group-hover:text-brand-600"
+                      }`}
+                    >
+                      <IconComponent size={20} />
+                    </div>
+
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-bold text-ink-900">
+                          {role.label}
+                        </span>
+                        <div
+                          className={`flex h-4 w-4 items-center justify-center rounded-full border transition-all ${
+                            isSelected
+                              ? "border-brand-600 bg-brand-600"
+                              : "border-ink-300"
+                          }`}
+                        >
+                          {isSelected && (
+                            <span className="h-1.5 w-1.5 rounded-full bg-white" />
+                          )}
+                        </div>
+                      </div>
+                      <p className="mt-1 text-xs leading-relaxed text-ink-600">
+                        {role.description}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {fieldErrors.role && (
+              <p
+                role="alert"
+                aria-live="polite"
+                className="mt-1.5 text-xs font-medium text-red-600"
+              >
+                {fieldErrors.role}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Step 3: OTP Verification */}
+        {step === 3 && (
+          <div className="space-y-4">
+            <div className="rounded-xl border border-line bg-surface-muted p-4">
+              <span className="technical-label block text-[11px] font-semibold uppercase tracking-wider text-ink-400">
+                Registered Work Email
+              </span>
+              <span className="mt-0.5 block text-sm font-semibold text-ink-900">
+                {form.email}
+              </span>
+              <p className="mt-2 text-xs text-ink-600">
+                The one-time verification code is valid for 5 minutes.
+              </p>
+            </div>
+
+            <div className="py-2">
+              <OtpInput
+                value={otp}
+                onChange={(val) => {
+                  setOtp(val);
+                  setError("");
+                  setSuccess("");
+                }}
+                disabled={isLoading}
+                autoFocus
+              />
+            </div>
+
+            <div className="space-y-2.5 pt-2">
+              <button
+                type="button"
+                onClick={handleVerifyOTP}
+                disabled={isLoading || otp.length !== 6}
+                className="w-full rounded-xl bg-brand-600 py-3.5 text-sm font-semibold text-white shadow-md shadow-brand-600/20 transition-all hover:bg-brand-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isLoading ? "Verifying..." : "Verify OTP & Complete Setup"}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setStep(2);
+                  setOtp("");
+                  setError("");
+                  setSuccess("");
+                }}
+                disabled={isLoading}
+                className="w-full rounded-xl border border-line py-2.5 text-xs font-semibold text-ink-600 transition-colors hover:bg-surface-muted"
+              >
+                ← Back to Role Details
+              </button>
             </div>
           </div>
+        )}
 
-        </div>
+        {/* Navigation Buttons for Step 1 & 2 */}
+        {step < 3 && (
+          <div className="flex items-center gap-3 pt-2">
+            {step > 1 && (
+              <button
+                type="button"
+                onClick={handleBack}
+                disabled={isLoading}
+                className="w-1/3 rounded-xl border border-line py-3.5 text-sm font-semibold text-ink-600 transition-colors hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Back
+              </button>
+            )}
+
+            {step === 1 ? (
+              <button
+                type="button"
+                onClick={handleNext}
+                disabled={isLoading}
+                className="w-full rounded-xl bg-brand-600 py-3.5 text-sm font-semibold text-white shadow-md shadow-brand-600/20 transition-all hover:bg-brand-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Continue
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleRegistration}
+                disabled={isLoading}
+                className="w-2/3 rounded-xl bg-brand-600 py-3.5 text-sm font-semibold text-white shadow-md shadow-brand-600/20 transition-all hover:bg-brand-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isLoading ? "Sending Code..." : "Send Verification Code"}
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Footer Link to Login */}
+        <p className="text-center text-xs text-ink-600">
+          Already have an account?{" "}
+          <button
+            type="button"
+            onClick={() => navigate("/login")}
+            className="font-semibold text-brand-600 transition-colors hover:text-brand-700 hover:underline"
+          >
+            Sign In
+          </button>
+        </p>
       </div>
-    </div>
+    </AuthShell>
   );
 }
 

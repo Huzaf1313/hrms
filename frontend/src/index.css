@@ -1,6 +1,28 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Manrope:wght@500;700&family=Space+Grotesk:wght@400;500&display=swap");
 @import "tailwindcss";
 
+@theme {
+  --color-brand-50:  #eff6ff;
+  --color-brand-100: #dbeafe;
+  --color-brand-500: #3b82f6;
+  --color-brand-600: #2563eb;
+  --color-brand-700: #1d4ed8;
+  --color-brand-900: #1e3a8a;
+
+  --color-ink-300:   #8993a7;
+  --color-ink-400:   #68758e;
+  --color-ink-600:   #52607a;
+  --color-ink-800:   #17213a;
+  --color-ink-900:   #14213d;
+
+  --color-panel-800: #131c31;
+  --color-panel-900: #0b1220;
+
+  --color-line:      #d6dbe6;
+  --color-surface:        #ffffff;
+  --color-surface-muted:  #f8faff;
+}
+
 body {
   font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
     sans-serif;
@@ -21,6 +43,11 @@ svg.lucide {
 
 aside.app-sidebar svg.lucide {
   color: #fff !important;
+}
+
+/* Auth dark brand panel Lucide icon color override so icons don't render black */
+.auth-brand-panel svg.lucide {
+  color: currentColor !important;
 }
 
 :is(div, span):is(
@@ -355,5 +382,58 @@ aside.app-sidebar svg.lucide {
 
   .payslip-section-title {
     font-size: 16px;
+  }
+}
+
+/* =========================================
+   Auth entrance and aurora animations
+   ========================================= */
+
+@keyframes auth-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.auth-rise {
+  animation: auth-rise 400ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes auth-aurora-drift-1 {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(6%, 10%) scale(1.06);
+  }
+}
+
+@keyframes auth-aurora-drift-2 {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(-8%, -6%) scale(1.1);
+  }
+}
+
+.auth-aurora-1 {
+  animation: auth-aurora-drift-1 18s ease-in-out infinite;
+}
+
+.auth-aurora-2 {
+  animation: auth-aurora-drift-2 22s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-rise,
+  .auth-aurora-1,
+  .auth-aurora-2 {
+    animation: none;
   }
 }
