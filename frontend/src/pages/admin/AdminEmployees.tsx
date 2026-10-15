@@ -4,6 +4,7 @@ import { Check } from "lucide-react";
 import AdminEmployeeDetailsPage from "../../components/admin/AdminEmployeeDetailsPage";
 import AdminEmployeeForm from "../../components/admin/AdminEmployeeForm";
 import AdminEmployeeTable from "../../components/admin/AdminEmployeeTable";
+import { TableSkeleton } from "../../components/ui";
 import { ApiError } from "../../services/api";
 import {
   salaryStructureService,
@@ -432,8 +433,8 @@ function AdminEmployees({ autoOpenCreateForm = false }: AdminEmployeesProps) {
         </div>
 
         {isLoading && (
-          <div className="py-10 text-center text-gray-500">
-            Loading employees…
+          <div className="py-2">
+            <TableSkeleton rows={6} columns={6} />
           </div>
         )}
 

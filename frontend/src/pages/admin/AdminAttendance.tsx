@@ -21,6 +21,7 @@ import {
   SlidersHorizontal,
   X,
 } from "lucide-react";
+import { CardSkeleton, TableRowSkeleton } from "../../components/ui";
 import { ApiError } from "../../services/api";
 import { attendanceService } from "../../services/attendanceService";
 import { departmentService } from "../../services/departmentService";
@@ -876,7 +877,7 @@ function AdminAttendance() {
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr><td colSpan={10} className="py-10 text-center text-gray-500">Loading attendance...</td></tr>
+                  <TableRowSkeleton rows={6} columns={10} />
                 ) : error ? (
                   <tr><td colSpan={10} className="py-10 text-center text-rose-600">{error}</td></tr>
                 ) : sortedRecords.length === 0 ? (
@@ -960,7 +961,7 @@ function AdminAttendance() {
               horizontal scroll hides half the row behind the viewport edge. */}
           <div className="mt-4 space-y-3 md:hidden">
             {isLoading ? (
-              <p className="py-6 text-center text-sm text-gray-500">Loading attendance...</p>
+              <CardSkeleton count={3} lines={2} className="space-y-3" />
             ) : error ? (
               <p className="py-6 text-center text-sm text-rose-600">{error}</p>
             ) : sortedRecords.length === 0 ? (

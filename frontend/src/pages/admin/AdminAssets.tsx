@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { DependencyList, ReactNode } from "react";
+import { TableSkeleton } from "../../components/ui";
 import {
   BarChart3,
   Check,
@@ -161,7 +162,11 @@ function PanelState({
   children: ReactNode;
 }) {
   if (loading) {
-    return <p className="py-10 text-center text-sm text-gray-400">Loading...</p>;
+    return (
+      <div className="py-4">
+        <TableSkeleton rows={4} columns={5} />
+      </div>
+    );
   }
 
   if (error) {

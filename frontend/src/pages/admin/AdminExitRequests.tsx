@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Download, X } from "lucide-react";
+import { TableRowSkeleton } from "../../components/ui";
 import ExitStatusBadge from "../../components/employee/ExitStatusBadge";
 import { ApiError } from "../../services/api";
 import {
@@ -174,7 +175,7 @@ function AdminExitRequests() {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {loading && (
-              <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-500">Loading…</td></tr>
+              <TableRowSkeleton rows={4} columns={5} />
             )}
             {!loading && items.length === 0 && (
               <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-500">No exit requests found.</td></tr>

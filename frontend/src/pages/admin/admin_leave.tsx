@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { TableRowSkeleton } from "../../components/ui";
 import {
   CalendarDays,
   Clock,
@@ -717,7 +718,7 @@ function AdminLeave() {
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan={9} className="py-10 text-center text-gray-500">Loading leave requests...</td></tr>
+                <TableRowSkeleton rows={5} columns={9} />
               ) : error ? (
                 <tr><td colSpan={9} className="py-10 text-center text-rose-600">{error}</td></tr>
               ) : requests.length === 0 ? (
