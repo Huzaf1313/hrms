@@ -13,16 +13,23 @@ class EmployeeRepository:
             {"_id": result.inserted_id}
         )
 
-    async def get_by_id(self, employee_id: str):
+    async def get_by_id(
+        self,
+        employee_id: str,
+        created_by: str | None = None,
+    ):
         if not ObjectId.is_valid(employee_id):
             return None
 
-        return await self.collection.find_one(
-            {
-                "_id": ObjectId(employee_id),
-                "employee_id": {"$exists": True},
-            }
-        )
+        query = {
+            "_id": ObjectId(employee_id),
+            "employee_id": {"$exists": True},
+        }
+
+        if created_by is not None:
+            query["created_by"] = created_by
+
+        return await self.collection.find_one(query)
 
     async def get_by_employee_id(self, employee_id: str):
         return await self.collection.find_one(
@@ -39,25 +46,34 @@ class EmployeeRepository:
             }
         )
 
+    
     async def get_all(
         self,
-        filters: dict,
-        skip: int,
-        limit: int,
+        filters: dict | None = None,
+        skip: int = 0,
+        limit: int = 10,
+        created_by: str | None = None,
     ):
-        filters = {
+        query = {
             "employee_id": {"$exists": True},
-            **filters,
         }
 
+        if filters:
+            query.update(filters)
+
+        # Apply ownership last so regular filters cannot override it.
+        if created_by is not None:
+            query["created_by"] = created_by
+
         cursor = (
-            self.collection
-            .find(filters)
+            self.collection.find(query)
+            .sort("created_at", -1)
             .skip(skip)
             .limit(limit)
         )
 
         return await cursor.to_list(length=limit)
+
 
     async def count_employees(self):
         return await self.collection.count_documents(
@@ -135,50 +151,72 @@ class EmployeeRepository:
         self,
         employee_id: str,
         update_data: dict,
+        created_by: str | None = None,
     ):
         if not ObjectId.is_valid(employee_id):
             return None
 
+        query = {
+            "_id": ObjectId(employee_id),
+            "employee_id": {"$exists": True},
+        }
+
+        if created_by is not None:
+            query["created_by"] = created_by
+
         await self.collection.update_one(
-            {
-                "_id": ObjectId(employee_id),
-                "employee_id": {"$exists": True},
-            },
+            query,
             {"$set": update_data},
         )
 
-        return await self.get_by_id(employee_id)
+        return await self.get_by_id(employee_id, created_by=created_by)
 
     async def update_status(
         self,
         employee_id: str,
         status: str,
-        update_data: dict,
+        update_data: dict | None = None,
+        created_by: str | None = None,
     ):
         if not ObjectId.is_valid(employee_id):
             return None
 
-        update_data["status"] = status
+        changes = dict(update_data or {})
+        changes["status"] = status
 
-        await self.collection.update_one(
-            {
-                "_id": ObjectId(employee_id),
-                "employee_id": {"$exists": True},
-            },
-            {"$set": update_data},
+        query = {
+            "_id": ObjectId(employee_id),
+            "employee_id": {"$exists": True},
+        }
+
+        if created_by is not None:
+            query["created_by"] = created_by
+
+        result = await self.collection.update_one(
+            query,
+            {"$set": changes},
         )
 
-        return await self.get_by_id(employee_id)
+        if result.matched_count == 0:
+            return None
 
-    async def delete(self, employee_id: str):
+        return await self.get_by_id(employee_id, created_by=created_by)
+
+    async def delete(
+        self,
+        employee_id: str,
+        created_by: str | None = None,
+    ):
         if not ObjectId.is_valid(employee_id):
             return False
 
-        result = await self.collection.delete_one(
-            {
-                "_id": ObjectId(employee_id),
-                "employee_id": {"$exists": True},
-            }
-        )
+        query = {
+            "_id": ObjectId(employee_id),
+            "employee_id": {"$exists": True},
+        }
 
+        if created_by is not None:
+            query["created_by"] = created_by
+
+        result = await self.collection.delete_one(query)
         return result.deleted_count > 0

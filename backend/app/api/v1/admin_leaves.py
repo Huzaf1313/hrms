@@ -16,7 +16,7 @@ service = AdminLeaveService()
 
 # Authentication is currently disabled for the other active admin modules
 # while the frontend session/role flow is being wired up.
-AUTH_ENABLED = False
+AUTH_ENABLED = True
 
 
 def require_permission_toggle(permission: Permission):
@@ -62,13 +62,14 @@ async def get_leaves(
     department_id: str | None = None,
 ):
     data = await service.get_leaves(
-        page=page,
-        limit=limit,
-        status=status,
-        employee_id=employee_id,
-        leave_type=leave_type,
-        department_id=department_id,
-    )
+    page=page,
+    limit=limit,
+    status=status,
+    employee_id=employee_id,
+    leave_type=leave_type,
+    department_id=department_id,
+    current_user=current_user,
+)
 
     return {
         "success": True,
@@ -87,7 +88,10 @@ async def get_leave(
     return {
         "success": True,
         "message": "Leave request fetched successfully",
-        "data": await service.get_leave(leave_id),
+        "data": await service.get_leave(
+            leave_id,
+            current_user=current_user,
+        ),
     }
 
 
@@ -99,7 +103,8 @@ async def create_leave(
     ),
 ):
     data = await service.create_leave(
-        payload.model_dump()
+        payload.model_dump(),
+        current_user=current_user,
     )
 
     return {
@@ -122,6 +127,7 @@ async def update_leave_status(
         status=payload.status,
         admin_note=payload.admin_note,
         admin_user_id=str(current_user["_id"]) if current_user else None,
+        current_user=current_user,
     )
 
     return {
@@ -138,7 +144,10 @@ async def delete_leave(
         require_permission_toggle(Permission.LEAVE_UPDATE)
     ),
 ):
-    await service.delete_leave(leave_id)
+    await service.delete_leave(
+        leave_id,
+        current_user=current_user,
+    )
 
     return {
         "success": True,

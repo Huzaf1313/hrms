@@ -171,13 +171,59 @@ class AttendanceService:
         self.department_repository = DepartmentRepository()
         self.shift_repository = ShiftRepository()
 
-    async def _get_employee(self, employee_id: str):
+    
+    @staticmethod
+    def _created_by_scope(current_user: dict | None) -> str | None:
+        if not current_user:
+            return None
+
+        role = current_user.get("role")
+        role = getattr(role, "value", role)
+
+        if role == "hr_admin":
+            user_id = current_user.get("_id")
+
+            if user_id is None:
+                raise AppException(
+                    "Authenticated HR account has no valid user ID",
+                    403,
+                )
+
+            return str(user_id)
+
+        return None
+
+    def _assert_employee_access(
+        self,
+        employee: dict | None,
+        current_user: dict | None,
+    ) -> None:
+        if not employee:
+            raise AppException("Employee not found", 404)
+
+        owner_id = self._created_by_scope(current_user)
+
+        if owner_id is not None and str(employee.get("created_by", "")) != owner_id:
+            # Do not reveal that another HR's employee exists.
+            raise AppException("Employee not found", 404)
+
+    async def _get_employee(
+        self,
+        employee_id: str,
+        current_user: dict | None = None,
+    ):
         employee = await self.employee_repository.get_by_id(employee_id)
 
-        if employee:
-            return employee
+        if not employee:
+            employee = await self.employee_repository.get_by_employee_id(
+                employee_id
+            )
 
-        return await self.employee_repository.get_by_employee_id(employee_id)
+        if employee:
+            self._assert_employee_access(employee, current_user)
+
+        return employee
+
 
     async def _shift_by_id(self, shift_id: str | None) -> dict | None:
         if not shift_id:
@@ -351,8 +397,16 @@ class AttendanceService:
         )
 
 
-    async def mark_attendance(self, data: dict, marked_by: str | None = None):
-        employee = await self._get_employee(data["employee_id"])
+    async def mark_attendance(
+        self,
+        data: dict,
+        marked_by: str | None = None,
+        current_user: dict | None = None,
+    ):
+        employee = await self._get_employee(
+            data["employee_id"],
+            current_user=current_user,
+        )
 
         if not employee:
             raise AppException("Employee not found", 404)
@@ -419,20 +473,32 @@ class AttendanceService:
 
         return self._serialize(attendance, employee, department)
 
-    async def get_attendance(self, attendance_id: str):
+    
+    async def get_attendance(
+        self,
+        attendance_id: str,
+        current_user: dict | None = None,
+    ):
         attendance = await self.repository.get_by_id(attendance_id)
 
         if not attendance:
             raise AppException("Attendance record not found", 404)
 
-        employee = await self._get_employee(attendance["employee_id"])
+        employee = await self._get_employee(
+            attendance["employee_id"],
+            current_user=current_user,
+        )
+
         department = (
-            await self.department_repository.get_by_id(attendance["department_id"])
+            await self.department_repository.get_by_id(
+                attendance["department_id"]
+            )
             if attendance.get("department_id")
             else None
         )
 
         return self._serialize(attendance, employee, department)
+
 
     async def get_my_status(
         self,
@@ -475,6 +541,7 @@ class AttendanceService:
         shift_id: str | None = None,
         overtime_only: bool = False,
         work_location: str | None = None,
+        current_user: dict | None = None,
     ) -> AttendanceListResponse:
         selected_date = attendance_date or business_today()
         date_filter = {"date": to_datetime(selected_date)}
@@ -496,7 +563,8 @@ class AttendanceService:
         employees = await self.employee_repository.get_all(
             filters=employee_filters,
             skip=0,
-            limit=1000,
+            limit=10000,
+            created_by=self._created_by_scope(current_user),
         )
 
         if search:
@@ -510,9 +578,18 @@ class AttendanceService:
             ]
 
         attendance_records = await self.repository.get_all(
-            filters=date_filter,
+            filters={
+                **date_filter,
+                "employee_id": {
+                    "$in": [
+                        employee["employee_id"]
+                        for employee in employees
+                    ]
+                    + [str(employee["_id"]) for employee in employees]
+                },
+            },
             skip=0,
-            limit=1000,
+            limit=10000,
         )
         records_by_employee = {
             record["employee_id"]: record for record in attendance_records
@@ -581,37 +658,59 @@ class AttendanceService:
             limit=pagination.limit,
         )
 
-    async def get_work_locations(self) -> list[str]:
-        """Distinct work locations across all employees, for the filter.
+    async def get_work_locations(
+        self,
+        current_user: dict | None = None,
+    ) -> list[str]:
+        filters = {
+            "employee_id": {"$exists": True},
+            "work_location": {"$nin": [None, ""]},
+        }
 
-        Reads the employee collection directly, matching how this service
-        already uses employee_repository.collection for counts.
-        """
+        owner_id = self._created_by_scope(current_user)
+
+        if owner_id is not None:
+            filters["created_by"] = owner_id
+
         values = await self.employee_repository.collection.distinct(
             "work_location",
-            {
-                "employee_id": {"$exists": True},
-                "work_location": {"$nin": [None, ""]},
-            },
+            filters,
         )
 
-        return sorted(value for value in values if isinstance(value, str) and value.strip())
+        return sorted(
+            value
+            for value in values
+            if isinstance(value, str) and value.strip()
+        )
 
+    
     async def get_employee_attendance(
         self,
         employee_id: str,
         pagination: PaginationParams,
+        current_user: dict | None = None,
     ) -> list[AttendanceResponse]:
-        employee = await self._get_employee(employee_id)
-        canonical_employee_id = employee["employee_id"] if employee else employee_id
+        employee = await self._get_employee(
+            employee_id,
+            current_user=current_user,
+        )
+
+        if not employee:
+            raise AppException("Employee not found", 404)
+
+        canonical_employee_id = employee["employee_id"]
+
         records = await self.repository.get_all(
             filters={"employee_id": canonical_employee_id},
             skip=pagination.skip,
             limit=pagination.limit,
         )
+
         department = (
-            await self.department_repository.get_by_id(employee["department_id"])
-            if employee and employee.get("department_id")
+            await self.department_repository.get_by_id(
+                employee["department_id"]
+            )
+            if employee.get("department_id")
             else None
         )
 
@@ -624,6 +723,7 @@ class AttendanceService:
         self,
         attendance_id: str,
         update_data: dict,
+        current_user: dict | None = None
     ):
         attendance = await self.repository.get_by_id(attendance_id)
 
@@ -636,7 +736,10 @@ class AttendanceService:
             if value is not None
         }
 
-        employee = await self._get_employee(attendance["employee_id"])
+        employee = await self._get_employee(
+            attendance["employee_id"],
+            current_user=current_user,
+        )
 
         # A shift change re-derives the duration, which changes overtime.
         shift_changed = any(
@@ -717,25 +820,24 @@ class AttendanceService:
         self,
         attendance_date: date,
         department_id: str | None = None,
+        current_user: dict | None = None,
     ) -> AttendanceSummaryResponse:
         employees = await self.employee_repository.get_all(
             filters=build_filter({"department_id": department_id}),
             skip=0,
             limit=10000,
+            created_by=self._created_by_scope(current_user),
         )
+        total_employees = len(employees)
         employee_ids = [employee["employee_id"] for employee in employees]
 
-        employee_filters = {
-            "employee_id": {"$exists": True},
-            **build_filter({"department_id": department_id}),
-        }
-        total_employees = await self.employee_repository.collection.count_documents(
-            employee_filters
-        )
+        attendance_ids = employee_ids + [
+            str(employee["_id"]) for employee in employees
+        ]
 
         attendance_filters = build_filter({"department_id": department_id})
         attendance_filters["date"] = to_datetime(attendance_date)
-        attendance_filters["employee_id"] = {"$in": employee_ids}
+        attendance_filters["employee_id"] = {"$in": attendance_ids}
 
         status_counts = await self.repository.get_status_counts(attendance_filters)
 
@@ -797,11 +899,10 @@ class AttendanceService:
         department_presence = []
         for department in departments:
             dept_id = str(department["_id"])
-            dept_total = await self.employee_repository.collection.count_documents(
-                {
-                    "department_id": dept_id,
-                    "employee_id": {"$exists": True},
-                }
+            dept_total = sum(
+                1
+                for employee in employees
+                if employee.get("department_id") == dept_id
             )
             dept_present = present_by_department.get(dept_id, 0)
 
@@ -845,6 +946,7 @@ class AttendanceService:
         end_date: date,
         department_id: str | None = None,
         shift_id: str | None = None,
+        current_user: dict | None = None,
     ) -> list[dict]:
         """Per-employee overtime totals across a date range.
 
@@ -858,6 +960,7 @@ class AttendanceService:
             filters=build_filter({"department_id": department_id}),
             skip=0,
             limit=10000,
+            created_by=self._created_by_scope(current_user),
         )
 
         employee_ids = [employee["employee_id"] for employee in employees]
