@@ -181,6 +181,12 @@ app.include_router(
     tags=["Health"],
 )
 
+# Also served unprefixed: uptime monitors conventionally poll /health.
+app.include_router(
+    health_router,
+    tags=["Health"],
+)
+
 app.include_router(
     auth_router,
     prefix="/api/v1",

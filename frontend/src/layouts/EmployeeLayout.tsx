@@ -42,6 +42,7 @@ function EmployeeLayout({ onLogout }: { onLogout: () => void }) {
 
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const notificationContainerRef = useRef<HTMLDivElement | null>(null);
 
@@ -100,6 +101,7 @@ function EmployeeLayout({ onLogout }: { onLogout: () => void }) {
   useEffect(() => {
     setShowProfileMenu(false);
     setShowNotificationDropdown(false);
+    setSidebarOpen(false);
   }, [location.pathname]);
 
   const fullName = user?.full_name ?? "Employee";
@@ -115,15 +117,21 @@ function EmployeeLayout({ onLogout }: { onLogout: () => void }) {
 
   return (
     <div className="min-h-screen bg-[#f5f7fb]">
-      <EmployeeSidebar onLogout={onLogout} />
+      <EmployeeSidebar
+        onLogout={onLogout}
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
 
-      <div className="ml-[250px] min-w-0">
+      <div className="min-w-0 lg:ml-[250px]">
         <header className="sticky top-0 z-30 flex h-[72px] items-center justify-between gap-4 border-b border-gray-200 bg-white px-6">
           <div className="flex min-w-0 items-center gap-4">
             <button
               type="button"
-              className="flex h-10 w-10 items-center justify-center rounded-lg text-gray-600 transition hover:bg-gray-100"
-              aria-label="Menu"
+              onClick={() => setSidebarOpen((previous) => !previous)}
+              className="flex h-10 w-10 items-center justify-center rounded-lg text-gray-600 transition hover:bg-gray-100 lg:hidden"
+              aria-label="Open menu"
+              aria-expanded={sidebarOpen}
             >
               <Menu className="h-5 w-5" />
             </button>

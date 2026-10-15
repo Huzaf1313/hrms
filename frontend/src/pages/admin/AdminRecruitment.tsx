@@ -9,6 +9,7 @@ import {
   Trash2,
   UserCheck,
   Users,
+  X,
 } from "lucide-react";
 
 import {
@@ -427,7 +428,7 @@ function AdminRecruitment() {
         >
           <span className="flex-1">{notice.text}</span>
           <button type="button" onClick={() => setNotice(null)} aria-label="Dismiss">
-            ✕
+            <X aria-hidden="true" className="h-4 w-4" />
           </button>
         </div>
       )}

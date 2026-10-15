@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Bell, ChevronDown, Menu, Search } from "lucide-react";
+import { Bell, ChevronDown, ChevronRight, Menu, Search } from "lucide-react";
 
 import DatePicker from "./DatePicker";
 
@@ -8,7 +8,17 @@ interface HeaderProps {
   onToggleSidebar?: () => void;
   pageTitle?: string;
   collapsed?: boolean;
+  /** Mobile: opens the drawer. Desktop has no use for it. */
+  onOpenSidebar?: () => void;
 }
+
+// "Attendance › Daily Attendance" in the reference design. Only pages that
+// genuinely sit under a parent get a trail; the rest render flat.
+const trails: Record<string, string[]> = {
+  Attendance: ["Dashboard", "Attendance", "Daily Attendance"],
+  "Regularization Requests": ["Dashboard", "Attendance", "Regularization Requests"],
+  Leave: ["Dashboard", "Leave"],
+};
 
 function readUser() {
   try {
@@ -40,6 +50,7 @@ function Header({
   onToggleSidebar,
   pageTitle = "Dashboard",
   collapsed = false,
+  onOpenSidebar,
 }: HeaderProps) {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
@@ -57,11 +68,23 @@ function Header({
     <header className="sticky top-0 z-30 flex h-[72px] items-center justify-between gap-4 border-b border-gray-200 bg-white px-6">
       {/* Left: menu + page title */}
       <div className="flex min-w-0 items-center gap-4">
+        <button
+          type="button"
+          onClick={() => {
+            if (onOpenSidebar) onOpenSidebar();
+            else onToggleSidebar?.();
+          }}
+          className="flex h-10 w-10 items-center justify-center rounded-lg text-gray-600 transition hover:bg-gray-100 lg:hidden"
+          aria-label="Open menu"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+
         {onToggleSidebar && (
           <button
             type="button"
             onClick={onToggleSidebar}
-            className="flex h-10 w-10 items-center justify-center rounded-lg text-gray-600 transition hover:bg-gray-100"
+            className="hidden h-10 w-10 items-center justify-center rounded-lg text-gray-600 transition hover:bg-gray-100 lg:flex"
             aria-label="Toggle menu"
             aria-expanded={!collapsed}
           >
@@ -69,9 +92,23 @@ function Header({
           </button>
         )}
 
-        <p className="truncate text-sm font-semibold text-gray-900">
-          {pageTitle}
-        </p>
+        <nav aria-label="Breadcrumb" className="min-w-0">
+          <ol className="flex items-center gap-1.5 text-sm">
+            {(trails[pageTitle] ?? [pageTitle]).map((crumb, index, all) => (
+              <li key={crumb} className="flex min-w-0 items-center gap-1.5">
+                <span
+                  className={`truncate ${index === all.length - 1 ? "font-semibold text-gray-900" : "text-gray-500"}`}
+                >
+                  {crumb}
+                </span>
+
+                {index < all.length - 1 && (
+                  <ChevronRight className="h-4 w-4 shrink-0 text-gray-300" />
+                )}
+              </li>
+            ))}
+          </ol>
+        </nav>
       </div>
 
       {/* Right: search, bell, date, profile */}

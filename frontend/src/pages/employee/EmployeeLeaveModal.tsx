@@ -8,8 +8,6 @@ import {
   X,
 } from "lucide-react";
 
-import { countWorkingDays } from "../../utils/workingDays";
-
 interface EmployeeLeaveModalProps {
   onClose: () => void;
   onSubmit: (

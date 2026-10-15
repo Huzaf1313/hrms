@@ -583,7 +583,7 @@ function AdminLeave() {
   }
 
   return (
-    <div className="px-10 pb-10 pt-8">
+    <div className="px-4 pb-10 pt-6 sm:px-6 lg:px-8 xl:px-10">
       {/* Header */}
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>

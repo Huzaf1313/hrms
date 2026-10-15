@@ -36,6 +36,7 @@ import {
   UserPlus,
   Loader2,
   AlertCircle,
+  Lightbulb,
 } from "lucide-react";
 import { api, ApiError } from "../../services/api";
 import { departmentService } from "../../services/departmentService";
@@ -1790,7 +1791,7 @@ export default function AdminAnnouncements({
 
             <div className="rounded-xl border border-slate-200 bg-blue-50/60 p-5">
               <h2 className="mb-3 flex items-center gap-2 text-base font-semibold text-slate-900">
-                <span className="text-2xl">💡</span>
+                <Lightbulb aria-hidden="true" className="h-5 w-5" />
                 Tips
               </h2>
 

@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { Hand } from "lucide-react";
 
 import CelebrationTicker from "../../components/CelebrationTicker";
 import type { Celebration } from "../../types/celebration";
@@ -49,11 +50,11 @@ export default function AdminDashboard({
   const { metrics, refresh } = useDashboardMetrics(totalHeadcount ?? null);
 
   return (
-    <div className="px-8 pb-8 pt-6">
+    <div className="px-4 pb-8 pt-6 sm:px-6 lg:px-8">
       <div className="mb-5">
         <h1 className="text-2xl font-bold text-gray-900">
           Welcome back, {firstName}!{" "}
-          <span aria-hidden="true">👋</span>
+          <Hand aria-hidden="true" className="ml-1 inline h-5 w-5 align-middle" />
         </h1>
 
         <p className="mt-1 text-[13px] text-gray-500">

@@ -10,8 +10,6 @@ import {
   Loader2,
   AlertCircle,
 } from "lucide-react";
-import { api } from "../../services/api";
-
 import {
   announcementService,
   type EmployeeAnnouncement,

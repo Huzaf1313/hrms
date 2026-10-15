@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
@@ -7,7 +8,6 @@ import AdminDashboard from "../pages/admin/AdminDashboard";
 import AdminEmployees from "../pages/admin/AdminEmployees";
 import AdminAttendance from "../pages/admin/AdminAttendance";
 import AdminLeave from "../pages/admin/admin_leave";
-import AdminRegularizationRequests from "../pages/admin/AdminRegularizationRequests";
 import AdminPayroll from "../pages/admin/AdminPayroll";
 import AdminAssets from "../pages/admin/AdminAssets";
 import AdminAnnouncements from "../pages/admin/AdminAnnouncements";
@@ -17,21 +17,39 @@ import { getDashboardData, type DashboardData } from "../services/dashboardServi
 import AdminExitRequests from "../pages/admin/AdminExitRequests";
 
 interface DashboardLayoutProps {
-  activePage: string;
-  onNavigate: (page: string) => void;
   onLogout: () => void;
 }
 
+const pagePaths: Record<string, string> = {
+  Dashboard: "/dashboard",
+  Employees: "/dashboard/employees",
+  Recruitment: "/dashboard/recruitment",
+  Attendance: "/dashboard/attendance",
+  Leave: "/dashboard/leave",
+  Payroll: "/dashboard/payroll",
+  Assets: "/dashboard/assets",
+  Announcement: "/dashboard/announcements",
+  "Exit Requests": "/dashboard/exit-requests",
+  Settings: "/dashboard/settings",
+};
+
+function pageFromPath(pathname: string): string {
+  if (pathname === "/dashboard/regularization") return "Attendance";
+  return Object.entries(pagePaths).find(([, path]) => path === pathname)?.[0] ?? "Dashboard";
+}
+
 function DashboardLayout({
-  activePage,
-  onNavigate,
   onLogout,
 }: DashboardLayoutProps) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const activePage = pageFromPath(location.pathname);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [openEmployeeFormOnMount, setOpenEmployeeFormOnMount] = useState(false);
   const [openAnnouncementFormOnMount, setOpenAnnouncementFormOnMount] =
     useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   function handleNavigate(page: string) {
     // Consume the "create employee" intent so it only applies to the very
@@ -45,17 +63,18 @@ function DashboardLayout({
       setOpenAnnouncementFormOnMount(false);
     }
 
-    onNavigate(page);
+    navigate(pagePaths[page] ?? "/dashboard");
+    setSidebarOpen(false);
   }
 
   function handleCreateEmployee() {
     setOpenEmployeeFormOnMount(true);
-    onNavigate("Employees");
+    handleNavigate("Employees");
   }
 
   function handleCreateAnnouncement() {
     setOpenAnnouncementFormOnMount(true);
-    onNavigate("Announcement");
+    handleNavigate("Announcement");
   }
 
   useEffect(() => {
@@ -82,6 +101,8 @@ function DashboardLayout({
         activePage={activePage}
         onNavigate={handleNavigate}
         collapsed={sidebarCollapsed}
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
       />
 
       <main className="min-w-0 flex-1">
@@ -90,6 +111,7 @@ function DashboardLayout({
           pageTitle={activePage}
           collapsed={sidebarCollapsed}
           onToggleSidebar={() => setSidebarCollapsed((previous) => !previous)}
+          onOpenSidebar={() => setSidebarOpen(true)}
         />
 
         {/* Scoped so a crash in one admin page leaves the sidebar and header
@@ -103,8 +125,6 @@ function DashboardLayout({
           <AdminAttendance />
         ) : activePage === "Leave" ? (
           <AdminLeave />
-        ) : activePage === "Regularization Requests" ? (
-          <AdminRegularizationRequests />
         ) : activePage === "Payroll" ? (
           <AdminPayroll />
         ) : activePage === "Assets" ? (

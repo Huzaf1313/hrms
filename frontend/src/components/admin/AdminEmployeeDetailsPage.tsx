@@ -410,7 +410,7 @@ function AdminEmployeeDetailsPage({
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[280px_1fr]">
         {/* LEFT COLUMN */}
         <div className="rounded-3xl bg-white p-6 shadow-sm">
-          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[#dce8df] text-3xl font-semibold text-[#2563eb]">
+          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[#2563eb] text-3xl font-semibold text-white">
             {initials}
           </div>
 
@@ -543,7 +543,7 @@ function AdminEmployeeDetailsPage({
 
                 {employee.reporting_manager ? (
                   <p className="mt-1 flex items-center gap-2 font-semibold text-gray-800">
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#dce8df] text-[10px] font-semibold text-[#2563eb]">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#2563eb] text-[10px] font-semibold text-white">
                       {initialFor(employee.reporting_manager)}
                     </span>
 

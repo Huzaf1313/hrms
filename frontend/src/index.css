@@ -1,9 +1,55 @@
-@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Manrope:wght@500;700&family=Space+Grotesk:wght@400;500&display=swap");
 @import "tailwindcss";
 
 body {
-  font-family: "Outfit", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+  font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
     sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6, .brand-wordmark {
+  font-family: "Manrope", ui-sans-serif, system-ui, sans-serif;
+}
+
+label, th, dt, code, .font-mono, .technical-label {
+  font-family: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+}
+
+/* One monochrome Lucide treatment site-wide; icon badge wrappers stay clear. */
+svg.lucide {
+  color: #111827 !important;
+}
+
+aside.app-sidebar svg.lucide {
+  color: #fff !important;
+}
+
+:is(div, span):is(
+    [class~="h-7"][class~="w-7"],
+    [class~="h-8"][class~="w-8"],
+    [class~="h-9"][class~="w-9"],
+    [class~="h-10"][class~="w-10"],
+    [class~="h-11"][class~="w-11"],
+    [class~="h-14"][class~="w-14"],
+    [class~="h-16"][class~="w-16"]
+  ):has(> svg.lucide) {
+  background-color: transparent !important;
+}
+
+/* =========================================
+   Hidden scrollbar (webkit)
+   ========================================= */
+
+/* Sidebar nav scrolls when the menu outgrows the viewport, but a visible track
+   against the dark navy reads as clutter. Scroll stays; the bar does not. */
+.scrollbar-hidden {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
 }
 
 /* =========================================

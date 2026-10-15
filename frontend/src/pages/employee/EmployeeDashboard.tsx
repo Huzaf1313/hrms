@@ -1,11 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Hand, Check } from "lucide-react";
 
 import { api } from "../../services/api";
-import {
-  announcementService,
-  type EmployeeAnnouncement,
-} from "../../services/announcementService";
 
 interface User {
   id: string;
@@ -81,16 +78,6 @@ function normalizeAttendance(
     check_in: record.check_in ?? record.in_time ?? null,
     check_out: record.check_out ?? record.out_time ?? null,
   };
-}
-
-function getInitials(name: string) {
-  return name
-    .trim()
-    .split(/\s+/)
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
 }
 
 function getDateKey(value: string | Date) {
@@ -318,15 +305,6 @@ function EmployeeDashboard() {
   const firstName = employeeName.split(" ")[0];
 
   const currentDate = new Date();
-
-  const formattedDate = currentDate.toLocaleDateString("en-IN", {
-    weekday: "short",
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-
-  const initials = getInitials(employeeName);
 
   const [todayAttendance, setTodayAttendance] =
     useState<AttendanceRecord | null>(null);
@@ -595,7 +573,7 @@ const attendanceChart = useMemo(() => {
 
       <section className="mb-7">
         <h1 className="mt-1 text-3xl font-bold tracking-tight text-[#171b1d] sm:text-4xl">
-          Good Morning, {firstName} 👋
+          Good Morning, {firstName} <Hand aria-hidden="true" className="inline h-5 w-5 align-middle" />
         </h1>
 
         <p className="mt-2 text-sm text-gray-500">
@@ -627,7 +605,7 @@ const attendanceChart = useMemo(() => {
             </div>
 
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-100 text-green-700">
-              ✓
+              <Check aria-hidden="true" className="h-5 w-5" />
             </div>
           </div>
 

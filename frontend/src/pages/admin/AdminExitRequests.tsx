@@ -122,13 +122,13 @@ function AdminExitRequests() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-5 px-4 py-5 sm:space-y-6 sm:px-6 sm:py-6 lg:px-8">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Exit Requests</h1>
+        <h1 className="text-xl font-semibold text-slate-900 sm:text-2xl">Exit Requests</h1>
         <p className="text-sm text-slate-500">Review resignation requests and track clearance.</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
+      <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 xl:grid-cols-5 sm:gap-4">
         {cards.map(([label, value]) => (
           <div key={label} className="rounded-xl border border-slate-200 bg-white p-4">
             <p className="text-xs text-slate-500">{label}</p>
@@ -137,7 +137,7 @@ function AdminExitRequests() {
         ))}
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex min-w-0 flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
         <div className="flex flex-wrap gap-2">
           {FILTERS.map((f) => (
             <button
@@ -152,7 +152,7 @@ function AdminExitRequests() {
           ))}
         </div>
         <input
-          className="w-64 rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500"
+          className="w-full min-w-0 rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500 xl:w-64"
           placeholder="Search name or employee ID"
           value={search}
           onChange={(e) => { setSearch(e.target.value); setPage(1); }}
@@ -195,7 +195,7 @@ function AdminExitRequests() {
         </table>
       </div>
 
-      <div className="flex items-center justify-end gap-3 text-sm">
+      <div className="flex flex-wrap items-center justify-center gap-2 text-sm sm:justify-end sm:gap-3">
         <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="rounded-lg border px-3 py-1 disabled:opacity-40">Previous</button>
         <span className="text-slate-500">Page {page} of {pages}</span>
         <button disabled={page >= pages} onClick={() => setPage((p) => p + 1)} className="rounded-lg border px-3 py-1 disabled:opacity-40">Next</button>
