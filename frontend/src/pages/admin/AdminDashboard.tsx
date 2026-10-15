@@ -75,7 +75,10 @@ export default function AdminDashboard({
 
         <div className="grid grid-cols-12 gap-4">
           <AttendanceTrendChart />
-          <RecruitmentFunnel />
+          <RecruitmentFunnel
+            metrics={metrics}
+            onOpenRecruitment={() => onNavigate("Recruitment")}
+          />
           <PayrollExpenseSummaryCard
             onOpenPayroll={() => onNavigate("Payroll")}
           />
@@ -86,7 +89,10 @@ export default function AdminDashboard({
             onOpenLeave={() => onNavigate("Leave")}
             onChanged={refresh}
           />
-          <UpcomingInterviewsCard />
+          <UpcomingInterviewsCard
+            metrics={metrics}
+            onOpenRecruitment={() => onNavigate("Recruitment")}
+          />
           <BirthdaysAndAnniversariesCard />
         </div>
 

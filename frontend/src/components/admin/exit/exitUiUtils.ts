@@ -1,5 +1,5 @@
 import { EXIT_STATUSES, EXIT_TYPES } from "../../../types/exitRequest";
-import type { ExitStatus, ExitType } from "../../../types/exitRequest";
+import type { ExitStatus } from "../../../types/exitRequest";
 import type { ExitRequest } from "../../../types/exitRequest";
 
 /**
@@ -68,9 +68,8 @@ export function percent(part: number, whole: number): string {
 
 /* ------------------------------------------------------------------ filters */
 
-/** Staged in the rail and committed on Apply. */
+/** The exit list's filters. Exit type is scoped by the tab strip, not here. */
 export interface ExitFilters {
-  exit_type: "" | ExitType;
   status: "" | ExitStatus;
   department_id: string;
   /** Inclusive ISO date (yyyy-mm-dd) the request was submitted on or after. */
@@ -80,7 +79,6 @@ export interface ExitFilters {
 }
 
 export const EMPTY_EXIT_FILTERS: ExitFilters = {
-  exit_type: "",
   status: "",
   department_id: "",
   from: "",
@@ -90,8 +88,7 @@ export const EMPTY_EXIT_FILTERS: ExitFilters = {
 
 export function hasActiveFilters(filters: ExitFilters): boolean {
   return Boolean(
-    filters.exit_type ||
-      filters.status ||
+    filters.status ||
       filters.department_id ||
       filters.from ||
       filters.to ||

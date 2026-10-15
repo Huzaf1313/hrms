@@ -95,6 +95,14 @@ export const adminExitRequestService = {
       `/admin/exit-requests/${id}/attachments/${attachmentId}/download`,
     );
   },
+
+  /**
+   * Permanently removes a request. The server only accepts this while the status
+   * is Pending or Cancelled, so settled offboardings stay on record.
+   */
+  remove(id: string) {
+    return api.delete<null>(`/admin/exit-requests/${id}`);
+  },
 };
  
 export function formatExitDate(value: string | null | undefined) {

@@ -1,4 +1,4 @@
-import { MoreVertical } from "lucide-react";
+import { Trash2 } from "lucide-react";
 
 import {
   EmptyState,
@@ -13,11 +13,17 @@ import type { ExitRequest } from "../../../types/exitRequest";
 
 export type ExitTableVariant = "overview" | "typed";
 
+/** Mirrors the server rule: only requests that never progressed can be removed. */
+const DELETABLE_STATUSES: ExitRequest["status"][] = ["Pending", "Cancelled"];
+
 interface ExitRequestsTableProps {
   requests: ExitRequest[];
   loading: boolean;
   error: string | null;
   onOpen: (request: ExitRequest) => void;
+  onDelete?: (request: ExitRequest) => void;
+  /** Id currently being deleted, so its button can show a busy state. */
+  deletingId?: string | null;
   /**
    * `overview` keeps the Type column, which is meaningful while the list mixes
    * types. A single-type tab drops it (every row would repeat it) and shows the
@@ -30,10 +36,16 @@ interface ExitRequestsTableProps {
 function ActionsMenu({
   request,
   onOpen,
+  onDelete,
+  deleting,
 }: {
   request: ExitRequest;
   onOpen: (request: ExitRequest) => void;
+  onDelete?: (request: ExitRequest) => void;
+  deleting: boolean;
 }) {
+  const canDelete = DELETABLE_STATUSES.includes(request.status);
+
   return (
     <div className="flex items-center justify-end gap-1.5">
       <button
@@ -43,14 +55,23 @@ function ActionsMenu({
       >
         View
       </button>
-      <button
-        type="button"
-        onClick={() => onOpen(request)}
-        aria-label={`Actions for ${request.employee_name}`}
-        className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
-      >
-        <MoreVertical className="h-4 w-4" />
-      </button>
+
+      {onDelete && (
+        <button
+          type="button"
+          onClick={() => onDelete(request)}
+          disabled={!canDelete || deleting}
+          title={
+            canDelete
+              ? `Delete ${request.employee_name}'s request`
+              : `A ${request.status.toLowerCase()} request cannot be deleted`
+          }
+          aria-label={`Delete ${request.employee_name}'s exit request`}
+          className="flex h-7 w-7 items-center justify-center rounded-lg text-rose-500 transition hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:text-slate-300 disabled:hover:bg-transparent disabled:hover:text-slate-300"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+      )}
     </div>
   );
 }
@@ -60,6 +81,8 @@ export default function ExitRequestsTable({
   loading,
   error,
   onOpen,
+  onDelete,
+  deletingId = null,
   variant = "overview",
   emptyMessage = "No exit requests found.",
 }: ExitRequestsTableProps) {
@@ -151,7 +174,12 @@ export default function ExitRequestsTable({
               </td>
 
               <td className="px-5 py-3" onClick={(event) => event.stopPropagation()}>
-                <ActionsMenu request={request} onOpen={onOpen} />
+                <ActionsMenu
+                  request={request}
+                  onOpen={onOpen}
+                  onDelete={onDelete}
+                  deleting={deletingId === request.id}
+                />
               </td>
             </tr>
           ))}

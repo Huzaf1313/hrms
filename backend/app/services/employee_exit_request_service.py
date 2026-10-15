@@ -41,7 +41,12 @@ FILE_SIGNATURES = {
  
 class ExitRequestService:
     ACTIVE_STATUSES = ["Pending", "In Progress"]
- 
+
+    # Anything further along has been actioned or settled, so it stays on
+    # record as an audit trail. A mis-keyed Pending/Cancelled request can be
+    # removed; a completed exit cannot.
+    DELETABLE_STATUSES = ["Pending", "Cancelled"]
+
     TRANSITIONS = {
         "Pending": {"In Progress", "Rejected"},
         "In Progress": {"Completed", "Rejected"},
@@ -311,7 +316,37 @@ class ExitRequestService:
             raise AppException("This request was just updated. Please refresh.", 409)
  
         return await self.repository.get_by_id(request_id)
- 
+
+    async def delete_request(self, request_id: str) -> bool:
+        """Permanently remove a request that never progressed past review.
+
+        This is for cleaning up duplicates and mis-keyed entries, so anything
+        already in clearance, completed or rejected is refused - those are the
+        record of a real offboarding.
+        """
+
+        document = await self.get_request(request_id)
+        status = document["status"]
+
+        if status not in self.DELETABLE_STATUSES:
+            raise AppException(
+                f"A request that is '{status}' cannot be deleted. Only pending "
+                "or cancelled requests can be removed.",
+                400,
+            )
+
+        deleted = await self.repository.delete_if_status(
+            request_id, self.DELETABLE_STATUSES
+        )
+        if not deleted:
+            raise AppException("This request was just updated. Please refresh.", 409)
+
+        # Only after the document is gone, so a failed delete never orphans the
+        # files the surviving record still points at.
+        self._remove_files(document.get("attachments", []))
+
+        return True
+
     # ------------------------------------------------------------------ admin
     async def create_admin_request(self, payload) -> dict:
         """Record a departure HR raised themselves.

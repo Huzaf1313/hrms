@@ -150,7 +150,7 @@ export default function DashboardKpiRow({
     {
       id: "kpi-openings",
       label: "Open Positions",
-      value: placeholders.openPositions,
+      value: metrics.activeJobPositions ?? placeholders.openPositions,
       icon: Briefcase,
       iconClass: "text-[#ea580c]",
       chipClass: "bg-[#fff7ed]",

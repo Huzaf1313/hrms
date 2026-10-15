@@ -113,6 +113,19 @@ async def update_exit_request_status(
     )
  
  
+@router.delete("/{request_id}", response_model=APIResponse[None])
+async def delete_exit_request(
+    request_id: str, _: dict = Depends(require_hr_admin)
+):
+    await service.delete_request(request_id)
+
+    return APIResponse(
+        success=True,
+        message="Exit request deleted successfully",
+        data=None,
+    )
+ 
+ 
 @router.get("/{request_id}/attachments/{attachment_id}/download")
 async def download_attachment(
     request_id: str,

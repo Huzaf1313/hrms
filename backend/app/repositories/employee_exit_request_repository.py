@@ -187,6 +187,21 @@ class ExitRequestRepository:
             {"$set": update_data},
         )
         return result.modified_count == 1
+
+    async def delete_if_status(
+        self, request_id: str, allowed_statuses: list[str]
+    ) -> bool:
+        """Atomic delete: only removes the document while it is still deletable.
+
+        Guards against a request moving to a settled status between the read and
+        the delete, which would otherwise destroy an audit record.
+        """
+        if not ObjectId.is_valid(request_id):
+            return False
+        result = await self.collection.delete_one(
+            {"_id": ObjectId(request_id), "status": {"$in": allowed_statuses}}
+        )
+        return result.deleted_count == 1
  
     async def get_hr_emails(self) -> list[str]:
         rows = await self.users.find(

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
-  ArrowRight,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -38,7 +37,7 @@ import {
   type ExitFilters,
   type InlineNotice,
 } from "../../components/admin/exit/exitUiUtils";
-import { ExitProcessFlow, HrSupport, ImportantLinks } from "../../components/admin/exit/ExitSideRail";
+import { ExitProcessFlow } from "../../components/admin/exit/ExitSideRail";
 import { departmentService } from "../../services/departmentService";
 import {
   adminExitRequestService,
@@ -46,7 +45,7 @@ import {
 } from "../../services/exitRequestService";
 import { ApiError } from "../../services/api";
 import { EXIT_TYPES, EXIT_TYPE_META } from "../../types/exitRequest";
-import type { ExitRequest, ExitRequestSummary, ExitStatus, ExitType } from "../../types/exitRequest";
+import type { ExitRequest, ExitRequestSummary, ExitType } from "../../types/exitRequest";
 import type { Department } from "../../types/department";
 
 type View = "all" | ExitType;
@@ -58,22 +57,8 @@ const TABS: Array<{ id: View; label: string }> = [
 
 const PAGE_SIZE = 5;
 
-/** Filters the rail stages locally and commits on Apply. */
-interface AppliedFilters {
-  status: "" | ExitStatus;
-  department_id: string;
-  from: string;
-  to: string;
-  search: string;
-}
-
-const NO_FILTERS: AppliedFilters = {
-  status: "",
-  department_id: "",
-  from: "",
-  to: "",
-  search: "",
-};
+/** How long the filters settle before the list refetches, in ms. */
+const FILTER_DEBOUNCE_MS = 250;
 
 /** yyyy-mm-dd bounds sent to the API, widened to cover the whole day. */
 function toIsoStart(date: string): string | undefined {
@@ -91,7 +76,7 @@ function errorText(cause: unknown, fallback: string): string {
 export default function AdminExitRequests() {
   const [view, setView] = useState<View>("all");
   const [draft, setDraft] = useState<ExitFilters>(EMPTY_EXIT_FILTERS);
-  const [applied, setApplied] = useState<AppliedFilters>(NO_FILTERS);
+  const [applied, setApplied] = useState<ExitFilters>(EMPTY_EXIT_FILTERS);
   const [page, setPage] = useState(1);
 
   const [requests, setRequests] = useState<ExitRequest[]>([]);
@@ -104,6 +89,7 @@ export default function AdminExitRequests() {
   const [error, setError] = useState<string | null>(null);
 
   const [selected, setSelected] = useState<ExitRequest | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [notice, setNotice] = useState<InlineNotice>(null);
   const [creating, setCreating] = useState<ExitType | "any" | null>(null);
   const [version, setVersion] = useState(0);
@@ -127,6 +113,18 @@ export default function AdminExitRequests() {
       active = false;
     };
   }, []);
+
+  // Filters apply as they are changed. The debounce keeps a half-typed search
+  // term from firing a request per keystroke, and any filter change restarts
+  // the list from the first page.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setApplied(draft);
+      setPage(1);
+    }, FILTER_DEBOUNCE_MS);
+
+    return () => clearTimeout(timer);
+  }, [draft]);
 
   // Requests + summary. The tab drives the exit type, and the single-type tabs
   // scope the summary too so their KPI cards count only that type.
@@ -178,23 +176,35 @@ export default function AdminExitRequests() {
     setPage(1);
   };
 
-  const applyDraft = () => {
-    setApplied({
-      status: draft.status,
-      department_id: draft.department_id,
-      from: draft.from,
-      to: draft.to,
-      search: draft.search,
-    });
-
-    // The rail's type control drives the active tab, so the two cannot disagree.
-    changeView(draft.exit_type ? draft.exit_type : "all");
-  };
-
   const resetFilters = () => {
     setDraft(EMPTY_EXIT_FILTERS);
-    setApplied(NO_FILTERS);
     changeView("all");
+  };
+
+  const deleteRequest = async (request: ExitRequest) => {
+    const confirmed = window.confirm(
+      `Delete ${request.employee_name}'s exit request? This cannot be undone.`,
+    );
+
+    if (!confirmed) return;
+
+    setDeletingId(request.id);
+
+    try {
+      await adminExitRequestService.remove(request.id);
+      refresh();
+      setNotice({
+        type: "success",
+        text: `${request.employee_name}'s exit request deleted.`,
+      });
+    } catch (cause: unknown) {
+      setNotice({
+        type: "error",
+        text: errorText(cause, "Unable to delete the exit request."),
+      });
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const totalFor = useCallback(
@@ -416,6 +426,12 @@ export default function AdminExitRequests() {
 
       <InlineNoticeBanner notice={notice} onDismiss={() => setNotice(null)} />
 
+      {isOverview && (
+        <div className="mb-5">
+          <ExitProcessFlow />
+        </div>
+      )}
+
       {/* KPI row */}
       <StatCards
         cards={typedCards}
@@ -458,9 +474,6 @@ export default function AdminExitRequests() {
                 type="text"
                 value={draft.search}
                 onChange={(event) => setDraft((d) => ({ ...d, search: event.target.value }))}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") applyDraft();
-                }}
                 placeholder="Search employee name, ID..."
                 className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               />
@@ -484,14 +497,6 @@ export default function AdminExitRequests() {
               </select>
               <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             </div>
-
-            <button
-              type="button"
-              onClick={applyDraft}
-              className="h-10 rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
-            >
-              Apply
-            </button>
 
             <button
               type="button"
@@ -526,6 +531,8 @@ export default function AdminExitRequests() {
               loading={loading}
               error={error}
               onOpen={setSelected}
+              onDelete={deleteRequest}
+              deletingId={deletingId}
               variant={tableVariant}
               emptyMessage={
                 isOverview
@@ -586,8 +593,6 @@ export default function AdminExitRequests() {
               onInitiateTermination={() => setCreating("Termination")}
             />
           )}
-
-          {isOverview && <ExitProcessFlow />}
         </div>
 
         {/* Right rail */}
@@ -596,7 +601,6 @@ export default function AdminExitRequests() {
             filters={draft}
             departments={departments}
             onChange={setDraft}
-            onApply={applyDraft}
             onReset={resetFilters}
           />
 
@@ -604,13 +608,6 @@ export default function AdminExitRequests() {
             byType={summary?.by_type ?? {}}
             total={summary?.by_type ? Object.values(summary.by_type).reduce((a, b) => a + b, 0) : 0}
           />
-
-          {isOverview && (
-            <>
-              <ImportantLinks />
-              <HrSupport />
-            </>
-          )}
 
           {!isOverview && (
             <button
@@ -622,15 +619,6 @@ export default function AdminExitRequests() {
               Record a {view.toLowerCase()}
             </button>
           )}
-
-          <button
-            type="button"
-            onClick={() => changeView("all")}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
-          >
-            <ArrowRight className="h-4 w-4" />
-            View all requests
-          </button>
         </aside>
       </div>
 

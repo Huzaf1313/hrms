@@ -1,5 +1,4 @@
 import {
-  ClipboardCheck,
   Download,
   FileText,
   Flag,
@@ -7,7 +6,7 @@ import {
   Wallet,
 } from "lucide-react";
 
-import { ExitStatusBadge, Panel } from "./ExitUi";
+import { Panel } from "./ExitUi";
 import { formatDateTime, pickActionable } from "./exitUiUtils";
 import { downloadExitCsv } from "../../../services/exitRequestService";
 import type { ExitRequest, ExitRequestSummary } from "../../../types/exitRequest";
@@ -228,28 +227,6 @@ export default function TerminationPanel({
             </div>
           </div>
         </div>
-
-        {actionable && (
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-400">
-              Needs action
-            </p>
-            <div className="flex items-center justify-between gap-2">
-              <p className="min-w-0 truncate text-sm font-semibold text-slate-900">
-                {actionable.employee_name}
-              </p>
-              <ExitStatusBadge status={actionable.status} />
-            </div>
-            <button
-              type="button"
-              onClick={() => onOpenRequest(actionable)}
-              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 transition hover:bg-blue-100"
-            >
-              <ClipboardCheck className="h-4 w-4" />
-              Open request
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );

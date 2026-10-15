@@ -97,6 +97,78 @@ function formatCount(value: number): string {
   return new Intl.NumberFormat("en-IN").format(value);
 }
 
+/** The server caps a page at 100, so the report walks past it. */
+const REPORT_PAGE_SIZE = 100;
+
+/** Quotes a CSV cell, doubling any embedded quotes. */
+function csvCell(value: unknown): string {
+  const text = value === null || value === undefined ? "" : String(value);
+
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+/**
+ * The asset register as CSV.
+ *
+ * Built from a full walk of the filtered list rather than the page on screen,
+ * so the report is the whole answer and not just what happened to fit.
+ */
+function buildAssetsCsv(assets: Asset[]): string {
+  const headers = [
+    "Asset Tag",
+    "Name",
+    "Category",
+    "Brand / Model",
+    "Serial Number",
+    "Status",
+    "Assigned To",
+    "Employee ID",
+    "Department",
+    "Issue Date",
+    "Purchase Date",
+    "Purchase Cost",
+    "Vendor",
+    "Warranty Expiry",
+  ];
+
+  const rows = assets.map((asset) => [
+    asset.asset_tag,
+    asset.name,
+    asset.category,
+    asset.brand_model,
+    asset.serial_number,
+    ASSET_STATUS_LABELS[asset.status] ?? asset.status,
+    asset.assigned_to_name,
+    asset.assigned_to_employee_id,
+    asset.department_name,
+    asset.issue_date,
+    asset.purchase_date,
+    asset.purchase_cost,
+    asset.vendor,
+    asset.warranty_expiry,
+  ]);
+
+  // The BOM is what makes Excel open a UTF-8 CSV without mangling names.
+  return [headers, ...rows].map((row) => row.map(csvCell).join(",")).join("\r\n");
+}
+
+function downloadBlob(csv: string, filename: string) {
+  const url = URL.createObjectURL(
+    new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" }),
+  );
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+/** "assets-report-2026-10-14.csv", so repeat exports do not overwrite each other. */
+function reportFilename(): string {
+  return `assets-report-${new Date().toISOString().slice(0, 10)}.csv`;
+}
+
 /**
  * Fetches an asset endpoint and tracks its loading/error state.
  *
@@ -888,12 +960,16 @@ function RecentAllocationPanel({ version }: { version: number }) {
 }
 
 interface QuickAction {
+  /** Stable across label changes, so a tile keeps its identity while busy. */
+  id: string;
   label: string;
   icon: typeof Plus;
   iconBg: string;
   iconColor: string;
   /** Undefined marks a decorative button that is not wired up yet. */
   run?: () => void;
+  /** Marks a wired tile that is temporarily unavailable. */
+  busy?: boolean;
 }
 
 interface QuickActionsPanelProps {
@@ -901,6 +977,9 @@ interface QuickActionsPanelProps {
   onAssign: () => void;
   onReturn: () => void;
   onViewAll: () => void;
+  onGenerateReport: () => void;
+  /** True while the report is being assembled, so the tile can show progress. */
+  generatingReport: boolean;
 }
 
 function QuickActionsPanel({
@@ -908,9 +987,12 @@ function QuickActionsPanel({
   onAssign,
   onReturn,
   onViewAll,
+  onGenerateReport,
+  generatingReport,
 }: QuickActionsPanelProps) {
   const actions: QuickAction[] = [
     {
+      id: "add",
       label: "Add Asset",
       icon: Plus,
       iconBg: "bg-blue-50",
@@ -918,6 +1000,7 @@ function QuickActionsPanel({
       run: onAdd,
     },
     {
+      id: "assign",
       label: "Assign Asset",
       icon: UserPlus,
       iconBg: "bg-emerald-50",
@@ -925,6 +1008,7 @@ function QuickActionsPanel({
       run: onAssign,
     },
     {
+      id: "return",
       label: "Request Return",
       icon: RotateCcw,
       iconBg: "bg-orange-50",
@@ -932,6 +1016,7 @@ function QuickActionsPanel({
       run: onReturn,
     },
     {
+      id: "view-all",
       label: "View All Assets",
       icon: Eye,
       iconBg: "bg-violet-50",
@@ -939,12 +1024,16 @@ function QuickActionsPanel({
       run: onViewAll,
     },
     {
-      label: "Generate Report",
+      id: "generate-report",
+      label: generatingReport ? "Building..." : "Generate Report",
       icon: BarChart3,
       iconBg: "bg-cyan-50",
       iconColor: "text-cyan-600",
+      run: generatingReport ? undefined : onGenerateReport,
+      busy: generatingReport,
     },
     {
+      id: "settings",
       label: "Asset Settings",
       icon: Settings2,
       iconBg: "bg-slate-100",
@@ -965,14 +1054,20 @@ function QuickActionsPanel({
 
           return (
             <button
-              key={action.label}
+              key={action.id}
               type="button"
               disabled={disabled}
               onClick={action.run}
-              title={disabled ? "Not available yet" : undefined}
+              title={
+                disabled
+                  ? action.busy
+                    ? "Generating the report"
+                    : "Not available yet"
+                  : undefined
+              }
               className={`flex min-w-0 flex-col items-center justify-center gap-1.5 rounded-2xl border border-gray-100 p-2.5 text-center transition ${
                 disabled
-                  ? "cursor-not-allowed opacity-45"
+                  ? `cursor-not-allowed opacity-45 ${action.busy ? "animate-pulse" : ""}`
                   : "hover:bg-gray-50"
               }`}
             >
@@ -1323,6 +1418,7 @@ export default function AdminAssets() {
   const [showAllAssets, setShowAllAssets] = useState(false);
   const [modal, setModal] = useState<ModalState>(null);
   const [notice, setNotice] = useState<Notice>(null);
+  const [generatingReport, setGeneratingReport] = useState(false);
   const overviewRef = useRef<HTMLDivElement>(null);
 
   const { data: stats, error: statsError } = useAssetQuery<AssetStats>(
@@ -1345,6 +1441,69 @@ export default function AdminAssets() {
     setShowAllAssets(true);
     setFilters(EMPTY_FILTERS);
     overviewRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  /**
+   * Exports the asset register as CSV.
+   *
+   * The filters in the overview panel are respected, so the report matches what
+   * the admin was looking at - but it walks every page of the match instead of
+   * exporting only the rows on screen.
+   */
+  async function handleGenerateReport() {
+    if (generatingReport) return;
+
+    setGeneratingReport(true);
+
+    const params = {
+      search: filters.search.trim() || undefined,
+      category: (filters.category || undefined) as AssetCategory | undefined,
+      status: (filters.status || undefined) as AssetStatus | undefined,
+    };
+
+    try {
+      const collected: Asset[] = [];
+      let page = 1;
+      let total = 0;
+
+      // The endpoint caps a page at 100, so walk until the rows run out. The
+      // empty-page break guards against a server that reports a total it will
+      // not actually hand over.
+      do {
+        const batch = await assetService.listAssets({
+          ...params,
+          page,
+          limit: REPORT_PAGE_SIZE,
+        });
+
+        collected.push(...batch.items);
+        total = batch.total;
+        page += 1;
+
+        if (batch.items.length === 0) break;
+      } while (collected.length < total);
+
+      if (collected.length === 0) {
+        setNotice({
+          type: "error",
+          text: "No assets match the current filters to report on.",
+        });
+        return;
+      }
+
+      downloadBlob(buildAssetsCsv(collected), reportFilename());
+      setNotice({
+        type: "success",
+        text: `Report generated with ${formatCount(collected.length)} asset${collected.length === 1 ? "" : "s"}.`,
+      });
+    } catch {
+      setNotice({
+        type: "error",
+        text: "Unable to generate the asset report.",
+      });
+    } finally {
+      setGeneratingReport(false);
+    }
   }
 
   // Wrapped in useCallback because the popup restarts its auto-dismiss timer
@@ -1514,6 +1673,8 @@ export default function AdminAssets() {
               onAssign={() => setModal({ kind: "assign" })}
               onReturn={() => setModal({ kind: "return" })}
               onViewAll={handleViewAllAssets}
+              onGenerateReport={handleGenerateReport}
+              generatingReport={generatingReport}
             />
           </div>
         </div>
