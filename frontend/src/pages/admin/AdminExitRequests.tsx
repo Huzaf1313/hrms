@@ -594,7 +594,6 @@ export default function AdminExitRequests() {
             />
           )}
         </div>
-
         {/* Right rail */}
         <aside className="flex min-w-0 flex-col gap-4">
           <ExitQuickFilters

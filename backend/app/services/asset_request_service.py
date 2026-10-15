@@ -8,6 +8,7 @@ from app.repositories.asset_repository import AssetRepository
 from app.repositories.asset_request_repository import AssetRequestRepository
 from app.schemas.asset import AssetRequestStatus, AssetRequestType, AssetStatus
 from app.services.asset_service import AssetService
+from app.services.admin_notification_service import AdminNotificationService
 from app.utils.pagination import PaginationParams
 
 
@@ -20,6 +21,7 @@ class AssetRequestService:
         self.repository = AssetRequestRepository()
         self.asset_repository = AssetRepository()
         self.asset_service = AssetService()
+        self.admin_notification_service = AdminNotificationService()
 
     async def create_request(self, data: dict):
         asset = await self.asset_service.get_asset(data["asset_id"])
@@ -74,12 +76,32 @@ class AssetRequestService:
         }
 
         try:
-            return await self.repository.create(request_data)
+            created = await self.repository.create(request_data)
         except DuplicateKeyError as exc:
             raise AppException(
                 f"Request tag {request_data['request_tag']} already exists",
                 409,
             ) from exc
+
+        # Routed to the admin who onboarded this employee. Wrapped so a
+        # notification failure can never lose the asset request itself.
+        try:
+            await self.admin_notification_service.create_for_employee(
+                employee_id=request_data["employee_id"],
+                notification_type="asset_requested",
+                title=(
+                    "Asset return request"
+                    if request_type_value == "return"
+                    else "Asset issue request"
+                ),
+                message=f"{request_data['asset_name']} ({request_data['asset_tag']}).",
+                target="/dashboard/assets",
+                target_id=str(created.get("_id")),
+            )
+        except Exception:
+            pass
+
+        return created
 
     async def get_requests(
         self,

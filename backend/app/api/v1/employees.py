@@ -51,6 +51,7 @@ def serialize_employee(employee: dict) -> EmployeeResponse:
         emergency_contact=employee.get("emergency_contact"),
         bank_information=employee.get("bank_information"),
         status=employee.get("status", "active"),
+        created_by=employee.get("created_by"),
     )
 
 
@@ -66,7 +67,10 @@ async def create_employee(
     employee_data["date_of_birth"] = to_datetime(employee_data.get("date_of_birth"))
     employee_data["joining_date"] = to_datetime(employee_data["joining_date"])
 
-    employee, temporary_password = await service.create_employee(employee_data)
+    employee, temporary_password = await service.create_employee(
+        employee_data,
+        created_by=str(current_user["_id"]),
+    )
 
     response = serialize_employee(employee)
     response.credentials = EmployeeCredentials(

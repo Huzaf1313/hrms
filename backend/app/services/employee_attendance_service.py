@@ -141,6 +141,8 @@ class EmployeeAttendanceService:
         employee_id: str,
         skip: int = 0,
         limit: int = 100,
+        start_date=None,
+        end_date=None,
     ):
         employee = await self.employee_repository.get_by_employee_id(employee_id)
         if not employee:
@@ -156,6 +158,8 @@ class EmployeeAttendanceService:
             employee_id=employee["employee_id"],
             skip=skip,
             limit=limit,
+            start_date=start_date,
+            end_date=end_date,
         )
 
     async def get_attendance_by_date(

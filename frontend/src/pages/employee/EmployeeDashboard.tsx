@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Hand, Check } from "lucide-react";
 
 import { api } from "../../services/api";
 
@@ -572,7 +573,7 @@ const attendanceChart = useMemo(() => {
 
       <section className="mb-7">
         <h1 className="mt-1 text-3xl font-bold tracking-tight text-[#171b1d] sm:text-4xl">
-          Good Morning, {firstName} 👋
+          Good Morning, {firstName} <Hand aria-hidden="true" className="inline h-5 w-5 align-middle" />
         </h1>
 
         <p className="mt-2 text-sm text-gray-500">
@@ -604,7 +605,7 @@ const attendanceChart = useMemo(() => {
             </div>
 
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-100 text-green-700">
-              ✓
+              <Check aria-hidden="true" className="h-5 w-5" />
             </div>
           </div>
 

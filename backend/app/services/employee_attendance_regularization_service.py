@@ -13,6 +13,7 @@ from app.repositories.shift_repository import ShiftRepository
 from app.services.employee_notification_service import (
     EmployeeNotificationService,
 )
+from app.services.admin_notification_service import AdminNotificationService
 from app.services.attendance_calculation import (
     compute_work_metrics,
     shift_duration_minutes,
@@ -39,6 +40,9 @@ class EmployeeAttendanceRegularizationService:
             EmployeeAttendanceRegularizationRepository()
         )
         self.notification_service = EmployeeNotificationService()
+        # Separate instance: this one targets the admins who own the employee,
+        # while the above targets the employee when a request is decided.
+        self.admin_notification_service = AdminNotificationService()
 
     async def _recompute_metrics(
         self,
@@ -311,9 +315,28 @@ class EmployeeAttendanceRegularizationService:
             "updated_at": datetime.utcnow(),
         }
 
-        return await self.regularization_repository.create(
+        created = await self.regularization_repository.create(
             regularization_data
         )
+
+        # Routed to the admin who onboarded this employee. Wrapped so a
+        # notification failure can never lose the request itself.
+        try:
+            await self.admin_notification_service.create_for_employee(
+                employee_id=employee_id,
+                notification_type="regularization_requested",
+                title="Attendance regularization request",
+                message=(
+                    f"{issue_type} on "
+                    f"{attendance_date.date().isoformat() if hasattr(attendance_date, 'date') else attendance_date}."
+                ),
+                target="/dashboard/regularization",
+                target_id=str(created.get("_id")),
+            )
+        except Exception:
+            pass
+
+        return created
 
     async def get_employee_requests(
         self,

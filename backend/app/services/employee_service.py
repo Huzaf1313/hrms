@@ -80,7 +80,11 @@ class EmployeeService:
                 400,
             )
 
-    async def create_employee(self, employee_data: dict):
+    async def create_employee(
+        self,
+        employee_data: dict,
+        created_by: str | None = None,
+    ):
         existing_employee = await self.repository.get_by_employee_id(
             employee_data["employee_id"]
         )
@@ -133,6 +137,10 @@ class EmployeeService:
         employee_data["failed_login_attempts"] = 0
         employee_data["created_at"] = datetime.utcnow()
         employee_data["updated_at"] = datetime.utcnow()
+
+        # The admin who added this person is who their requests route back to.
+        # Same convention as assets and job openings.
+        employee_data["created_by"] = created_by
 
         employee = await self.repository.create(employee_data)
 

@@ -212,5 +212,9 @@ class EmployeeResponse(BaseModel):
     # Status
     status: str
 
+    # Admin user id (Mongo _id as str) who created this profile. Null on records
+    # that predate the field.
+    created_by: str | None = None
+
     # Login credentials (only populated right after creation)
     credentials: EmployeeCredentials | None = None

@@ -14,11 +14,12 @@ import {
   ChevronRight,
   FileText,
   ClipboardEdit,
-  CalendarPlus,
-  Settings,
   Users2,
   Timer,
   RotateCcw,
+  MoreVertical,
+  SlidersHorizontal,
+  X,
 } from "lucide-react";
 import { ApiError } from "../../services/api";
 import { attendanceService } from "../../services/attendanceService";
@@ -40,6 +41,7 @@ const tabs = [
   { label: "Late", status: "late" },
   { label: "On Leave", status: "on_leave" },
   { label: "Absent", status: "absent" },
+  { label: "Missing Punch", status: "missing_punch" },
 ];
 
 const statusStyles: Record<AttendanceStatus, string> = {
@@ -74,8 +76,6 @@ const quickActions = [
   { label: "Process Regularization", icon: ClipboardEdit, iconBg: "bg-orange-50", iconColor: "text-orange-500" },
   { label: "Generate Report", icon: FileText, iconBg: "bg-emerald-50", iconColor: "text-emerald-600" },
   { label: "Manage Shifts", icon: Users2, iconBg: "bg-violet-50", iconColor: "text-violet-600" },
-  { label: "Add Holiday", icon: CalendarPlus, iconBg: "bg-rose-50", iconColor: "text-rose-600" },
-  { label: "Attendance Settings", icon: Settings, iconBg: "bg-gray-100", iconColor: "text-gray-600" },
 ];
 
 // --- Sorting -----------------------------------------------------------
@@ -88,7 +88,6 @@ type SortKey =
   | "in_time"
   | "out_time"
   | "working_hours"
-  | "overtime"
   | "status";
 
 type SortDirection = "asc" | "desc";
@@ -101,7 +100,6 @@ const columns: { key: SortKey; label: string }[] = [
   { key: "in_time", label: "In Time" },
   { key: "out_time", label: "Out Time" },
   { key: "working_hours", label: "Working Hours" },
-  { key: "overtime", label: "Overtime" },
   { key: "status", label: "Status" },
 ];
 
@@ -159,8 +157,6 @@ function getSortValue(row: AttendanceRecord, key: SortKey): string | number {
       }
 
       return workingHoursToMinutes(row.working_hours ?? row.total_hours);
-    case "overtime":
-      return row.overtime_minutes ?? 0;
     case "status":
       return row.status;
     default:
@@ -244,6 +240,13 @@ function displayShift(row: AttendanceRecord): string {
   return row.shift || "General";
 }
 
+/** "9:30 AM - 6:30 PM" under the shift name, when the shift has times. */
+function displayShiftHours(row: AttendanceRecord): string | null {
+  if (!row.shift_start || !row.shift_end) return null;
+
+  return `${displayPunchTime(row.shift_start)} - ${displayPunchTime(row.shift_end)}`;
+}
+
 // Three distinct outcomes, which the table used to collapse into one "-":
 // overtime worked, a genuine zero against a real shift, and "cannot tell"
 // because no shift was assigned.
@@ -266,9 +269,11 @@ function AdminAttendance() {
   const [workLocation, setWorkLocation] = useState("");
   const [workLocations, setWorkLocations] = useState<string[]>([]);
   const [overtimeOnly, setOvertimeOnly] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
+  const [total, setTotal] = useState(0);
   const [summary, setSummary] = useState<AttendanceSummary | null>(null);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
@@ -278,6 +283,7 @@ function AdminAttendance() {
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [showMarkModal, setShowMarkModal] = useState(false);
   const [showShiftManager, setShowShiftManager] = useState(false);
+  const [detailRow, setDetailRow] = useState<AttendanceRecord | null>(null);
   const [markForm, setMarkForm] = useState({
     employee_id: "",
     date: getToday(),
@@ -320,6 +326,7 @@ function AdminAttendance() {
         const attendance = attendanceResult.value;
         if (Array.isArray(attendance.items)) {
           setRecords(attendance.items);
+          setTotal(attendance.total ?? attendance.items.length);
         } else {
           setRecords([]);
           setError("Attendance API returned an invalid response.");
@@ -468,6 +475,31 @@ function AdminAttendance() {
     }
   }
 
+  const pageCount = Math.max(1, Math.ceil(total / limit));
+
+  // 1 2 3 4 5 … 25 — first four, last, current window, gap marker for the rest.
+  const pageNumbers = useMemo(() => {
+    if (pageCount <= 7) {
+      return Array.from({ length: pageCount }, (_, index) => index + 1);
+    }
+
+    const pages: (number | null)[] = [1, 2, 3, 4];
+
+    if (page > 5) pages.push(page - 1, page);
+
+    if (page < pageCount - 4) pages.push(pageCount - 3, pageCount - 2, pageCount - 1);
+
+    pages.push(pageCount);
+
+    return [...new Set(pages)].sort((a, b) => (a ?? 0) - (b ?? 0)).map((value, index, all) => {
+      // null where a real page was skipped, so the ellipsis renders in between.
+      const previous = all[index - 1];
+      const hasGap = value !== null && previous !== null && value - previous > 1;
+
+      return hasGap ? null : value;
+    });
+  }, [page, pageCount]);
+
   const sortedRecords = useMemo(() => {
     if (!sortKey) return records;
 
@@ -492,11 +524,11 @@ function AdminAttendance() {
   };
 
   const summaryCards = [
-    { label: "Total Employees", value: summary?.total_employees ?? "-", sub: summary ? "100%" : "-", subStyle: { color: "#2563eb" }, icon: Users, iconBg: "bg-blue-50", iconColor: "text-blue-600" },
-    { label: "Present Today", value: summary?.present_count ?? "-", sub: summary ? `${summary.present_percentage}%` : "-", subStyle: subColorStyles["Present Today"], icon: UserCheck, iconBg: "bg-emerald-50", iconColor: "text-emerald-600" },
-    { label: "Late Today", value: summary?.late_count ?? "-", sub: summary ? `${summary.late_percentage}%` : "-", subStyle: subColorStyles["Late Today"], icon: Clock, iconBg: "bg-orange-50", iconColor: "text-orange-500" },
-    { label: "On Leave", value: summary?.on_leave_count ?? "-", sub: summary ? `${summary.on_leave_percentage}%` : "-", subStyle: subColorStyles["On Leave"], icon: CalendarDays, iconBg: "bg-purple-50", iconColor: "text-purple-600" },
-    { label: "Absent Today", value: summary?.absent_count ?? "-", sub: summary ? `${summary.absent_percentage}%` : "-", subStyle: subColorStyles["Absent Today"], icon: UserX, iconBg: "bg-rose-50", iconColor: "text-rose-600" },
+    { label: "Total Employees", value: summary?.total_employees ?? "-", sub: summary ? "100%" : "-", subStyle: { color: "#2563eb" }, icon: Users, iconBg: "bg-blue-50", iconColor: "text-blue-600", card: "bg-blue-50/40 border-blue-200" },
+    { label: "Present Today", value: summary?.present_count ?? "-", sub: summary ? `${summary.present_percentage}%` : "-", subStyle: subColorStyles["Present Today"], icon: UserCheck, iconBg: "bg-emerald-50", iconColor: "text-emerald-600", card: "bg-emerald-50/40 border-emerald-200" },
+    { label: "Late Today", value: summary?.late_count ?? "-", sub: summary ? `${summary.late_percentage}%` : "-", subStyle: subColorStyles["Late Today"], icon: Clock, iconBg: "bg-orange-50", iconColor: "text-orange-500", card: "bg-orange-50/40 border-orange-200" },
+    { label: "On Leave", value: summary?.on_leave_count ?? "-", sub: summary ? `${summary.on_leave_percentage}%` : "-", subStyle: subColorStyles["On Leave"], icon: CalendarDays, iconBg: "bg-purple-50", iconColor: "text-purple-600", card: "bg-purple-50/40 border-purple-200" },
+    { label: "Absent Today", value: summary?.absent_count ?? "-", sub: summary ? `${summary.absent_percentage}%` : "-", subStyle: subColorStyles["Absent Today"], icon: UserX, iconBg: "bg-rose-50", iconColor: "text-rose-600", card: "bg-rose-50/40 border-rose-200" },
   ];
 
   const summaryTotals = summary
@@ -559,11 +591,11 @@ function AdminAttendance() {
   }
 
   return (
-    <div className="px-10 pb-10 pt-8">
+    <div className="mx-auto w-full max-w-[1800px] px-4 pb-10 pt-5 sm:px-6 lg:px-8 2xl:px-10">
       {/* Header */}
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-bold text-gray-900">Daily Attendance</h1>
+          <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl xl:text-4xl">Daily Attendance</h1>
           <p className="mt-1 text-gray-500">
             View and manage employees attendance for a selected date.
           </p>
@@ -590,20 +622,26 @@ function AdminAttendance() {
       </div>
 
       {/* Stat cards */}
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="mb-5 grid grid-cols-1 gap-3 min-[480px]:grid-cols-2 xl:grid-cols-5 xl:gap-4">
         {summaryCards.map((card) => {
           const Icon = card.icon;
           return (
-            <div key={card.label} className="rounded-3xl bg-white p-5 shadow-sm">
-              <div className={`mb-4 flex h-10 w-10 items-center justify-center rounded-xl ${card.iconBg}`}>
-                <Icon className={`h-5 w-5 ${card.iconColor}`} />
-              </div>
-              <p className="text-sm font-bold text-black">{card.label}</p>
-              <div className="mt-1 flex items-baseline gap-2">
-                <span className="text-2xl font-bold text-gray-900">{card.value}</span>
-                {card.sub && (
-                  <span className="text-sm font-semibold" style={card.subStyle}>{card.sub}</span>
-                )}
+            <div key={card.label} className={`min-h-[96px] rounded-2xl border p-4 shadow-sm transition-shadow hover:shadow-md ${card.card}`}>
+              <div className="flex items-center gap-3">
+                <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${card.iconBg}`}>
+                  <Icon className={`h-6 w-6 ${card.iconColor}`} />
+                </div>
+
+                <div className="min-w-0">
+                  <p className="truncate text-xs font-medium text-gray-600">{card.label}</p>
+
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-2xl font-bold text-gray-900">{card.value}</span>
+                    {card.sub && (
+                      <span className="text-xs font-semibold" style={card.subStyle}>{card.sub}</span>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           );
@@ -611,7 +649,23 @@ function AdminAttendance() {
       </div>
 
       {/* Filters */}
-      <div className="mb-6 grid grid-cols-1 items-end gap-x-3 gap-y-4 rounded-3xl bg-white p-5 shadow-sm sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
+      <div className="mb-6 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <p className="text-sm font-semibold text-gray-900">Filters</p>
+
+          <button
+            type="button"
+            onClick={() => setShowFilters((current) => !current)}
+            aria-expanded={showFilters}
+            className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 lg:hidden"
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+            {showFilters ? "Hide" : "Show"}
+            {activeFilterCount > 0 && ` (${activeFilterCount})`}
+          </button>
+        </div>
+
+        <div className={`${showFilters ? "grid" : "hidden"} grid-cols-1 items-end gap-x-3 gap-y-4 sm:grid-cols-2 lg:grid lg:grid-cols-4 2xl:grid-cols-8`}>
         <div className="min-w-0">
           <label className="mb-1.5 block text-xs font-medium text-gray-500">Date</label>
           <input
@@ -735,18 +789,19 @@ function AdminAttendance() {
             Clear filters
           </button>
         </div>
+        </div>
       </div>
 
       {/* Tabs */}
-      <div className="mb-4 flex flex-wrap items-center gap-6 border-b border-gray-200 px-1">
+      <div className="mb-4 flex gap-2 overflow-x-auto rounded-2xl border border-gray-100 bg-white px-3 py-2 shadow-sm [scrollbar-width:none]">
         {tabs.map((tab, index) => (
           <button
             key={tab.label}
             onClick={() => { setPage(1); setActiveTab(index); setStatus(tab.status ?? ""); }}
-            className={`whitespace-nowrap border-b-2 pb-3 text-sm font-medium transition ${
+            className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition ${
               activeTab === index
-                ? "border-[#2563eb] text-[#2563eb]"
-                : "border-transparent text-gray-500 hover:text-gray-700"
+                ? "bg-[#2563eb] text-white"
+                : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
             }`}
           >
             {tab.label} ({summary ? (tab.status === "present" ? summary.present_count : tab.status === "late" ? summary.late_count : tab.status === "on_leave" ? summary.on_leave_count : tab.status === "absent" ? summary.absent_count : tab.status === "missing_punch" ? summary.missing_punch_count : summary.total_employees) : "-"})
@@ -754,86 +809,11 @@ function AdminAttendance() {
         ))}
       </div>
 
-      {/* Row 1: Summary cards side by side */}
-      <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-3">
-        {/* Attendance Summary */}
-        <div className="rounded-3xl bg-white p-6 shadow-sm">
-          <h3 className="mb-4 font-bold text-gray-900">Attendance Summary</h3>
-          <div className="flex justify-center">
-            <AttendanceDonut summary={summary} />
-          </div>
-          <div className="mt-5 flex flex-col gap-2.5">
-            {summaryTotals.map((item) => (
-              <div key={item.label} className="flex items-center justify-between text-sm">
-                <span className="flex items-center gap-2 text-gray-600">
-                  <span className={`h-2 w-2 rounded-full ${item.color}`} />
-                  {item.label}
-                </span>
-                <span className="font-medium text-gray-700">
-                  {item.value} ({item.pct})
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Department Wise Present % */}
-        <div className="rounded-3xl bg-white p-6 shadow-sm">
-          <h3 className="mb-4 font-bold text-gray-900">Department Wise Present %</h3>
-          <div className="flex flex-col gap-4">
-            {(summary?.department_presence ?? []).map((dept) => (
-              <div key={dept.department_id}>
-                <div className="mb-1.5 flex items-center justify-between text-sm">
-                  <span className="text-gray-600">{dept.department_name}</span>
-                  <span className="font-semibold text-gray-900">{dept.present_percentage}%</span>
-                </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
-                  <div
-                    className="h-full rounded-full bg-[#2563eb]"
-                    style={{ width: `${dept.present_percentage}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="rounded-3xl bg-white p-6 shadow-sm">
-          <h3 className="mb-4 font-bold text-gray-900">Quick Actions</h3>
-          <div className="grid grid-cols-2 gap-3">
-            {quickActions.map((action) => {
-              const Icon = action.icon;
-              return (
-                <button
-                  key={action.label}
-                  type="button"
-                  onClick={
-                    action.label === "Manage Shifts"
-                      ? () => setShowShiftManager(true)
-                      : undefined
-                  }
-                  className="flex min-w-0 flex-col items-start gap-2 rounded-2xl border border-gray-100 p-3 text-left hover:bg-gray-50"
-                >
-                  <span
-                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${action.iconBg}`}
-                  >
-                    <Icon className={`h-4 w-4 ${action.iconColor}`} />
-                  </span>
-                  <span className="w-full break-words text-xs font-medium leading-tight text-gray-700">
-                    {action.label}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* Row 2: Table + Regularization side by side */}
-      <div className="flex flex-col gap-6 lg:flex-row">
+      {/* Keep the full-width attendance table together; analytics follow it in
+          a responsive row instead of leaving a long empty column beside it. */}
+      <div className="flex min-w-0 flex-col gap-5">
         {/* Table */}
-        <div className="min-w-0 flex-1 self-start rounded-3xl bg-white p-6 shadow-sm">
+        <div className="min-w-0 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-6">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div className="relative">
               <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -856,7 +836,7 @@ function AdminAttendance() {
             </div>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[1080px] text-left text-sm">
               <thead>
                 <tr className="border-b border-gray-100 text-xs font-bold uppercase tracking-wide text-gray-600">
@@ -920,11 +900,19 @@ function AdminAttendance() {
                     <td className="py-4 text-gray-600">{row.employee.department_name ?? "-"}</td>
                     <td className="py-4">
                       <div className="text-gray-700">{displayShift(row)}</div>
+
+                      {displayShiftHours(row) && (
+                        <div className="mt-0.5 text-[11px] text-gray-400">
+                          {displayShiftHours(row)}
+                        </div>
+                      )}
+
                       {row.is_overnight && (
                         <div className="mt-0.5 text-[11px] text-violet-600">
                           Ends next day
                         </div>
                       )}
+
                       {!hasShift(row) && (
                         <div className="mt-0.5 text-[11px] text-gray-400">
                           No shift length
@@ -935,29 +923,6 @@ function AdminAttendance() {
                     <td className="py-4 text-gray-600">{displayPunchTime(row.out_time ?? row.check_out)}</td>
                     <td className="py-4 text-gray-600">{displayWorkingHours(row.working_hours ?? row.total_hours)}</td>
                     <td className="py-4">
-                      {(() => {
-                        const overtime = displayOvertime(row);
-
-                        if (!overtime.computable) {
-                          return (
-                            <span className="text-gray-300">No shift</span>
-                          );
-                        }
-
-                        if (row.overtime_minutes && row.overtime_minutes > 0) {
-                          return (
-                            <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
-                              {overtime.text}
-                            </span>
-                          );
-                        }
-
-                        return (
-                          <span className="text-gray-400">{overtime.text}</span>
-                        );
-                      })()}
-                    </td>
-                    <td className="py-4">
                       <span
                         className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${statusStyles[row.status]}`}
                       >
@@ -965,34 +930,303 @@ function AdminAttendance() {
                         {formatStatus(row.status)}
                       </span>
                     </td>
+                    <td className="py-4">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setDetailRow(row)}
+                          className="rounded-lg border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
+                        >
+                          View
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setDetailRow(row)}
+                          aria-label={`More actions for ${row.employee.first_name} ${row.employee.last_name}`}
+                          className="flex h-7 w-7 items-center justify-center rounded-lg border border-gray-200 text-gray-400 transition hover:bg-gray-50 hover:text-gray-600"
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
 
+          {/* Card list below md. A 8-column table is unusable at 375px and
+              horizontal scroll hides half the row behind the viewport edge. */}
+          <div className="mt-4 space-y-3 md:hidden">
+            {isLoading ? (
+              <p className="py-6 text-center text-sm text-gray-500">Loading attendance...</p>
+            ) : error ? (
+              <p className="py-6 text-center text-sm text-rose-600">{error}</p>
+            ) : sortedRecords.length === 0 ? (
+              <p className="py-6 text-center text-sm text-gray-500">No attendance records found.</p>
+            ) : (
+              sortedRecords.map((row) => (
+                <div key={row.id} className="rounded-xl border border-gray-100 p-3">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-semibold text-blue-700">
+                      {initials(row)}
+                    </span>
+
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-gray-900">
+                        {row.employee.first_name} {row.employee.last_name}
+                      </p>
+
+                      <p className="truncate text-xs text-gray-500">
+                        {row.employee.employee_code} · {row.employee.department_name ?? "-"}
+                      </p>
+                    </div>
+
+                    <span
+                      className={`shrink-0 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ${statusStyles[row.status]}`}
+                    >
+                      <span className={`h-1.5 w-1.5 rounded-full ${statusDot[row.status]}`} />
+                      {formatStatus(row.status)}
+                    </span>
+                  </div>
+
+                  <dl className="mt-3 grid grid-cols-3 gap-2 border-t border-gray-50 pt-3 text-xs">
+                    <div>
+                      <dt className="text-gray-400">Shift</dt>
+                      <dd className="font-medium text-gray-700">{displayShift(row)}</dd>
+                    </div>
+
+                    <div>
+                      <dt className="text-gray-400">In</dt>
+                      <dd className="font-medium text-gray-700">{displayPunchTime(row.in_time ?? row.check_in)}</dd>
+                    </div>
+
+                    <div>
+                      <dt className="text-gray-400">Out</dt>
+                      <dd className="font-medium text-gray-700">{displayPunchTime(row.out_time ?? row.check_out)}</dd>
+                    </div>
+
+                    <div>
+                      <dt className="text-gray-400">Worked</dt>
+                      <dd className="font-medium text-gray-700">{displayWorkingHours(row.working_hours ?? row.total_hours)}</dd>
+                    </div>
+
+                    <div className="col-span-2">
+                      <dt className="text-gray-400">Overtime</dt>
+                      <dd className="font-medium text-gray-700">{displayOvertime(row).text}</dd>
+                    </div>
+                  </dl>
+                </div>
+              ))
+            )}
+          </div>
+
           {/* Pagination */}
           <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-sm text-gray-500">
-            <span>Showing {records.length ? (page - 1) * limit + 1 : 0} to {Math.min(page * limit, records.length + (page - 1) * limit)} entries</span>
-            <div className="flex items-center gap-1.5">
-              <button type="button" disabled={page === 1} onClick={() => setPage((current) => current - 1)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 disabled:opacity-40">
+            <span>
+              Showing {total ? (page - 1) * limit + 1 : 0} to{" "}
+              {Math.min(page * limit, total)} of {total} entries
+            </span>
+
+            <div className="flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                disabled={page === 1}
+                onClick={() => setPage((current) => current - 1)}
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-400 transition hover:bg-gray-50 disabled:opacity-40"
+                aria-label="Previous page"
+              >
                 <ChevronLeft className="h-4 w-4" />
               </button>
-              <span className="px-2 font-semibold text-gray-700">{page}</span>
-              <button type="button" disabled={records.length < limit} onClick={() => setPage((current) => current + 1)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 disabled:opacity-40">
+
+              {pageNumbers.map((entry, index) =>
+                entry === null ? (
+                  <span key={`gap-${index}`} className="px-1 text-gray-400">…</span>
+                ) : (
+                  <button
+                    key={entry}
+                    type="button"
+                    onClick={() => setPage(entry)}
+                    aria-current={entry === page ? "page" : undefined}
+                    className={`flex h-8 min-w-8 items-center justify-center rounded-lg px-2 text-sm font-medium transition ${
+                      entry === page
+                        ? "bg-[#2563eb] text-white"
+                        : "border border-gray-200 text-gray-600 hover:bg-gray-50"
+                    }`}
+                  >
+                    {entry}
+                  </button>
+                ),
+              )}
+
+              <button
+                type="button"
+                disabled={page >= pageCount}
+                onClick={() => setPage((current) => current + 1)}
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-400 transition hover:bg-gray-50 disabled:opacity-40"
+                aria-label="Next page"
+              >
                 <ChevronRight className="h-4 w-4" />
               </button>
             </div>
           </div>
         </div>
 
-        {/* Regularization Requests */}
-        <div className="flex w-full flex-col gap-6 lg:w-80">
-          <RegularizationRequestsCard
-            onReviewed={() => setAttendanceRefreshKey((current) => current + 1)}
-          />
+        {/* Right rail */}
+        <div className="order-first grid min-w-0 auto-rows-fr grid-cols-1 items-stretch gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {/* Attendance Summary */}
+          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+            <h3 className="mb-4 font-bold text-gray-900">Attendance Summary</h3>
+
+            <div className="flex justify-center">
+              <AttendanceDonut summary={summary} />
+            </div>
+
+            <div className="mt-5 flex flex-col gap-2.5">
+              {summaryTotals.map((item) => (
+                <div key={item.label} className="flex items-center justify-between text-sm">
+                  <span className="flex items-center gap-2 text-gray-600">
+                    <span className={`h-2 w-2 rounded-full ${item.color}`} />
+                    {item.label}
+                  </span>
+
+                  <span className="font-medium text-gray-700">
+                    {item.value} ({item.pct})
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Department Wise Present % */}
+          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+            <h3 className="mb-4 font-bold text-gray-900">Department Wise Present %</h3>
+
+            <div className="flex flex-col gap-4">
+              {(summary?.department_presence ?? []).map((dept) => (
+                <div key={dept.department_id}>
+                  <div className="mb-1.5 flex items-center justify-between text-sm">
+                    <span className="text-gray-600">{dept.department_name}</span>
+                    <span className="font-semibold text-gray-900">{dept.present_percentage}%</span>
+                  </div>
+
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
+                    <div
+                      className="h-full rounded-full bg-[#2563eb]"
+                      style={{ width: `${dept.present_percentage}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+            <h3 className="mb-4 font-bold text-gray-900">Quick Actions</h3>
+
+            <div className="grid grid-cols-2 gap-3">
+              {quickActions.map((action) => {
+                const Icon = action.icon;
+
+                return (
+                  <button
+                    key={action.label}
+                    type="button"
+                    onClick={() => {
+                      if (action.label === "Mark Attendance") setShowMarkModal(true);
+                      if (action.label === "Process Regularization")
+                        document.getElementById("regularization-requests")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                      if (action.label === "Generate Report") exportAttendance();
+                      if (action.label === "Manage Shifts") setShowShiftManager(true);
+                    }}
+                    className="flex min-w-0 flex-col items-start gap-2 rounded-xl border border-gray-100 p-3 text-left transition hover:border-gray-200 hover:bg-gray-50"
+                  >
+                    <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${action.iconBg}`}>
+                      <Icon className={`h-4 w-4 ${action.iconColor}`} />
+                    </span>
+
+                    <span className="w-full break-words text-xs font-medium leading-tight text-gray-700">
+                      {action.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div id="regularization-requests" className="scroll-mt-6">
+            <RegularizationRequestsCard
+              onReviewed={() => setAttendanceRefreshKey((current) => current + 1)}
+            />
+          </div>
         </div>
       </div>
+
+      {/* Row detail. The Action column's View button and kebab both land here. */}
+      {detailRow && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4"
+          onClick={() => setDetailRow(null)}
+        >
+          <div
+            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-white p-5 shadow-lg sm:rounded-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-700">
+                  {initials(detailRow)}
+                </span>
+
+                <div>
+                  <h2 className="font-bold text-gray-900">
+                    {detailRow.employee.first_name} {detailRow.employee.last_name}
+                  </h2>
+
+                  <p className="text-sm text-gray-500">
+                    {detailRow.employee.employee_code} · {detailRow.employee.department_name ?? "-"}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setDetailRow(null)}
+                aria-label="Close"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+              {[
+                ["Date", detailRow.date],
+                ["Status", formatStatus(detailRow.status)],
+                ["Shift", displayShift(detailRow)],
+                ["Shift hours", displayShiftHours(detailRow) ?? "--"],
+                ["In time", displayPunchTime(detailRow.in_time ?? detailRow.check_in)],
+                ["Out time", displayPunchTime(detailRow.out_time ?? detailRow.check_out)],
+                ["Working hours", displayWorkingHours(detailRow.working_hours ?? detailRow.total_hours)],
+                ["Overtime", displayOvertime(detailRow).text],
+              ].map(([label, value]) => (
+                <div key={label}>
+                  <dt className="text-xs text-gray-400">{label}</dt>
+                  <dd className="font-medium text-gray-700">{value}</dd>
+                </div>
+              ))}
+            </dl>
+
+            {detailRow.notes && (
+              <p className="mt-4 rounded-lg bg-gray-50 p-3 text-sm text-gray-600">
+                {detailRow.notes}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Mark Attendance Modal */}
       {showMarkModal && (

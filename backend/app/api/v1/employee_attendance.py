@@ -154,16 +154,32 @@ async def get_employee_attendance(
     employee_id: str,
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=100, ge=1, le=100),
+    start_date: date | None = Query(
+        default=None,
+        description="Inclusive lower bound, for paging the calendar by month",
+    ),
+    end_date: date | None = Query(
+        default=None,
+        description="Inclusive upper bound, for paging the calendar by month",
+    ),
     current_user: dict | None = Depends(
         require_permission(Permission.ATTENDANCE_READ)
     ),
 ):
     skip = (page - 1) * limit
 
+    if start_date and end_date and end_date < start_date:
+        raise AppException(
+            "End date cannot be before start date",
+            400,
+        )
+
     attendance = await service.get_employee_attendance(
         employee_id=employee_id,
         skip=skip,
         limit=limit,
+        start_date=start_date,
+        end_date=end_date,
     )
 
     return APIResponse(

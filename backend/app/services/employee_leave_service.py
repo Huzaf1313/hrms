@@ -5,6 +5,7 @@ from app.core.working_days import count_working_days
 from app.repositories.employee_leave_repository import (
     EmployeeLeaveRepository,
 )
+from app.services.admin_notification_service import AdminNotificationService
 
 
 class EmployeeLeaveService:
@@ -18,6 +19,7 @@ class EmployeeLeaveService:
 
     def __init__(self):
         self.repository = EmployeeLeaveRepository()
+        self.admin_notification_service = AdminNotificationService()
 
     async def create_request(
         self,
@@ -144,9 +146,28 @@ class EmployeeLeaveService:
             "updated_at": now,
         }
 
-        return await self.repository.create(
+        created = await self.repository.create(
             leave_data
         )
+
+        # The admin who owns this employee needs to see it pending. Wrapped so a
+        # notification failure can never lose the leave request itself.
+        try:
+            await self.admin_notification_service.create_for_employee(
+                employee_id=employee_id,
+                notification_type="leave_requested",
+                title="New leave request",
+                message=(
+                    f'{leave_type} for {total_days} day(s), '
+                    f"{start_date.isoformat()} to {end_date.isoformat()}."
+                ),
+                target="/dashboard/leave",
+                target_id=str(created.get("_id")),
+            )
+        except Exception:
+            pass
+
+        return created
 
     async def get_employee_requests(
         self,

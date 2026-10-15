@@ -64,10 +64,28 @@ class EmployeeAttendanceRepository:
         employee_id: str,
         skip: int = 0,
         limit: int = 100,
+        start_date: date | None = None,
+        end_date: date | None = None,
     ):
+        query: dict = {"employee_id": employee_id}
+
+        # `date` is stored as midnight-anchored datetimes, so the range is
+        # inclusive on both ends via time.min / time.max. Served by the existing
+        # (employee_id, date) compound index.
+        if start_date or end_date:
+            date_filter: dict = {}
+
+            if start_date:
+                date_filter["$gte"] = self.date_to_datetime(start_date)
+
+            if end_date:
+                date_filter["$lte"] = datetime.combine(end_date, time.max)
+
+            query["date"] = date_filter
+
         cursor = (
             self.collection
-            .find({"employee_id": employee_id})
+            .find(query)
             .sort("date", -1)
             .skip(skip)
             .limit(limit)

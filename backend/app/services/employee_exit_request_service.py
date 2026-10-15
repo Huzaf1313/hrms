@@ -5,9 +5,9 @@ import uuid
 from datetime import date, datetime, timedelta, timezone
 from math import ceil
 from pathlib import Path
- 
+
 from fastapi import UploadFile
- 
+
 from app.core.config import settings
 from app.core.exceptions import AppException
 from app.repositories.department_repository import DepartmentRepository
@@ -19,14 +19,15 @@ from app.schemas.employee_exit_request import (
     ExitStatusUpdate,
 )
 from app.services.email_service import EmailService
- 
+from app.services.admin_notification_service import AdminNotificationService
+
 logger = logging.getLogger(__name__)
- 
+
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 MAX_ATTACHMENTS = 5
- 
+
 ALLOWED_EXTENSIONS = {".pdf", ".doc", ".docx", ".jpg", ".jpeg", ".png"}
- 
+
 # The extension and the client content-type are both user controlled, so the
 # file's leading bytes are checked as well.
 FILE_SIGNATURES = {
@@ -37,8 +38,16 @@ FILE_SIGNATURES = {
     ".docx": [b"PK\x03\x04"],
     ".doc": [b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"],
 }
- 
- 
+
+
+# Documents the employee submits during exit. Add or rename entries here.
+DOCUMENT_TEMPLATES = [
+    {"key": "relieving_letter", "label": "Relieving Letter"},
+    {"key": "asset_handover", "label": "Handover of Company Assets"},
+    {"key": "no_dues_form", "label": "No Dues Form"},
+]
+
+
 class ExitRequestService:
     ACTIVE_STATUSES = ["Pending", "In Progress"]
 
@@ -51,11 +60,12 @@ class ExitRequestService:
         "Pending": {"In Progress", "Rejected"},
         "In Progress": {"Completed", "Rejected"},
     }
- 
+
     def __init__(self):
         self.repository = ExitRequestRepository()
         self.department_repository = DepartmentRepository()
         self.employee_repository = EmployeeRepository()
+        self.admin_notification_service = AdminNotificationService()
 
     async def _department_names(self, department_ids: list[str]) -> dict[str, str]:
         """Resolve department ids to names in one pass.
@@ -74,60 +84,60 @@ class ExitRequestService:
                 names[department_id] = department.get("name") or department_id
 
         return names
- 
+
     # ------------------------------------------------------------------ files
     @staticmethod
     async def read_attachments(files: list[UploadFile]) -> list[dict]:
         files = [f for f in files if f and f.filename]
- 
+
         if len(files) > MAX_ATTACHMENTS:
             raise AppException(
                 f"You can attach at most {MAX_ATTACHMENTS} files", 400
             )
- 
+
         prepared = []
         for upload in files:
             name = Path(upload.filename or "").name
             extension = Path(name).suffix.lower()
- 
+
             if extension not in ALLOWED_EXTENSIONS:
                 raise AppException(
                     "Unsupported file type. Allowed formats: PDF, DOC, DOCX, JPG, PNG",
                     400,
                 )
- 
+
             contents = await upload.read(MAX_FILE_SIZE + 1)
             await upload.close()
- 
+
             if not contents:
                 raise AppException(f"{name} is empty", 400)
- 
+
             if len(contents) > MAX_FILE_SIZE:
                 raise AppException(f"{name} exceeds the 10 MB limit", 413)
- 
+
             if not any(contents.startswith(sig) for sig in FILE_SIGNATURES[extension]):
                 raise AppException(
                     f"{name} does not look like a valid {extension} file", 400
                 )
- 
+
             prepared.append({"name": name, "extension": extension, "contents": contents})
- 
+
         return prepared
- 
+
     @staticmethod
     def _store_files(prepared: list[dict]) -> list[dict]:
         private_dir = os.path.abspath(settings.PRIVATE_UPLOAD_DIR)
         os.makedirs(private_dir, exist_ok=True)
- 
+
         saved: list[dict] = []
         try:
             for item in prepared:
                 stored_name = f"{uuid.uuid4().hex}{item['extension']}"
                 path = os.path.join(private_dir, stored_name)
- 
+
                 with open(path, "wb") as output:
                     output.write(item["contents"])
- 
+
                 saved.append(
                     {
                         "id": uuid.uuid4().hex,
@@ -142,16 +152,16 @@ class ExitRequestService:
         except Exception:
             ExitRequestService._remove_files(saved)
             raise
- 
+
         return saved
- 
+
     @staticmethod
     def _remove_files(attachments: list[dict]) -> None:
         for attachment in attachments:
             path = attachment.get("storage_path")
             if path and os.path.isfile(path):
                 os.remove(path)
- 
+
     def get_attachment_file(self, request: dict, attachment_id: str):
         attachment = next(
             (a for a in request.get("attachments", []) if a["id"] == attachment_id),
@@ -159,20 +169,83 @@ class ExitRequestService:
         )
         if not attachment:
             raise AppException("Attachment not found", 404)
- 
+
         private_dir = os.path.abspath(settings.PRIVATE_UPLOAD_DIR)
         file_path = os.path.abspath(attachment.get("storage_path", ""))
- 
+
         try:
             inside = os.path.commonpath([private_dir, file_path]) == private_dir
         except ValueError:
             inside = False
- 
+
         if not inside or not os.path.isfile(file_path):
             raise AppException("Attachment file not found", 404)
- 
+
         return file_path, attachment["file_name"], attachment["mime_type"]
- 
+
+    # -------------------------------------------------------------- documents
+    @staticmethod
+    def _documents(document: dict) -> list[dict]:
+        stored = {d["key"]: d.get("file") for d in document.get("submitted_documents", [])}
+        return [
+            {"key": t["key"], "label": t["label"], "required": True, "file": stored.get(t["key"])}
+            for t in DOCUMENT_TEMPLATES
+        ]
+
+    async def upload_document(
+        self,
+        request_id: str,
+        employee_id: str,
+        key: str,
+        upload: UploadFile,
+    ):
+        document = await self.get_request(request_id, employee_id)
+
+        if document["status"] not in self.ACTIVE_STATUSES:
+            raise AppException(
+                "Documents can only be uploaded while the request is active", 400
+            )
+
+        if key not in {t["key"] for t in DOCUMENT_TEMPLATES}:
+            raise AppException("Unknown document type", 404)
+
+        prepared = await self.read_attachments([upload])
+        if not prepared:
+            raise AppException("Please select a file", 400)
+
+        saved = self._store_files(prepared)[0]
+        old = next(
+            (d.get("file") for d in document.get("submitted_documents", []) if d["key"] == key),
+            None,
+        )
+
+        changed = await self.repository.replace_document_if_active(
+            request_id,
+            self.ACTIVE_STATUSES,
+            key,
+            {"key": key, "file": saved},
+            datetime.now(timezone.utc),
+        )
+        if not changed:
+            self._remove_files([saved])
+            raise AppException("This request was just updated. Please refresh.", 409)
+
+        if old:
+            self._remove_files([old])
+
+        return await self.repository.get_by_id(request_id)
+
+    def get_document_file(self, request: dict, key: str):
+        entry = next(
+            (d.get("file") for d in request.get("submitted_documents", []) if d["key"] == key),
+            None,
+        )
+        if not entry:
+            raise AppException("Document not found", 404)
+
+        # Reuses the private-directory path check.
+        return self.get_attachment_file({"attachments": [entry]}, entry["id"])
+
     # --------------------------------------------------------------- employee
     async def create_request(
         self,
@@ -181,15 +254,15 @@ class ExitRequestService:
         prepared_files: list[dict],
     ):
         employee_id = current_user["employee_id"]
- 
+
         if not payload.confirmed:
             raise AppException(
                 "Please confirm that the information provided is correct", 400
             )
- 
+
         if payload.reason == "Other" and not (payload.remarks or "").strip():
             raise AppException("Please add remarks when the reason is 'Other'", 400)
- 
+
         earliest = date.today() + timedelta(days=payload.notice_period_days)
         if payload.last_working_day < earliest:
             raise AppException(
@@ -197,21 +270,21 @@ class ExitRequestService:
                 f"working day must be on or after {earliest.strftime('%d %b %Y')}",
                 400,
             )
- 
+
         if await self.repository.find_active_for_employee(
             employee_id, self.ACTIVE_STATUSES
         ):
             raise AppException(
                 "You already have an active resignation request", 409
             )
- 
+
         attachments = self._store_files(prepared_files)
         now = datetime.now(timezone.utc)
- 
+
         name = (
             f"{current_user.get('first_name', '')} {current_user.get('last_name', '')}"
         ).strip() or current_user.get("full_name") or current_user.get("email")
- 
+
         document = {
             "employee_id": employee_id,
             "employee_name": name,
@@ -234,15 +307,32 @@ class ExitRequestService:
             "created_at": now,
             "updated_at": now,
         }
- 
+
         try:
             created = await self.repository.create(document)
         except Exception:
             self._remove_files(attachments)
             raise
- 
+
+        # Routed to the admin who onboarded this employee. Wrapped so a
+        # notification failure can never lose the resignation itself.
+        try:
+            await self.admin_notification_service.create_for_employee(
+                employee_id=str(employee_id),
+                notification_type="resignation_submitted",
+                title="Resignation submitted",
+                message=(
+                    f"Notice period {notice_period_days} days, "
+                    f"last working day {last_working_day}."
+                ),
+                target="/dashboard/exit-requests",
+                target_id=str(created.get("_id")),
+            )
+        except Exception:
+            pass
+
         return created
- 
+
     async def list_requests(
         self,
         page: int,
@@ -256,7 +346,7 @@ class ExitRequestService:
         submitted_to: datetime | None = None,
     ):
         skip = (page - 1) * limit
-        records = await self.repository.list_requests(
+        records = await self.repository.list(
             skip,
             limit,
             employee_id,
@@ -291,22 +381,22 @@ class ExitRequestService:
             "limit": limit,
             "pages": ceil(total / limit) if total else 1,
         }
- 
+
     async def get_request(self, request_id: str, employee_id: str | None = None):
         document = await self.repository.get_by_id(request_id)
- 
+
         # 404 (not 403) so another employee's request ID is not confirmed to exist.
         if not document or (employee_id and document["employee_id"] != employee_id):
             raise AppException("Exit request not found", 404)
- 
+
         return document
- 
+
     async def cancel_request(self, request_id: str, employee_id: str):
         document = await self.get_request(request_id, employee_id)
- 
+
         if document["status"] != "Pending":
             raise AppException("Only pending requests can be cancelled", 400)
- 
+
         changed = await self.repository.update_if_status(
             request_id,
             "Pending",
@@ -314,7 +404,7 @@ class ExitRequestService:
         )
         if not changed:
             raise AppException("This request was just updated. Please refresh.", 409)
- 
+
         return await self.repository.get_by_id(request_id)
 
     async def delete_request(self, request_id: str) -> bool:
@@ -451,23 +541,23 @@ class ExitRequestService:
                 for row in by_department_rows
             ],
         }
- 
+
     async def update_status(
         self, request_id: str, payload: ExitStatusUpdate, reviewer: str
     ):
         document = await self.get_request(request_id)
         current = document["status"]
         target = payload.status
- 
+
         if target not in self.TRANSITIONS.get(current, set()):
             raise AppException(
                 f"A request that is '{current}' cannot be moved to '{target}'", 400
             )
- 
+
         note = (payload.admin_note or "").strip() or None
         if target == "Rejected" and not note:
             raise AppException("Please provide a reason for rejecting", 400)
- 
+
         now = datetime.now(timezone.utc)
         changed = await self.repository.update_if_status(
             request_id,
@@ -482,12 +572,12 @@ class ExitRequestService:
         )
         if not changed:
             raise AppException("This request was just updated. Please refresh.", 409)
- 
+
         return await self.repository.get_by_id(request_id)
- 
+
     async def get_hr_emails(self) -> list[str]:
         return await self.repository.get_hr_emails()
- 
+
     # ----------------------------------------------------------------- emails
     # These are synchronous (SMTP) and meant to run via BackgroundTasks.
     # A mail failure is logged and never fails the request.
@@ -496,7 +586,7 @@ class ExitRequestService:
         if isinstance(value, datetime):
             value = value.date()
         return value.strftime("%d %b %Y")
- 
+
     def send_submitted_email(self, request: dict, hr_emails: list[str]) -> None:
         email_service = EmailService()
         data = {
@@ -518,7 +608,7 @@ class ExitRequestService:
                 )
             except Exception:
                 logger.exception("Could not send resignation email to %s", recipient)
- 
+
     def send_status_email(self, request: dict) -> None:
         recipient = request.get("email")
         if not recipient:
@@ -537,19 +627,23 @@ class ExitRequestService:
             )
         except Exception:
             logger.exception("Could not send status email to %s", recipient)
- 
+
     # -------------------------------------------------------------- serialize
     @staticmethod
     def _serialize(document: dict, department_name: str | None = None):
         if not document:
             return None
- 
+
         last_day = document["last_working_day"]
         if isinstance(last_day, datetime):
             last_day = last_day.date()
- 
+
         return {
             "id": str(document["_id"]),
+            "request_number": (
+                f"EX-{document['submitted_at'].year}-"
+                f"{str(document['_id'])[-6:].upper()}"
+            ),
             "employee_id": document["employee_id"],
             "employee_name": document.get("employee_name"),
             "email": document.get("email"),
@@ -573,6 +667,18 @@ class ExitRequestService:
                     "uploaded_at": a["uploaded_at"],
                 }
                 for a in document.get("attachments", [])
+            ],
+            "documents": [
+                {
+                    "key": d["key"],
+                    "label": d["label"],
+                    "required": d["required"],
+                    "status": "Submitted" if d["file"] else "Pending",
+                    "file_name": d["file"]["file_name"] if d["file"] else None,
+                    "file_size": d["file"]["file_size"] if d["file"] else None,
+                    "uploaded_at": d["file"]["uploaded_at"] if d["file"] else None,
+                }
+                for d in ExitRequestService._documents(document)
             ],
             "status": document["status"],
             "submitted_at": document["submitted_at"],

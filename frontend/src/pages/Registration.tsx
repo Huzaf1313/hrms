@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, ApiError } from "../services/api";
-import { Eye, EyeOff } from "lucide-react";
+import { Circle, Check, Eye, EyeOff } from "lucide-react";
 
 type Step = 1 | 2 | 3;
 
@@ -350,7 +350,11 @@ const handleVerifyOTP = async () => {
                         : "text-gray-400"
                     }`}
                   >
-                    <span>{passed ? "✓" : "○"}</span>
+                    {passed ? (
+                      <Check aria-hidden="true" className="h-3 w-3 shrink-0" />
+                    ) : (
+                      <Circle aria-hidden="true" className="h-3 w-3 shrink-0" />
+                    )}
                     {rule.label}
                   </li>
                 );

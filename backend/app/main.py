@@ -9,6 +9,9 @@ from app.api.v1.admin_payslip import router as admin_payslip_router
 from app.api.v1.admin_leaves import router as leaves_router
 from app.api.v1.admin_attendance import router as attendance_router
 from app.api.v1.shifts import router as shifts_router
+from app.api.v1.holidays import router as holidays_router
+from app.api.v1.admin_notifications import router as admin_notifications_router
+from app.api.v1.admin_support_tickets import router as admin_support_tickets_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.departments import router as departments_router
 from app.api.v1.employees import router as employees_router
@@ -65,6 +68,10 @@ from app.repositories.admin_announcement_repository import (
     AdminAnnouncementRepository,
 )
 from app.repositories.shift_repository import ShiftRepository
+from app.repositories.holiday_repository import HolidayRepository
+from app.repositories.employee_support_ticket_repository import (
+    EmployeeSupportTicketRepository,
+)
 
 from app.api.v1.employee_notification import (
     router as employee_notification_router,
@@ -96,6 +103,10 @@ async def lifespan(app: FastAPI):
 
     shift_repository = ShiftRepository()
     await shift_repository.ensure_indexes()
+
+    await HolidayRepository().ensure_indexes()
+
+    await EmployeeSupportTicketRepository().ensure_indexes()
 
     attendance_repository = EmployeeAttendanceRepository()
     await attendance_repository.ensure_indexes()
@@ -175,6 +186,12 @@ app.include_router(
     tags=["Health"],
 )
 
+# Also served unprefixed: uptime monitors conventionally poll /health.
+app.include_router(
+    health_router,
+    tags=["Health"],
+)
+
 app.include_router(
     auth_router,
     prefix="/api/v1",
@@ -209,6 +226,24 @@ app.include_router(
     shifts_router,
     prefix="/api/v1",
     tags=["Shifts"],
+)
+
+app.include_router(
+    holidays_router,
+    prefix="/api/v1",
+    tags=["Holidays"],
+)
+
+app.include_router(
+    admin_notifications_router,
+    prefix="/api/v1",
+    tags=["Admin Notifications"],
+)
+
+app.include_router(
+    admin_support_tickets_router,
+    prefix="/api/v1",
+    tags=["Admin Support Tickets"],
 )
 
 app.include_router(
@@ -298,7 +333,7 @@ app.include_router(
 app.include_router(employee_exit_requests_router, prefix="/api/v1")
 
 app.include_router(admin_exit_requests_router, prefix="/api/v1")
-
+    
 app.include_router(
     recruitment_router,
     prefix="/api/v1",

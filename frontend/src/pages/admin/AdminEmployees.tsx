@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Check } from "lucide-react";
 
 import AdminEmployeeDetailsPage from "../../components/admin/AdminEmployeeDetailsPage";
 import AdminEmployeeForm from "../../components/admin/AdminEmployeeForm";
@@ -58,7 +59,7 @@ function CredentialsModal({
       <div className="w-full max-w-md rounded-3xl bg-white p-8 shadow-xl">
         <div className="mb-1 flex items-center gap-2">
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
-            ✓
+            <Check aria-hidden="true" className="h-4 w-4" />
           </span>
           <h3 className="text-lg font-bold text-gray-900">
             Employee Created
@@ -97,7 +98,7 @@ function CredentialsModal({
             onClick={copyCredentials}
             className="rounded-full border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
           >
-            {copied ? "Copied ✓" : "Copy Credentials"}
+            {copied ? <><Check aria-hidden="true" className="mr-1 inline h-4 w-4" />Copied</> : "Copy Credentials"}
           </button>
 
           <button
@@ -360,7 +361,7 @@ function AdminEmployees({ autoOpenCreateForm = false }: AdminEmployeesProps) {
   }
 
   return (
-    <div className="px-10 pb-10 pt-8">
+    <div className="px-4 pb-10 pt-6 sm:px-6 lg:px-8 xl:px-10">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-4xl font-bold text-gray-900">Employees</h1>

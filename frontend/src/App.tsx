@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   BrowserRouter,
   Navigate,
@@ -26,8 +25,6 @@ import EmployeeResignation from "./pages/employee/EmployeeResignation";
 
 
 function App() {
-  const [activePage, setActivePage] = useState("Dashboard");
-
   async function handleLogout() {
     const refreshToken = getRefreshToken();
 
@@ -48,24 +45,8 @@ function App() {
 
         <Route element={<AdminRoute />}>
           <Route
-            path="/dashboard"
-            element={
-              <DashboardLayout
-                activePage={activePage}
-                onNavigate={setActivePage}
-                onLogout={handleLogout}
-              />
-            }
-          />
-          <Route
-            path="/dashboard/regularization"
-            element={
-              <DashboardLayout
-                activePage="Regularization Requests"
-                onNavigate={() => undefined}
-                onLogout={handleLogout}
-              />
-            }
+            path="/dashboard/*"
+            element={<DashboardLayout onLogout={handleLogout} />}
           />
         </Route>
 

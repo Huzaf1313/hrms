@@ -2,11 +2,9 @@ import { useState } from "react";
 import {
   BarChart3,
   CalendarDays,
-  ChevronDown,
   ClipboardList,
   FileText,
   Landmark,
-  Play,
   Settings2,
   Users,
   WalletCards,
@@ -157,7 +155,7 @@ export default function AdminPayroll() {
   ];
 
   return (
-    <div className="px-10 pb-10 pt-8">
+    <div className="px-4 pb-10 pt-6 sm:px-6 lg:px-8 xl:px-10">
       {/* Header */}
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -189,45 +187,23 @@ export default function AdminPayroll() {
         })}
       </div>
 
-      {/* Tabs + run controls */}
+      {/* Tabs */}
       <div className="mb-6 rounded-3xl bg-white px-6 py-4 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-6 border-b border-gray-200">
-            {tabs.map((tab) => (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => setActiveTab(tab.key)}
-                className={`whitespace-nowrap border-b-2 pb-3 text-sm font-medium transition ${
-                  activeTab === tab.key
-                    ? "border-[#2563eb] text-[#2563eb]"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {activeTab === "overview" && (
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs text-gray-500">Pay Period</span>
-
-              <button
-                type="button"
-                className="flex items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs text-gray-600 hover:bg-gray-50"
-              >
-                01 May 2024 - 31 May 2024 <ChevronDown className="h-3 w-3" />
-              </button>
-
-              <button
-                type="button"
-                className="flex items-center gap-1.5 rounded-full bg-[#2563eb] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1d4ed8]"
-              >
-                <Play className="h-3.5 w-3.5 fill-current" /> Run Payroll
-              </button>
-            </div>
-          )}
+        <div className="flex flex-wrap items-center gap-6 border-b border-gray-200">
+          {tabs.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setActiveTab(tab.key)}
+              className={`whitespace-nowrap border-b-2 pb-3 text-sm font-medium transition ${
+                activeTab === tab.key
+                  ? "border-[#2563eb] text-[#2563eb]"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
       </div>
 

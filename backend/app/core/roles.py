@@ -49,6 +49,12 @@ class Permission(str, Enum):
     SHIFT_UPDATE = "shift.update"
     SHIFT_DELETE = "shift.delete"
 
+    # Holidays
+    HOLIDAY_READ = "holiday.read"
+    HOLIDAY_CREATE = "holiday.create"
+    HOLIDAY_UPDATE = "holiday.update"
+    HOLIDAY_DELETE = "holiday.delete"
+
     # Leave
     LEAVE_READ = "leave.read"
     LEAVE_CREATE = "leave.create"
@@ -116,6 +122,10 @@ class Permission(str, Enum):
     ANNOUNCEMENT_READ = "announcement.read"
     ANNOUNCEMENT_MANAGE = "announcement.manage"
 
+    # Exit / offboarding requests
+    EXIT_REQUESTS_READ = "exit_requests.read"
+    EXIT_REQUESTS_MANAGE = "exit_requests.manage"
+
     # Own profile
     SELF_PROFILE_READ = "self_profile.read"
     SELF_PROFILE_UPDATE = "self_profile.update"
@@ -134,6 +144,9 @@ EMPLOYEE_PERMISSIONS = {
 
     # Shifts (own shift only - routes scope this down to the caller)
     Permission.SHIFT_READ,
+
+    # Holidays (read-only - the employee attendance calendar marks them)
+    Permission.HOLIDAY_READ,
 
     # Leave
     Permission.LEAVE_READ,

@@ -1,20 +1,22 @@
+from __future__ import annotations
+
 import re
 from datetime import date, datetime, time
-from typing import List
+
 from bson import ObjectId
 from pymongo import ASCENDING, DESCENDING
- 
+
 from app.db.database import database
- 
- 
+
+
 class ExitRequestRepository:
     collection = database["exit_requests"]
     users = database["users"]
- 
+
     @staticmethod
     def _to_datetime(value: date) -> datetime:
         return datetime.combine(value, time.min)
- 
+
     async def ensure_indexes(self):
         await self.collection.create_index(
             [
@@ -28,26 +30,26 @@ class ExitRequestRepository:
             [("status", ASCENDING), ("submitted_at", DESCENDING)],
             name="exit_request_status_submitted_index",
         )
- 
+
     async def create(self, data: dict):
         if isinstance(data.get("last_working_day"), date) and not isinstance(
             data["last_working_day"], datetime
         ):
             data["last_working_day"] = self._to_datetime(data["last_working_day"])
- 
+
         result = await self.collection.insert_one(data)
         return await self.get_by_id(str(result.inserted_id))
- 
+
     async def get_by_id(self, request_id: str):
         if not ObjectId.is_valid(request_id):
             return None
         return await self.collection.find_one({"_id": ObjectId(request_id)})
- 
+
     async def find_active_for_employee(self, employee_id: str, statuses: list[str]):
         return await self.collection.find_one(
             {"employee_id": employee_id, "status": {"$in": statuses}}
         )
- 
+
     @staticmethod
     def _filters(
         employee_id: str | None = None,
@@ -82,7 +84,7 @@ class ExitRequestRepository:
             filters["$or"] = [{"employee_name": pattern}, {"employee_id": pattern}]
         return filters
 
-    async def list_requests(
+    async def list(
         self,
         skip: int,
         limit: int,
@@ -175,7 +177,7 @@ class ExitRequestRepository:
                 {"$sort": {"count": -1}},
             ]
         ).to_list(length=None)
- 
+
     async def update_if_status(
         self, request_id: str, expected_status: str, update_data: dict
     ) -> bool:
@@ -202,7 +204,47 @@ class ExitRequestRepository:
             {"_id": ObjectId(request_id), "status": {"$in": allowed_statuses}}
         )
         return result.deleted_count == 1
- 
+
+    async def replace_document_if_active(
+        self,
+        request_id: str,
+        active_statuses: list[str],
+        key: str,
+        entry: dict,
+        now: datetime,
+    ) -> bool:
+        """Atomically replace one submitted document (no lost updates when
+        two uploads happen at once). $literal stops a file name that starts
+        with '$' from being read as a field path."""
+        if not ObjectId.is_valid(request_id):
+            return False
+
+        result = await self.collection.update_one(
+            {"_id": ObjectId(request_id), "status": {"$in": active_statuses}},
+            [
+                {
+                    "$set": {
+                        "submitted_documents": {
+                            "$concatArrays": [
+                                {
+                                    "$filter": {
+                                        "input": {
+                                            "$ifNull": ["$submitted_documents", []]
+                                        },
+                                        "as": "d",
+                                        "cond": {"$ne": ["$$d.key", key]},
+                                    }
+                                },
+                                [{"$literal": entry}],
+                            ]
+                        },
+                        "updated_at": now,
+                    }
+                }
+            ],
+        )
+        return result.modified_count == 1
+
     async def get_hr_emails(self) -> list[str]:
         rows = await self.users.find(
             {"role": "hr_admin", "is_active": True}, {"email": 1}
