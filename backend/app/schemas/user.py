@@ -45,8 +45,6 @@ class UserCreate(BaseModel):
 
     reference: str = Field(default="", max_length=100)
 
-    role: UserRole
-
     @field_validator("full_name")
     @classmethod
     def validate_full_name(cls, value: str) -> str:
@@ -77,6 +75,11 @@ class UserCreate(BaseModel):
         return validate_password_strength(value)
 
 
+class ManagerCreate(UserCreate):
+    """Manager account request. The role is fixed server-side so a client
+    cannot ask for anything else."""
+
+
 class UserResponse(BaseModel):
     id: str
     employee_id: str | None = None
@@ -102,13 +105,6 @@ class TokenResponse(BaseModel):
 
 class RefreshTokenRequest(BaseModel):
     refresh_token: str = Field(min_length=1)
-
-class VerifyOTPRequest(BaseModel):
-    email: EmailStr
-    otp: str = Field(
-        min_length=6,
-        max_length=6,
-    )
 
 class VerifyPasswordResetOTPRequest(BaseModel):
     email: EmailStr

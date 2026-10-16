@@ -15,6 +15,7 @@ import RecentActivityCard from "../../components/admin/RecentActivityCard";
 import RecruitmentFunnel from "../../components/admin/RecruitmentFunnel";
 import UpcomingInterviewsCard from "../../components/admin/UpcomingInterviewsCard";
 import { useDashboardMetrics } from "../../components/admin/useDashboardMetrics";
+import { isHrAdmin } from "../../lib/access";
 
 interface AdminDashboardProps {
   /** Live values the dashboard endpoint already provides. */
@@ -47,6 +48,10 @@ export default function AdminDashboard({
 }: AdminDashboardProps) {
   const firstName = useMemo(() => readUserFirstName(), []);
 
+  // Hiring, payroll and interview widgets are HR-only and the manager has no
+  // permission behind them, so they are not rendered at all.
+  const showHrWidgets = isHrAdmin();
+
   const { metrics, refresh } = useDashboardMetrics(totalHeadcount ?? null);
 
   return (
@@ -70,16 +75,22 @@ export default function AdminDashboard({
       <div className="space-y-4">
         <DashboardKpiRow
           metrics={metrics}
+          showHrWidgets={showHrWidgets}
           onOpenLeave={() => onNavigate("Leave")}
           onOpenPayroll={() => onNavigate("Payroll")}
         />
 
         <div className="grid grid-cols-12 gap-4">
           <AttendanceTrendChart />
-          <RecruitmentFunnel />
-          <PayrollExpenseSummaryCard
-            onOpenPayroll={() => onNavigate("Payroll")}
-          />
+
+          {showHrWidgets && (
+            <>
+              <RecruitmentFunnel />
+              <PayrollExpenseSummaryCard
+                onOpenPayroll={() => onNavigate("Payroll")}
+              />
+            </>
+          )}
         </div>
 
         <div className="grid grid-cols-12 gap-4">
@@ -87,7 +98,9 @@ export default function AdminDashboard({
             onOpenLeave={() => onNavigate("Leave")}
             onChanged={refresh}
           />
-          <UpcomingInterviewsCard />
+
+          {showHrWidgets && <UpcomingInterviewsCard />}
+
           <BirthdaysAndAnniversariesCard />
         </div>
 
@@ -96,6 +109,7 @@ export default function AdminDashboard({
           <QuickActionsCard
             onNavigate={onNavigate}
             onCreateAnnouncement={onCreateAnnouncement}
+            showHrWidgets={showHrWidgets}
           />
           <DepartmentDonut counts={metrics.departmentCounts} />
         </div>

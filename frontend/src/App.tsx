@@ -7,7 +7,6 @@ import {
 
 import Login from "./pages/login";
 import ProtectedRoute, { AdminRoute } from "./components/ProtectedRoute";
-import Registration from "./pages/Registration";
 import DashboardLayout from "./layouts/DashboardLayout";
 import EmployeeDashboard from "./pages/employee/EmployeeDashboard";
 import EmployeeProfile from "./pages/employee/EmployeeProfile";
@@ -41,7 +40,6 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Registration />} />
 
         <Route element={<AdminRoute />}>
           <Route

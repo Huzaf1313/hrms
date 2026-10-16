@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff, CheckCircle2 } from "lucide-react";
 import {
   api,
+  apiRaw,
   ApiError,
   clearSession,
   setAccessToken,
@@ -12,14 +13,6 @@ import { AuthShell } from "../components/auth/AuthShell";
 import { AuthField } from "../components/auth/AuthField";
 import { OtpInput } from "../components/auth/OtpInput";
 import { PasswordStrength } from "../components/auth/PasswordStrength";
-
-const roles = ["Manager", "HR", "Employee"];
-
-const roleMap: Record<string, string> = {
-  Manager: "manager",
-  HR: "hr_admin",
-  Employee: "employee",
-};
 
 interface LoginResponse {
   access_token: string;
@@ -58,8 +51,6 @@ type ForgotPasswordStep = "email" | "otp" | "reset" | "success";
 
 function Login() {
   const navigate = useNavigate();
-
-  const [selectedRole, setSelectedRole] = useState("Employee");
 
   // Login state
   const [email, setEmail] = useState("");
@@ -104,7 +95,7 @@ function Login() {
     setIsLoading(true);
 
     try {
-      const loginResponse = await api.post("/auth/login", {
+      const loginResponse = await apiRaw.post("/auth/login", {
         email: trimmedEmail,
         password,
       });
@@ -119,17 +110,6 @@ function Login() {
       const userResponse = await api.get("/users/me");
       const user = userResponse as UserResponse;
 
-      const expectedRole = roleMap[selectedRole];
-
-      if (user.role !== expectedRole) {
-        clearSession();
-        localStorage.removeItem("token_type");
-        setError(
-          `This account belongs to the ${user.role} role. Please select the correct login section.`
-        );
-        return;
-      }
-
       localStorage.setItem("user", JSON.stringify(user));
 
       if (rememberMe) {
@@ -138,11 +118,10 @@ function Login() {
         localStorage.removeItem("remember_me");
       }
 
-      if (user.role === "employee") {
-        navigate("/employee/dashboard");
-      } else {
-        navigate("/dashboard");
-      }
+      // The account decides where you land, not a picker on this form.
+      navigate(
+        user.role === "employee" ? "/employee/dashboard" : "/dashboard",
+      );
     } catch (err: unknown) {
       clearSession();
       localStorage.removeItem("token_type");
@@ -200,7 +179,7 @@ function Login() {
     setIsLoading(true);
 
     try {
-      const response = await api.post("/auth/forgot-password", {
+      const response = await apiRaw.post("/auth/forgot-password", {
         email: trimmedEmail,
       });
 
@@ -237,7 +216,7 @@ function Login() {
     setIsLoading(true);
 
     try {
-      const response = await api.post("/auth/forgot-password/verify-otp", {
+      const response = await apiRaw.post("/auth/forgot-password/verify-otp", {
         email: forgotEmail.trim(),
         otp: trimmedOTP,
       });
@@ -311,7 +290,7 @@ function Login() {
     setIsLoading(true);
 
     try {
-      const response = await api.post("/auth/forgot-password/reset-password", {
+      const response = await apiRaw.post("/auth/forgot-password/reset-password", {
         email: forgotEmail.trim(),
         reset_token: resetToken,
         new_password: newPassword,
@@ -358,35 +337,6 @@ function Login() {
             <p className="mt-1 text-xs text-ink-400">
               Sign in to access your HRMS portal
             </p>
-          </div>
-
-          {/* Segmented Role Selector */}
-          <div className="space-y-2">
-            <label className="technical-label block text-[11px] font-semibold uppercase tracking-wider text-ink-400">
-              Select Portal Role
-            </label>
-            <div className="flex rounded-xl border border-line bg-surface-muted p-1">
-              {roles.map((role) => {
-                const isSelected = selectedRole === role;
-                return (
-                  <button
-                    key={role}
-                    type="button"
-                    onClick={() => {
-                      setSelectedRole(role);
-                      setError("");
-                    }}
-                    className={`technical-label flex-1 rounded-lg py-2 text-xs font-semibold uppercase tracking-wider transition-all duration-200 ${
-                      isSelected
-                        ? "bg-brand-600 text-white shadow-sm"
-                        : "text-ink-600 hover:text-ink-900"
-                    }`}
-                  >
-                    {role}
-                  </button>
-                );
-              })}
-            </div>
           </div>
 
           {/* Error Alert */}
@@ -465,16 +415,8 @@ function Login() {
             {isLoading ? "Signing In..." : "Sign In"}
           </button>
 
-          {/* Sign Up Footer */}
-          <p className="text-center text-xs text-ink-600">
-            Don't have an account?{" "}
-            <button
-              type="button"
-              onClick={() => navigate("/register")}
-              className="font-semibold text-brand-600 transition-colors hover:text-brand-700 hover:underline"
-            >
-              Sign up
-            </button>
+          <p className="text-center text-[11px] text-ink-400">
+            Accounts are created by HR. Contact your HR admin for access.
           </p>
         </form>
       ) : (

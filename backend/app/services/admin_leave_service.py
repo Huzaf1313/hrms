@@ -3,6 +3,7 @@ from datetime import date, datetime, time, timedelta, timezone
 from bson import ObjectId
 
 from app.core.exceptions import AppException
+from app.core.scope import scope_matches, visibility_scope
 from app.core.working_days import count_working_days
 from app.repositories.department_repository import DepartmentRepository
 from app.repositories.employee_repository import EmployeeRepository
@@ -22,12 +23,73 @@ class AdminLeaveService:
         self.department_repository = DepartmentRepository()
         self.notification_service = EmployeeNotificationService()
 
+    
+    @staticmethod
+    def _created_by_scope(current_user: dict | None) -> dict:
+        """See app.core.scope.visibility_scope."""
+        return visibility_scope(current_user)
+
+    async def _get_accessible_employee_ids(
+        self,
+        current_user: dict | None,
+    ) -> list[str] | None:
+        scope = self._created_by_scope(current_user)
+
+        if not scope:
+            return None
+
+        employees = await self.employee_repository.get_all(
+            skip=0,
+            limit=10000,
+            scope=scope,
+        )
+
+        return [
+            employee["employee_id"]
+            for employee in employees
+            if employee.get("employee_id")
+        ]
+
+    async def _assert_employee_access(
+        self,
+        employee_id: str,
+        current_user: dict | None,
+    ) -> dict:
+        employee = await self.employee_repository.get_by_employee_id(
+            employee_id
+        )
+
+        if not employee:
+            raise AppException("Employee not found", 404)
+
+        if not scope_matches(employee, self._created_by_scope(current_user)):
+            raise AppException("Leave request not found", 404)
+
+        return employee
+
+    async def _assert_leave_access(
+        self,
+        leave: dict,
+        current_user: dict | None,
+    ) -> None:
+        await self._assert_employee_access(
+            employee_id=leave["employee_id"],
+            current_user=current_user,
+        )
+
+
     async def create_leave(
         self,
         leave_data: dict,
+        current_user: dict | None = None,
     ):
         start_date = leave_data["start_date"]
         end_date = leave_data["end_date"]
+
+        await self._assert_employee_access(
+            employee_id=leave_data["employee_id"],
+            current_user=current_user,
+        )
 
         if end_date < start_date:
             raise AppException(
@@ -91,14 +153,17 @@ class AdminLeaveService:
 
         return await self._serialize(result)
 
-    async def get_leave(self, leave_id: str):
+    async def get_leave(
+        self,
+        leave_id: str,
+        current_user: dict | None = None,
+    ):
         leave = await self.repository.get_by_id(leave_id)
 
         if not leave:
-            raise AppException(
-                "Leave request not found",
-                404,
-            )
+            raise AppException("Leave request not found", 404)
+
+        await self._assert_leave_access(leave, current_user)
 
         return await self._serialize(leave)
 
@@ -110,6 +175,7 @@ class AdminLeaveService:
         employee_id: str | None = None,
         leave_type: str | None = None,
         department_id: str | None = None,
+        current_user: dict | None = None,
     ):
         filters = {}
 
@@ -127,39 +193,48 @@ class AdminLeaveService:
         if leave_type:
             filters["leave_type"] = leave_type
 
+        
+        
+        accessible_employee_ids = await self._get_accessible_employee_ids(
+            current_user
+        )
+
         if department_id:
-            employees = await self.employee_repository.get_all(
+            department_employees = await self.employee_repository.get_all(
                 filters={"department_id": department_id},
                 skip=0,
                 limit=10000,
+                scope=self._created_by_scope(current_user),
             )
-            employee_ids = [employee["employee_id"] for employee in employees]
-            filters["employee_id"] = {"$in": employee_ids}
 
-        skip = (page - 1) * limit
+            department_ids = {
+                employee["employee_id"]
+                for employee in department_employees
+                if employee.get("employee_id")
+            }
 
-        records = await self.repository.get_all(
-            filters,
-            skip,
-            limit,
-        )
+            if accessible_employee_ids is not None:
+                department_ids.intersection_update(
+                    accessible_employee_ids
+                )
 
-        total = await self.repository.count(filters)
+            accessible_employee_ids = list(department_ids)
 
-        return {
-            "items": [
-                await self._serialize(record)
-                for record in records
-            ],
-            "total": total,
-            "page": page,
-            "limit": limit,
-            "pages": (
-                (total + limit - 1) // limit
-                if total
-                else 1
-            ),
-        }
+        if employee_id:
+            if accessible_employee_ids is not None:
+                accessible_employee_ids = [
+                    item
+                    for item in accessible_employee_ids
+                    if item == employee_id
+                ]
+            else:
+                filters["employee_id"] = employee_id
+
+        if accessible_employee_ids is not None:
+            filters["employee_id"] = {
+                "$in": accessible_employee_ids
+            }
+
 
     async def update_status(
         self,
@@ -167,6 +242,7 @@ class AdminLeaveService:
         status: str,
         admin_note: str | None,
         admin_user_id: str | None,
+        current_user: dict | None = None,
     ):
         leave = await self.repository.get_by_id(leave_id)
 
@@ -175,6 +251,8 @@ class AdminLeaveService:
                 "Leave request not found",
                 404,
             )
+
+        await self._assert_leave_access(leave, current_user)
 
         current_status = str(leave.get("status", "")).lower()
         if current_status in ["approved", "rejected", "cancelled"]:
@@ -242,28 +320,29 @@ class AdminLeaveService:
                 target_id=str(leave.get("_id", leave_id)),
             )
 
-    async def delete_leave(self, leave_id: str):
+    async def delete_leave(
+        self,
+        leave_id: str,
+        current_user: dict | None = None,
+    ):
         leave = await self.repository.get_by_id(leave_id)
 
         if not leave:
-            raise AppException(
-                "Leave request not found",
-                404,
-            )
+            raise AppException("Leave request not found", 404)
 
-        deleted = await self.repository.delete(
-            leave_id
-        )
+        await self._assert_leave_access(leave, current_user)
+
+        deleted = await self.repository.delete(leave_id)
 
         if not deleted:
-            raise AppException(
-                "Unable to delete leave request",
-                500,
-            )
+            raise AppException("Unable to delete leave request", 500)
 
         return True
 
-    async def get_summary(self):
+    async def get_summary(
+        self,
+        current_user: dict | None = None,
+    ):
         today = datetime.now(IST).date()
 
         month_start = datetime.combine(
@@ -306,14 +385,19 @@ class AdminLeaveService:
             time.min,
         )
 
+        accessible_employee_ids = await self._get_accessible_employee_ids(
+            current_user
+        )
+
         return await self.repository.get_summary_counts(
             month_start=month_start,
             month_end=month_end,
             today_start=today_start,
             tomorrow_start=tomorrow_start,
             upcoming_end=upcoming_end,
+            employee_ids=accessible_employee_ids,
         )
-
+    
     async def _serialize(self, document: dict):
         if not document:
             return None

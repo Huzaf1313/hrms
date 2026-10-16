@@ -15,6 +15,7 @@ import AdminSettings from "../pages/admin/AdminSetting";
 import AdminRecruitment from "../pages/admin/AdminRecruitment";
 import { getDashboardData, type DashboardData } from "../services/dashboardService";
 import AdminExitRequests from "../pages/admin/AdminExitRequests";
+import { canAccessPage } from "../lib/access";
 
 interface DashboardLayoutProps {
   onLogout: () => void;
@@ -43,13 +44,26 @@ function DashboardLayout({
 }: DashboardLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
-  const activePage = pageFromPath(location.pathname);
+  const page = pageFromPath(location.pathname);
+
+  // A manager who types an HR-only URL lands on their dashboard instead. The
+  // backend would 403 anyway; this just avoids a dead page.
+  const activePage = canAccessPage(page) ? page : "Dashboard";
+
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [openEmployeeFormOnMount, setOpenEmployeeFormOnMount] = useState(false);
   const [openAnnouncementFormOnMount, setOpenAnnouncementFormOnMount] =
     useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [employeeSearchRequest, setEmployeeSearchRequest] = useState<{
+    query: string;
+    requestId: number;
+  } | undefined>(undefined);
+  const [employeeSelectionRequest, setEmployeeSelectionRequest] = useState<{
+    employeeId: string;
+    requestId: number;
+  } | undefined>(undefined);
 
   function handleNavigate(page: string) {
     // Consume the "create employee" intent so it only applies to the very
@@ -67,6 +81,21 @@ function DashboardLayout({
     setSidebarOpen(false);
   }
 
+  function handleSearchEmployee(query: string) {
+    const trimmedQuery = query.trim();
+
+    if (!trimmedQuery) return;
+
+    setOpenEmployeeFormOnMount(false);
+
+    setEmployeeSearchRequest((current) => ({
+      query: trimmedQuery,
+      requestId: (current?.requestId ?? 0) + 1,
+    }));
+
+    handleNavigate("Employees");
+  }
+
   function handleCreateEmployee() {
     setOpenEmployeeFormOnMount(true);
     handleNavigate("Employees");
@@ -75,6 +104,17 @@ function DashboardLayout({
   function handleCreateAnnouncement() {
     setOpenAnnouncementFormOnMount(true);
     handleNavigate("Announcement");
+  }
+
+  function handleSelectEmployee(employeeId: string) {
+    setOpenEmployeeFormOnMount(false);
+
+    setEmployeeSelectionRequest((current) => ({
+      employeeId,
+      requestId: (current?.requestId ?? 0) + 1,
+    }));
+
+    handleNavigate("Employees");
   }
 
   useEffect(() => {
@@ -112,13 +152,19 @@ function DashboardLayout({
           collapsed={sidebarCollapsed}
           onToggleSidebar={() => setSidebarCollapsed((previous) => !previous)}
           onOpenSidebar={() => setSidebarOpen(true)}
+          onSearchEmployee={handleSearchEmployee}
+          onSelectEmployee={handleSelectEmployee}
         />
 
         {/* Scoped so a crash in one admin page leaves the sidebar and header
             usable, instead of blanking the whole screen. */}
         <ErrorBoundary label={activePage}>
           {activePage === "Employees" ? (
-          <AdminEmployees autoOpenCreateForm={openEmployeeFormOnMount} />
+          <AdminEmployees
+            autoOpenCreateForm={openEmployeeFormOnMount}
+            employeeSearchRequest={employeeSearchRequest}
+            employeeSelectionRequest={employeeSelectionRequest}
+          />
         ) : activePage === "Recruitment" ? (
           <AdminRecruitment />
         ) : activePage === "Attendance" ? (

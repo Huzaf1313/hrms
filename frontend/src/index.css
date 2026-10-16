@@ -437,3 +437,12 @@ aside.app-sidebar svg.lucide {
     animation: none;
   }
 }
+/* Hide the sidebar scrollbar while preserving scrolling */
+.sidebar-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer and Edge Legacy */
+}
+
+.sidebar-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, and Edge */
+}

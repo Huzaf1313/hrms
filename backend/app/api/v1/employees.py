@@ -45,6 +45,7 @@ def serialize_employee(employee: dict) -> EmployeeResponse:
         employment_type=employee.get("employment_type", "Full-time"),
         work_location=employee.get("work_location"),
         reporting_manager=employee.get("reporting_manager"),
+        manager_id=employee.get("manager_id"),
         salary_structure=employee.get("salary_structure"),
         salary=employee.get("salary"),
         shift_id=employee.get("shift_id"),
@@ -66,7 +67,10 @@ async def create_employee(
     employee_data["date_of_birth"] = to_datetime(employee_data.get("date_of_birth"))
     employee_data["joining_date"] = to_datetime(employee_data["joining_date"])
 
-    employee, temporary_password = await service.create_employee(employee_data)
+    employee, temporary_password = await service.create_employee(
+        employee_data,
+        current_user=current_user,
+    )
 
     response = serialize_employee(employee)
     response.credentials = EmployeeCredentials(
@@ -100,6 +104,7 @@ async def get_employees(
         department_id=department_id,
         status=status,
         pagination=pagination,
+        current_user=current_user,
     )
 
     return APIResponse(
@@ -135,7 +140,10 @@ async def get_employee(
     employee_id: str,
     current_user: dict = Depends(require_permission(Permission.EMPLOYEES_READ)),
 ):
-    employee = await service.get_employee(employee_id)
+    employee = await service.get_employee(
+        employee_id=employee_id,
+        current_user=current_user,
+    )
 
     return APIResponse(
         success=True,
@@ -153,10 +161,7 @@ async def update_employee(
     data: EmployeeUpdate,
     current_user: dict = Depends(get_current_user),
 ):
-    print("🔥 UPDATE EMPLOYEE ENDPOINT HIT")
-    print("Current user:", current_user)
-    print("Employee ID from URL:", employee_id)
-
+   
     role = current_user.get("role")
     current_user_id = current_user.get("_id")
 
@@ -207,6 +212,7 @@ async def update_employee(
     employee = await service.update_employee(
         employee_id=employee_id,
         update_data=update_data,
+        current_user=current_user,
     )
 
     return APIResponse(
@@ -222,16 +228,20 @@ async def update_employee(
 )
 async def deactivate_employee(
     employee_id: str,
-    current_user: dict = Depends(require_permission(Permission.EMPLOYEES_UPDATE)),
+    current_user: dict = Depends(
+        require_permission(Permission.EMPLOYEES_UPDATE)
+    ),
 ):
-    employee = await service.deactivate_employee(employee_id)
+    employee = await service.deactivate_employee(
+        employee_id=employee_id,
+        current_user=current_user,
+    )
 
     return APIResponse(
         success=True,
         message="Employee deactivated successfully",
         data=serialize_employee(employee),
     )
-
 
 @router.delete(
     "/employees/{employee_id}",
@@ -241,7 +251,10 @@ async def delete_employee(
     employee_id: str,
     current_user: dict = Depends(require_permission(Permission.EMPLOYEES_DELETE)),
 ):
-    await service.delete_employee(employee_id)
+    await service.delete_employee(
+        employee_id=employee_id,
+        current_user=current_user,
+    )
 
     return APIResponse(
         success=True,

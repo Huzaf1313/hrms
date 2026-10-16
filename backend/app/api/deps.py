@@ -3,7 +3,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.core.exceptions import AppException
 from app.core.jwt import decode_token
-from app.core.roles import Permission, has_permission
+from app.core.roles import Permission, UserRole, has_permission
 from app.repositories.user_repository import UserRepository
 
 security = HTTPBearer()
@@ -81,6 +81,22 @@ def require_permission(permission: Permission):
         return current_user
 
     return permission_checker
+
+
+async def require_hr_admin(
+    current_user: dict = Depends(get_current_user),
+):
+    """HR only. Managers are admins in roles.py but must not reach these
+    endpoints - manager account creation and exit-request review."""
+    role = getattr(current_user.get("role"), "value", current_user.get("role"))
+
+    if role != UserRole.HR_ADMIN.value:
+        raise AppException(
+            "Only HR can perform this action",
+            403,
+        )
+
+    return current_user
 
 async def require_employee_self_update(
     current_user: dict = Depends(get_current_user),

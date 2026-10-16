@@ -1,8 +1,7 @@
 from fastapi import APIRouter, BackgroundTasks, Depends, Query
 from fastapi.responses import FileResponse
 
-from app.api.deps import get_current_user
-from app.core.exceptions import AppException
+from app.api.deps import require_hr_admin
 from app.schemas.common import APIResponse
 from app.schemas.employee_exit_request import (
     ExitRequestListResponse,
@@ -18,13 +17,6 @@ router = APIRouter(
 )
 
 service = ExitRequestService()
-
-
-async def require_hr_admin(current_user: dict = Depends(get_current_user)):
-    # HR only: managers are admins in roles.py but should not review resignations.
-    if current_user.get("role") != "hr_admin":
-        raise AppException("Only HR can manage exit requests", 403)
-    return current_user
 
 
 @router.get("", response_model=APIResponse[ExitRequestListResponse])
