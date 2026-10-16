@@ -21,7 +21,9 @@ import {
 } from "lucide-react";
 import { departmentService } from "../../services/departmentService";
 import { leaveService, type LeaveRequest, type LeaveStatus, type LeaveSummary } from "../../services/admin_leave_service";
+import NewLeaveRequestModal from "../../components/admin/NewLeaveRequestModal";
 import type { Department } from "../../types/department";
+import type { LeaveRequestDraft } from "../../types/leave";
 import { countWorkingDays } from "../../utils/workingDays";
 
 const leaveBalances = [
@@ -506,6 +508,7 @@ function AdminLeave() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedRequest, setSelectedRequest] = useState<LeaveRequest | null>(null);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [chartRequests, setChartRequests] = useState<LeaveRequest[]>([]);
 
   useEffect(() => {
@@ -580,6 +583,12 @@ function AdminLeave() {
     } catch {
       setError("Unable to update this leave request.");
     }
+  }
+
+  // TODO: POST the draft to /admin/leaves once the create endpoint is ready.
+  // The modal only collects and validates for now.
+  function createRequest(draft: LeaveRequestDraft) {
+    void draft;
   }
 
   return (
@@ -693,7 +702,7 @@ function AdminLeave() {
               <Filter className="h-3.5 w-3.5" />
               Filters
             </button>
-            <button className="flex items-center gap-1.5 rounded-full bg-[#2563eb] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1d4ed8]">
+            <button type="button" onClick={() => setIsCreateOpen(true)} className="flex items-center gap-1.5 rounded-full bg-[#2563eb] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1d4ed8]">
               <Plus className="h-3.5 w-3.5" />
               New Request
             </button>
@@ -1051,6 +1060,14 @@ function AdminLeave() {
             </div>
           </div>
         </div>
+      )}
+
+      {isCreateOpen && (
+        <NewLeaveRequestModal
+          departments={departments}
+          onClose={() => setIsCreateOpen(false)}
+          onSubmit={createRequest}
+        />
       )}
     </div>
   );

@@ -16,6 +16,7 @@ import AdminRecruitment from "../pages/admin/AdminRecruitment";
 import { getDashboardData, type DashboardData } from "../services/dashboardService";
 import AdminExitRequests from "../pages/admin/AdminExitRequests";
 import AdminSupportTickets from "../pages/admin/AdminSupportTickets";
+import AdminMyProfile from "../pages/admin/AdminMyProfile";
 
 interface DashboardLayoutProps {
   onLogout: () => void;
@@ -33,6 +34,7 @@ const pagePaths: Record<string, string> = {
   "Exit Requests": "/dashboard/exit-requests",
   "Support Tickets": "/dashboard/support-tickets",
   Settings: "/dashboard/settings",
+  "My Profile": "/dashboard/profile",
 };
 
 function pageFromPath(pathname: string): string {
@@ -142,6 +144,8 @@ function DashboardLayout({
           <AdminSupportTickets />
         ) : activePage === "Settings" ? (
           <AdminSettings />
+        ) : activePage === "My Profile" ? (
+          <AdminMyProfile />
         ) : (
           <AdminDashboard
             totalHeadcount={dashboardData?.total_headcount ?? null}

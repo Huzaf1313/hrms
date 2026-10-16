@@ -19,6 +19,16 @@ svg.lucide {
   color: #111827 !important;
 }
 
+/* Opt-in accents for pages whose design calls for coloured icons. Needs the
+   `svg.lucide` prefix to outrank the site-wide rule above. */
+svg.lucide.icon-accent {
+  color: #2563eb !important;
+}
+
+svg.lucide.icon-on-primary {
+  color: #ffffff !important;
+}
+
 aside.app-sidebar svg.lucide {
   color: #fff !important;
 }

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Bell, ChevronDown, ChevronRight, Menu, Search } from "lucide-react";
+import { Bell, ChevronDown, ChevronRight, LogOut, Menu, Search } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 import AdminNotificationDropdown from "./admin/AdminNotificationDropdown";
 import DatePicker from "./DatePicker";
@@ -20,6 +21,7 @@ const trails: Record<string, string[]> = {
   Attendance: ["Dashboard", "Attendance", "Daily Attendance"],
   "Regularization Requests": ["Dashboard", "Attendance", "Regularization Requests"],
   Leave: ["Dashboard", "Leave"],
+  "My Profile": ["Dashboard", "My Profile"],
 };
 
 function readUser() {
@@ -59,6 +61,7 @@ function Header({
   collapsed = false,
   onOpenSidebar,
 }: HeaderProps) {
+  const navigate = useNavigate();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotificationDropdown, setShowNotificationDropdown] =
     useState(false);
@@ -231,10 +234,22 @@ function Header({
                 type="button"
                 onClick={() => {
                   setShowProfileMenu(false);
+                  navigate("/dashboard/profile");
+                }}
+                className="w-full px-4 py-2.5 text-left text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+              >
+                My Profile
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowProfileMenu(false);
                   onLogout();
                 }}
-                className="w-full px-4 py-2.5 text-left text-sm font-medium text-gray-700 transition hover:bg-red-50 hover:text-red-600"
+                className="w-full px-4 py-2.5 text-left text-sm font-medium text-red-600 transition hover:bg-red-50"
               >
+                <LogOut className="mr-2 inline h-4 w-4" />
                 Log out
               </button>
             </div>
