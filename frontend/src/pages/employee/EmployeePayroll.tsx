@@ -290,7 +290,7 @@ async function handleDownloadPayslip(payslip?: Payslip | null) {
 
     const link = document.createElement("a");
     link.href = downloadUrl;
-     link.download = filename;
+    link.download = `payslip_${(payslip.month || "statement").replace(/\s+/g, "_")}.pdf`;
 
     document.body.appendChild(link);
     link.click();

@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime, timezone
 from calendar import monthrange
 
 from app.core.exceptions import AppException
@@ -306,3 +306,250 @@ class AdminPayslipService:
             "created_at": document.get("created_at"),
             "updated_at": document.get("updated_at"),
         }
+
+    async def get_payroll_analytics(
+        self,
+        year: int | None = None,
+        months: int | None = 6,
+    ):
+        all_records = await self.payslip_repository.get_all_records()
+
+        now = datetime.now(timezone.utc)
+        current_year = now.year
+
+        years_set = {current_year}
+        for rec in all_records:
+            p_start = rec.get("pay_period_start")
+            if isinstance(p_start, (datetime, date)):
+                years_set.add(p_start.year)
+            c_at = rec.get("created_at")
+            if isinstance(c_at, (datetime, date)):
+                years_set.add(c_at.year)
+
+        available_years = sorted(list(years_set), reverse=True)
+
+        month_map = {
+            "january": 1, "jan": 1,
+            "february": 2, "feb": 2,
+            "march": 3, "mar": 3,
+            "april": 4, "apr": 4,
+            "may": 5,
+            "june": 6, "jun": 6,
+            "july": 7, "jul": 7,
+            "august": 8, "aug": 8,
+            "september": 9, "sep": 9, "sept": 9,
+            "october": 10, "oct": 10,
+            "november": 11, "nov": 11,
+            "december": 12, "dec": 12,
+        }
+
+        bucketed: dict[tuple[int, int], list[dict]] = {}
+        for rec in all_records:
+            rec_year = None
+            rec_month_num = None
+
+            p_start = rec.get("pay_period_start")
+            if isinstance(p_start, (datetime, date)):
+                rec_year = p_start.year
+                rec_month_num = p_start.month
+            elif rec.get("month"):
+                m_str = str(rec.get("month")).strip().lower()
+                parts = m_str.split()
+                for p in parts:
+                    if p.isdigit() and len(p) == 4:
+                        rec_year = int(p)
+                    elif p in month_map:
+                        rec_month_num = month_map[p]
+
+                if not rec_month_num:
+                    for k, v in month_map.items():
+                        if k in m_str:
+                            rec_month_num = v
+                            break
+
+            if rec_year is None:
+                c_at = rec.get("created_at")
+                if isinstance(c_at, (datetime, date)):
+                    rec_year = c_at.year
+                else:
+                    rec_year = current_year
+
+            if rec_month_num is not None:
+                key = (rec_year, rec_month_num)
+                bucketed.setdefault(key, []).append(rec)
+
+        if year is not None:
+            window = [(year, m) for m in range(1, 13)]
+        else:
+            n_months = months if (months and 1 <= months <= 24) else 6
+            window = []
+            curr_y = now.year
+            curr_m = now.month
+            for i in range(n_months - 1, -1, -1):
+                total_m = curr_y * 12 + (curr_m - 1) - i
+                y = total_m // 12
+                m = (total_m % 12) + 1
+                window.append((y, m))
+
+        month_short_names = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+        month_full_names = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+
+        timeline = []
+        period_gross = 0.0
+        period_deductions = 0.0
+        period_net = 0.0
+        period_expense = 0.0
+
+        for (y, m) in window:
+            recs = bucketed.get((y, m), [])
+            m_gross = 0.0
+            m_deductions = 0.0
+            m_net = 0.0
+            emp_ids = set()
+
+            for r in recs:
+                gross = float(r.get("salary", {}).get("gross", 0.0) or 0.0)
+                ded = float(r.get("deductions", {}).get("total", 0.0) or 0.0)
+                net = float(r.get("net_salary", 0.0) or 0.0)
+
+                if ded == 0.0 and gross > 0 and net > 0 and gross > net:
+                    ded = round(gross - net, 2)
+                elif net == 0.0 and gross > 0:
+                    net = round(max(0.0, gross - ded), 2)
+
+                m_gross += gross
+                m_deductions += ded
+                m_net += net
+                if r.get("employee_id"):
+                    emp_ids.add(r.get("employee_id"))
+
+            m_gross = round(m_gross, 2)
+            m_deductions = round(m_deductions, 2)
+            m_net = round(m_net, 2)
+            m_expense = m_gross
+
+            period_gross += m_gross
+            period_deductions += m_deductions
+            period_net += m_net
+            period_expense += m_expense
+
+            timeline.append({
+                "month": month_short_names[m],
+                "month_name": month_full_names[m],
+                "year": y,
+                "month_num": m,
+                "gross": m_gross,
+                "deductions": m_deductions,
+                "net": m_net,
+                "total_expense": m_expense,
+                "employee_count": len(emp_ids),
+                "records_count": len(recs),
+            })
+
+        total_employees = await self.employee_repository.count_employees()
+
+        latest_key = None
+        if bucketed:
+            latest_key = max(bucketed.keys())
+
+        latest_month_str = ""
+        processed_count = 0
+        total_payroll_amount = 0.0
+
+        if latest_key:
+            ly, lm = latest_key
+            latest_month_str = f"{month_full_names[lm]} {ly}"
+            latest_recs = bucketed[latest_key]
+            latest_emps = {r.get("employee_id") for r in latest_recs if r.get("employee_id")}
+            processed_count = len(latest_emps)
+            total_payroll_amount = round(sum(float(r.get("net_salary", 0.0) or 0.0) for r in latest_recs), 2)
+
+        pending_payroll = max(0, total_employees - processed_count)
+
+        summary = {
+            "total_employees": total_employees,
+            "processed_payroll": processed_count,
+            "pending_payroll": pending_payroll,
+            "total_payroll_amount": total_payroll_amount,
+            "latest_month": latest_month_str,
+            "period_gross": round(period_gross, 2),
+            "period_deductions": round(period_deductions, 2),
+            "period_net": round(period_net, 2),
+            "period_expense": round(period_expense, 2),
+        }
+
+        recent_runs = []
+        if bucketed:
+            sorted_keys = sorted(bucketed.keys(), reverse=True)[:5]
+            for (by, bm) in sorted_keys:
+                brecs = bucketed[(by, bm)]
+                b_emps = {r.get("employee_id") for r in brecs if r.get("employee_id")}
+                dates = [
+                    r.get("created_at") or r.get("pay_period_start")
+                    for r in brecs
+                    if r.get("created_at") or r.get("pay_period_start")
+                ]
+                run_date_str = ""
+                if dates:
+                    dt = max(dates)
+                    if isinstance(dt, (datetime, date)):
+                        run_date_str = dt.strftime("%d %b %Y")
+                if not run_date_str:
+                    run_date_str = f"25 {month_short_names[bm]} {by}"
+
+                all_completed = all(r.get("payment", {}).get("status") == "Credited" for r in brecs)
+                status = "Completed" if all_completed else "Processing"
+
+                recent_runs.append({
+                    "month": f"{month_full_names[bm]} {by}",
+                    "processed_on": run_date_str,
+                    "progress": f"{len(b_emps)}/{total_employees}",
+                    "status": status,
+                })
+
+        departments = []
+        if latest_key:
+            latest_recs = bucketed[latest_key]
+            dept_docs = await self.payslip_repository.collection.database["departments"].find({}).to_list(length=100)
+            dept_map = {str(d["_id"]): d.get("name", "Unknown") for d in dept_docs}
+
+            emp_ids = [r.get("employee_id") for r in latest_recs if r.get("employee_id")]
+            user_docs = await self.employee_repository.collection.find(
+                {"employee_id": {"$in": emp_ids}}
+            ).to_list(length=len(emp_ids))
+            emp_to_dept = {}
+            for u in user_docs:
+                d_id = str(u.get("department_id", ""))
+                d_name = dept_map.get(d_id, u.get("department") or "General")
+                emp_to_dept[u["employee_id"]] = d_name
+
+            dept_agg: dict[str, dict] = {}
+            for r in latest_recs:
+                eid = r.get("employee_id")
+                d_name = emp_to_dept.get(eid, "General")
+                if d_name not in dept_agg:
+                    dept_agg[d_name] = {"employees": set(), "gross": 0.0, "net": 0.0, "status": "Completed"}
+                if eid:
+                    dept_agg[d_name]["employees"].add(eid)
+                dept_agg[d_name]["gross"] += float(r.get("salary", {}).get("gross", 0.0) or 0.0)
+                dept_agg[d_name]["net"] += float(r.get("net_salary", 0.0) or 0.0)
+                if r.get("payment", {}).get("status") != "Credited":
+                    dept_agg[d_name]["status"] = "Processing"
+
+            for d_name, d_info in dept_agg.items():
+                departments.append({
+                    "department": d_name,
+                    "employees": len(d_info["employees"]),
+                    "gross": round(d_info["gross"], 2),
+                    "net": round(d_info["net"], 2),
+                    "status": d_info["status"],
+                })
+
+        return {
+            "timeline": timeline,
+            "summary": summary,
+            "available_years": available_years,
+            "recent_runs": recent_runs,
+            "departments": departments,
+        }
+
