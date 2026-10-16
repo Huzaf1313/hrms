@@ -28,6 +28,12 @@ export interface UserResponse {
   updated_at: string;
 }
 
+export interface ChangePasswordPayload {
+  current_password: string;
+  new_password: string;
+  confirm_password: string;
+}
+
 export const authService = {
   register(data: RegisterPayload) {
     return apiRaw.post<UserResponse>("/auth/register", data);
@@ -49,4 +55,9 @@ export const authService = {
       clearSession();
     }
   },
+  
+  async changePassword(data: ChangePasswordPayload) {
+    return apiRaw.post("/auth/change-password", data);
+  },
+
 };

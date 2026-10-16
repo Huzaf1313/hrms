@@ -341,12 +341,9 @@ async function requestRaw<T>(path: string, options: RequestOptions = {}): Promis
   }
 
   const payload = await response.json().catch(() => null);
-
+  
   if (!response.ok) {
-    const message =
-      (payload && typeof payload === "object" && "message" in payload
-        ? String((payload as { message?: unknown }).message)
-        : undefined) ?? `Request failed with status ${response.status}`;
+    const message = errorMessage(payload, response.status);
     throw new ApiError(message, response.status);
   }
 
