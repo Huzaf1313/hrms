@@ -1,3 +1,4 @@
+import re
 from bson import ObjectId
 
 from app.db.database import database
@@ -19,14 +20,19 @@ class AdminSalaryStructureRepository:
         )
 
     async def get_by_name(self, name: str):
+        if not name or not name.strip():
+            return None
+
+        trimmed = name.strip()
         return await self.collection.find_one(
-            {"name": name}
+            {"name": {"$regex": f"^{re.escape(trimmed)}$", "$options": "i"}}
         )
 
     async def get_all(self, filters: dict, skip: int, limit: int):
         cursor = (
             self.collection
             .find(filters)
+            .sort("name", 1)
             .skip(skip)
             .limit(limit)
         )
@@ -67,9 +73,17 @@ class AdminSalaryStructureRepository:
             "fixed_amount": deduction.get("fixed_amount"),
         }
 
+        # First, update if this deduction id already exists on structures
+        await self.collection.update_many(
+            {"deductions.id": applied["id"]},
+            {"$set": {"deductions.$": applied}},
+        )
+
+        # Second, add to any structure where it hasn't been added yet
         result = await self.collection.update_many(
             {"deductions.id": {"$ne": applied["id"]}},
             {"$push": {"deductions": applied}},
         )
 
         return result.modified_count
+
