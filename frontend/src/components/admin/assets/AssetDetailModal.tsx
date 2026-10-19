@@ -1,4 +1,4 @@
-import { Package, User, X } from "lucide-react";
+import { Package, X } from "lucide-react";
 
 import { ASSET_CATEGORY_ICONS } from "../assetData";
 import { ASSET_STATUS_LABELS } from "../../../types/asset";
@@ -85,25 +85,21 @@ export default function AssetDetailModal({ asset, onClose }: AssetDetailModalPro
             {ASSET_STATUS_LABELS[asset.status]}
           </span>
 
-          <p className="mt-6 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-            Assigned To
-          </p>
-
-          <div className="mt-2 flex items-center gap-2.5">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 text-white">
-              <User className="h-4 w-4" />
-            </span>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-white">
-                {asset.assigned_to_name ?? "Unassigned"}
+          <div className="mt-6 border-t border-white/10 pt-4">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              Assigned To
+            </p>
+            <p className="mt-1 truncate text-sm font-semibold text-white">
+              {asset.assigned_to_name ?? "Unassigned"}
+            </p>
+            {asset.department_name && (
+              <p className="mt-0.5 truncate text-xs text-slate-400">
+                {asset.department_name}
               </p>
-              {asset.department_name && (
-                <p className="truncate text-xs text-slate-400">{asset.department_name}</p>
-              )}
-            </div>
+            )}
           </div>
 
-          <div className="mt-6 border-t border-white/10 pt-4">
+          <div className="mt-4 border-t border-white/10 pt-4">
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
               Issue Date
             </p>

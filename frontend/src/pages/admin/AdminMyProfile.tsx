@@ -497,7 +497,7 @@ export default function AdminMyProfile() {
         </ProfileSection>
 
         <ProfileSection icon={icon} title="Addresses">
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <DetailCard title="Permanent Address">
               <DetailRow label="Address" value={profile.permanent_address} />
             </DetailCard>
@@ -836,7 +836,7 @@ export default function AdminMyProfile() {
       </div>
 
       {/* Body: profile tabs + action rail */}
-      <div className="mt-6 grid gap-6 xl:grid-cols-3">
+      <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-3">
         <div className="min-w-0 xl:col-span-2">
           <div className="rounded-2xl border border-gray-100 bg-white px-5 pt-4 shadow-sm">
             <ProfileTabBar active={activeTab} onChange={setActiveTab} />

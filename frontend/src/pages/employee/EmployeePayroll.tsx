@@ -361,7 +361,7 @@ async function handleDownloadPayslip(payslip?: Payslip | null) {
           {/* Summary Cards */}
           <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {/* Net Salary */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-sm font-medium text-slate-500">
@@ -406,7 +406,7 @@ async function handleDownloadPayslip(payslip?: Payslip | null) {
             </div>
 
             {/* Pay Period */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-sm font-medium text-slate-500">
@@ -448,7 +448,7 @@ async function handleDownloadPayslip(payslip?: Payslip | null) {
             </div>
 
             {/* Bank Account */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-sm font-medium text-slate-500">
@@ -518,7 +518,7 @@ async function handleDownloadPayslip(payslip?: Payslip | null) {
           {/* Main Payroll Area */}
           <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
             {/* Main Content */}
-            <section className="min-w-0 rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <section className="min-w-0 rounded-2xl border border-gray-100 bg-white shadow-sm">
               {/* Tabs */}
               <div className="overflow-x-auto border-b border-slate-200">
                 <div className="flex min-w-max px-2 sm:px-4">
@@ -758,7 +758,7 @@ async function handleDownloadPayslip(payslip?: Payslip | null) {
             {/* Right Sidebar */}
             <aside className="space-y-6">
               {/* Salary Breakdown */}
-              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
                 <div className="mb-5">
                   <h2 className="text-lg font-bold text-slate-900">
                     Salary Breakdown
@@ -875,7 +875,7 @@ async function handleDownloadPayslip(payslip?: Payslip | null) {
               </section>
 
               {/* Recent Deductions */}
-              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
                 <div className="flex items-start justify-between">
                   <div>
                     <h2 className="text-lg font-bold text-slate-900">

@@ -397,7 +397,7 @@ function LeaveByDepartmentKpi({ requests }: { requests: LeaveRequest[] }) {
     .segments.join(", ");
 
   return (
-    <div className="overflow-y-auto rounded-3xl bg-white p-4 shadow-sm">
+    <div className="overflow-y-auto rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
       <h3 className="mb-2 font-bold text-gray-900">Leave by Department</h3>
       <div className="flex flex-wrap items-center gap-4">
         <div
@@ -457,7 +457,7 @@ function LeaveByTypeKpi({ requests }: { requests: LeaveRequest[] }) {
     .segments.join(", ");
 
   return (
-    <div className="overflow-y-auto rounded-3xl bg-white p-4 shadow-sm">
+    <div className="overflow-y-auto rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
       <h3 className="mb-2 font-bold text-gray-900">Leave by Type</h3>
       <div className="flex flex-wrap items-center gap-4">
         <div
@@ -609,7 +609,7 @@ function AdminLeave() {
         {statCards.map((card) => {
           const Icon = card.icon;
           return (
-            <div key={card.label} className="rounded-3xl bg-white p-5 shadow-sm">
+            <div key={card.label} className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
               <div className={`mb-4 flex h-10 w-10 items-center justify-center rounded-xl ${card.iconBg}`}>
                 <Icon className="h-5 w-5 text-white" />
               </div>
@@ -623,7 +623,7 @@ function AdminLeave() {
 
       {/* Chart + Balance summary */}
       <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-5">
-        <div className="rounded-3xl bg-white p-6 shadow-sm lg:col-span-3">
+        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm lg:col-span-3">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h3 className="font-bold text-gray-900">Leave Requests Overview</h3>
             <div className="flex items-center gap-4">
@@ -646,7 +646,7 @@ function AdminLeave() {
           <LeaveChart series={leaveChartSeries} />
         </div>
 
-        <div className="rounded-3xl bg-white p-6 shadow-sm lg:col-span-2">
+        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm lg:col-span-2">
           <div className="mb-4 flex items-center justify-between">
             <h3 className="font-bold text-gray-900">Leave Balance Summary</h3>
             <button className="text-xs font-semibold text-[#2563eb] hover:underline">
@@ -675,7 +675,7 @@ function AdminLeave() {
       </div>
 
       {/* Recent Leave Requests */}
-      <div className="mb-6 rounded-3xl bg-white p-6 shadow-sm">
+      <div className="mb-6 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h3 className="font-bold text-gray-900">Recent Leave Requests</h3>
           <div className="flex flex-wrap items-center gap-2">
@@ -831,8 +831,8 @@ function AdminLeave() {
       </div>
 
       {/* Calendar + Upcoming leave + KPI cards */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.25fr_2fr_2fr]">
-        <div className="overflow-y-auto rounded-3xl bg-white p-4 shadow-sm lg:col-span-1 lg:h-[400px]">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[1.25fr_2fr_2fr]">
+        <div className="overflow-y-auto rounded-2xl border border-gray-100 bg-white p-4 shadow-sm lg:h-[400px]">
           <div className="mb-2 flex items-center justify-between gap-2">
             <h3 className="font-bold text-gray-900">Leave Calendar</h3>
           </div>
@@ -844,7 +844,7 @@ function AdminLeave() {
           </div>
         </div>
 
-        <div className="min-w-0 overflow-y-auto rounded-3xl bg-white p-4 shadow-sm lg:col-span-1 lg:h-[400px]">
+        <div className="min-w-0 overflow-y-auto rounded-2xl border border-gray-100 bg-white p-4 shadow-sm lg:h-[400px]">
           <div className="mb-2 flex items-center justify-between gap-3">
           <h3 className="font-bold text-gray-900">Upcoming Leave (Next 7 Days)</h3>
             <button className="text-xs font-semibold text-[#2563eb] hover:underline">
@@ -890,7 +890,7 @@ function AdminLeave() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-4 lg:col-span-1 lg:h-[400px] [&>div]:flex-1">
+        <div className="flex flex-col gap-4 md:col-span-2 lg:col-span-1 lg:h-[400px] [&>div]:flex-1">
           <LeaveByDepartmentKpi requests={requests} />
           <LeaveByTypeKpi requests={requests} />
         </div>

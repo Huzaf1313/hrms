@@ -567,7 +567,7 @@ const handleChangePassword = async (
         )}
 
         {/* Profile Hero */}
-        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
           {/* Cover */}
           <div className="relative h-32 overflow-hidden bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900">
             <div className="absolute -right-12 -top-24 h-64 w-64 rounded-full bg-white/5" />
@@ -667,8 +667,8 @@ const handleChangePassword = async (
         </section>
 
         {/* Summary */}
-        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
+        <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
             <ProfileSummary
               icon={Mail}
               label="Email"
@@ -676,7 +676,7 @@ const handleChangePassword = async (
             />
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
+          <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
             <ProfileSummary
               icon={Phone}
               label="Phone"
@@ -684,7 +684,7 @@ const handleChangePassword = async (
             />
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
+          <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
             <ProfileSummary
               icon={Building2}
               label="Department"
@@ -692,7 +692,7 @@ const handleChangePassword = async (
             />
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
+          <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
             <ProfileSummary
               icon={CalendarDays}
               label="Joined"
@@ -704,7 +704,7 @@ const handleChangePassword = async (
         {/* Main Content */}
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Personal Information */}
-          <section className="rounded-2xl border border-slate-200 bg-white shadow-sm lg:col-span-2">
+          <section className="rounded-2xl border border-gray-100 bg-white shadow-sm lg:col-span-2">
             <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
               <div>
                 <h2 className="text-base font-bold text-slate-900">
@@ -1001,7 +1001,7 @@ const handleChangePassword = async (
           {/* Account Overview + Bank Information */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             {/* Account Overview */}
-            <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <section className="rounded-2xl border border-gray-100 bg-white shadow-sm">
               <div className="border-b border-slate-100 px-6 py-5">
                 <h2 className="text-base font-bold text-slate-900">
                   Account Overview
@@ -1046,7 +1046,7 @@ const handleChangePassword = async (
             </section>
 
             {/* Bank Information */}
-            <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <section className="rounded-2xl border border-gray-100 bg-white shadow-sm">
               <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
                 <div>
                   <h2 className="text-base font-bold text-slate-900">
@@ -1112,7 +1112,7 @@ const handleChangePassword = async (
           </div>
 
         {/* Employment Information */}
-        <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <section className="rounded-2xl border border-gray-100 bg-white shadow-sm">
           <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
             <div>
               <h2 className="text-base font-bold text-slate-900">
@@ -1182,7 +1182,7 @@ const handleChangePassword = async (
           </div>
         </section>
 
-      <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+      <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
         <div className="mb-6 flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
             <KeyRound size={21} />

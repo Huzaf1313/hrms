@@ -130,7 +130,7 @@ function AdminRegularizationRequests() {
         <p className="mt-1 text-gray-500">Review all employee attendance correction requests.</p>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
         {isLoading ? (
           <div className="p-4">
             <TableSkeleton rows={5} columns={6} />

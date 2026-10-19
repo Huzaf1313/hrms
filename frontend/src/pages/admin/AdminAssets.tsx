@@ -53,11 +53,12 @@ import {
   type Paginated,
 } from "../../types/asset";
 
-const PANEL_CLASS = "rounded-3xl bg-white p-6 shadow-sm";
+const PANEL_CLASS = "rounded-2xl border border-gray-100 bg-white p-6 shadow-sm";
 
 // KPI cards are narrow, so they clip instead of letting the big number
 // overflow into the neighbouring card.
-const KPI_CARD_CLASS = "min-w-0 overflow-hidden rounded-3xl bg-white p-5 shadow-sm";
+const KPI_CARD_CLASS =
+  "min-w-0 overflow-hidden rounded-2xl border border-gray-100 bg-white p-5 shadow-sm";
 
 const FILTER_CONTROL_CLASS =
   "h-10 w-full appearance-none rounded-full border border-gray-200 bg-white px-4 pr-9 text-sm " +

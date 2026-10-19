@@ -433,7 +433,7 @@ export default function AdminPayroll() {
           const Icon = card.icon;
 
           return (
-            <div key={card.label} className="rounded-3xl bg-white p-5 shadow-sm">
+            <div key={card.label} className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
               <div
                 className={`mb-4 flex h-10 w-10 items-center justify-center rounded-xl ${card.iconBg}`}
               >
@@ -449,7 +449,7 @@ export default function AdminPayroll() {
       </div>
 
       {/* Tabs */}
-      <div className="mb-6 rounded-3xl bg-white px-6 py-4 shadow-sm">
+      <div className="mb-6 rounded-2xl border border-gray-100 bg-white px-6 py-4 shadow-sm">
         <div className="flex flex-wrap items-center gap-6 border-b border-gray-200">
           {tabs.map((tab) => (
             <button
@@ -472,7 +472,7 @@ export default function AdminPayroll() {
         <>
           {/* Chart + Quick actions */}
           <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-5">
-            <div className="min-w-0 rounded-3xl bg-white p-6 shadow-sm lg:col-span-3">
+            <div className="min-w-0 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm lg:col-span-3">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h3 className="font-bold text-gray-900">Payroll Charts</h3>
@@ -592,7 +592,7 @@ export default function AdminPayroll() {
               )}
             </div>
 
-            <div className="min-w-0 rounded-3xl bg-white p-6 shadow-sm lg:col-span-2">
+            <div className="min-w-0 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm lg:col-span-2">
               <h3 className="mb-4 font-bold text-gray-900">Quick Actions</h3>
 
               <div className="grid grid-cols-2 gap-3">
@@ -616,7 +616,7 @@ export default function AdminPayroll() {
 
           {/* Recent runs + pending items */}
           <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <div className="min-w-0 rounded-3xl bg-white p-6 shadow-sm">
+            <div className="min-w-0 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="font-bold text-gray-900">Recent Payroll Runs</h3>
                 <button
@@ -652,7 +652,7 @@ export default function AdminPayroll() {
               </div>
             </div>
 
-            <div className="min-w-0 rounded-3xl bg-white p-6 shadow-sm">
+            <div className="min-w-0 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="font-bold text-gray-900">Pending Items</h3>
                 <button
@@ -691,7 +691,7 @@ export default function AdminPayroll() {
           </div>
 
           {/* Department summary table */}
-          <div className="mb-6 rounded-3xl bg-white p-6 shadow-sm">
+          <div className="mb-6 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <h3 className="font-bold text-gray-900">Payroll Summary by Department</h3>
             </div>

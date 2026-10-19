@@ -1960,7 +1960,7 @@ export default function AdminAnnouncements({
               return (
                 <div
                   key={a.id}
-                  className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+                  className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"
                 >
                   <div className="flex gap-3">
                     <span
@@ -2132,7 +2132,7 @@ export default function AdminAnnouncements({
         <div className="flex flex-col gap-5">
           {/* Quick Filters */}
 
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
             <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-900">
               <Filter className="h-4 w-4 text-slate-400" />
               Quick Filters
@@ -2192,7 +2192,7 @@ export default function AdminAnnouncements({
 
           {/* Pinned */}
 
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
                 <Pin className="h-4 w-4 text-slate-400" />
@@ -2250,7 +2250,7 @@ export default function AdminAnnouncements({
 
           {/* Recent */}
 
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
                 <Clock className="h-4 w-4 text-slate-400" />

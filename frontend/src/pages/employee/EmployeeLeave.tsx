@@ -586,7 +586,7 @@ function EmployeeLeave() {
 
           {/* Loading */}
           {loading ? (
-            <div className="flex min-h-[400px] items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="flex min-h-[400px] items-center justify-center rounded-2xl border border-gray-100 bg-white shadow-sm">
               <div className="text-center">
                 <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-[#2563eb]" />
                 <p className="mt-4 text-sm font-medium text-slate-500">
@@ -601,7 +601,7 @@ function EmployeeLeave() {
                 {leaveBalances.map((balance) => (
                   <div
                     key={balance.type}
-                    className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+                    className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"
                   >
                     <div className="flex items-start justify-between">
                       <div>
@@ -626,7 +626,7 @@ function EmployeeLeave() {
                 ))}
 
                 {/* Pending Requests */}
-                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="text-sm font-medium text-slate-500">
@@ -652,8 +652,8 @@ function EmployeeLeave() {
               {/* Main Content */}
               <div className="mt-7 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
                 {/* Leave Requests */}
-                <section className="min-w-0 rounded-2xl border border-slate-200 bg-white shadow-sm">
-                  <div className="border-b border-slate-200 px-6 pt-6">
+                <section className="min-w-0 rounded-2xl border border-gray-100 bg-white shadow-sm">
+                  <div className="border-b border-gray-100 px-6 pt-6">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <h2 className="text-lg font-bold text-slate-900">
@@ -878,8 +878,8 @@ function EmployeeLeave() {
                 </section>
 
                 {/* Upcoming Leaves */}
-                <aside className="h-fit rounded-2xl border border-slate-200 bg-white shadow-sm">
-                  <div className="flex items-center justify-between border-b border-slate-200 px-5 py-5">
+                <aside className="h-fit rounded-2xl border border-gray-100 bg-white shadow-sm">
+                  <div className="flex items-center justify-between border-b border-gray-100 px-5 py-5">
                     <div>
                       <h2 className="text-lg font-bold text-slate-900">
                         Upcoming Leaves

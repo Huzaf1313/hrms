@@ -858,7 +858,7 @@ if (
           <section className="mt-6">
 
             {isLoading && (
-              <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-sm">
+              <div className="rounded-2xl border border-gray-100 bg-white p-8 text-center shadow-sm">
                 <p className="text-sm text-gray-500">
                   Loading attendance...
                 </p>
@@ -878,10 +878,10 @@ if (
             )}
 
             {!isLoading && !error && (
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
 
                 {/* Present */}
-              <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+              <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
                 <p className="text-sm font-medium text-gray-500">
                   Present Days
                 </p>
@@ -923,7 +923,7 @@ if (
 
 
                 {/* Absent */}
-                <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
 
                   <p className="text-sm font-medium text-gray-500">
                     Absent Days
@@ -935,7 +935,7 @@ if (
                 </div>
 
                 {/* Late */}
-                <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
 
                   <p className="text-sm font-medium text-gray-500">
                     Late Days
@@ -947,7 +947,7 @@ if (
                 </div>
 
                 {/* Overtime */}
-                <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
 
                   <p className="text-sm font-medium text-gray-500">
                     Overtime
@@ -967,7 +967,7 @@ if (
                 </div>
 
                 {/* Leave */}
-                <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
 
                   <p className="text-sm font-medium text-gray-500">
                     On Leave
@@ -979,7 +979,7 @@ if (
                 </div>
 
                 {/* Working Hours */}
-                <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
 
                   <p className="text-sm font-medium text-gray-500">
                     Working Hours
@@ -1006,7 +1006,7 @@ if (
         <section className="mt-6 grid gap-6 lg:grid-cols-2">
 
         {/* Today's Attendance */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
 
             <div className="flex items-start justify-between">
 
@@ -1184,7 +1184,7 @@ if (
         </div>
 
         {/* Leave Balance */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
 
             <div className="flex items-start justify-between">
 
@@ -1289,7 +1289,7 @@ if (
         <section className="mt-6 grid grid-cols-1 gap-8 lg:grid-cols-2">
 
           {/* Punch In/Out History */}
-          <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
 
             <div className="flex items-start justify-between">
 
@@ -1422,7 +1422,7 @@ if (
 
 
           {/* Regularization Requests */}
-          <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
 
             <div className="flex items-start justify-between gap-4">
 

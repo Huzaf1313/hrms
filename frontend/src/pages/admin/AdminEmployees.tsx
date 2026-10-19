@@ -57,7 +57,7 @@ function CredentialsModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-      <div className="w-full max-w-md rounded-3xl bg-white p-8 shadow-xl">
+      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl sm:p-8">
         <div className="mb-1 flex items-center gap-2">
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
             <Check aria-hidden="true" className="h-4 w-4" />
@@ -514,7 +514,7 @@ function AdminEmployees({
         </button>
       </div>
 
-      <div className="rounded-3xl bg-white p-8 shadow-sm">
+      <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm sm:p-8">
         <div className="mb-6 flex flex-wrap items-center gap-3">
           <input
             type="text"
@@ -640,7 +640,7 @@ function AdminEmployees({
 
       {pendingDeleteId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
-          <div className="w-full max-w-sm rounded-3xl bg-white p-8 shadow-lg">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-lg sm:p-8">
             <h3 className="text-lg font-semibold text-gray-800">Delete employee?</h3>
             <p className="mt-2 text-sm text-gray-500">
               This action cannot be undone.
