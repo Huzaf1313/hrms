@@ -406,12 +406,14 @@ export default function AdminPayroll() {
     ["Payroll Reports", BarChart3, () => setActiveTab("reports")],
   ];
 
-  const pendingItems: Array<[string, string, typeof Users]> = useMemo(() => {
+  const pendingItems: Array<[string, string, typeof Users, () => void]> = useMemo(() => {
     const pendingCount = summary?.pending_payroll ?? 0;
+    const newJoiners = summary?.new_joiners ?? 0;
+    const unassignedStructures = summary?.unassigned_salary_structures ?? 0;
     return [
-      [String(pendingCount), "Employees - Pending Payroll", Users],
-      ["0", "New Joiners - Add to Payroll", Users],
-      ["0", "Employee Updates - Pending", ClipboardList],
+      [String(pendingCount), "Employees - Pending Payroll", Users, () => setActiveTab("payslips")],
+      [String(newJoiners), "New Joiners (Last 30 Days)", Users, () => setActiveTab("payslips")],
+      [String(unassignedStructures), "Employees Missing Salary Structure", ClipboardList, () => setActiveTab("structure")],
     ];
   }, [summary]);
 
@@ -665,7 +667,7 @@ export default function AdminPayroll() {
               </div>
 
               <div className="flex flex-col gap-3">
-                {pendingItems.map(([count, label, Icon]) => (
+                {pendingItems.map(([count, label, Icon, action]) => (
                   <div
                     key={label}
                     className="flex items-center gap-3 rounded-2xl border border-gray-100 p-4"
@@ -679,7 +681,7 @@ export default function AdminPayroll() {
 
                     <button
                       type="button"
-                      onClick={() => setActiveTab("payslips")}
+                      onClick={action}
                       className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50"
                     >
                       View

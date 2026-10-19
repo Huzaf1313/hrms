@@ -5,6 +5,7 @@ from app.api.deps import require_permission
 from app.schemas.admin_payslip import (
     AdminPayslipCreate,
     PayrollAnalyticsResponse,
+    PayslipStatusUpdate,
 )
 from app.schemas.common import APIResponse
 from app.core.exceptions import AppException
@@ -67,11 +68,15 @@ async def get_payroll_analytics(
 @router.get(
     "",
     summary="Get All Admin Payslips",
-    description="Get all employee payslips with pagination.",
+    description="Get all employee payslips with pagination and filtering.",
 )
 async def get_all_payslips(
     page: int = 1,
     limit: int = 20,
+    month: str | None = None,
+    year: int | None = None,
+    search: str | None = None,
+    status: str | None = None,
     current_user: dict = Depends(
         require_permission(Permission.PAYSLIPS_READ)
     ),
@@ -79,12 +84,40 @@ async def get_all_payslips(
     payslips = await service.get_all_payslips(
         page=page,
         limit=limit,
+        month=month,
+        year=year,
+        search=search,
+        status=status,
     )
 
     return {
         "success": True,
         "message": "Payslips retrieved successfully",
         "data": payslips,
+    }
+
+
+@router.patch(
+    "/{payslip_id}/status",
+    summary="Update Payslip Status",
+    description="Update payslip payment status (e.g., Paid, Credited, Processing).",
+)
+async def update_payslip_status(
+    payslip_id: str,
+    payload: PayslipStatusUpdate,
+    current_user: dict = Depends(
+        require_permission(Permission.PAYROLL_PROCESS)
+    ),
+):
+    updated = await service.update_payslip_status(
+        payslip_id=payslip_id,
+        status=payload.status,
+    )
+
+    return {
+        "success": True,
+        "message": "Payslip status updated successfully",
+        "data": updated,
     }
 
 
