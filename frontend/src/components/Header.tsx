@@ -19,10 +19,10 @@ interface HeaderProps {
   onSelectEmployee?: (employeeId: string) => void;
 }
 
-// "Attendance ΓÇ║ Daily Attendance" in the reference design. Only pages that
+// "Dashboard > Attendance" in the reference design. Only pages that
 // genuinely sit under a parent get a trail; the rest render flat.
 const trails: Record<string, string[]> = {
-  Attendance: ["Dashboard", "Attendance", "Daily Attendance"],
+  Attendance: ["Dashboard", "Attendance"],
   "Regularization Requests": ["Dashboard", "Attendance", "Regularization Requests"],
   Leave: ["Dashboard", "Leave"],
   "My Profile": ["Dashboard", "My Profile"],
@@ -43,9 +43,9 @@ function readUser() {
 function roleDisplay(role?: string): string {
   switch (role) {
     case "hr_admin":
-      return "Admin ΓÇó HR";
+      return "Admin | HR";
     case "manager":
-      return "Admin ΓÇó Manager";
+      return "Admin | Manager";
     case "employee":
       return "Employee";
     default:
@@ -342,11 +342,11 @@ function Header({
               {initials}
             </span>
 
-            <span className="hidden text-left sm:block">
-              <span className="block text-sm font-semibold leading-tight text-gray-900">
+            <span className="hidden min-w-0 max-w-[180px] text-left sm:block">
+              <span className="block truncate text-sm font-semibold leading-tight text-gray-900">
                 {fullName}
               </span>
-              <span className="block text-[11px] leading-tight text-gray-500">
+              <span className="block truncate text-[11px] leading-tight text-gray-500">
                 {roleDisplay(user?.role)}
               </span>
             </span>

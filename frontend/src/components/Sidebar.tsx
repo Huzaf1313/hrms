@@ -62,7 +62,7 @@ const sections: NavSection[] = [
   {
     title: "Attendance",
     items: [
-      { label: "Daily Attendance", icon: CalendarCheck, page: "Attendance" },
+      { label: "Attendance", icon: CalendarCheck, page: "Attendance" },
       { label: "Leave", icon: CalendarDays, page: "Leave" },
     ],
   },

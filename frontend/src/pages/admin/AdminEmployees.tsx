@@ -523,7 +523,7 @@ function AdminEmployees({
               setPage(1);
               setSearch(event.target.value);
             }}
-            placeholder="Search employeesΓÇª"
+            placeholder="Search employees..."
             className="min-w-[220px] flex-1 rounded-full border border-gray-200 px-4 py-2.5 text-sm focus:border-[#2563eb] focus:outline-none"
           />
 
@@ -562,7 +562,7 @@ function AdminEmployees({
             onClick={clearFilters}
             className="rounded-full border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
           >
-            Γçà Clear Filters
+            Clear Filters
           </button>
         </div>
 
@@ -671,4 +671,3 @@ function AdminEmployees({
 }
 
 export default AdminEmployees;
-
