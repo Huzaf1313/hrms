@@ -354,9 +354,10 @@ async function requestRaw<T>(path: string, options: RequestOptions = {}): Promis
   }
 
   const payload = await response.json().catch(() => null);
-
+  
   if (!response.ok) {
-    throw new ApiError(errorMessage(payload, response.status), response.status);
+    const message = errorMessage(payload, response.status);
+    throw new ApiError(message, response.status);
   }
 
   return payload as T;

@@ -95,13 +95,15 @@ function Login() {
     setIsLoading(true);
 
     try {
-      const loginResponse = await apiRaw.post("/auth/login", {
-        email: trimmedEmail,
-        password,
-      });
+      const loginResponse = await apiRaw.post<LoginResponse>(
+        "/auth/login",
+        {
+          email: trimmedEmail,
+          password,
+        },
+      );
 
-      const { access_token, refresh_token, token_type } =
-        loginResponse as LoginResponse;
+      const { access_token, refresh_token, token_type } = loginResponse;
 
       setAccessToken(access_token);
       setRefreshToken(refresh_token);

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, status
+from fastapi import APIRouter, status, Depends
 
 from app.schemas.user import (
     ForgotPasswordRequest,
@@ -11,6 +11,9 @@ from app.schemas.user import (
 from app.services.user_service import UserService
 from app.services.otp_service import OTPService
 
+
+from app.api.deps import get_current_user
+from app.schemas.user import ChangePasswordRequest
 
 router = APIRouter(
     prefix="/auth",
@@ -78,6 +81,19 @@ async def login(login_data: LoginRequest):
         password=login_data.password,
     )
 
+@router.post("/change-password")
+async def change_password(
+    request: ChangePasswordRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    user_service = UserService()
+
+    return await user_service.change_password(
+        user_id=str(current_user["_id"]),
+        current_password=request.current_password,
+        new_password=request.new_password,
+        confirm_password=request.confirm_password,
+    )
 
 @router.post(
     "/refresh",

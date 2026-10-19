@@ -11,6 +11,9 @@ import {
   Clock3,
   CreditCard,
   Edit3,
+  Eye,
+  EyeOff,
+  KeyRound,
   Mail,
   MapPin,
   Phone,
@@ -29,6 +32,7 @@ import { shiftService } from "../../services/shiftService";
 import type { Employee } from "../../types/employee";
 import type { Department } from "../../types/department";
 import type { Shift } from "../../types/shift";
+import { authService } from "../../services/authService";
 
 interface UserResponse {
   id: string;
@@ -227,6 +231,18 @@ export default function EmployeeProfile() {
   const [isSavingEmergencyContact, setIsSavingEmergencyContact] =
     useState(false);
 
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordSuccess, setPasswordSuccess] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+
   useEffect(() => {
     let isMounted = true;
 
@@ -343,6 +359,75 @@ export default function EmployeeProfile() {
       setIsSavingEmergencyContact(false);
     }
   };
+
+const handleChangePassword = async (
+  event: React.FormEvent<HTMLFormElement>,
+) => {
+  event.preventDefault();
+
+  setPasswordSuccess("");
+  setPasswordError("");
+
+  if (!currentPassword || !newPassword || !confirmPassword) {
+    setPasswordError("Please fill in all password fields.");
+    return;
+  }
+
+  if (newPassword.length < 8 || newPassword.length > 128) {
+    setPasswordError("Password must be between 8 and 128 characters.");
+    return;
+  }
+
+  if (
+    !/[A-Z]/.test(newPassword) ||
+    !/[a-z]/.test(newPassword) ||
+    !/[0-9]/.test(newPassword) ||
+    !/[^A-Za-z0-9]/.test(newPassword)
+  ) {
+    setPasswordError(
+      "Password must contain uppercase and lowercase letters, a number, and a special character.",
+    );
+    return;
+  }
+
+  if (newPassword !== confirmPassword) {
+    setPasswordError("New password and confirmation do not match.");
+    return;
+  }
+
+  if (currentPassword === newPassword) {
+    setPasswordError(
+      "Your new password must be different from your current password.",
+    );
+    return;
+  }
+
+  setIsChangingPassword(true);
+
+  try {
+    await authService.changePassword({
+      current_password: currentPassword,
+      new_password: newPassword,
+      confirm_password: confirmPassword,
+    });
+
+    setPasswordSuccess("Password changed successfully.");
+
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+  
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Unable to change password. Please try again.";
+
+    setPasswordError(message);
+  } finally {
+    setIsChangingPassword(false);
+  }
+};
 
   const profileCompletion = useMemo(() => {
     if (!employee) return 0;
@@ -1096,6 +1181,120 @@ export default function EmployeeProfile() {
             <InfoItem icon={Clock3} label="Shift" value={shiftName} />
           </div>
         </section>
+
+      <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="mb-6 flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+            <KeyRound size={21} />
+          </div>
+
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">
+              Change Password
+            </h2>
+            <p className="mt-1 text-sm text-gray-500">
+              Update your account password securely.
+            </p>
+          </div>
+        </div>
+
+        <form onSubmit={handleChangePassword} className="space-y-5">
+          {[
+            {
+              label: "Current Password",
+              value: currentPassword,
+              setValue: setCurrentPassword,
+              visible: showCurrentPassword,
+              setVisible: setShowCurrentPassword,
+              placeholder: "Enter current password",
+            },
+            {
+              label: "New Password",
+              value: newPassword,
+              setValue: setNewPassword,
+              visible: showNewPassword,
+              setVisible: setShowNewPassword,
+              placeholder: "Enter new password",
+            },
+            {
+              label: "Confirm New Password",
+              value: confirmPassword,
+              setValue: setConfirmPassword,
+              visible: showConfirmPassword,
+              setVisible: setShowConfirmPassword,
+              placeholder: "Confirm new password",
+            },
+          ].map((field) => (
+            <div key={field.label}>
+              <label className="mb-2 block text-sm font-medium text-gray-700">
+                {field.label}
+              </label>
+
+              <div className="relative">
+                <input
+                  type={field.visible ? "text" : "password"}
+                  value={field.value}
+                  onChange={(event) => {
+                    field.setValue(event.target.value);
+                    setPasswordError("");
+                    setPasswordSuccess("");
+                  }}
+                  placeholder={field.placeholder}
+                  autoComplete="current-password"
+                  maxLength={128}
+                  required
+                  disabled={isChangingPassword}
+                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 pr-12 text-sm text-gray-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:bg-gray-50"
+                />
+
+                <button
+                  type="button"
+                  onClick={() => field.setVisible(!field.visible)}
+                  aria-label={field.visible ? "Hide password" : "Show password"}
+                  className="absolute inset-y-0 right-0 flex items-center px-4 text-gray-500 hover:text-gray-700"
+                >
+                  {field.visible ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </div>
+          ))}
+
+          <p className="text-xs leading-5 text-gray-500">
+            Use at least 8 characters, including uppercase and lowercase letters,
+            a number, and a special character.
+          </p>
+
+          {passwordError && (
+            <div
+              role="alert"
+              className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+            >
+              {passwordError}
+            </div>
+          )}
+
+          {passwordSuccess && (
+            <div
+              role="status"
+              className="flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700"
+            >
+              <CheckCircle2 size={18} />
+              {passwordSuccess}
+            </div>
+          )}
+
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              disabled={isChangingPassword}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <ShieldCheck size={17} />
+              {isChangingPassword ? "Changing Password..." : "Change Password"}
+            </button>
+          </div>
+        </form>
+      </section>
       </div>
     </div>
   );

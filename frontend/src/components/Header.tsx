@@ -19,7 +19,7 @@ interface HeaderProps {
   onSelectEmployee?: (employeeId: string) => void;
 }
 
-// "Attendance › Daily Attendance" in the reference design. Only pages that
+// "Attendance ΓÇ║ Daily Attendance" in the reference design. Only pages that
 // genuinely sit under a parent get a trail; the rest render flat.
 const trails: Record<string, string[]> = {
   Attendance: ["Dashboard", "Attendance", "Daily Attendance"],
@@ -43,9 +43,9 @@ function readUser() {
 function roleDisplay(role?: string): string {
   switch (role) {
     case "hr_admin":
-      return "Admin • HR";
+      return "Admin ΓÇó HR";
     case "manager":
-      return "Admin • Manager";
+      return "Admin ΓÇó Manager";
     case "employee":
       return "Employee";
     default:

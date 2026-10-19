@@ -343,3 +343,51 @@ class UserService:
         return {
             "message": "Logout successful"
         }
+  
+    async def change_password(
+        self,
+        user_id: str,
+        current_password: str,
+        new_password: str,
+        confirm_password: str,
+    ):
+        if new_password != confirm_password:
+            raise AppException(
+                "New password and confirmation do not match",
+                400,
+            )
+
+        user = await self.repository.get_by_id(user_id)
+
+        if not user:
+            raise AppException(
+                "User not found",
+                404,
+            )
+
+        if not verify_password(
+            current_password,
+            user["password_hash"],
+        ):
+            raise AppException(
+                "Current password is incorrect",
+                400,
+            )
+
+        if verify_password(new_password, user["password_hash"]):
+            raise AppException(
+                "New password must be different from the current password",
+                400,
+            )
+
+        await self.repository.update(
+            str(user["_id"]),
+            {
+                "password_hash": hash_password(new_password),
+                "updated_at": datetime.now(timezone.utc),
+            },
+        )
+
+        return {
+            "message": "Password changed successfully",
+        }

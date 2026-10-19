@@ -94,18 +94,18 @@ def format_punch_time(value) -> str | None:
     if isinstance(value, str):
         text = value.strip()
 
-        # Already in "hh:mm AM/PM" format — leave as-is.
+        # Already in "hh:mm AM/PM" format ΓÇö leave as-is.
         if re.match(r"^\d{1,2}:\d{2}\s*[AP]M$", text, re.IGNORECASE):
             return text
 
-        # Plain 24-hour "HH:MM" string — convert to 12-hour AM/PM.
+        # Plain 24-hour "HH:MM" string ΓÇö convert to 12-hour AM/PM.
         try:
             parsed = datetime.strptime(text, "%H:%M")
             return parsed.strftime("%I:%M %p")
         except ValueError:
             pass
 
-        # ISO datetime string (with or without "Z") — convert UTC to IST.
+        # ISO datetime string (with or without "Z") ΓÇö convert UTC to IST.
         try:
             iso_text = text if text.endswith("Z") or "+" in text else f"{text}Z"
             parsed_dt = datetime.fromisoformat(iso_text.replace("Z", "+00:00"))
@@ -1038,4 +1038,3 @@ class AttendanceService:
         )
 
         return rows
-
