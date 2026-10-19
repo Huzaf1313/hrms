@@ -27,14 +27,6 @@ export interface DepartmentShare {
   color: string;
 }
 
-export interface InterviewRow {
-  id: string;
-  candidateName: string;
-  position: string;
-  dateLabel: string;
-  timeLabel: string;
-}
-
 export interface ActivityRow {
   id: string;
   text: string;
@@ -133,44 +125,6 @@ export const departmentShares: DepartmentShare[] = [
   { label: "Marketing", value: 20, color: DEPARTMENT_COLORS[4] },
   { label: "Support", value: 15, color: DEPARTMENT_COLORS[5] },
   { label: "Others", value: 20, color: DEPARTMENT_COLORS[6] },
-];
-
-export const interviewRows: InterviewRow[] = [
-  {
-    id: "interview-1",
-    candidateName: "Sneha Desai",
-    position: "Frontend Developer",
-    dateLabel: "20 May 2024",
-    timeLabel: "10:00 AM",
-  },
-  {
-    id: "interview-2",
-    candidateName: "Rohit Mehta",
-    position: "Backend Developer",
-    dateLabel: "21 May 2024",
-    timeLabel: "02:00 PM",
-  },
-  {
-    id: "interview-3",
-    candidateName: "Pooja Sharma",
-    position: "UI/UX Designer",
-    dateLabel: "22 May 2024",
-    timeLabel: "11:00 AM",
-  },
-  {
-    id: "interview-4",
-    candidateName: "Karan Singh",
-    position: "DevOps Engineer",
-    dateLabel: "23 May 2024",
-    timeLabel: "03:00 PM",
-  },
-  {
-    id: "interview-5",
-    candidateName: "Anjali Yadav",
-    position: "QA Engineer",
-    dateLabel: "24 May 2024",
-    timeLabel: "11:30 AM",
-  },
 ];
 
 export const activityRows: ActivityRow[] = [

@@ -9,6 +9,7 @@ import type {
   Paginated,
   PipelineColumn,
   RecruitmentStats,
+  UpcomingInterview,
 } from "../types/recruitment";
 
 export interface ListJobsParams {
@@ -73,6 +74,26 @@ export const recruitmentService = {
   changeStage(id: string, stage: CandidateStage) {
     return api.patch<Candidate>(`/recruitment/candidates/${id}/stage`, {
       stage,
+    });
+  },
+
+  // ---- Interviews
+
+  /**
+   * Books an interview. `when` must be a future ISO instant carrying a
+   * timezone offset; the server rejects naive or past times. Pass null to
+   * cancel a booking.
+   */
+  scheduleInterview(id: string, when: string | null) {
+    return api.patch<Candidate>(`/recruitment/candidates/${id}/interview`, {
+      interview_scheduled_at: when,
+    });
+  },
+
+  /** Interviews still ahead of now, soonest first. */
+  getUpcomingInterviews(limit = 6) {
+    return api.get<UpcomingInterview[]>("/recruitment/interviews/upcoming", {
+      limit,
     });
   },
 

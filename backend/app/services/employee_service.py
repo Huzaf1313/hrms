@@ -225,11 +225,9 @@ class EmployeeService:
         await self._resolve_manager(employee_data)
 
         if current_user:
-            role = current_user.get("role")
-            role = getattr(role, "value", role)
-
-            if role == UserRole.HR_ADMIN.value:
-                employee_data["created_by"] = str(current_user.get("_id"))
+            # The admin who added this person is who their requests route back to.
+            # Same convention as assets and job openings.
+            employee_data["created_by"] = str(current_user.get("_id"))
 
         employee = await self.repository.create(employee_data)
 

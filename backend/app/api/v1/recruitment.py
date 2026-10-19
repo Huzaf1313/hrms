@@ -10,6 +10,7 @@ from app.schemas.recruitment import (
     CandidateStage,
     CandidateStageUpdate,
     CandidateUpdate,
+    InterviewScheduleUpdate,
     JobPositionCreate,
     JobPositionResponse,
     JobPositionUpdate,
@@ -18,6 +19,7 @@ from app.schemas.recruitment import (
     PipelineCandidate,
     PipelineColumn,
     RecruitmentStats,
+    UpcomingInterview,
 )
 from app.services.candidate_service import CandidateService
 from app.services.job_position_service import JobPositionService
@@ -67,6 +69,7 @@ def serialize_candidate(candidate: dict) -> CandidateResponse:
         resume_uploaded_at=resume.get("uploaded_at"),
         applied_at=candidate["applied_at"],
         stage_updated_at=candidate["stage_updated_at"],
+        interview_scheduled_at=candidate.get("interview_scheduled_at"),
     )
 
 
@@ -311,6 +314,65 @@ async def delete_candidate(
         success=True,
         message="Candidate deleted successfully",
         data=None,
+    )
+
+
+# ------------------------------------------------------------------ Interviews
+
+
+@router.patch(
+    "/candidates/{candidate_id}/interview",
+    response_model=APIResponse[CandidateResponse],
+)
+async def schedule_candidate_interview(
+    candidate_id: str,
+    data: InterviewScheduleUpdate,
+    current_user: dict = Depends(require_permission(Permission.RECRUITMENT_UPDATE)),
+):
+    candidate = await candidate_service.schedule_interview(
+        candidate_id,
+        data.interview_scheduled_at,
+    )
+
+    scheduled = candidate.get("interview_scheduled_at")
+
+    return APIResponse(
+        success=True,
+        message=(
+            "Interview scheduled successfully"
+            if scheduled
+            else "Interview cancelled"
+        ),
+        data=serialize_candidate(candidate),
+    )
+
+
+@router.get(
+    "/interviews/upcoming",
+    response_model=APIResponse[list[UpcomingInterview]],
+)
+async def get_upcoming_interviews(
+    limit: int = Query(default=6, ge=1, le=50),
+    current_user: dict = Depends(require_permission(Permission.RECRUITMENT_READ)),
+):
+    """Interviews still ahead of now, soonest first.
+
+    Feeds the admin dashboard's Upcoming Interviews card.
+    """
+    interviews = await candidate_service.get_upcoming_interviews(limit)
+
+    return APIResponse(
+        success=True,
+        message="Upcoming interviews retrieved successfully",
+        data=[
+            UpcomingInterview(
+                id=str(candidate["_id"]),
+                full_name=candidate["full_name"],
+                job_title=candidate["job_title"],
+                interview_scheduled_at=candidate["interview_scheduled_at"],
+            )
+            for candidate in interviews
+        ],
     )
 
 

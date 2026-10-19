@@ -1,9 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
-import { Bell, ChevronDown, ChevronRight, Menu, Search } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Bell, ChevronDown, ChevronRight, LogOut, Menu, Search } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
+import AdminNotificationDropdown from "./admin/AdminNotificationDropdown";
 import DatePicker from "./DatePicker";
 import { employeeService } from "../services/employeeService";
 import type { Employee } from "../types/employee";
+import { adminNotificationService } from "../services/adminNotificationService";
 
 interface HeaderProps {
   onLogout: () => void;
@@ -22,6 +25,7 @@ const trails: Record<string, string[]> = {
   Attendance: ["Dashboard", "Attendance", "Daily Attendance"],
   "Regularization Requests": ["Dashboard", "Attendance", "Regularization Requests"],
   Leave: ["Dashboard", "Leave"],
+  "My Profile": ["Dashboard", "My Profile"],
 };
 
 function readUser() {
@@ -53,6 +57,11 @@ function employeeFullName(employee: Employee) {
   return `${employee.first_name} ${employee.last_name}`.trim();
 }
 
+/** Only admin-level roles may create or edit holidays. */
+function isAdminRole(role?: string): boolean {
+  return role === "hr_admin" || role === "manager";
+}
+
 function Header({
   onLogout,
   onToggleSidebar,
@@ -62,6 +71,7 @@ function Header({
   onSearchEmployee,
   onSelectEmployee,
 }: HeaderProps) {
+  const navigate = useNavigate();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [employeeSearch, setEmployeeSearch] = useState("");
   const [allEmployees, setAllEmployees] = useState<Employee[]>([]);
@@ -135,6 +145,51 @@ function Header({
       onSearchEmployee?.(query);
     }
   }
+  const [showNotificationDropdown, setShowNotificationDropdown] =
+    useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const notificationRef = useRef<HTMLDivElement>(null);
+
+  // A newly created employee has no `created_by` on file yet, so notifications
+  // route to every active admin until their creator is known.
+  const refreshUnreadCount = useCallback(async () => {
+    try {
+      setUnreadCount(await adminNotificationService.getUnreadCount());
+    } catch (error) {
+      console.error("Failed to load admin unread count:", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    // Polling an external source on mount and on an interval. The setState
+    // happens after the await, so this is not a synchronous cascade.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void refreshUnreadCount();
+
+    const interval = window.setInterval(() => {
+      // Paused while the tab is hidden so a backgrounded dashboard does not keep
+      // hitting the API.
+      if (document.visibilityState === "visible") {
+        void refreshUnreadCount();
+      }
+    }, 30_000);
+
+    return () => window.clearInterval(interval);
+  }, [refreshUnreadCount]);
+
+  useEffect(() => {
+    function closeOnOutsideClick(event: MouseEvent) {
+      if (
+        notificationRef.current &&
+        !notificationRef.current.contains(event.target as Node)
+      ) {
+        setShowNotificationDropdown(false);
+      }
+    }
+
+    document.addEventListener("mousedown", closeOnOutsideClick);
+    return () => document.removeEventListener("mousedown", closeOnOutsideClick);
+  }, []);
 
   const fullName = user?.full_name ?? "Admin";
   const initials = fullName
@@ -250,18 +305,32 @@ function Header({
           )}
         </div>
 
-        <button
-          type="button"
-          className="relative flex h-10 w-10 items-center justify-center rounded-full text-gray-600 transition hover:bg-gray-100"
-          aria-label="Notifications"
-        >
-          <Bell className="h-5 w-5" />
-          <span className="absolute -right-0.5 -top-0.5 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-[#ef4444] px-1 text-[9px] font-bold text-white">
-            12
-          </span>
-        </button>
+        <div ref={notificationRef} className="relative">
+          <button
+            type="button"
+            onClick={() => setShowNotificationDropdown((current) => !current)}
+            className="relative flex h-10 w-10 items-center justify-center rounded-full text-gray-600 transition hover:bg-gray-100"
+            aria-label="Notifications"
+            aria-expanded={showNotificationDropdown}
+          >
+            <Bell className="h-5 w-5" />
 
-        <DatePicker />
+            {unreadCount > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 flex h-4.5 min-w-4 items-center justify-center rounded-full bg-[#ef4444] px-1 text-[9px] font-bold text-white">
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </span>
+            )}
+          </button>
+          {showNotificationDropdown && (
+            <AdminNotificationDropdown
+              onClose={() => setShowNotificationDropdown(false)}
+              onUnreadCountChange={setUnreadCount}
+              onRefreshRequest={refreshUnreadCount}
+            />
+          )}
+        </div>
+
+        <DatePicker canManageHolidays={isAdminRole(user?.role)} />
 
         <div className="relative">
           <button
@@ -291,10 +360,22 @@ function Header({
                 type="button"
                 onClick={() => {
                   setShowProfileMenu(false);
+                  navigate("/dashboard/profile");
+                }}
+                className="w-full px-4 py-2.5 text-left text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+              >
+                My Profile
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowProfileMenu(false);
                   onLogout();
                 }}
-                className="w-full px-4 py-2.5 text-left text-sm font-medium text-gray-700 transition hover:bg-red-50 hover:text-red-600"
+                className="w-full px-4 py-2.5 text-left text-sm font-medium text-red-600 transition hover:bg-red-50"
               >
+                <LogOut className="mr-2 inline h-4 w-4" />
                 Log out
               </button>
             </div>

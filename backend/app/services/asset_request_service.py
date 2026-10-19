@@ -8,6 +8,7 @@ from app.repositories.asset_repository import AssetRepository
 from app.repositories.asset_request_repository import AssetRequestRepository
 from app.schemas.asset import AssetRequestStatus, AssetRequestType, AssetStatus
 from app.services.asset_service import AssetService
+from app.services.admin_notification_service import AdminNotificationService
 from app.utils.pagination import PaginationParams
 
 
@@ -20,6 +21,7 @@ class AssetRequestService:
         self.repository = AssetRequestRepository()
         self.asset_repository = AssetRepository()
         self.asset_service = AssetService()
+        self.admin_notification_service = AdminNotificationService()
 
     async def create_request(self, data: dict, current_user: dict | None = None):
         asset = await self.asset_service.get_asset(
@@ -80,12 +82,32 @@ class AssetRequestService:
         }
 
         try:
-            return await self.repository.create(request_data)
+            created = await self.repository.create(request_data)
         except DuplicateKeyError as exc:
             raise AppException(
                 f"Request tag {request_data['request_tag']} already exists",
                 409,
             ) from exc
+
+        # Routed to the admin who onboarded this employee. Wrapped so a
+        # notification failure can never lose the asset request itself.
+        try:
+            await self.admin_notification_service.create_for_employee(
+                employee_id=request_data["employee_id"],
+                notification_type="asset_requested",
+                title=(
+                    "Asset return request"
+                    if request_type_value == "return"
+                    else "Asset issue request"
+                ),
+                message=f"{request_data['asset_name']} ({request_data['asset_tag']}).",
+                target="/dashboard/assets",
+                target_id=str(created.get("_id")),
+            )
+        except Exception:
+            pass
+
+        return created
 
     async def get_requests(
         self,
@@ -195,6 +217,53 @@ class AssetRequestService:
         }
 
         return await self.repository.update(request_id, update_data)
+
+    async def complete_return(self, request_id: str, reviewed_by: str | None):
+        """Confirm receipt of an asset and close the request in one step.
+
+        Raising a return request only flags the asset as pending_return; it
+        stays with the employee on purpose. This is where the admin says "yes,
+        I have the laptop back", which is the only event that both frees the
+        asset and takes the request off pending.
+
+        The asset is released before the request is marked approved because
+        `return_asset` is the step that can legitimately fail - it rejects an
+        asset nobody is holding, and that rejection should leave the request
+        pending so the admin still sees an actionable row rather than one
+        already reviewed with the kit still out.
+        """
+
+        request = await self.get_request(request_id)
+
+        if request["request_type"] != AssetRequestType.RETURN.value:
+            raise AppException(
+                "Only a return request can be completed this way",
+                400,
+            )
+
+        if request["status"] != AssetRequestStatus.PENDING.value:
+            raise AppException(
+                "This request has already been reviewed",
+                409,
+            )
+
+        if not request.get("asset_id"):
+            raise AppException(
+                "This request is not linked to an asset",
+                400,
+            )
+
+        await self.asset_service.return_asset(request["asset_id"])
+
+        return await self.repository.update(
+            request_id,
+            {
+                "status": AssetRequestStatus.APPROVED.value,
+                "reviewed_by": reviewed_by,
+                "reviewed_at": _now(),
+                "updated_at": _now(),
+            },
+        )
 
     async def _apply_to_asset(self, request: dict):
         """Move the asset to match an approved request.

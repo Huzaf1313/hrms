@@ -85,7 +85,10 @@ export default function AdminDashboard({
 
           {showHrWidgets && (
             <>
-              <RecruitmentFunnel />
+              <RecruitmentFunnel
+                metrics={metrics}
+                onOpenRecruitment={() => onNavigate("Recruitment")}
+              />
               <PayrollExpenseSummaryCard
                 onOpenPayroll={() => onNavigate("Payroll")}
               />
@@ -99,7 +102,12 @@ export default function AdminDashboard({
             onChanged={refresh}
           />
 
-          {showHrWidgets && <UpcomingInterviewsCard />}
+          {showHrWidgets && (
+            <UpcomingInterviewsCard
+              metrics={metrics}
+              onOpenRecruitment={() => onNavigate("Recruitment")}
+            />
+          )}
 
           <BirthdaysAndAnniversariesCard />
         </div>

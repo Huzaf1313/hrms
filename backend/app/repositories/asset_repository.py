@@ -152,6 +152,23 @@ class AssetRepository:
             }
         )
 
+    async def recent_allocations(self, limit: int) -> list[dict]:
+        """The most recently handed-out assets, newest issue date first.
+
+        `issue_date` is stamped every time an asset is assigned, so it doubles
+        as the allocation timestamp. Assets nobody is holding are excluded:
+        an allocation feed that still listed returned kit would misreport who
+        currently has what.
+        """
+
+        cursor = (
+            self.collection.find({"assigned_to_employee_id": {"$ne": None}})
+            .sort("issue_date", -1)
+            .limit(limit)
+        )
+
+        return await cursor.to_list(length=limit)
+
     async def get_by_ids(self, asset_ids: list[str]) -> dict[str, dict]:
         """Fetch many assets by id in one query, keyed by id.
 

@@ -141,6 +141,153 @@ function EmptyText({ children }: { children: ReactNode }) {
   return <p className="py-6 text-center text-sm text-slate-400">{children}</p>;
 }
 
+/**
+ * Books or cancels the interview that the dashboard's Upcoming Interviews card
+ * reads. Only rendered for candidates actually at the interview stage, matching
+ * the server rule, so nobody is offered a booking the API would reject.
+ */
+function InterviewScheduler({
+  candidate,
+  onChanged,
+}: {
+  candidate: Candidate;
+  onChanged: (message: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (candidate.stage !== "interview") return null;
+
+  const scheduled = candidate.interview_scheduled_at;
+
+  async function save() {
+    if (!value) return;
+
+    setBusy(true);
+    setError(null);
+
+    try {
+      // datetime-local yields a naive local time; the offset has to be added
+      // explicitly or the server would read it as UTC.
+      await recruitmentService.scheduleInterview(
+        candidate.id,
+        new Date(value).toISOString(),
+      );
+      setOpen(false);
+      setValue("");
+      onChanged(`Interview scheduled for ${candidate.full_name}`);
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function cancel() {
+    if (!window.confirm(`Cancel ${candidate.full_name}'s scheduled interview?`)) {
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+
+    try {
+      await recruitmentService.scheduleInterview(candidate.id, null);
+      setOpen(false);
+      onChanged(`Interview cancelled for ${candidate.full_name}`);
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!open) {
+    return (
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {scheduled ? (
+          <>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-50 px-2.5 py-1 text-[11px] font-semibold text-violet-700">
+              <CalendarClock className="h-3 w-3" />
+              {formatDateTimeLabel(scheduled)}
+            </span>
+
+            <button
+              type="button"
+              disabled={busy}
+              onClick={cancel}
+              className="rounded-full border border-slate-200 px-2.5 py-1 text-[11px] font-medium text-slate-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:opacity-40"
+            >
+              Cancel
+            </button>
+          </>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-full bg-violet-600 px-3 py-1 text-[11px] font-semibold text-white shadow-sm transition hover:bg-violet-700"
+          >
+            <CalendarClock className="h-3 w-3" />
+            Schedule interview
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-end gap-1.5">
+      <div className="flex items-center gap-1.5 rounded-xl border border-violet-200 bg-violet-50/60 p-1.5">
+        <input
+          type="datetime-local"
+          value={value}
+          min={new Date().toISOString().slice(0, 16)}
+          onChange={(e) => setValue(e.target.value)}
+          aria-label={`Interview date and time for ${candidate.full_name}`}
+          className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[11px] text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500"
+        />
+        <button
+          type="button"
+          disabled={busy || !value}
+          onClick={save}
+          className="rounded-lg bg-violet-600 px-3 py-1.5 text-[11px] font-semibold text-white transition hover:bg-violet-700 disabled:opacity-40"
+        >
+          {busy ? "Saving..." : "Save"}
+        </button>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => setOpen(false)}
+          className="rounded-lg px-2 py-1.5 text-[11px] font-medium text-slate-500 transition hover:bg-slate-100"
+        >
+          Dismiss
+        </button>
+      </div>
+
+      {error && (
+        <p className="max-w-[280px] text-[10px] leading-4 text-red-600">{error}</p>
+      )}
+    </div>
+  );
+}
+
+/** "20 Oct 2026, 02:30 PM" in the admin's own timezone. */
+function formatDateTimeLabel(iso: string): string {
+  const date = new Date(iso);
+
+  if (Number.isNaN(date.getTime())) return "—";
+
+  return date.toLocaleString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 // --------------------------------------------------------------------- page
 
 function AdminRecruitment() {
@@ -745,6 +892,13 @@ function AdminRecruitment() {
                           Delete
                         </button>
                       </div>
+
+                      <InterviewScheduler
+                        candidate={candidate}
+                        onChanged={(message) =>
+                          run(() => Promise.resolve(), message)
+                        }
+                      />
                     </div>
                   </li>
                 ))}
@@ -828,60 +982,114 @@ function AdminRecruitment() {
 
         {/* Reports */}
         <Section title="Recruitment Reports" icon={<Briefcase className="h-5 w-5" />}>
-          <div className="grid gap-6 md:grid-cols-2">
-            <div className="flex items-center gap-4">
-              <div
-                className="relative h-36 w-36 shrink-0 rounded-full"
-                style={{ background: donutBackground }}
-              >
-                <div className="absolute inset-[22px] flex flex-col items-center justify-center rounded-full bg-white">
-                  <span className="text-2xl font-bold text-slate-800">{donutTotal}</span>
-                  <span className="text-[11px] text-slate-500">Applications</span>
+          <div className="grid gap-8 lg:grid-cols-2">
+            {/* Stage mix */}
+            <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-center sm:gap-8">
+              <div className="relative h-40 w-40 shrink-0">
+                <div
+                  className="h-full w-full rounded-full"
+                  style={{ background: donutBackground }}
+                />
+                <div className="absolute inset-[26px] flex flex-col items-center justify-center rounded-full bg-white">
+                  <span className="text-3xl font-bold tracking-tight text-slate-800">
+                    {donutTotal}
+                  </span>
+                  <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
+                    Candidates
+                  </span>
                 </div>
               </div>
 
-              <ul className="space-y-1 text-xs">
-                {stageEntries.map((entry) => (
-                  <li key={entry.stage} className="flex items-center gap-2">
-                    <span
-                      className="h-2.5 w-2.5 rounded-full"
-                      style={{ backgroundColor: STAGE_COLORS[entry.stage] }}
-                    />
-                    <span className="w-20 text-slate-600">
-                      {STAGE_LABELS[entry.stage]}
-                    </span>
-                    <span className="text-slate-800">
-                      {entry.count}
-                      {donutTotal > 0 &&
-                        ` (${Math.round((entry.count / donutTotal) * 100)}%)`}
-                    </span>
-                  </li>
-                ))}
+              <ul className="w-full min-w-0 flex-1 space-y-1.5">
+                {stageEntries.map((entry) => {
+                  const percent =
+                    donutTotal > 0
+                      ? Math.round((entry.count / donutTotal) * 100)
+                      : 0;
+
+                  return (
+                    <li
+                      key={entry.stage}
+                      className="flex items-center gap-2.5 rounded-lg px-2 py-1 transition hover:bg-slate-50"
+                    >
+                      <span
+                        className="h-2.5 w-2.5 shrink-0 rounded-full"
+                        style={{ backgroundColor: STAGE_COLORS[entry.stage] }}
+                      />
+
+                      <span className="min-w-0 flex-1 truncate text-xs font-medium text-slate-600">
+                        {STAGE_LABELS[entry.stage]}
+                      </span>
+
+                      {/* nowrap keeps the count and share on one line instead
+                          of the share wrapping under a squeezed count. */}
+                      <span className="shrink-0 whitespace-nowrap text-xs text-slate-400 tabular-nums">
+                        {percent}%
+                      </span>
+
+                      <span className="w-7 shrink-0 text-right text-sm font-semibold text-slate-800 tabular-nums">
+                        {entry.count}
+                      </span>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
 
-            <div>
-              <p className="mb-2 text-sm font-medium text-slate-700">
-                Applications by Department
-              </p>
+            {/* Department split */}
+            <div className="min-w-0">
+              <div className="mb-3 flex items-baseline justify-between gap-3">
+                <p className="text-sm font-semibold text-slate-700">
+                  Applications by Department
+                </p>
+
+                {departmentCounts.length > 0 && (
+                  <p className="text-xs text-slate-400">
+                    {departmentCounts.length} department
+                    {departmentCounts.length === 1 ? "" : "s"}
+                  </p>
+                )}
+              </div>
+
               {departmentCounts.length === 0 ? (
-                <EmptyText>No applications yet.</EmptyText>
+                <p className="rounded-xl border border-dashed border-slate-200 py-8 text-center text-sm text-slate-400">
+                  No applications yet.
+                </p>
               ) : (
-                <ul className="max-h-[200px] space-y-2 overflow-y-auto overscroll-contain pr-1">
-                  {departmentCounts.map((item) => (
-                    <li key={item.department}>
-                      <div className="mb-0.5 flex justify-between text-xs text-slate-600">
-                        <span className="truncate">{item.department}</span>
-                        <span>{item.count}</span>
-                      </div>
-                      <div className="h-2 rounded-full bg-slate-100">
-                        <div
-                          className="h-2 rounded-full bg-blue-500"
-                          style={{ width: `${(item.count / maxDepartmentCount) * 100}%` }}
-                        />
-                      </div>
-                    </li>
-                  ))}
+                <ul className="max-h-[220px] space-y-2.5 overflow-y-auto overscroll-contain pr-1">
+                  {departmentCounts.map((item) => {
+                    const percent = donutTotal
+                      ? Math.round((item.count / donutTotal) * 100)
+                      : 0;
+
+                    return (
+                      <li key={item.department}>
+                        <div className="mb-1 flex items-baseline justify-between gap-3 text-xs">
+                          <span className="min-w-0 truncate font-medium text-slate-600">
+                            {item.department}
+                          </span>
+
+                          <span className="shrink-0 whitespace-nowrap text-slate-400 tabular-nums">
+                            <span className="font-semibold text-slate-800">
+                              {item.count}
+                            </span>{" "}
+                            · {percent}%
+                          </span>
+                        </div>
+
+                        <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                          <div
+                            className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500"
+                            style={{
+                              width: `${
+                                (item.count / maxDepartmentCount) * 100
+                              }%`,
+                            }}
+                          />
+                        </div>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </div>

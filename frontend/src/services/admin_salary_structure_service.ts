@@ -27,7 +27,7 @@ export interface SalaryStructure {
 
 export interface SalaryStructureInput {
   name: string;
-  range: string;
+  range?: string | null;
   min_salary?: number | null;
   max_salary?: number | null;
   earnings: Earning[];
@@ -44,20 +44,23 @@ export const LEGACY_SALARY_STRUCTURE_LABELS: Record<string, string> = {
   professional: "Structure C – Professional",
 };
 
-function firstNumberIn(value: string | null | undefined): number | null {
+function parseRangeNumbers(value: string | null | undefined): [number | null, number | null] {
   if (!value) {
-    return null;
+    return [null, null];
   }
 
-  const match = value.match(/\d[\d,]*/);
-
-  if (!match) {
-    return null;
+  const matches = value.match(/\d[\d,]*/g);
+  if (!matches) {
+    return [null, null];
   }
 
-  const parsed = Number(match[0].replace(/,/g, ""));
+  const parsed = matches
+    .map((m) => Number(m.replace(/,/g, "")))
+    .filter((n) => Number.isFinite(n) && n >= 0);
 
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  if (parsed.length === 0) return [null, null];
+  if (parsed.length === 1) return [parsed[0], null];
+  return [parsed[0], parsed[1]];
 }
 
 export function salaryBandFor(
@@ -65,18 +68,21 @@ export function salaryBandFor(
     | Pick<SalaryStructure, "range" | "min_salary" | "max_salary">
     | undefined,
 ): SalaryBand {
+  const [rangeMin, rangeMax] = parseRangeNumbers(structure?.range);
+
   const min =
-    typeof structure?.min_salary === "number" && structure.min_salary > 0
+    typeof structure?.min_salary === "number" && structure.min_salary >= 0
       ? structure.min_salary
-      : firstNumberIn(structure?.range);
+      : rangeMin;
 
   const max =
-    typeof structure?.max_salary === "number" && structure.max_salary > 0
+    typeof structure?.max_salary === "number" && structure.max_salary >= 0
       ? structure.max_salary
-      : null;
+      : rangeMax;
 
   return { min, max };
 }
+
 
 
 export const salaryStructureService = {

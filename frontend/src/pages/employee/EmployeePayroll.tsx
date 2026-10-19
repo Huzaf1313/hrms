@@ -286,30 +286,11 @@ async function handleDownloadPayslip(payslip?: Payslip | null) {
       `/employee-payslip/${payslip.id}/download`,
     );
 
-    const user = JSON.parse(
-      localStorage.getItem("user") || "{}"
-    );
-
-    const firstName = String(user.first_name ?? "").trim();
-    const lastName = String(user.last_name ?? "").trim();
-
-    const employeeName =
-      [firstName, lastName].filter(Boolean).join("_") ||
-      String(user.name ?? user.full_name ?? "Employee")
-        .trim()
-        .replace(/\s+/g, "_");
-
-    const payrollMonth = String(payslip.month ?? "Payslip")
-      .trim()
-      .replace(/\s+/g, "_");
-
-    const filename = `${employeeName}_Payslip_${payrollMonth}.pdf`;
-
     const downloadUrl = window.URL.createObjectURL(pdfBlob);
 
     const link = document.createElement("a");
     link.href = downloadUrl;
-     link.download = filename;
+    link.download = `payslip_${(payslip.month || "statement").replace(/\s+/g, "_")}.pdf`;
 
     document.body.appendChild(link);
     link.click();

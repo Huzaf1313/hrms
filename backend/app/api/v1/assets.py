@@ -224,6 +224,43 @@ async def review_asset_request(
     )
 
 
+@router.get(
+    "/recent-allocations",
+    response_model=APIResponse[list[AssetResponse]],
+)
+async def get_recent_allocations(
+    limit: int = Query(default=5, ge=1, le=100),
+    current_user: dict = Depends(require_permission(Permission.ASSETS_READ)),
+):
+    assets = await asset_service.get_recent_allocations(limit)
+
+    return APIResponse(
+        success=True,
+        message="Recent allocations retrieved successfully",
+        data=[serialize_asset(asset) for asset in assets],
+    )
+
+
+@router.post(
+    "/requests/{request_id}/complete-return",
+    response_model=APIResponse[AssetRequestResponse],
+)
+async def complete_asset_return(
+    request_id: str,
+    current_user: dict = Depends(require_permission(Permission.ASSETS_UPDATE)),
+):
+    request = await request_service.complete_return(
+        request_id,
+        str(current_user["_id"]),
+    )
+
+    return APIResponse(
+        success=True,
+        message="Asset return confirmed successfully",
+        data=serialize_request(request),
+    )
+
+
 # ---------------------------------------------------------------------------
 # Assets
 # ---------------------------------------------------------------------------
@@ -237,6 +274,8 @@ async def get_assets(
     status: AssetStatus | None = Query(default=None),
     category: AssetCategory | None = Query(default=None),
     search: str | None = Query(default=None),
+    employee_id: str | None = Query(default=None),
+    department_id: str | None = Query(default=None),
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=7, ge=1, le=100),
     current_user: dict = Depends(require_permission(Permission.ASSETS_READ)),
@@ -245,6 +284,8 @@ async def get_assets(
         status=status.value if status else None,
         category=category.value if category else None,
         search=search,
+        employee_id=employee_id,
+        department_id=department_id,
         pagination=PaginationParams(page=page, limit=limit),
         current_user=current_user,
     )

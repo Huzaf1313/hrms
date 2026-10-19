@@ -1,6 +1,12 @@
+import {
+  PIPELINE_STAGES,
+  STAGE_COLORS,
+  STAGE_LABELS,
+} from "../../types/recruitment";
 import DashboardCard, { DashboardViewAllLink } from "./DashboardCard";
 import { recruitmentStages } from "./dashboardData";
 import { useAnimationFrame, useCountUp } from "./useDashboardAnimation";
+import type { DashboardMetrics } from "./useDashboardMetrics";
 
 function StageCounter({ value, delay }: { value: number; delay: number }) {
   const animated = useCountUp(value, 1000 + delay);
@@ -8,21 +14,55 @@ function StageCounter({ value, delay }: { value: number; delay: number }) {
   return <>{Math.round(animated)}</>;
 }
 
-export default function RecruitmentFunnel() {
+interface RecruitmentFunnelProps {
+  metrics: DashboardMetrics;
+  onOpenRecruitment: () => void;
+}
+
+/**
+ * Candidate counts per pipeline stage.
+ *
+ * Reads the same stage counts the recruitment board is built from, so moving a
+ * candidate between columns on that page is reflected here. The hardcoded rows
+ * in `dashboardData` stand in until the stats call resolves or if it fails.
+ */
+export default function RecruitmentFunnel({
+  metrics,
+  onOpenRecruitment,
+}: RecruitmentFunnelProps) {
   const ready = useAnimationFrame();
 
-  const topValue = Math.max(
-    ...recruitmentStages.map((stage) => stage.value),
-  );
+  const counts = metrics.recruitmentStageCounts;
+
+  const stages = PIPELINE_STAGES.map((stage) => ({
+    label: STAGE_LABELS[stage],
+    value: counts ? (counts[stage] ?? 0) : null,
+    color: STAGE_COLORS[stage],
+  }));
+
+  const placeholders = recruitmentStages;
+
+  // Without live counts the rows fall back to the placeholder sequence, matched
+  // by position because both lists walk the same seven stages.
+  const rows = stages.map((stage, index) => ({
+    ...stage,
+    value: stage.value ?? placeholders[index]?.value ?? 0,
+  }));
+
+  const total = rows.reduce((sum, stage) => sum + stage.value, 0);
+
+  // Normalising against the largest stage keeps the bars readable whether the
+  // pipeline holds ten candidates or ten thousand.
+  const topValue = Math.max(...rows.map((stage) => stage.value), 1);
 
   return (
     <DashboardCard
       title="Recruitment Pipeline"
       className="col-span-12 md:col-span-6 xl:col-span-4"
-      action={<DashboardViewAllLink />}
+      action={<DashboardViewAllLink onClick={onOpenRecruitment} />}
     >
       <div className="space-y-2.5">
-        {recruitmentStages.map((stage, index) => {
+        {rows.map((stage, index) => {
           const percent = (stage.value / topValue) * 100;
 
           return (
@@ -48,7 +88,7 @@ export default function RecruitmentFunnel() {
                   {stage.label}
                 </span>
 
-                <span className="text-[11px] font-semibold text-gray-800">
+                <span className="text-[11px] font-semibold text-gray-800 tabular-nums">
                   <StageCounter value={stage.value} delay={index * 110} />
                 </span>
               </div>
@@ -56,6 +96,13 @@ export default function RecruitmentFunnel() {
           );
         })}
       </div>
+
+      {/* Only meaningful once the live counts have landed. */}
+      {counts && (
+        <p className="mt-3 border-t border-gray-100 pt-2.5 text-[11px] text-gray-400">
+          {total} candidate{total === 1 ? "" : "s"} across the pipeline
+        </p>
+      )}
     </DashboardCard>
   );
 }

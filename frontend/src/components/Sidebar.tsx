@@ -1,15 +1,15 @@
 import {
-  LayoutDashboard,
-  Users,
-  /*Building2,*/
+  Briefcase,
   CalendarCheck,
   CalendarDays,
-  Wallet,
-  Megaphone,
   DoorOpen,
-  Settings,
-  Briefcase,
+  LayoutDashboard,
+  LifeBuoy,
+  Megaphone,
   Package,
+  Settings,
+  Users,
+  Wallet,
   PanelLeftClose,
 } from "lucide-react";
 
@@ -83,6 +83,7 @@ const sections: NavSection[] = [
         page: "Exit Requests",
         hrOnly: true,
       },
+      { label: "Support Tickets", icon: LifeBuoy, page: "Support Tickets" },
       { label: "Settings", icon: Settings, page: "Settings" },
     ],
   },

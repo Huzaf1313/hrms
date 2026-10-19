@@ -52,6 +52,7 @@ def serialize_employee(employee: dict) -> EmployeeResponse:
         emergency_contact=employee.get("emergency_contact"),
         bank_information=employee.get("bank_information"),
         status=employee.get("status", "active"),
+        created_by=employee.get("created_by"),
     )
 
 

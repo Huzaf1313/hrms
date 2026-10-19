@@ -180,6 +180,52 @@ class CandidateService:
 
         return updated, job_closed
 
+    # ------------------------------------------------------------- Interview
+    async def schedule_interview(self, candidate_id: str, when):
+        """Books or clears a candidate's interview slot.
+
+        Only candidates actually at the interview stage can be booked, so the
+        dashboard never advertises an interview for someone still screening.
+        Clearing (when=None) is allowed at any stage, because a cancelled
+        interview has to come off the list whatever the pipeline moved on to.
+        """
+        candidate = await self.get_candidate(candidate_id)
+
+        if when is None:
+            return await self.repository.update_interview(
+                candidate_id,
+                None,
+                datetime.now(timezone.utc),
+            )
+
+        if candidate["stage"] != CandidateStage.INTERVIEW.value:
+            raise AppException(
+                "Move the candidate to the Interview stage before scheduling",
+                400,
+            )
+
+        # The client sends whatever its own timezone offset implies, so this is
+        # already an absolute instant. A naive value would be read as UTC and
+        # land hours off, which is worse than rejecting it outright.
+        if when.tzinfo is None:
+            raise AppException(
+                "Interview time must include a timezone offset", 400
+            )
+
+        if when <= datetime.now(timezone.utc):
+            raise AppException("Interview time must be in the future", 400)
+
+        return await self.repository.update_interview(
+            candidate_id,
+            when,
+            datetime.now(timezone.utc),
+        )
+
+    async def get_upcoming_interviews(self, limit: int):
+        now = datetime.now(timezone.utc)
+
+        return await self.repository.upcoming_interviews(now, limit)
+
     async def _close_job_if_filled(self, job_id: str) -> bool:
         """Close the job once the number of hired candidates reaches its
         number of openings. Reopening it later is still a manual action."""

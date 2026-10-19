@@ -240,6 +240,8 @@ class AssetService:
         status: str | None = None,
         category: str | None = None,
         search: str | None = None,
+        employee_id: str | None = None,
+        department_id: str | None = None,
         pagination: PaginationParams | None = None,
         current_user: dict | None = None,
     ):
@@ -250,6 +252,12 @@ class AssetService:
 
         if category:
             filters["category"] = category
+
+        if employee_id:
+            filters["assigned_to_employee_id"] = employee_id
+
+        if department_id:
+            filters["department_id"] = department_id
 
         if search and search.strip():
             pattern = {"$regex": re.escape(search.strip()), "$options": "i"}
@@ -275,6 +283,15 @@ class AssetService:
             ),
             total,
         )
+
+    async def get_recent_allocations(self, limit: int = 5):
+        """The assets handed out most recently, newest first.
+
+        Feeds the Recent Allocation panel, which answers "who was given what,
+        and when" rather than "what did somebody ask for".
+        """
+
+        return await self.repository.recent_allocations(limit)
 
     # ------------------------------------------------------------------- Stats
 
