@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Eye, Download, Search } from "lucide-react";
+import { Eye, Search } from "lucide-react";
 import { employeeService } from "../../services/employeeService";
 import { salaryStructureService, type SalaryStructure } from "../../services/admin_salary_structure_service";
 import type { Employee } from "../../types/employee";
@@ -170,10 +170,6 @@ function PayslipsTab() {
     return matchesMonth && matchesSearch && matchesStatus;
   });
 
-  function handleDownload(payslip: Payslip) {
-    alert(`Download will be available once the payslip backend is connected (${payslip.employeeName}).`);
-  }
-
   return (
     <div>
       <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
@@ -260,7 +256,7 @@ function PayslipsTab() {
                         </span>
                       </td>
                       <td className="px-5 py-3">
-                        <div className="flex items-center justify-end gap-2">
+                        <div className="flex items-center justify-end">
                           <button
                             type="button"
                             onClick={() => setSelectedPayslip(payslip)}
@@ -268,14 +264,6 @@ function PayslipsTab() {
                             aria-label="View"
                           >
                             <Eye className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDownload(payslip)}
-                            className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50"
-                            aria-label="Download"
-                          >
-                            <Download className="h-3.5 w-3.5" />
                           </button>
                         </div>
                       </td>

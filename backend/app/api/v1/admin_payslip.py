@@ -7,6 +7,7 @@ from app.schemas.admin_payslip import (
     PayrollAnalyticsResponse,
 )
 from app.schemas.common import APIResponse
+from app.core.exceptions import AppException
 from app.services.admin_payslip_service import AdminPayslipService
 
 
@@ -107,4 +108,16 @@ async def get_payslip_by_id(
         "message": "Payslip retrieved successfully",
         "data": payslip,
     }
+
+
+@router.get(
+    "/{payslip_id}/download",
+    summary="Download Admin Payslip (Disabled)",
+    description="Payslip PDF download has been retired and disabled.",
+)
+async def download_payslip(payslip_id: str):
+    raise AppException(
+        "Payslip PDF download has been disabled",
+        410,
+    )
 

@@ -223,17 +223,10 @@ class AdminPayslipService:
         return self._serialize(payslip)
 
     async def download_payslip(self, payslip_id: str):
-        payslip = await self.payslip_repository.get_by_id(
-            payslip_id
+        raise AppException(
+            "Payslip PDF download has been disabled",
+            410,
         )
-
-        if not payslip:
-            raise AppException(
-                "Payslip not found",
-                 404,
-          )
-
-        return payslip
 
     @staticmethod
     def _get_basic_salary(earnings: list[dict]) -> float:
