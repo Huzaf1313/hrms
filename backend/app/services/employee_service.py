@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.core.config import settings
 from app.core.exceptions import AppException
@@ -162,8 +162,8 @@ class EmployeeService:
         employee_data["is_active"] = True
         employee_data["is_locked"] = False
         employee_data["failed_login_attempts"] = 0
-        employee_data["created_at"] = datetime.utcnow()
-        employee_data["updated_at"] = datetime.utcnow()
+        employee_data["created_at"] = datetime.now(timezone.utc)
+        employee_data["updated_at"] = datetime.now(timezone.utc)
 
         # The admin who added this person is who their requests route back to.
         # Same convention as assets and job openings.
