@@ -23,15 +23,16 @@ import {
 } from "lucide-react";
 import { ApiError } from "../../services/api";
 import { attendanceService } from "../../services/attendanceService";
-import { departmentService } from "../../services/departmentService";
-import { formatShiftTime, shiftService } from "../../services/shiftService";
+import { formatShiftTime } from "../../services/shiftService";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useDepartments } from "../../hooks/useDepartments";
+import { useShifts } from "../../hooks/useShifts";
+import { queryKeys } from "../../lib/queryKeys";
 import type {
   AttendanceRecord,
   AttendanceStatus,
   AttendanceSummary,
 } from "../../types/attendance";
-import type { Department } from "../../types/department";
-import type { Shift } from "../../types/shift";
 import RegularizationRequestsCard from "../../components/admin/RegularizationRequestsCard";
 import ShiftManagerModal from "../../components/admin/ShiftManagerModal";
 
@@ -264,10 +265,22 @@ function AdminAttendance() {
   const [search, setSearch] = useState("");
   const [date, setDate] = useState(getToday);
   const [departmentId, setDepartmentId] = useState("");
+  const [workLocation, setWorkLocation] = useState("");
   const [status, setStatus] = useState("");
   const [shiftId, setShiftId] = useState("");
-  const [workLocation, setWorkLocation] = useState("");
-  const [workLocations, setWorkLocations] = useState<string[]>([]);
+  const queryClient = useQueryClient();
+  const { data: departmentsData } = useDepartments();
+  const { data: shiftsData } = useShifts();
+  const { data: optionsData } = useQuery({
+    queryKey: queryKeys.admin.attendanceOptions(),
+    queryFn: () => attendanceService.listOptions(),
+    staleTime: 30 * 60 * 1000,
+  });
+
+  const departments = departmentsData ?? [];
+  const shifts = shiftsData ?? [];
+  const workLocations = optionsData?.work_locations ?? [];
+
   const [overtimeOnly, setOvertimeOnly] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(1);
@@ -275,8 +288,6 @@ function AdminAttendance() {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [total, setTotal] = useState(0);
   const [summary, setSummary] = useState<AttendanceSummary | null>(null);
-  const [departments, setDepartments] = useState<Department[]>([]);
-  const [shifts, setShifts] = useState<Shift[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
@@ -301,24 +312,20 @@ function AdminAttendance() {
 
     async function loadAttendance() {
       setError("");
-      const [attendanceResult, summaryResult, departmentsResult, shiftsResult, optionsResult] =
-        await Promise.allSettled([
-          attendanceService.list({
-            date,
-            department_id: departmentId || undefined,
-            status: status || undefined,
-            search: search || undefined,
-            shift_id: shiftId || undefined,
-            work_location: workLocation || undefined,
-            overtime: overtimeOnly || undefined,
-            page,
-            limit,
-          }),
-          attendanceService.summary(date, departmentId || undefined),
-          departmentService.list(),
-          shiftService.listAll(),
-          attendanceService.listOptions(),
-        ]);
+      const [attendanceResult, summaryResult] = await Promise.allSettled([
+        attendanceService.list({
+          date,
+          department_id: departmentId || undefined,
+          status: status || undefined,
+          search: search || undefined,
+          shift_id: shiftId || undefined,
+          work_location: workLocation || undefined,
+          overtime: overtimeOnly || undefined,
+          page,
+          limit,
+        }),
+        attendanceService.summary(date, departmentId || undefined),
+      ]);
 
       if (!isCurrent) return;
 
@@ -344,18 +351,6 @@ function AdminAttendance() {
         setSummary(summaryResult.value);
       } else {
         setSummary(null);
-      }
-
-      if (departmentsResult.status === "fulfilled") {
-        setDepartments(departmentsResult.value);
-      }
-
-      if (shiftsResult.status === "fulfilled") {
-        setShifts(shiftsResult.value);
-      }
-
-      if (optionsResult.status === "fulfilled") {
-        setWorkLocations(optionsResult.value.work_locations ?? []);
       }
 
       setIsLoading(false);
@@ -464,6 +459,10 @@ function AdminAttendance() {
         departmentId || undefined,
       );
       setSummary(summaryResult);
+
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.admin.attendanceSummary(markForm.date),
+      });
     } catch (err) {
       const errorMsg =
         err instanceof ApiError

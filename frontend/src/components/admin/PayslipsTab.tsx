@@ -1,5 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Eye, Search, Plus, RefreshCw, CheckCircle2, AlertCircle, X, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "../../lib/queryKeys";
 import {
   adminPayrollService,
   type AdminPayslipItem,
@@ -55,11 +57,16 @@ function PayslipDetailModal({ payslip, onClose, onStatusUpdated }: PayslipDetail
   const status = payslip.payment?.status || payslip.status || "Processing";
   const isPaid = status === "Paid" || status === "Credited";
 
+  const queryClient = useQueryClient();
+
   const handleMarkAsPaid = async () => {
     setUpdating(true);
     setUpdateError(null);
     try {
       await adminPayrollService.updateStatus(payslip.id, "Paid");
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.admin.payrollAnalytics(),
+      });
       onStatusUpdated();
       onClose();
     } catch (err: any) {
@@ -239,6 +246,7 @@ interface GenerateModalProps {
 }
 
 function GeneratePayslipModal({ onClose, onGenerated, employees }: GenerateModalProps) {
+  const queryClient = useQueryClient();
   const [employeeId, setEmployeeId] = useState<string>(employees[0]?.employee_id || "");
   const [month, setMonth] = useState<string>("October");
   const [year, setYear] = useState<number>(new Date().getFullYear());
@@ -263,6 +271,9 @@ function GeneratePayslipModal({ onClose, onGenerated, employees }: GenerateModal
         employee_id: employeeId,
         month,
         year: Number(year),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.admin.payrollAnalytics(),
       });
       onGenerated();
       onClose();

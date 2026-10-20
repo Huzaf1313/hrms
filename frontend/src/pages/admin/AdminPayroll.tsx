@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   AlertCircle,
   BarChart3,
@@ -18,10 +18,9 @@ import DeductionsTab from "../../components/admin/DeductionsTab";
 import PayslipsTab from "../../components/admin/PayslipsTab";
 import Reports from "../../components/admin/Reports";
 import {
-  adminPayrollService,
   type MonthlyPayrollItem,
-  type PayrollAnalyticsData,
 } from "../../services/adminPayrollService";
+import { usePayrollAnalytics } from "../../hooks/useAdminPayroll";
 
 type TabKey = "overview" | "structure" | "deductions" | "payslips" | "reports";
 
@@ -289,48 +288,32 @@ function PayrollChart({ timeline, hoveredIndex, onHover }: PayrollChartProps) {
 export default function AdminPayroll() {
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
   const [periodFilter, setPeriodFilter] = useState<string>("last_6");
-  const [analytics, setAnalytics] = useState<PayrollAnalyticsData | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
   const [hoveredBarIndex, setHoveredBarIndex] = useState<number | null>(null);
 
-  const fetchAnalytics = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      let params: { year?: number; months?: number } = {};
-      if (periodFilter === "last_6") {
-        params = { months: 6 };
-      } else if (periodFilter === "last_12") {
-        params = { months: 12 };
-      } else {
-        const parsedYear = Number(periodFilter);
-        if (!isNaN(parsedYear)) {
-          params = { year: parsedYear };
-        }
-      }
-
-      const data = await adminPayrollService.getAnalytics(params);
-      setAnalytics(data);
-    } catch (err: unknown) {
-      console.error("Failed to load payroll analytics:", err);
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to load payroll overview data."
-      );
-    } finally {
-      setLoading(false);
+  const analyticsParams = useMemo(() => {
+    if (periodFilter === "last_6") {
+      return { months: 6 };
+    } else if (periodFilter === "last_12") {
+      return { months: 12 };
+    } else {
+      const parsedYear = Number(periodFilter);
+      return !isNaN(parsedYear) ? { year: parsedYear } : {};
     }
   }, [periodFilter]);
 
-  // Refresh analytics whenever overview tab is opened or period filter changes
-  useEffect(() => {
-    if (activeTab === "overview") {
-      void fetchAnalytics();
-    }
-  }, [activeTab, fetchAnalytics]);
+  const {
+    data: analyticsData,
+    isLoading: loading,
+    error: queryError,
+    refetch,
+  } = usePayrollAnalytics(analyticsParams);
+
+  const analytics = analyticsData ?? null;
+  const error = queryError
+    ? queryError instanceof Error
+      ? queryError.message
+      : "Failed to load payroll overview data."
+    : null;
 
   const filterLabel = useMemo(() => {
     if (periodFilter === "last_6") return "Last 6 Months";
@@ -507,7 +490,7 @@ export default function AdminPayroll() {
                   {/* Refresh button */}
                   <button
                     type="button"
-                    onClick={() => void fetchAnalytics()}
+                    onClick={() => void refetch()}
                     disabled={loading}
                     title="Refresh payroll data"
                     className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700"
@@ -541,7 +524,7 @@ export default function AdminPayroll() {
                   <p className="text-xs font-medium text-red-700">{error}</p>
                   <button
                     type="button"
-                    onClick={() => void fetchAnalytics()}
+                    onClick={() => void refetch()}
                     className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700"
                   >
                     Try Again

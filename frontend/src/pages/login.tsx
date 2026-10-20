@@ -8,6 +8,7 @@ import {
   setAccessToken,
   setRefreshToken,
 } from "../services/api";
+import { clearAuthQueries } from "../lib/queryClient";
 
 const roles = [
   "Manager",
@@ -119,6 +120,9 @@ function Login() {
         refresh_token,
         token_type,
       } = loginResponse as LoginResponse;
+
+      // Clear any cached data from previous session
+      clearAuthQueries();
 
       setAccessToken(access_token);
 
