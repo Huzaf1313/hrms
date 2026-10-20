@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   BrowserRouter,
   Navigate,
@@ -8,7 +7,6 @@ import {
 
 import Login from "./pages/login";
 import ProtectedRoute, { AdminRoute } from "./components/ProtectedRoute";
-import Registration from "./pages/Registration";
 import DashboardLayout from "./layouts/DashboardLayout";
 import EmployeeDashboard from "./pages/employee/EmployeeDashboard";
 import EmployeeProfile from "./pages/employee/EmployeeProfile";
@@ -26,8 +24,6 @@ import EmployeeResignation from "./pages/employee/EmployeeResignation";
 
 
 function App() {
-  const [activePage, setActivePage] = useState("Dashboard");
-
   async function handleLogout() {
     const refreshToken = getRefreshToken();
 
@@ -44,28 +40,11 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Registration />} />
 
         <Route element={<AdminRoute />}>
           <Route
-            path="/dashboard"
-            element={
-              <DashboardLayout
-                activePage={activePage}
-                onNavigate={setActivePage}
-                onLogout={handleLogout}
-              />
-            }
-          />
-          <Route
-            path="/dashboard/regularization"
-            element={
-              <DashboardLayout
-                activePage="Regularization Requests"
-                onNavigate={() => undefined}
-                onLogout={handleLogout}
-              />
-            }
+            path="/dashboard/*"
+            element={<DashboardLayout onLogout={handleLogout} />}
           />
         </Route>
 

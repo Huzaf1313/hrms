@@ -69,6 +69,9 @@ export interface Employee {
   employment_type: EmploymentType;
   work_location?: string;
   reporting_manager?: string;
+  /** Account id of the reporting manager - this is what scopes a
+   *  manager to their own team. */
+  manager_id?: string | null;
   salary_structure?: string;
   salary?: string;
   shift_id?: string;
@@ -103,6 +106,9 @@ export interface EmployeeCreate {
   employment_type: EmploymentType;
   work_location?: string;
   reporting_manager?: string;
+  /** Account id of the reporting manager - this is what scopes a
+   *  manager to their own team. */
+  manager_id?: string | null;
   salary_structure?: string;
   salary?: string;
   shift_id?: string;
@@ -127,6 +133,9 @@ export interface EmployeeUpdate {
   employment_type?: EmploymentType;
   work_location?: string;
   reporting_manager?: string;
+  /** Account id of the reporting manager - this is what scopes a
+   *  manager to their own team. */
+  manager_id?: string | null;
   salary_structure?: string;
   salary?: string;
   shift_id?: string;

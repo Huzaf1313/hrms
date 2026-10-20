@@ -110,7 +110,7 @@ def serialize_request(request: dict) -> AssetRequestResponse:
 async def get_asset_stats(
     current_user: dict = Depends(require_permission(Permission.ASSETS_READ)),
 ):
-    stats = await asset_service.get_stats()
+    stats = await asset_service.get_stats(current_user)
 
     return APIResponse(
         success=True,
@@ -136,6 +136,7 @@ async def get_asset_allocation(
         search=search,
         category=category.value if category else None,
         pagination=PaginationParams(page=page, limit=limit),
+        current_user=current_user,
     )
 
     return APIResponse(
@@ -167,6 +168,7 @@ async def get_asset_requests(
         status=status.value if status else None,
         search=search,
         pagination=PaginationParams(page=page, limit=limit),
+        current_user=current_user,
     )
 
     return APIResponse(
@@ -189,7 +191,7 @@ async def create_asset_request(
     data: AssetRequestCreate,
     current_user: dict = Depends(require_permission(Permission.ASSETS_CREATE)),
 ):
-    request = await request_service.create_request(data.model_dump())
+    request = await request_service.create_request(data.model_dump(), current_user)
 
     return APIResponse(
         success=True,
@@ -212,11 +214,49 @@ async def review_asset_request(
         data.status,
         data.admin_note,
         str(current_user["_id"]),
+        current_user,
     )
 
     return APIResponse(
         success=True,
         message=f"Asset request {data.status.value} successfully",
+        data=serialize_request(request),
+    )
+
+
+@router.get(
+    "/recent-allocations",
+    response_model=APIResponse[list[AssetResponse]],
+)
+async def get_recent_allocations(
+    limit: int = Query(default=5, ge=1, le=100),
+    current_user: dict = Depends(require_permission(Permission.ASSETS_READ)),
+):
+    assets = await asset_service.get_recent_allocations(limit)
+
+    return APIResponse(
+        success=True,
+        message="Recent allocations retrieved successfully",
+        data=[serialize_asset(asset) for asset in assets],
+    )
+
+
+@router.post(
+    "/requests/{request_id}/complete-return",
+    response_model=APIResponse[AssetRequestResponse],
+)
+async def complete_asset_return(
+    request_id: str,
+    current_user: dict = Depends(require_permission(Permission.ASSETS_UPDATE)),
+):
+    request = await request_service.complete_return(
+        request_id,
+        str(current_user["_id"]),
+    )
+
+    return APIResponse(
+        success=True,
+        message="Asset return confirmed successfully",
         data=serialize_request(request),
     )
 
@@ -234,6 +274,8 @@ async def get_assets(
     status: AssetStatus | None = Query(default=None),
     category: AssetCategory | None = Query(default=None),
     search: str | None = Query(default=None),
+    employee_id: str | None = Query(default=None),
+    department_id: str | None = Query(default=None),
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=7, ge=1, le=100),
     current_user: dict = Depends(require_permission(Permission.ASSETS_READ)),
@@ -242,7 +284,10 @@ async def get_assets(
         status=status.value if status else None,
         category=category.value if category else None,
         search=search,
+        employee_id=employee_id,
+        department_id=department_id,
         pagination=PaginationParams(page=page, limit=limit),
+        current_user=current_user,
     )
 
     return APIResponse(
@@ -268,6 +313,7 @@ async def create_asset(
     asset = await asset_service.create_asset(
         data.model_dump(),
         created_by=str(current_user["_id"]),
+        current_user=current_user,
     )
 
     return APIResponse(
@@ -285,7 +331,7 @@ async def get_asset(
     asset_id: str,
     current_user: dict = Depends(require_permission(Permission.ASSETS_READ)),
 ):
-    asset = await asset_service.get_asset(asset_id)
+    asset = await asset_service.get_asset(asset_id, current_user)
 
     return APIResponse(
         success=True,
@@ -306,6 +352,7 @@ async def update_asset(
     asset = await asset_service.update_asset(
         asset_id,
         data.model_dump(exclude_none=True, mode="json"),
+        current_user,
     )
 
     return APIResponse(
@@ -323,7 +370,7 @@ async def delete_asset(
     asset_id: str,
     current_user: dict = Depends(require_permission(Permission.ASSETS_DELETE)),
 ):
-    await asset_service.delete_asset(asset_id)
+    await asset_service.delete_asset(asset_id, current_user)
 
     return APIResponse(
         success=True,
@@ -345,6 +392,7 @@ async def assign_asset(
         asset_id,
         data.employee_id,
         data.issue_date,
+        current_user,
     )
 
     return APIResponse(
@@ -362,7 +410,7 @@ async def return_asset(
     asset_id: str,
     current_user: dict = Depends(require_permission(Permission.ASSETS_UPDATE)),
 ):
-    asset = await asset_service.return_asset(asset_id)
+    asset = await asset_service.return_asset(asset_id, current_user)
 
     return APIResponse(
         success=True,

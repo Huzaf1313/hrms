@@ -8,6 +8,7 @@ from app.repositories.asset_repository import AssetRepository
 from app.repositories.asset_request_repository import AssetRequestRepository
 from app.schemas.asset import AssetRequestStatus, AssetRequestType, AssetStatus
 from app.services.asset_service import AssetService
+from app.services.admin_notification_service import AdminNotificationService
 from app.utils.pagination import PaginationParams
 
 
@@ -20,10 +21,17 @@ class AssetRequestService:
         self.repository = AssetRequestRepository()
         self.asset_repository = AssetRepository()
         self.asset_service = AssetService()
+        self.admin_notification_service = AdminNotificationService()
 
-    async def create_request(self, data: dict):
-        asset = await self.asset_service.get_asset(data["asset_id"])
+    async def create_request(self, data: dict, current_user: dict | None = None):
+        asset = await self.asset_service.get_asset(
+            data["asset_id"], current_user
+        )
         employee = await self.asset_service._resolve_employee(data["employee_id"])
+
+        await self.asset_service._assert_assignable(
+            employee["employee_id"], current_user
+        )
 
         request_type = data["request_type"]
         request_type_value = (
@@ -74,12 +82,32 @@ class AssetRequestService:
         }
 
         try:
-            return await self.repository.create(request_data)
+            created = await self.repository.create(request_data)
         except DuplicateKeyError as exc:
             raise AppException(
                 f"Request tag {request_data['request_tag']} already exists",
                 409,
             ) from exc
+
+        # Routed to the admin who onboarded this employee. Wrapped so a
+        # notification failure can never lose the asset request itself.
+        try:
+            await self.admin_notification_service.create_for_employee(
+                employee_id=request_data["employee_id"],
+                notification_type="asset_requested",
+                title=(
+                    "Asset return request"
+                    if request_type_value == "return"
+                    else "Asset issue request"
+                ),
+                message=f"{request_data['asset_name']} ({request_data['asset_tag']}).",
+                target="/dashboard/assets",
+                target_id=str(created.get("_id")),
+            )
+        except Exception:
+            pass
+
+        return created
 
     async def get_requests(
         self,
@@ -87,8 +115,15 @@ class AssetRequestService:
         status: str | None = None,
         search: str | None = None,
         pagination: PaginationParams | None = None,
+        current_user: dict | None = None,
     ):
-        filters: dict = {}
+        scope = await self.asset_service._scope_filter(current_user)
+
+        # Asset requests reference the employee by `employee_id`, not by the
+        # `assigned_to_employee_id` an asset carries.
+        filters: dict = (
+            {"employee_id": scope["assigned_to_employee_id"]["$in"]} if scope else {}
+        )
 
         if request_type:
             filters["request_type"] = request_type
@@ -128,10 +163,20 @@ class AssetRequestService:
 
         return requests, total
 
-    async def get_request(self, request_id: str):
+    async def get_request(self, request_id: str, current_user: dict | None = None):
         request = await self.repository.get_by_id(request_id)
 
         if not request:
+            raise AppException("Asset request not found", 404)
+
+        scope = await self.asset_service._scope_filter(current_user)
+
+        if (
+            scope
+            and request.get("employee_id")
+            not in scope["assigned_to_employee_id"]["$in"]
+        ):
+            # 404 rather than 403, so request ids do not leak across teams.
             raise AppException("Asset request not found", 404)
 
         return request
@@ -142,8 +187,9 @@ class AssetRequestService:
         status: AssetRequestStatus | str,
         admin_note: str | None,
         reviewed_by: str | None,
+        current_user: dict | None = None,
     ):
-        request = await self.get_request(request_id)
+        request = await self.get_request(request_id, current_user)
 
         if request["status"] != AssetRequestStatus.PENDING.value:
             raise AppException(
@@ -171,6 +217,53 @@ class AssetRequestService:
         }
 
         return await self.repository.update(request_id, update_data)
+
+    async def complete_return(self, request_id: str, reviewed_by: str | None):
+        """Confirm receipt of an asset and close the request in one step.
+
+        Raising a return request only flags the asset as pending_return; it
+        stays with the employee on purpose. This is where the admin says "yes,
+        I have the laptop back", which is the only event that both frees the
+        asset and takes the request off pending.
+
+        The asset is released before the request is marked approved because
+        `return_asset` is the step that can legitimately fail - it rejects an
+        asset nobody is holding, and that rejection should leave the request
+        pending so the admin still sees an actionable row rather than one
+        already reviewed with the kit still out.
+        """
+
+        request = await self.get_request(request_id)
+
+        if request["request_type"] != AssetRequestType.RETURN.value:
+            raise AppException(
+                "Only a return request can be completed this way",
+                400,
+            )
+
+        if request["status"] != AssetRequestStatus.PENDING.value:
+            raise AppException(
+                "This request has already been reviewed",
+                409,
+            )
+
+        if not request.get("asset_id"):
+            raise AppException(
+                "This request is not linked to an asset",
+                400,
+            )
+
+        await self.asset_service.return_asset(request["asset_id"])
+
+        return await self.repository.update(
+            request_id,
+            {
+                "status": AssetRequestStatus.APPROVED.value,
+                "reviewed_by": reviewed_by,
+                "reviewed_at": _now(),
+                "updated_at": _now(),
+            },
+        )
 
     async def _apply_to_asset(self, request: dict):
         """Move the asset to match an approved request.

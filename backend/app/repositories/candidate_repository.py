@@ -20,6 +20,12 @@ class CandidateRepository:
             "job_id",
             name="candidate_job",
         )
+        # The dashboard reads booked interviews in chronological order and only
+        # ever asks for ones still ahead of now.
+        await self.collection.create_index(
+            [("interview_scheduled_at", 1)],
+            name="candidate_interview_scheduled_at",
+        )
 
     async def create(self, candidate_data: dict):
         result = await self.collection.insert_one(candidate_data)
@@ -101,6 +107,39 @@ class CandidateRepository:
         )
 
         return await self.get_by_id(candidate_id)
+
+    async def update_interview(self, candidate_id: str, when, now):
+        """Books or clears the interview slot.
+
+        A None `when` unsets the field, so a cancelled interview stops showing
+        on the dashboard without the candidate ever leaving the pipeline.
+        """
+        if not ObjectId.is_valid(candidate_id):
+            return None
+
+        await self.collection.update_one(
+            {"_id": ObjectId(candidate_id)},
+            {"$set": {"interview_scheduled_at": when, "updated_at": now}},
+        )
+
+        return await self.get_by_id(candidate_id)
+
+    async def upcoming_interviews(self, from_time, limit: int):
+        """Interviews still ahead of `from_time`, soonest first."""
+        cursor = (
+            self.collection.find(
+                {
+                    "interview_scheduled_at": {
+                        "$ne": None,
+                        "$gte": from_time,
+                    }
+                }
+            )
+            .sort("interview_scheduled_at", 1)
+            .limit(limit)
+        )
+
+        return await cursor.to_list(length=limit)
 
     async def delete(self, candidate_id: str) -> bool:
         if not ObjectId.is_valid(candidate_id):

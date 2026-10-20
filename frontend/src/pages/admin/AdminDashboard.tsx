@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { Hand } from "lucide-react";
 
 import CelebrationTicker from "../../components/CelebrationTicker";
 import type { Celebration } from "../../types/celebration";
@@ -14,6 +15,7 @@ import RecentActivityCard from "../../components/admin/RecentActivityCard";
 import RecruitmentFunnel from "../../components/admin/RecruitmentFunnel";
 import UpcomingInterviewsCard from "../../components/admin/UpcomingInterviewsCard";
 import { useDashboardMetrics } from "../../components/admin/useDashboardMetrics";
+import { isHrAdmin } from "../../lib/access";
 
 interface AdminDashboardProps {
   /** Live values the dashboard endpoint already provides. */
@@ -46,14 +48,18 @@ export default function AdminDashboard({
 }: AdminDashboardProps) {
   const firstName = useMemo(() => readUserFirstName(), []);
 
+  // Hiring, payroll and interview widgets are HR-only and the manager has no
+  // permission behind them, so they are not rendered at all.
+  const showHrWidgets = isHrAdmin();
+
   const { metrics, refresh } = useDashboardMetrics(totalHeadcount ?? null);
 
   return (
-    <div className="px-8 pb-8 pt-6">
+    <div className="px-4 pb-8 pt-6 sm:px-6 lg:px-8">
       <div className="mb-5">
         <h1 className="text-2xl font-bold text-gray-900">
           Welcome back, {firstName}!{" "}
-          <span aria-hidden="true">👋</span>
+          <Hand aria-hidden="true" className="ml-1 inline h-5 w-5 align-middle" />
         </h1>
 
         <p className="mt-1 text-[13px] text-gray-500">
@@ -69,16 +75,25 @@ export default function AdminDashboard({
       <div className="space-y-4">
         <DashboardKpiRow
           metrics={metrics}
+          showHrWidgets={showHrWidgets}
           onOpenLeave={() => onNavigate("Leave")}
           onOpenPayroll={() => onNavigate("Payroll")}
         />
 
         <div className="grid grid-cols-12 gap-4">
           <AttendanceTrendChart />
-          <RecruitmentFunnel />
-          <PayrollExpenseSummaryCard
-            onOpenPayroll={() => onNavigate("Payroll")}
-          />
+
+          {showHrWidgets && (
+            <>
+              <RecruitmentFunnel
+                metrics={metrics}
+                onOpenRecruitment={() => onNavigate("Recruitment")}
+              />
+              <PayrollExpenseSummaryCard
+                onOpenPayroll={() => onNavigate("Payroll")}
+              />
+            </>
+          )}
         </div>
 
         <div className="grid grid-cols-12 gap-4">
@@ -86,7 +101,14 @@ export default function AdminDashboard({
             onOpenLeave={() => onNavigate("Leave")}
             onChanged={refresh}
           />
-          <UpcomingInterviewsCard />
+
+          {showHrWidgets && (
+            <UpcomingInterviewsCard
+              metrics={metrics}
+              onOpenRecruitment={() => onNavigate("Recruitment")}
+            />
+          )}
+
           <BirthdaysAndAnniversariesCard />
         </div>
 
@@ -95,6 +117,7 @@ export default function AdminDashboard({
           <QuickActionsCard
             onNavigate={onNavigate}
             onCreateAnnouncement={onCreateAnnouncement}
+            showHrWidgets={showHrWidgets}
           />
           <DepartmentDonut counts={metrics.departmentCounts} />
         </div>

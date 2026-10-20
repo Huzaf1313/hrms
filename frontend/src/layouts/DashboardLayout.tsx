@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
@@ -7,7 +8,6 @@ import AdminDashboard from "../pages/admin/AdminDashboard";
 import AdminEmployees from "../pages/admin/AdminEmployees";
 import AdminAttendance from "../pages/admin/AdminAttendance";
 import AdminLeave from "../pages/admin/admin_leave";
-import AdminRegularizationRequests from "../pages/admin/AdminRegularizationRequests";
 import AdminPayroll from "../pages/admin/AdminPayroll";
 import AdminAssets from "../pages/admin/AdminAssets";
 import AdminAnnouncements from "../pages/admin/AdminAnnouncements";
@@ -15,23 +15,51 @@ import AdminSettings from "../pages/admin/AdminSetting";
 import AdminRecruitment from "../pages/admin/AdminRecruitment";
 import { getDashboardData, type DashboardData } from "../services/dashboardService";
 import AdminExitRequests from "../pages/admin/AdminExitRequests";
+import { canAccessPage } from "../lib/access";
+import AdminSupportTickets from "../pages/admin/AdminSupportTickets";
+import AdminMyProfile from "../pages/admin/AdminMyProfile";
 
 interface DashboardLayoutProps {
-  activePage: string;
-  onNavigate: (page: string) => void;
   onLogout: () => void;
 }
 
+const pagePaths: Record<string, string> = {
+  Dashboard: "/dashboard",
+  Employees: "/dashboard/employees",
+  Recruitment: "/dashboard/recruitment",
+  Attendance: "/dashboard/attendance",
+  Leave: "/dashboard/leave",
+  Payroll: "/dashboard/payroll",
+  Assets: "/dashboard/assets",
+  Announcement: "/dashboard/announcements",
+  "Exit Requests": "/dashboard/exit-requests",
+  "Support Tickets": "/dashboard/support-tickets",
+  Settings: "/dashboard/settings",
+  "My Profile": "/dashboard/profile",
+};
+
+function pageFromPath(pathname: string): string {
+  if (pathname === "/dashboard/regularization") return "Attendance";
+  return Object.entries(pagePaths).find(([, path]) => path === pathname)?.[0] ?? "Dashboard";
+}
+
 function DashboardLayout({
-  activePage,
-  onNavigate,
   onLogout,
 }: DashboardLayoutProps) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const page = pageFromPath(location.pathname);
+
+  // A manager who types an HR-only URL lands on their dashboard instead. The
+  // backend would 403 anyway; this just avoids a dead page.
+  const activePage = canAccessPage(page) ? page : "Dashboard";
+
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [openEmployeeFormOnMount, setOpenEmployeeFormOnMount] = useState(false);
   const [openAnnouncementFormOnMount, setOpenAnnouncementFormOnMount] =
     useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [employeeSearchRequest, setEmployeeSearchRequest] = useState<{
     query: string;
     requestId: number;
@@ -53,7 +81,8 @@ function DashboardLayout({
       setOpenAnnouncementFormOnMount(false);
     }
 
-    onNavigate(page);
+    navigate(pagePaths[page] ?? "/dashboard");
+    setSidebarOpen(false);
   }
 
   function handleSearchEmployee(query: string) {
@@ -73,12 +102,12 @@ function DashboardLayout({
 
   function handleCreateEmployee() {
     setOpenEmployeeFormOnMount(true);
-    onNavigate("Employees");
+    handleNavigate("Employees");
   }
 
   function handleCreateAnnouncement() {
     setOpenAnnouncementFormOnMount(true);
-    onNavigate("Announcement");
+    handleNavigate("Announcement");
   }
 
   function handleSelectEmployee(employeeId: string) {
@@ -116,6 +145,8 @@ function DashboardLayout({
         activePage={activePage}
         onNavigate={handleNavigate}
         collapsed={sidebarCollapsed}
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
       />
 
       <main className="min-w-0 flex-1">
@@ -124,6 +155,7 @@ function DashboardLayout({
           pageTitle={activePage}
           collapsed={sidebarCollapsed}
           onToggleSidebar={() => setSidebarCollapsed((previous) => !previous)}
+          onOpenSidebar={() => setSidebarOpen(true)}
           onSearchEmployee={handleSearchEmployee}
           onSelectEmployee={handleSelectEmployee}
         />
@@ -143,8 +175,6 @@ function DashboardLayout({
           <AdminAttendance />
         ) : activePage === "Leave" ? (
           <AdminLeave />
-        ) : activePage === "Regularization Requests" ? (
-          <AdminRegularizationRequests />
         ) : activePage === "Payroll" ? (
           <AdminPayroll />
         ) : activePage === "Assets" ? (
@@ -156,8 +186,12 @@ function DashboardLayout({
           />
         ) : activePage === "Exit Requests" ? (
           <AdminExitRequests />
+        ) : activePage === "Support Tickets" ? (
+          <AdminSupportTickets />
         ) : activePage === "Settings" ? (
           <AdminSettings />
+        ) : activePage === "My Profile" ? (
+          <AdminMyProfile />
         ) : (
           <AdminDashboard
             totalHeadcount={dashboardData?.total_headcount ?? null}

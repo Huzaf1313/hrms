@@ -3,6 +3,7 @@ from datetime import date, datetime, time, timedelta, timezone
 from bson import ObjectId
 
 from app.core.exceptions import AppException
+from app.core.scope import scope_matches, visibility_scope
 from app.core.working_days import count_working_days
 from app.repositories.department_repository import DepartmentRepository
 from app.repositories.employee_repository import EmployeeRepository
@@ -24,39 +25,23 @@ class AdminLeaveService:
 
     
     @staticmethod
-    def _created_by_scope(current_user: dict | None) -> str | None:
-        if not current_user:
-            return None
-
-        role = current_user.get("role")
-        role = getattr(role, "value", role)
-
-        if role == "hr_admin":
-            user_id = current_user.get("_id")
-
-            if user_id is None:
-                raise AppException(
-                    "Authenticated HR account has no valid user ID",
-                    403,
-                )
-
-            return str(user_id)
-
-        return None
+    def _created_by_scope(current_user: dict | None) -> dict:
+        """See app.core.scope.visibility_scope."""
+        return visibility_scope(current_user)
 
     async def _get_accessible_employee_ids(
         self,
         current_user: dict | None,
     ) -> list[str] | None:
-        created_by = self._created_by_scope(current_user)
+        scope = self._created_by_scope(current_user)
 
-        if created_by is None:
+        if not scope:
             return None
 
         employees = await self.employee_repository.get_all(
             skip=0,
             limit=10000,
-            created_by=created_by,
+            scope=scope,
         )
 
         return [
@@ -77,11 +62,8 @@ class AdminLeaveService:
         if not employee:
             raise AppException("Employee not found", 404)
 
-        created_by = self._created_by_scope(current_user)
-
-        if created_by is not None:
-            if str(employee.get("created_by", "")) != created_by:
-                raise AppException("Leave request not found", 404)
+        if not scope_matches(employee, self._created_by_scope(current_user)):
+            raise AppException("Leave request not found", 404)
 
         return employee
 
@@ -222,7 +204,7 @@ class AdminLeaveService:
                 filters={"department_id": department_id},
                 skip=0,
                 limit=10000,
-                created_by=self._created_by_scope(current_user),
+                scope=self._created_by_scope(current_user),
             )
 
             department_ids = {

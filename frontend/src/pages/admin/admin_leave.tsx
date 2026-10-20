@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { TableRowSkeleton } from "../../components/ui";
 import {
   CalendarDays,
   Clock,
@@ -21,7 +22,9 @@ import {
 } from "lucide-react";
 import { departmentService } from "../../services/departmentService";
 import { leaveService, type LeaveRequest, type LeaveStatus, type LeaveSummary } from "../../services/admin_leave_service";
+import NewLeaveRequestModal from "../../components/admin/NewLeaveRequestModal";
 import type { Department } from "../../types/department";
+import type { LeaveRequestDraft } from "../../types/leave";
 import { countWorkingDays } from "../../utils/workingDays";
 
 const leaveBalances = [
@@ -394,7 +397,7 @@ function LeaveByDepartmentKpi({ requests }: { requests: LeaveRequest[] }) {
     .segments.join(", ");
 
   return (
-    <div className="overflow-y-auto rounded-3xl bg-white p-4 shadow-sm">
+    <div className="overflow-y-auto rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
       <h3 className="mb-2 font-bold text-gray-900">Leave by Department</h3>
       <div className="flex flex-wrap items-center gap-4">
         <div
@@ -454,7 +457,7 @@ function LeaveByTypeKpi({ requests }: { requests: LeaveRequest[] }) {
     .segments.join(", ");
 
   return (
-    <div className="overflow-y-auto rounded-3xl bg-white p-4 shadow-sm">
+    <div className="overflow-y-auto rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
       <h3 className="mb-2 font-bold text-gray-900">Leave by Type</h3>
       <div className="flex flex-wrap items-center gap-4">
         <div
@@ -506,6 +509,7 @@ function AdminLeave() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedRequest, setSelectedRequest] = useState<LeaveRequest | null>(null);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [chartRequests, setChartRequests] = useState<LeaveRequest[]>([]);
 
   useEffect(() => {
@@ -582,8 +586,14 @@ function AdminLeave() {
     }
   }
 
+  // TODO: POST the draft to /admin/leaves once the create endpoint is ready.
+  // The modal only collects and validates for now.
+  function createRequest(draft: LeaveRequestDraft) {
+    void draft;
+  }
+
   return (
-    <div className="px-10 pb-10 pt-8">
+    <div className="px-4 pb-10 pt-6 sm:px-6 lg:px-8 xl:px-10">
       {/* Header */}
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -599,7 +609,7 @@ function AdminLeave() {
         {statCards.map((card) => {
           const Icon = card.icon;
           return (
-            <div key={card.label} className="rounded-3xl bg-white p-5 shadow-sm">
+            <div key={card.label} className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
               <div className={`mb-4 flex h-10 w-10 items-center justify-center rounded-xl ${card.iconBg}`}>
                 <Icon className="h-5 w-5 text-white" />
               </div>
@@ -613,7 +623,7 @@ function AdminLeave() {
 
       {/* Chart + Balance summary */}
       <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-5">
-        <div className="rounded-3xl bg-white p-6 shadow-sm lg:col-span-3">
+        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm lg:col-span-3">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h3 className="font-bold text-gray-900">Leave Requests Overview</h3>
             <div className="flex items-center gap-4">
@@ -636,7 +646,7 @@ function AdminLeave() {
           <LeaveChart series={leaveChartSeries} />
         </div>
 
-        <div className="rounded-3xl bg-white p-6 shadow-sm lg:col-span-2">
+        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm lg:col-span-2">
           <div className="mb-4 flex items-center justify-between">
             <h3 className="font-bold text-gray-900">Leave Balance Summary</h3>
             <button className="text-xs font-semibold text-[#2563eb] hover:underline">
@@ -665,7 +675,7 @@ function AdminLeave() {
       </div>
 
       {/* Recent Leave Requests */}
-      <div className="mb-6 rounded-3xl bg-white p-6 shadow-sm">
+      <div className="mb-6 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h3 className="font-bold text-gray-900">Recent Leave Requests</h3>
           <div className="flex flex-wrap items-center gap-2">
@@ -693,7 +703,7 @@ function AdminLeave() {
               <Filter className="h-3.5 w-3.5" />
               Filters
             </button>
-            <button className="flex items-center gap-1.5 rounded-full bg-[#2563eb] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1d4ed8]">
+            <button type="button" onClick={() => setIsCreateOpen(true)} className="flex items-center gap-1.5 rounded-full bg-[#2563eb] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1d4ed8]">
               <Plus className="h-3.5 w-3.5" />
               New Request
             </button>
@@ -717,7 +727,7 @@ function AdminLeave() {
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan={9} className="py-10 text-center text-gray-500">Loading leave requests...</td></tr>
+                <TableRowSkeleton rows={5} columns={9} />
               ) : error ? (
                 <tr><td colSpan={9} className="py-10 text-center text-rose-600">{error}</td></tr>
               ) : requests.length === 0 ? (
@@ -821,8 +831,8 @@ function AdminLeave() {
       </div>
 
       {/* Calendar + Upcoming leave + KPI cards */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.25fr_2fr_2fr]">
-        <div className="overflow-y-auto rounded-3xl bg-white p-4 shadow-sm lg:col-span-1 lg:h-[400px]">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[1.25fr_2fr_2fr]">
+        <div className="overflow-y-auto rounded-2xl border border-gray-100 bg-white p-4 shadow-sm lg:h-[400px]">
           <div className="mb-2 flex items-center justify-between gap-2">
             <h3 className="font-bold text-gray-900">Leave Calendar</h3>
           </div>
@@ -834,7 +844,7 @@ function AdminLeave() {
           </div>
         </div>
 
-        <div className="min-w-0 overflow-y-auto rounded-3xl bg-white p-4 shadow-sm lg:col-span-1 lg:h-[400px]">
+        <div className="min-w-0 overflow-y-auto rounded-2xl border border-gray-100 bg-white p-4 shadow-sm lg:h-[400px]">
           <div className="mb-2 flex items-center justify-between gap-3">
           <h3 className="font-bold text-gray-900">Upcoming Leave (Next 7 Days)</h3>
             <button className="text-xs font-semibold text-[#2563eb] hover:underline">
@@ -880,7 +890,7 @@ function AdminLeave() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-4 lg:col-span-1 lg:h-[400px] [&>div]:flex-1">
+        <div className="flex flex-col gap-4 md:col-span-2 lg:col-span-1 lg:h-[400px] [&>div]:flex-1">
           <LeaveByDepartmentKpi requests={requests} />
           <LeaveByTypeKpi requests={requests} />
         </div>
@@ -1051,6 +1061,14 @@ function AdminLeave() {
             </div>
           </div>
         </div>
+      )}
+
+      {isCreateOpen && (
+        <NewLeaveRequestModal
+          departments={departments}
+          onClose={() => setIsCreateOpen(false)}
+          onSubmit={createRequest}
+        />
       )}
     </div>
   );

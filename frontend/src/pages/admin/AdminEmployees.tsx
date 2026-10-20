@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
+import { Check } from "lucide-react";
 
 import AdminEmployeeDetailsPage from "../../components/admin/AdminEmployeeDetailsPage";
 import AdminEmployeeForm from "../../components/admin/AdminEmployeeForm";
 import AdminEmployeeTable from "../../components/admin/AdminEmployeeTable";
+import { TableSkeleton } from "../../components/ui";
 import { ApiError } from "../../services/api";
 import {
   salaryStructureService,
@@ -55,10 +57,10 @@ function CredentialsModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-      <div className="w-full max-w-md rounded-3xl bg-white p-8 shadow-xl">
+      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl sm:p-8">
         <div className="mb-1 flex items-center gap-2">
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
-            ✓
+            <Check aria-hidden="true" className="h-4 w-4" />
           </span>
           <h3 className="text-lg font-bold text-gray-900">
             Employee Created
@@ -97,7 +99,7 @@ function CredentialsModal({
             onClick={copyCredentials}
             className="rounded-full border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
           >
-            {copied ? "Copied ✓" : "Copy Credentials"}
+            {copied ? <><Check aria-hidden="true" className="mr-1 inline h-4 w-4" />Copied</> : "Copy Credentials"}
           </button>
 
           <button
@@ -111,10 +113,6 @@ function CredentialsModal({
       </div>
     </div>
   );
-}
-
-interface AdminEmployeesProps {
-  autoOpenCreateForm?: boolean;
 }
 
 interface EmployeeSearchRequest {
@@ -284,24 +282,41 @@ function AdminEmployees({
       .catch(() => setShifts([]));
   }, []);
 
-  useEffect(() => {
-    if (!employeeSearchRequest) return;
+  // Both requests arrive as new prop objects from the layout. Resetting state
+  // during render (rather than in an effect) keeps the list and the spinner in
+  // step with the request in the same commit, with no cascading render.
+  const [appliedSearchRequest, setAppliedSearchRequest] =
+    useState(employeeSearchRequest);
 
-    setViewingEmployee(undefined);
-    setSearch(employeeSearchRequest.query);
-    setDepartmentFilter("");
-    setStatusFilter("");
-    setPage(1);
-  }, [employeeSearchRequest]);
+  if (employeeSearchRequest !== appliedSearchRequest) {
+    setAppliedSearchRequest(employeeSearchRequest);
+
+    if (employeeSearchRequest) {
+      setViewingEmployee(undefined);
+      setSearch(employeeSearchRequest.query);
+      setDepartmentFilter("");
+      setStatusFilter("");
+      setPage(1);
+    }
+  }
+
+  const [appliedSelectionRequest, setAppliedSelectionRequest] =
+    useState(employeeSelectionRequest);
+
+  if (employeeSelectionRequest !== appliedSelectionRequest) {
+    setAppliedSelectionRequest(employeeSelectionRequest);
+
+    if (employeeSelectionRequest) {
+      setViewingEmployee(undefined);
+      setError(null);
+      setIsLoading(true);
+    }
+  }
 
   useEffect(() => {
     if (!employeeSelectionRequest) return;
 
     let cancelled = false;
-
-    setViewingEmployee(undefined);
-    setError(null);
-    setIsLoading(true);
 
     employeeService
       .get(employeeSelectionRequest.employeeId)
@@ -481,7 +496,7 @@ function AdminEmployees({
   }
 
   return (
-    <div className="px-10 pb-10 pt-8">
+    <div className="px-4 pb-10 pt-6 sm:px-6 lg:px-8 xl:px-10">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-4xl font-bold text-gray-900">Employees</h1>
@@ -499,7 +514,7 @@ function AdminEmployees({
         </button>
       </div>
 
-      <div className="rounded-3xl bg-white p-8 shadow-sm">
+      <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm sm:p-8">
         <div className="mb-6 flex flex-wrap items-center gap-3">
           <input
             type="text"
@@ -508,7 +523,7 @@ function AdminEmployees({
               setPage(1);
               setSearch(event.target.value);
             }}
-            placeholder="Search employees…"
+            placeholder="Search employees..."
             className="min-w-[220px] flex-1 rounded-full border border-gray-200 px-4 py-2.5 text-sm focus:border-[#2563eb] focus:outline-none"
           />
 
@@ -547,13 +562,13 @@ function AdminEmployees({
             onClick={clearFilters}
             className="rounded-full border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
           >
-            ⇅ Clear Filters
+            Clear Filters
           </button>
         </div>
 
         {isLoading && (
-          <div className="py-10 text-center text-gray-500">
-            Loading employees…
+          <div className="py-2">
+            <TableSkeleton rows={6} columns={6} />
           </div>
         )}
 
@@ -625,7 +640,7 @@ function AdminEmployees({
 
       {pendingDeleteId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
-          <div className="w-full max-w-sm rounded-3xl bg-white p-8 shadow-lg">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-lg sm:p-8">
             <h3 className="text-lg font-semibold text-gray-800">Delete employee?</h3>
             <p className="mt-2 text-sm text-gray-500">
               This action cannot be undone.
@@ -656,5 +671,3 @@ function AdminEmployees({
 }
 
 export default AdminEmployees;
-
-

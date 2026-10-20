@@ -1,15 +1,19 @@
 from datetime import date, datetime
 
 from app.repositories.employee_repository import EmployeeRepository
+from app.services.employee_service import EmployeeService
 
 
 class DashboardService:
     def __init__(self):
         self.employee_repository = EmployeeRepository()
+        self.employee_service = EmployeeService()
 
-    async def get_dashboard_data(self):
-        total_headcount = await self.employee_repository.count_employees()
-        celebrations = await self.get_celebrations()
+    async def get_dashboard_data(self, current_user: dict | None = None):
+        scope = self.employee_service._visibility_scope(current_user)
+
+        total_headcount = await self.employee_repository.count_employees(scope)
+        celebrations = await self.get_celebrations(scope=scope)
 
         return {
             "total_headcount": total_headcount,
@@ -24,7 +28,11 @@ class DashboardService:
             },
         }
 
-    async def get_celebrations(self, today: date | None = None):
+    async def get_celebrations(
+        self,
+        today: date | None = None,
+        scope: dict | None = None,
+    ):
         """Birthdays and work anniversaries falling on `today`.
 
         Both dates live on the employee document, so a celebration is simply
@@ -36,7 +44,8 @@ class DashboardService:
         targets = self._month_day_targets(today)
 
         candidates = await self.employee_repository.get_celebration_candidates(
-            targets
+            targets,
+            scope,
         )
 
         celebrations = []

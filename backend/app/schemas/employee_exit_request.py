@@ -17,6 +17,8 @@ ResignationReason = Literal[
 ]
 
 HandoverStatus = Literal["Pending", "In Progress", "Completed"]
+ExitType = Literal["Resignation", "Termination", "Contract End", "Retirement"]
+EXIT_TYPE_ORDER = ("Resignation", "Termination", "Contract End", "Retirement")
 
 
 class HandoverTask(BaseModel):
@@ -33,6 +35,16 @@ class ExitRequestCreate(BaseModel):
     remarks: str | None = Field(default=None, max_length=500)
     handover_tasks: list[HandoverTask] = Field(default_factory=list, max_length=10)
     confirmed: bool
+
+
+class AdminExitRequestCreate(BaseModel):
+    employee_id: str = Field(min_length=1)
+    exit_type: ExitType
+    last_working_day: date
+    notice_period_days: NoticePeriod = 30
+    reason: str = Field(min_length=1, max_length=500)
+    remarks: str | None = Field(default=None, max_length=500)
+    handover_tasks: list[HandoverTask] = Field(default_factory=list, max_length=10)
 
 
 class ExitStatusUpdate(BaseModel):
@@ -67,6 +79,7 @@ class ExitRequestResponse(BaseModel):
     email: str | None = None
     designation: str | None = None
     department_id: str | None = None
+    department_name: str | None = None
     reporting_manager: str | None = None
     exit_type: str
     last_working_day: date
@@ -92,7 +105,11 @@ class ExitRequestListResponse(BaseModel):
     limit: int
     pages: int
 
-
+class DepartmentExitCount(BaseModel):
+    department_id: str | None = None
+    department_name: str
+    count: int = 0
+    
 class ExitRequestSummary(BaseModel):
     total: int = 0
     pending: int = 0
@@ -100,3 +117,7 @@ class ExitRequestSummary(BaseModel):
     completed: int = 0
     rejected: int = 0
     cancelled: int = 0
+    # Every type is reported, including zeroes, so the KPI row and the donut
+    # keep a stable set of cards instead of losing one when a type is unused.
+    by_type: dict[str, int] = {}
+    by_department: list[DepartmentExitCount] = []

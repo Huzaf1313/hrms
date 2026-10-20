@@ -2,6 +2,7 @@ from datetime import datetime
 
 from app.core.exceptions import AppException
 from app.core.roles import UserRole
+from app.core.scope import visibility_scope
 from app.core.security import hash_password
 from app.repositories.admin_salary_structure_repository import (
     AdminSalaryStructureRepository,
@@ -9,6 +10,7 @@ from app.repositories.admin_salary_structure_repository import (
 from app.repositories.department_repository import DepartmentRepository
 from app.repositories.employee_repository import EmployeeRepository
 from app.repositories.shift_repository import ShiftRepository
+from app.repositories.user_repository import UserRepository
 from app.services.admin_salary_structure_service import parse_salary_floor
 from app.utils.filtering import build_filter
 from app.utils.pagination import PaginationParams
@@ -20,30 +22,88 @@ class EmployeeService:
         self.department_repository = DepartmentRepository()
         self.salary_structure_repository = AdminSalaryStructureRepository()
         self.shift_repository = ShiftRepository()
+        self.user_repository = UserRepository()
 
-    
-   
+
     @staticmethod
-    def _created_by_scope(current_user: dict | None) -> str | None:
-        if not current_user:
-            return None
+    def _visibility_scope(current_user: dict | None) -> dict:
+        """See app.core.scope.visibility_scope."""
+        return visibility_scope(current_user)
 
-        role = current_user.get("role")
-        role = getattr(role, "value", role)
 
-        if role == UserRole.HR_ADMIN.value:
-            user_id = current_user.get("_id")
+    async def _resolve_manager(
+        self,
+        data: dict,
+        existing: dict | None = None,
+    ) -> None:
+        """Validate the reporting manager on `data` in place.
 
-            if user_id is None:
+        `manager_id` is the authoritative link a manager's scope is built on.
+        `reporting_manager` stays as the display name. Records written before
+        manager_id existed only have the name, so fall back to matching an
+        active admin account by exact name.
+        """
+        has_manager_id = "manager_id" in data
+        has_manager_name = "reporting_manager" in data
+
+        if not has_manager_id and not has_manager_name:
+            return
+
+        manager_id = (data.get("manager_id") or "").strip()
+
+        if manager_id:
+            manager = await self.user_repository.get_by_id(manager_id)
+
+            if not manager:
                 raise AppException(
-                    "Authenticated HR account has no valid user ID",
-                    403,
+                    "Reporting manager not found",
+                    400,
                 )
 
-            return str(user_id)
+            manager_role = getattr(manager.get("role"), "value", manager.get("role"))
 
-        return None
+            if manager_role not in (
+                UserRole.HR_ADMIN.value,
+                UserRole.MANAGER.value,
+            ):
+                raise AppException(
+                    "Reporting manager must be an HR or manager account",
+                    400,
+                )
 
+            if not manager.get("is_active", True) or manager.get("is_locked"):
+                raise AppException(
+                    "Reporting manager account is not active",
+                    400,
+                )
+
+            data["manager_id"] = str(manager_id)
+
+            # Keep the display name in step with the id.
+            if not (data.get("reporting_manager") or "").strip():
+                data["reporting_manager"] = manager.get("full_name")
+
+            return
+
+        # No manager_id: the caller cleared the dropdown, or this is a legacy
+        # record that only carries a name. Try to resolve the name so the
+        # record still lands under the right manager.
+        name = (data.get("reporting_manager") or "").strip()
+
+        if not name:
+            data.pop("manager_id", None)
+            return
+
+        match = await self.user_repository.get_admin_account_by_name(name)
+
+        if match:
+            data["manager_id"] = str(match["_id"])
+            data["reporting_manager"] = match["full_name"]
+        elif existing is not None or has_manager_id:
+            # Explicitly selected a manager that cannot be resolved - drop it
+            # rather than leaving a name no manager will ever match.
+            data["manager_id"] = None
+            data["reporting_manager"] = None
 
     async def _validate_shift(self, shift_id: str | None):
         if not shift_id:
@@ -162,13 +222,12 @@ class EmployeeService:
         employee_data["created_at"] = datetime.utcnow()
         employee_data["updated_at"] = datetime.utcnow()
 
-        if current_user:
-            role = current_user.get("role")
-            role = getattr(role, "value", role)
+        await self._resolve_manager(employee_data)
 
-            if role == UserRole.HR_ADMIN.value:
-                created_by = self._created_by_scope(current_user)
-                employee_data["created_by"] = created_by
+        if current_user:
+            # The admin who added this person is who their requests route back to.
+            # Same convention as assets and job openings.
+            employee_data["created_by"] = str(current_user.get("_id"))
 
         employee = await self.repository.create(employee_data)
 
@@ -181,7 +240,7 @@ class EmployeeService:
     ):
         employee = await self.repository.get_by_id(
             employee_id,
-            created_by=self._created_by_scope(current_user),
+            scope=self._visibility_scope(current_user),
         )
 
         if not employee:
@@ -236,7 +295,7 @@ class EmployeeService:
             filters=filters,
             skip=pagination.skip,
             limit=pagination.limit,
-            created_by=self._created_by_scope(current_user),           
+            scope=self._visibility_scope(current_user),
         )
 
     async def update_employee(
@@ -247,7 +306,7 @@ class EmployeeService:
     ):
         employee = await self.repository.get_by_id(
             employee_id,
-            created_by=self._created_by_scope(current_user),
+            scope=self._visibility_scope(current_user),
         )
 
         if not employee:
@@ -314,12 +373,15 @@ class EmployeeService:
         if "shift_id" in update_data:
             await self._validate_shift(update_data["shift_id"])
 
+        if "manager_id" in update_data or "reporting_manager" in update_data:
+            await self._resolve_manager(update_data, existing=employee)
+
         update_data["updated_at"] = datetime.utcnow()
 
         return await self.repository.update(
             employee_id,
             update_data,
-            created_by=self._created_by_scope(current_user),
+            scope=self._visibility_scope(current_user),
         )
 
     
@@ -328,11 +390,11 @@ class EmployeeService:
         employee_id: str,
         current_user: dict | None = None,
     ):
-        created_by = self._created_by_scope(current_user)
+        scope = self._visibility_scope(current_user)
 
         employee = await self.repository.get_by_id(
             employee_id,
-            created_by=created_by,
+            scope=scope,
         )
 
         if not employee:
@@ -344,7 +406,7 @@ class EmployeeService:
             update_data={
                 "deactivated_at": datetime.utcnow(),
             },
-            created_by=created_by,
+            scope=scope,
         )
 
         if not updated_employee:
@@ -360,7 +422,7 @@ class EmployeeService:
     ):
         deleted = await self.repository.delete(
             employee_id,
-            created_by=self._created_by_scope(current_user),
+            scope=self._visibility_scope(current_user),
         )
 
         if not deleted:

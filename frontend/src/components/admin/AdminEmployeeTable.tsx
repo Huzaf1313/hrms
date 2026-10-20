@@ -85,7 +85,7 @@ function AdminEmployeeTable({
           {/* Employee Header */}
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#dce8df] text-sm font-semibold text-[#2563eb]">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#2563eb] text-sm font-semibold text-white">
                 {initialsFor(employee)}
               </div>
 

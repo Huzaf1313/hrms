@@ -1,11 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Hand, Check } from "lucide-react";
 
 import { api } from "../../services/api";
-import {
-  announcementService,
-  type EmployeeAnnouncement,
-} from "../../services/announcementService";
 
 interface User {
   id: string;
@@ -81,16 +78,6 @@ function normalizeAttendance(
     check_in: record.check_in ?? record.in_time ?? null,
     check_out: record.check_out ?? record.out_time ?? null,
   };
-}
-
-function getInitials(name: string) {
-  return name
-    .trim()
-    .split(/\s+/)
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
 }
 
 function getDateKey(value: string | Date) {
@@ -318,15 +305,6 @@ function EmployeeDashboard() {
   const firstName = employeeName.split(" ")[0];
 
   const currentDate = new Date();
-
-  const formattedDate = currentDate.toLocaleDateString("en-IN", {
-    weekday: "short",
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-
-  const initials = getInitials(employeeName);
 
   const [todayAttendance, setTodayAttendance] =
     useState<AttendanceRecord | null>(null);
@@ -595,7 +573,7 @@ const attendanceChart = useMemo(() => {
 
       <section className="mb-7">
         <h1 className="mt-1 text-3xl font-bold tracking-tight text-[#171b1d] sm:text-4xl">
-          Good Morning, {firstName} 👋
+          Good Morning, {firstName} <Hand aria-hidden="true" className="inline h-5 w-5 align-middle" />
         </h1>
 
         <p className="mt-2 text-sm text-gray-500">
@@ -607,12 +585,12 @@ const attendanceChart = useMemo(() => {
           KPI CARDS
       ===================================================== */}
 
-      <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+      <section className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
         {/* ===================================================
             TODAY'S ATTENDANCE
         =================================================== */}
 
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
@@ -627,7 +605,7 @@ const attendanceChart = useMemo(() => {
             </div>
 
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-100 text-green-700">
-              ✓
+              <Check aria-hidden="true" className="h-5 w-5" />
             </div>
           </div>
 
@@ -662,7 +640,7 @@ const attendanceChart = useMemo(() => {
             LEAVE BALANCE
         =================================================== */}
 
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
@@ -734,7 +712,7 @@ const attendanceChart = useMemo(() => {
             PAYSLIP
         =================================================== */}
 
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
@@ -769,12 +747,12 @@ const attendanceChart = useMemo(() => {
           ATTENDANCE + ANNOUNCEMENTS
       ===================================================== */}
 
-      <section className="mt-6 grid gap-6 xl:grid-cols-3">
+      <section className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-3">
         {/* ===================================================
             ATTENDANCE OVERVIEW
         =================================================== */}
 
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm xl:col-span-2">
+        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm xl:col-span-2">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-bold text-[#17213a]">
@@ -918,54 +896,18 @@ const attendanceChart = useMemo(() => {
             RECENT ANNOUNCEMENTS
         =================================================== */}
 
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
           <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-bold text-[#17213a]">
-                Recent Announcements
-              </h2>
-
-              <div className="mt-5 space-y-4">
-                {announcements.length === 0 ? (
-                  <p className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-6 text-center text-xs text-gray-500">
-                    No announcements available.
-                  </p>
-                ) : (
-                  announcements.map((announcement) => (
-                    <div
-                      key={announcement.id}
-                      className="rounded-xl border border-gray-100 bg-gray-50 p-4"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <h3 className="text-sm font-semibold text-gray-800">
-                          {announcement.title}
-                        </h3>
-
-                        <span className="shrink-0 text-xs text-gray-400">
-                          {new Date(
-                            `${announcement.published_at}T00:00:00`,
-                          ).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "2-digit",
-                          })}
-                        </span>
-                      </div>
-
-                      <p className="mt-2 text-xs leading-5 text-gray-500">
-                        {announcement.description}
-                      </p>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
+            <h2 className="text-lg font-bold text-[#17213a]">
+              Recent Announcements
+            </h2>
 
             <button
               type="button"
               onClick={() =>
                 navigate("/employee/announcements")
               }
-              className="text-sm font-semibold text-[#2563eb]"
+              className="text-sm font-semibold text-[#2563eb] hover:underline"
             >
               View All
             </button>
@@ -1020,7 +962,7 @@ const attendanceChart = useMemo(() => {
       ===================================================== */}
 
       <section className="mt-6">
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
           <div>
             <h2 className="text-lg font-bold text-[#17213a]">
               My Leave Requests

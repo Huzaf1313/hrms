@@ -10,8 +10,6 @@ import {
   Loader2,
   AlertCircle,
 } from "lucide-react";
-import { api } from "../../services/api";
-
 import {
   announcementService,
   type EmployeeAnnouncement,
@@ -201,9 +199,9 @@ function EmployeeAnnouncements() {
       </div>
 
       {/* Main Content */}
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
         {/* Announcements Feed */}
-        <section className="rounded-xl border border-gray-200 bg-white">
+        <section className="rounded-2xl border border-gray-100 bg-white shadow-sm">
           <div className="border-b border-gray-100 px-5 py-4">
             <div className="flex items-center justify-between">
               <div>
@@ -374,7 +372,7 @@ function EmployeeAnnouncements() {
         {/* Right Sidebar */}
         <aside className="space-y-6">
           {/* Filters */}
-          <section className="rounded-xl border border-gray-200 bg-white p-5">
+          <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
             <div className="mb-5 flex items-center gap-2">
               <SlidersHorizontal className="h-4 w-4 text-gray-500" />
               <h2 className="text-sm font-semibold text-gray-900">
@@ -445,7 +443,7 @@ function EmployeeAnnouncements() {
           </section>
 
           {/* Important Announcements */}
-          <section className="rounded-xl border border-gray-200 bg-white p-5">
+          <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
             <div className="mb-4">
               <h2 className="text-sm font-semibold text-gray-900">
                 Important

@@ -6,6 +6,11 @@ from app.db.database import database
 class EmployeeRepository:
     collection = database["users"]
 
+    async def ensure_indexes(self):
+        # Manager-scoped reads filter on manager_id; without this the whole
+        # collection is scanned for every manager list request.
+        await self.collection.create_index("manager_id")
+
     async def create(self, employee_data: dict):
         result = await self.collection.insert_one(employee_data)
 
@@ -16,7 +21,7 @@ class EmployeeRepository:
     async def get_by_id(
         self,
         employee_id: str,
-        created_by: str | None = None,
+        scope: dict | None = None,
     ):
         if not ObjectId.is_valid(employee_id):
             return None
@@ -26,8 +31,8 @@ class EmployeeRepository:
             "employee_id": {"$exists": True},
         }
 
-        if created_by is not None:
-            query["created_by"] = created_by
+        if scope:
+            query.update(scope)
 
         return await self.collection.find_one(query)
 
@@ -52,7 +57,7 @@ class EmployeeRepository:
         filters: dict | None = None,
         skip: int = 0,
         limit: int = 10,
-        created_by: str | None = None,
+        scope: dict | None = None,
     ):
         query = {
             "employee_id": {"$exists": True},
@@ -61,9 +66,9 @@ class EmployeeRepository:
         if filters:
             query.update(filters)
 
-        # Apply ownership last so regular filters cannot override it.
-        if created_by is not None:
-            query["created_by"] = created_by
+        # Visibility scope last, so regular filters cannot override it.
+        if scope:
+            query.update(scope)
 
         cursor = (
             self.collection.find(query)
@@ -75,14 +80,18 @@ class EmployeeRepository:
         return await cursor.to_list(length=limit)
 
 
-    async def count_employees(self):
-        return await self.collection.count_documents(
-            {"employee_id": {"$exists": True}}
-        )
+    async def count_employees(self, scope: dict | None = None):
+        query = {"employee_id": {"$exists": True}}
+
+        if scope:
+            query.update(scope)
+
+        return await self.collection.count_documents(query)
 
     async def get_celebration_candidates(
         self,
         month_day_values: list[str],
+        scope: dict | None = None,
     ):
         """Employees whose date_of_birth or joining_date falls on any of the
         given "MM-DD" strings.
@@ -102,6 +111,7 @@ class EmployeeRepository:
                     # Not "== active": records predating the status field have
                     # no value at all, and those must still be celebrated.
                     "status": {"$ne": "inactive"},
+                    **(scope or {}),
                 }
             },
             {
@@ -151,7 +161,7 @@ class EmployeeRepository:
         self,
         employee_id: str,
         update_data: dict,
-        created_by: str | None = None,
+        scope: dict | None = None,
     ):
         if not ObjectId.is_valid(employee_id):
             return None
@@ -161,22 +171,22 @@ class EmployeeRepository:
             "employee_id": {"$exists": True},
         }
 
-        if created_by is not None:
-            query["created_by"] = created_by
+        if scope:
+            query.update(scope)
 
         await self.collection.update_one(
             query,
             {"$set": update_data},
         )
 
-        return await self.get_by_id(employee_id, created_by=created_by)
+        return await self.get_by_id(employee_id, scope=scope)
 
     async def update_status(
         self,
         employee_id: str,
         status: str,
         update_data: dict | None = None,
-        created_by: str | None = None,
+        scope: dict | None = None,
     ):
         if not ObjectId.is_valid(employee_id):
             return None
@@ -189,8 +199,8 @@ class EmployeeRepository:
             "employee_id": {"$exists": True},
         }
 
-        if created_by is not None:
-            query["created_by"] = created_by
+        if scope:
+            query.update(scope)
 
         result = await self.collection.update_one(
             query,
@@ -200,12 +210,12 @@ class EmployeeRepository:
         if result.matched_count == 0:
             return None
 
-        return await self.get_by_id(employee_id, created_by=created_by)
+        return await self.get_by_id(employee_id, scope=scope)
 
     async def delete(
         self,
         employee_id: str,
-        created_by: str | None = None,
+        scope: dict | None = None,
     ):
         if not ObjectId.is_valid(employee_id):
             return False
@@ -215,8 +225,8 @@ class EmployeeRepository:
             "employee_id": {"$exists": True},
         }
 
-        if created_by is not None:
-            query["created_by"] = created_by
+        if scope:
+            query.update(scope)
 
         result = await self.collection.delete_one(query)
         return result.deleted_count > 0

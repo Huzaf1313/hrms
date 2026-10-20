@@ -88,3 +88,7 @@ class AdminPayslipRepository:
 
     async def count(self):
         return await self.collection.count_documents({})
+
+    async def get_all_records(self, query: dict | None = None):
+        cursor = self.collection.find(query or {}).sort("pay_period_start", 1)
+        return await cursor.to_list(length=2000)

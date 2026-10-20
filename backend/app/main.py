@@ -9,6 +9,9 @@ from app.api.v1.admin_payslip import router as admin_payslip_router
 from app.api.v1.admin_leaves import router as leaves_router
 from app.api.v1.admin_attendance import router as attendance_router
 from app.api.v1.shifts import router as shifts_router
+from app.api.v1.holidays import router as holidays_router
+from app.api.v1.admin_notifications import router as admin_notifications_router
+from app.api.v1.admin_support_tickets import router as admin_support_tickets_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.departments import router as departments_router
 from app.api.v1.employees import router as employees_router
@@ -32,7 +35,6 @@ from app.api.v1.admin_announcements import (
     router as announcements_router,
 )
 
-
 from app.api.v1.employee_documents import router as employee_documents_router
 from app.api.v1.employee_announcement import (
     router as employee_announcement_router,
@@ -49,11 +51,6 @@ from app.api.v1.employee_payroll import (
 )
 
 from app.api.v1 import employee_payslip
-from app.api.v1.admin_salary_structures import (
-    router as admin_salary_structures_router,
-)
-from app.api.v1.admin_deductions import router as admin_deductions_router
-from app.api.v1.admin_announcements import router as announcements_router
 
 from app.repositories.employee_attendance_repository import (
     EmployeeAttendanceRepository,
@@ -71,6 +68,10 @@ from app.repositories.admin_announcement_repository import (
     AdminAnnouncementRepository,
 )
 from app.repositories.shift_repository import ShiftRepository
+from app.repositories.holiday_repository import HolidayRepository
+from app.repositories.employee_support_ticket_repository import (
+    EmployeeSupportTicketRepository,
+)
 
 from app.api.v1.employee_notification import (
     router as employee_notification_router,
@@ -92,6 +93,8 @@ from app.repositories.asset_repository import AssetRepository
 from app.repositories.asset_request_repository import AssetRequestRepository
 from app.repositories.candidate_repository import CandidateRepository
 from app.repositories.job_position_repository import JobPositionRepository
+from app.repositories.employee_repository import EmployeeRepository
+from app.services.user_service import UserService
 
 
 @asynccontextmanager
@@ -100,8 +103,26 @@ async def lifespan(app: FastAPI):
 
     os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 
+    if settings.BOOTSTRAP_HR_EMAIL and settings.BOOTSTRAP_HR_PASSWORD:
+        created = await UserService().bootstrap_hr_admin(
+            email=settings.BOOTSTRAP_HR_EMAIL,
+            password=settings.BOOTSTRAP_HR_PASSWORD,
+            full_name=settings.BOOTSTRAP_HR_NAME,
+        )
+
+        if created:
+            print(
+                f"Bootstrapped HR account: {settings.BOOTSTRAP_HR_EMAIL}"
+            )
+
+    await EmployeeRepository().ensure_indexes()
+
     shift_repository = ShiftRepository()
     await shift_repository.ensure_indexes()
+
+    await HolidayRepository().ensure_indexes()
+
+    await EmployeeSupportTicketRepository().ensure_indexes()
 
     attendance_repository = EmployeeAttendanceRepository()
     await attendance_repository.ensure_indexes()
@@ -181,6 +202,12 @@ app.include_router(
     tags=["Health"],
 )
 
+# Also served unprefixed: uptime monitors conventionally poll /health.
+app.include_router(
+    health_router,
+    tags=["Health"],
+)
+
 app.include_router(
     auth_router,
     prefix="/api/v1",
@@ -215,6 +242,24 @@ app.include_router(
     shifts_router,
     prefix="/api/v1",
     tags=["Shifts"],
+)
+
+app.include_router(
+    holidays_router,
+    prefix="/api/v1",
+    tags=["Holidays"],
+)
+
+app.include_router(
+    admin_notifications_router,
+    prefix="/api/v1",
+    tags=["Admin Notifications"],
+)
+
+app.include_router(
+    admin_support_tickets_router,
+    prefix="/api/v1",
+    tags=["Admin Support Tickets"],
 )
 
 app.include_router(

@@ -14,25 +14,11 @@ router = APIRouter(
 
 service = AdminLeaveService()
 
-# Authentication is currently disabled for the other active admin modules
-# while the frontend session/role flow is being wired up.
-AUTH_ENABLED = True
-
-
-def require_permission_toggle(permission: Permission):
-    if AUTH_ENABLED:
-        return require_permission(permission)
-
-    async def bypass_auth() -> None:
-        return None
-
-    return bypass_auth
-
 
 @router.get("/summary")
 async def get_leave_summary(
     current_user: dict | None = Depends(
-        require_permission_toggle(Permission.LEAVE_READ)
+        require_permission(Permission.LEAVE_READ)
     ),
 ):
     return {
@@ -45,7 +31,7 @@ async def get_leave_summary(
 @router.get("")
 async def get_leaves(
     current_user: dict | None = Depends(
-        require_permission_toggle(Permission.LEAVE_READ)
+        require_permission(Permission.LEAVE_READ)
     ),
     page: int = Query(
         default=1,
@@ -82,7 +68,7 @@ async def get_leaves(
 async def get_leave(
     leave_id: str,
     current_user: dict | None = Depends(
-        require_permission_toggle(Permission.LEAVE_READ)
+        require_permission(Permission.LEAVE_READ)
     ),
 ):
     return {
@@ -99,7 +85,7 @@ async def get_leave(
 async def create_leave(
     payload: LeaveCreate,
     current_user: dict | None = Depends(
-        require_permission_toggle(Permission.LEAVE_CREATE)
+        require_permission(Permission.LEAVE_CREATE)
     ),
 ):
     data = await service.create_leave(
@@ -119,7 +105,7 @@ async def update_leave_status(
     leave_id: str,
     payload: LeaveStatusUpdate,
     current_user: dict | None = Depends(
-        require_permission_toggle(Permission.LEAVE_APPROVE)
+        require_permission(Permission.LEAVE_APPROVE)
     ),
 ):
     data = await service.update_status(
@@ -141,7 +127,7 @@ async def update_leave_status(
 async def delete_leave(
     leave_id: str,
     current_user: dict | None = Depends(
-        require_permission_toggle(Permission.LEAVE_UPDATE)
+        require_permission(Permission.LEAVE_UPDATE)
     ),
 ):
     await service.delete_leave(

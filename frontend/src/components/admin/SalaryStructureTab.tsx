@@ -1,5 +1,13 @@
-import { useEffect, useState } from "react";
-import { Pencil, Plus, Trash2, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Loader2,
+  Pencil,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
 import {
   salaryBandFor,
   salaryStructureService,
@@ -8,11 +16,11 @@ import {
 } from "../../services/admin_salary_structure_service";
 
 function formatCurrency(value: number): string {
-  return `₹${value.toLocaleString("en-IN")}`;
+  return `₹${Math.round(value).toLocaleString("en-IN")}`;
 }
 
 function grossOf(structure: SalaryStructure): number {
-  return structure.earnings.reduce((sum, earning) => sum + earning.amount, 0);
+  return structure.earnings.reduce((sum, earning) => sum + (Number(earning.amount) || 0), 0);
 }
 
 function StructureCard({
@@ -28,46 +36,73 @@ function StructureCard({
   const band = salaryBandFor(structure);
 
   return (
-    <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-      <h3 className="text-sm font-bold text-slate-900">{structure.name}</h3>
+    <div className="flex flex-col justify-between rounded-2xl border border-slate-100 bg-white p-5 shadow-sm transition hover:shadow-md">
+      <div>
+        <div className="flex items-start justify-between gap-2">
+          <h3 className="text-base font-bold text-slate-900">{structure.name}</h3>
+        </div>
 
-      <div className="mt-4">
-        <p className="text-[11px] font-medium text-slate-400">Salary Range</p>
-        <p className="text-sm font-semibold text-slate-700">{structure.range}</p>
-      </div>
+        <div className="mt-4">
+          <p className="text-[11px] font-medium text-slate-400">Salary Range</p>
+          <p className="text-sm font-semibold text-slate-700">{structure.range || "Flexible"}</p>
+        </div>
 
-      <div className="mt-3 rounded-lg bg-slate-50 px-3 py-2">
-        <p className="text-[11px] font-medium text-slate-400">Allowed Salary Amount</p>
-        <p className="text-sm font-semibold text-slate-700">
-          {band.min !== null ? formatCurrency(band.min) : "No min"}
-          {" – "}
-          {band.max !== null ? formatCurrency(band.max) : "No max"}
-        </p>
-      </div>
+        <div className="mt-3 rounded-lg bg-slate-50 px-3 py-2">
+          <p className="text-[11px] font-medium text-slate-400">Allowed Salary Band</p>
+          <p className="text-sm font-semibold text-slate-700">
+            {band.min !== null ? formatCurrency(band.min) : "No min"}
+            {" – "}
+            {band.max !== null ? formatCurrency(band.max) : "No max"}
+          </p>
+        </div>
 
-      <div className="mt-4 border-t border-slate-100 pt-4">
-        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-          Earnings
-        </p>
-        <div className="space-y-1.5 text-sm">
-          {structure.earnings.map((earning) => (
-            <div key={earning.label} className="flex items-center justify-between">
-              <span className="text-slate-600">{earning.label}</span>
-              <span className="font-medium text-slate-800">{formatCurrency(earning.amount)}</span>
+        <div className="mt-4 border-t border-slate-100 pt-4">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+            Earnings ({structure.earnings.length})
+          </p>
+          <div className="space-y-1.5 text-sm">
+            {structure.earnings.map((earning, idx) => (
+              <div key={`${earning.label}-${idx}`} className="flex items-center justify-between">
+                <span className="text-slate-600">{earning.label}</span>
+                <span className="font-medium text-slate-800">{formatCurrency(earning.amount)}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
+            <span className="text-sm font-bold text-slate-900">Gross Salary</span>
+            <span className="text-sm font-bold text-blue-600">{formatCurrency(gross)}</span>
+          </div>
+        </div>
+
+        {structure.deductions && structure.deductions.length > 0 && (
+          <div className="mt-4 border-t border-slate-100 pt-4">
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              Applied Deductions & Contributions ({structure.deductions.length})
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {structure.deductions.map((deduction) => (
+                <span
+                  key={deduction.id}
+                  className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${
+                    deduction.type === "contribution"
+                      ? "bg-purple-50 text-purple-700 border border-purple-200"
+                      : "bg-slate-100 text-slate-700 border border-slate-200"
+                  }`}
+                >
+                  {deduction.name}
+                </span>
+              ))}
             </div>
-          ))}
-        </div>
-        <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
-          <span className="text-sm font-bold text-slate-900">Gross Salary</span>
-          <span className="text-sm font-bold text-slate-900">{formatCurrency(gross)}</span>
-        </div>
+          </div>
+        )}
       </div>
 
-      <div className="mt-5 flex gap-2">
+      <div className="mt-5 flex gap-2 border-t border-slate-50 pt-4">
         <button
           type="button"
           onClick={() => onEdit(structure)}
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-200 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-200 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
         >
           <Pencil className="h-3.5 w-3.5" />
           Edit Structure
@@ -75,28 +110,13 @@ function StructureCard({
         <button
           type="button"
           onClick={() => onDelete(structure)}
-          className="flex items-center justify-center rounded-lg border border-slate-200 px-3 py-2 text-rose-500 hover:bg-rose-50"
-          aria-label="Delete structure"
+          className="flex items-center justify-center rounded-lg border border-slate-200 px-3 py-2 text-rose-500 transition hover:bg-rose-50"
+          aria-label={`Delete ${structure.name}`}
+          title="Delete structure"
         >
           <Trash2 className="h-3.5 w-3.5" />
         </button>
       </div>
-
-      {structure.deductions && structure.deductions.length > 0 && (
-        <div className="mt-4 border-t border-slate-100 pt-4">
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-            Applied deductions & contributions
-          </p>
-          <div className="space-y-1 text-xs text-slate-600">
-            {structure.deductions.map((deduction) => (
-              <div key={deduction.id} className="flex items-center justify-between gap-2">
-                <span>{deduction.name}</span>
-                <span className="text-slate-400">{deduction.type}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -115,88 +135,160 @@ function EditStructureModal({
   const [name, setName] = useState(structure.name);
   const [range, setRange] = useState(structure.range);
   const [minSalary, setMinSalary] = useState(
-    structure.min_salary != null ? String(structure.min_salary) : "",
+    structure.min_salary != null ? String(structure.min_salary) : ""
   );
   const [maxSalary, setMaxSalary] = useState(
-    structure.max_salary != null ? String(structure.max_salary) : "",
+    structure.max_salary != null ? String(structure.max_salary) : ""
   );
-  const [earnings, setEarnings] = useState<Earning[]>(structure.earnings);
+  const [earnings, setEarnings] = useState<Earning[]>(
+    structure.earnings.length > 0
+      ? structure.earnings
+      : [{ label: "Basic Salary", amount: 0 }]
+  );
   const [saving, setSaving] = useState(false);
-  const [bandError, setBandError] = useState<string | null>(null);
-
-  const parsedMin = minSalary.trim() === "" ? null : Number(minSalary);
-  const parsedMax = maxSalary.trim() === "" ? null : Number(maxSalary);
-
-  const bandInvalid =
-    (parsedMin !== null && !Number.isFinite(parsedMin)) ||
-    (parsedMax !== null && !Number.isFinite(parsedMax)) ||
-    (parsedMin !== null &&
-      parsedMax !== null &&
-      Number.isFinite(parsedMin) &&
-      Number.isFinite(parsedMax) &&
-      parsedMax < parsedMin);
+  const [modalError, setModalError] = useState<string | null>(null);
 
   function updateAmount(index: number, value: string) {
-    const amount = value === "" ? 0 : Number(value) || 0;
+    setModalError(null);
+    const amount = value === "" ? 0 : Math.max(0, Number(value) || 0);
     setEarnings((current) =>
-      current.map((earning, i) => (i === index ? { ...earning, amount } : earning)),
+      current.map((earning, i) => (i === index ? { ...earning, amount } : earning))
     );
   }
 
   function updateLabel(index: number, value: string) {
+    setModalError(null);
     setEarnings((current) =>
-      current.map((earning, i) => (i === index ? { ...earning, label: value } : earning)),
+      current.map((earning, i) => (i === index ? { ...earning, label: value } : earning))
     );
   }
 
   function removeRow(index: number) {
+    if (earnings.length <= 1) {
+      setModalError("At least one earning component is required.");
+      return;
+    }
+    setModalError(null);
     setEarnings((current) => current.filter((_, i) => i !== index));
   }
 
   function addRow() {
-    if (earnings.some((earning) => earning.label.trim().toLowerCase() === "new allowance")) {
-      window.alert("This earning field already exists in the salary structure.");
-      return;
+    setModalError(null);
+    const existingLabels = new Set(
+      earnings.map((e) => e.label.trim().toLowerCase())
+    );
+
+    let candidate = "New Allowance";
+    let counter = 1;
+    while (existingLabels.has(candidate.toLowerCase())) {
+      counter++;
+      candidate = `New Allowance ${counter}`;
     }
 
-    setEarnings((current) => [...current, { label: "New Allowance", amount: 0 }]);
+    setEarnings((current) => [...current, { label: candidate, amount: 0 }]);
   }
 
-  const gross = earnings.reduce((sum, earning) => sum + earning.amount, 0);
+  const gross = useMemo(
+    () => earnings.reduce((sum, earning) => sum + (Number(earning.amount) || 0), 0),
+    [earnings]
+  );
 
   async function handleSave() {
-    if (bandInvalid) {
-      setBandError(
-        parsedMax !== null &&
-          parsedMin !== null &&
-          Number.isFinite(parsedMax) &&
-          Number.isFinite(parsedMin) &&
-          parsedMax < parsedMin
-          ? "Maximum salary cannot be lower than the minimum salary."
-          : "Min and max salary must be valid numbers.",
-      );
+    setModalError(null);
+
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      setModalError("Structure name is required.");
       return;
     }
 
-    setBandError(null);
+    // Validate salary band numbers
+    const parsedMin = minSalary.trim() === "" ? null : Number(minSalary);
+    const parsedMax = maxSalary.trim() === "" ? null : Number(maxSalary);
+
+    if (parsedMin !== null && (!Number.isFinite(parsedMin) || parsedMin < 0)) {
+      setModalError("Minimum salary must be a valid non-negative number.");
+      return;
+    }
+
+    if (parsedMax !== null && (!Number.isFinite(parsedMax) || parsedMax < 0)) {
+      setModalError("Maximum salary must be a valid non-negative number.");
+      return;
+    }
+
+    if (
+      parsedMin !== null &&
+      parsedMax !== null &&
+      parsedMax < parsedMin
+    ) {
+      setModalError("Maximum salary cannot be lower than the minimum salary.");
+      return;
+    }
+
+    // Validate earnings
+    if (earnings.length === 0) {
+      setModalError("At least one earning component is required.");
+      return;
+    }
+
+    const trimmedLabels = earnings.map((e) => e.label.trim());
+    if (trimmedLabels.some((l) => !l)) {
+      setModalError("All earning components must have a label.");
+      return;
+    }
+
+    const lowerLabels = trimmedLabels.map((l) => l.toLowerCase());
+    if (new Set(lowerLabels).size !== lowerLabels.length) {
+      setModalError("Duplicate earning component labels are not allowed.");
+      return;
+    }
+
+    if (earnings.some((e) => e.amount < 0)) {
+      setModalError("Earning amounts cannot be negative.");
+      return;
+    }
+
+    // Auto-derive range if left blank
+    let computedRange = range.trim();
+    if (!computedRange) {
+      if (parsedMin !== null && parsedMax !== null) {
+        computedRange = `${formatCurrency(parsedMin)} – ${formatCurrency(parsedMax)}`;
+      } else if (parsedMin !== null) {
+        computedRange = `${formatCurrency(parsedMin)}+`;
+      } else if (parsedMax !== null) {
+        computedRange = `Up to ${formatCurrency(parsedMax)}`;
+      } else {
+        computedRange = "Flexible";
+      }
+    }
+
     setSaving(true);
     try {
       await onSave({
         ...structure,
-        name,
-        range,
+        name: trimmedName,
+        range: computedRange,
         min_salary: parsedMin,
         max_salary: parsedMax,
-        earnings,
+        earnings: earnings.map((e) => ({
+          label: e.label.trim(),
+          amount: Number(e.amount) || 0,
+        })),
       });
+    } catch (err: unknown) {
+      setModalError(
+        err instanceof Error
+          ? err.message
+          : "Failed to save salary structure. Please try again."
+      );
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
-      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6 backdrop-blur-xs">
+      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
           <h2 className="text-lg font-bold text-slate-900">
             {isCreating ? "Add Salary Structure" : "Edit Salary Structure"}
@@ -212,60 +304,96 @@ function EditStructureModal({
         </div>
 
         <div className="space-y-4 px-6 py-5">
+          {modalError && (
+            <div className="flex items-start gap-2.5 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-500" />
+              <span>{modalError}</span>
+            </div>
+          )}
+
           <div>
-            <label className="mb-1 block text-xs font-semibold text-slate-600">Structure Name</label>
+            <label className="mb-1 block text-xs font-semibold text-slate-600">
+              Structure Name <span className="text-rose-500">*</span>
+            </label>
             <input
               type="text"
               value={name}
-              onChange={(event) => setName(event.target.value)}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+              onChange={(event) => {
+                setName(event.target.value);
+                setModalError(null);
+              }}
+              placeholder="e.g. Standard, Executive Band"
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-semibold text-slate-600">Salary Range</label>
+            <label className="mb-1 block text-xs font-semibold text-slate-600">
+              Salary Range Label
+            </label>
             <input
               type="text"
               value={range}
-              onChange={(event) => setRange(event.target.value)}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+              onChange={(event) => {
+                setRange(event.target.value);
+                setModalError(null);
+              }}
+              placeholder="e.g. 15,000 - 30,000 (optional)"
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             />
-            <p className="mt-1 text-[11px] text-slate-400">Label only. Use the min/max below to enforce limits.</p>
+            <p className="mt-1 text-[11px] text-slate-400">
+              Display label. If left empty, it will be automatically derived from the band limits below.
+            </p>
           </div>
 
           <div>
-            <p className="mb-1 text-xs font-semibold text-slate-600">Allowed Salary Amount</p>
+            <p className="mb-1 text-xs font-semibold text-slate-600">
+              Allowed Salary Amount Band
+            </p>
             <div className="flex items-center gap-2">
               <input
                 type="number"
+                min="0"
                 value={minSalary}
                 onChange={(event) => {
                   setMinSalary(event.target.value);
-                  setBandError(null);
+                  setModalError(null);
                 }}
-                placeholder="Min"
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                placeholder="Min salary"
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
-              <span className="text-sm text-slate-400">to</span>
+              <span className="text-sm font-medium text-slate-400">to</span>
               <input
                 type="number"
+                min="0"
                 value={maxSalary}
                 onChange={(event) => {
                   setMaxSalary(event.target.value);
-                  setBandError(null);
+                  setModalError(null);
                 }}
-                placeholder="Max"
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                placeholder="Max salary (optional)"
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
             </div>
             <p className="mt-1 text-[11px] text-slate-400">
-              Employees can only be assigned a salary inside this band. Leave max empty for no upper limit.
+              Employees assigned to this structure must have salaries within this range. Leave max empty for no ceiling.
             </p>
-            {bandError && <p className="mt-1 text-[11px] text-rose-600">{bandError}</p>}
           </div>
 
           <div>
-            <p className="mb-2 text-xs font-semibold text-slate-600">Earnings</p>
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-xs font-semibold text-slate-600">
+                Earnings Components <span className="text-rose-500">*</span>
+              </p>
+              <button
+                type="button"
+                onClick={addRow}
+                className="text-xs font-semibold text-blue-600 hover:underline"
+              >
+                + Add Component
+              </button>
+            </div>
+
             <div className="space-y-2">
               {earnings.map((earning, index) => (
                 <div key={index} className="flex items-center gap-2">
@@ -273,38 +401,40 @@ function EditStructureModal({
                     type="text"
                     value={earning.label}
                     onChange={(event) => updateLabel(index, event.target.value)}
-                    className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                    placeholder="Component Label"
+                    className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   />
-                  <input
-                    type="number"
-                    value={earning.amount === 0 ? "" : earning.amount}
-                    onChange={(event) => updateAmount(index, event.target.value)}
-                    placeholder="0"
-                    className="w-28 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  />
+                  <div className="relative w-32">
+                    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">
+                      ₹
+                    </span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={earning.amount === 0 ? "" : earning.amount}
+                      onChange={(event) => updateAmount(index, event.target.value)}
+                      placeholder="0"
+                      className="w-full rounded-lg border border-slate-200 py-2 pl-7 pr-3 text-sm outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                  </div>
                   <button
                     type="button"
                     onClick={() => removeRow(index)}
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-rose-500 hover:bg-rose-50"
-                    aria-label="Remove"
+                    disabled={earnings.length <= 1}
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-rose-500 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:text-slate-300 disabled:hover:bg-transparent"
+                    aria-label="Remove component"
+                    title={earnings.length <= 1 ? "At least one component required" : "Remove component"}
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
               ))}
             </div>
-            <button
-              type="button"
-              onClick={addRow}
-              className="mt-2 text-xs font-semibold text-blue-600 hover:underline"
-            >
-              + Add Earning
-            </button>
           </div>
 
           <div className="flex items-center justify-between rounded-lg bg-slate-50 px-4 py-3">
-            <span className="text-sm font-bold text-slate-900">Gross Salary</span>
-            <span className="text-sm font-bold text-slate-900">{formatCurrency(gross)}</span>
+            <span className="text-sm font-bold text-slate-900">Total Gross Salary</span>
+            <span className="text-sm font-bold text-blue-600">{formatCurrency(gross)}</span>
           </div>
         </div>
 
@@ -312,17 +442,27 @@ function EditStructureModal({
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 rounded-lg border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            disabled={saving}
+            className="flex-1 rounded-lg border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={handleSave}
-            disabled={saving || !name.trim() || !range.trim()}
-            className="flex-1 rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
+            disabled={saving || !name.trim()}
+            className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
           >
-            {saving ? "Saving..." : isCreating ? "Create Structure" : "Save Changes"}
+            {saving ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Saving...</span>
+              </>
+            ) : isCreating ? (
+              "Create Structure"
+            ) : (
+              "Save Changes"
+            )}
           </button>
         </div>
       </div>
@@ -335,60 +475,66 @@ function SalaryStructureTab() {
   const [editingStructure, setEditingStructure] = useState<SalaryStructure | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [deletingStructure, setDeletingStructure] = useState<SalaryStructure | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [deleteModalError, setDeleteModalError] = useState<string | null>(null);
+
+  const fetchStructures = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await salaryStructureService.list();
+      setStructures(data);
+    } catch (requestError: unknown) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Failed to load salary structures."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    let mounted = true;
-
-    salaryStructureService
-      .list()
-      .then((data) => {
-        if (mounted) setStructures(data);
-      })
-      .catch((requestError: Error) => {
-        if (mounted) setError(requestError.message);
-      })
-      .finally(() => {
-        if (mounted) setLoading(false);
-      });
-
-    return () => {
-      mounted = false;
-    };
+    void fetchStructures();
   }, []);
 
-  async function handleSave(updated: SalaryStructure) {
-    const labels = updated.earnings.map((earning) => earning.label.trim().toLowerCase());
-    if (labels.some((label, index) => labels.indexOf(label) !== index)) {
-      window.alert("This earning field already exists in the salary structure.");
-      return;
+  // Auto-hide success message after 4s
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => setSuccessMessage(null), 4000);
+      return () => clearTimeout(timer);
     }
+  }, [successMessage]);
 
-    setError(null);
+  async function handleSave(updated: SalaryStructure) {
     const payload = {
       name: updated.name.trim(),
-      range: updated.range.trim(),
+      range: updated.range?.trim() || null,
       min_salary: updated.min_salary ?? null,
       max_salary: updated.max_salary ?? null,
       earnings: updated.earnings,
     };
+
     let saved: SalaryStructure;
-    try {
-      saved = updated.id.startsWith("custom-")
-        ? await salaryStructureService.create(payload)
-        : await salaryStructureService.update(updated.id, payload);
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "Could not save salary structure.");
-      return;
+    if (isCreating || updated.id.startsWith("custom-")) {
+      saved = await salaryStructureService.create(payload);
+      setSuccessMessage(`Salary structure '${saved.name}' created successfully.`);
+    } else {
+      saved = await salaryStructureService.update(updated.id, payload);
+      setSuccessMessage(`Salary structure '${saved.name}' updated successfully.`);
     }
 
     setStructures((current) => {
-      const exists = current.some((structure) => structure.id === saved.id);
+      const exists = current.some((s) => s.id === saved.id);
       return exists
-        ? current.map((structure) => (structure.id === saved.id ? saved : structure))
+        ? current.map((s) => (s.id === saved.id ? saved : s))
         : [...current, saved];
     });
+
     setEditingStructure(null);
     setIsCreating(false);
   }
@@ -397,9 +543,14 @@ function SalaryStructureTab() {
     setIsCreating(true);
     setEditingStructure({
       id: `custom-${Date.now()}`,
-      name: "New Salary Structure",
+      name: "",
       range: "",
-      earnings: [{ label: "Basic Salary", amount: 0 }],
+      min_salary: null,
+      max_salary: null,
+      earnings: [
+        { label: "Basic Salary", amount: 0 },
+        { label: "House Rent Allowance (HRA)", amount: 0 },
+      ],
       gross_salary: 0,
     });
   }
@@ -412,52 +563,102 @@ function SalaryStructureTab() {
   async function handleConfirmDelete() {
     if (!deletingStructure) return;
     try {
-      setError(null);
+      setIsDeleting(true);
+      setDeleteModalError(null);
       await salaryStructureService.delete(deletingStructure.id);
-      setStructures((current) => current.filter((structure) => structure.id !== deletingStructure.id));
+      setSuccessMessage(`Salary structure '${deletingStructure.name}' deleted successfully.`);
+      setStructures((current) =>
+        current.filter((s) => s.id !== deletingStructure.id)
+      );
       setDeletingStructure(null);
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "Could not delete salary structure.");
+    } catch (requestError: unknown) {
+      const message =
+        requestError instanceof Error
+          ? requestError.message
+          : "Could not delete salary structure.";
+      setDeleteModalError(message);
+    } finally {
+      setIsDeleting(false);
     }
   }
 
   return (
     <div>
-      <div className="mb-5 flex items-center justify-between">
-        <h2 className="text-sm font-bold text-slate-900">Salary Structures</h2>
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-bold text-slate-900">Salary Structures</h2>
+          <p className="mt-0.5 text-xs text-slate-500">
+            Define salary bands, earning components, and gross remuneration for employee assignments.
+          </p>
+        </div>
         <button
           type="button"
           onClick={handleAddNew}
-          className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700"
+          className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-blue-700"
         >
-          <Plus className="h-3.5 w-3.5" />
+          <Plus className="h-4 w-4" />
           Add Structure
         </button>
       </div>
 
-      {error && (
-        <div className="mb-4 rounded-lg bg-rose-50 px-4 py-3 text-sm text-rose-600">
-          {error}
+      {successMessage && (
+        <div className="mb-4 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800 shadow-xs">
+          <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+          <span>{successMessage}</span>
         </div>
       )}
 
-      {loading && <p className="text-sm text-slate-500">Loading salary structures...</p>}
-      {!loading && structures.length === 0 && (
-        <p className="rounded-xl border border-dashed border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
-          No salary structures found. Add your first structure.
-        </p>
+      {error && (
+        <div className="mb-4 flex items-center justify-between rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-xs">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 text-rose-500 shrink-0" />
+            <span>{error}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => void fetchStructures()}
+            className="text-xs font-bold underline hover:text-rose-900"
+          >
+            Retry
+          </button>
+        </div>
       )}
 
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-        {structures.map((structure) => (
-          <StructureCard
-            key={structure.id}
-            structure={structure}
-            onEdit={setEditingStructure}
-            onDelete={setDeletingStructure}
-          />
-        ))}
-      </div>
+      {loading ? (
+        <div className="flex h-56 flex-col items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-white p-8">
+          <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+          <p className="text-xs text-slate-400">Loading salary structures...</p>
+        </div>
+      ) : structures.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-12 text-center">
+          <h3 className="text-sm font-bold text-slate-800">No Salary Structures Defined</h3>
+          <p className="mt-1 text-xs text-slate-500">
+            Create salary structures to assign earning components and salary bands to employees.
+          </p>
+          <button
+            type="button"
+            onClick={handleAddNew}
+            className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-blue-700"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add First Structure
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+          {structures.map((structure) => (
+            <StructureCard
+              key={structure.id}
+              structure={structure}
+              onEdit={setEditingStructure}
+              onDelete={(s) => {
+                setDeleteModalError(null);
+                setDeletingStructure(s);
+              }}
+            />
+          ))}
+        </div>
+      )}
 
       {editingStructure && (
         <EditStructureModal
@@ -469,26 +670,47 @@ function SalaryStructureTab() {
       )}
 
       {deletingStructure && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6 backdrop-blur-xs">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
             <h2 className="text-lg font-bold text-slate-900">Delete Structure?</h2>
             <p className="mt-2 text-sm text-slate-600">
-              This will permanently delete "{deletingStructure.name}". This can't be undone.
+              Are you sure you want to permanently delete{" "}
+              <strong className="text-slate-900">"{deletingStructure.name}"</strong>? This action cannot be undone.
             </p>
-            <div className="mt-5 flex gap-3">
+
+            {deleteModalError && (
+              <div className="mt-3 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-500" />
+                <span>{deleteModalError}</span>
+              </div>
+            )}
+
+            <div className="mt-6 flex gap-3">
               <button
                 type="button"
-                onClick={() => setDeletingStructure(null)}
-                className="flex-1 rounded-lg border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                onClick={() => {
+                  setDeletingStructure(null);
+                  setDeleteModalError(null);
+                }}
+                disabled={isDeleting}
+                className="flex-1 rounded-lg border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleConfirmDelete}
-                className="flex-1 rounded-lg bg-rose-500 py-2.5 text-sm font-semibold text-white hover:bg-rose-600"
+                disabled={isDeleting}
+                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-rose-600 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:opacity-60"
               >
-                Delete
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  "Delete"
+                )}
               </button>
             </div>
           </div>

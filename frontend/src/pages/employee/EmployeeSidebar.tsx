@@ -10,10 +10,14 @@ import {
   CircleHelp,
   DoorOpen,
   LogOut,
+  PanelLeftClose,
 } from "lucide-react";
 
 interface EmployeeSidebarProps {
   onLogout: () => void;
+  /** Mobile drawer state. Desktop ignores this. */
+  open?: boolean;
+  onClose?: () => void;
 }
 
 interface NavItem {
@@ -127,34 +131,48 @@ function isItemActive(
 
 function EmployeeSidebar({
   onLogout,
+  open,
+  onClose,
 }: EmployeeSidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-40 flex w-[250px] flex-col bg-[#0d1e3e] px-4 py-6">
+    <>
+      {open && (
+        <div
+          className="fixed inset-0 z-30 bg-black/40 lg:hidden"
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
+    <aside
+      className={`app-sidebar fixed inset-y-0 left-0 z-40 flex w-[250px] flex-col bg-[#0d1e3e] px-4 py-4 transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+        open ? "translate-x-0" : "-translate-x-full"
+      }`}
+    >
       {/* Logo */}
       <button
         type="button"
         onClick={() => navigate("/employee/dashboard")}
-        className="mb-8 flex items-center gap-3 px-2 text-left"
+        className="mb-5 flex items-center gap-3 px-2 text-left"
       >
         <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#2563eb]">
           <UserRound className="h-5 w-5 text-white" />
         </span>
 
         <span>
-          <span className="block text-xl font-bold text-white">HRMS</span>
+          <span className="brand-wordmark block text-xl font-bold text-white">HRMS</span>
           <span className="block text-xs text-slate-400">Employee Portal</span>
         </span>
       </button>
 
       {/* Navigation */}
-      <nav className="sidebar-scrollbar flex-1 overflow-y-auto">
+      <nav className="sidebar-scrollbar min-h-0 flex-1 overflow-y-auto">
         {sections.map((section, sectionIndex) => (
-          <div key={section.title ?? `top-${sectionIndex}`} className="mb-5">
+          <div key={section.title ?? `top-${sectionIndex}`} className="mb-3">
             {section.title && (
-              <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-widest text-slate-500">
+              <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
                 {section.title}
               </p>
             )}
@@ -170,8 +188,11 @@ function EmployeeSidebar({
                     key={item.label}
                     type="button"
                     disabled={isDisabled}
-                    onClick={() => item.path && navigate(item.path)}
-                    className={`flex min-h-[42px] items-center gap-3 rounded-xl px-3 py-2 text-left text-[14.5px] transition ${
+                    onClick={() => {
+                      if (item.path) navigate(item.path);
+                      onClose?.();
+                    }}
+                    className={`flex min-h-9 items-center gap-3 rounded-xl px-3 py-1.5 text-left text-sm transition ${
                       isActive
                         ? "bg-[#2563eb] font-semibold text-white shadow-lg shadow-blue-900/30"
                         : isDisabled
@@ -206,9 +227,18 @@ function EmployeeSidebar({
           <LogOut className="h-[18px] w-[18px] shrink-0 text-slate-400" />
           <span>Logout</span>
         </button>
+      <button
+        type="button"
+        onClick={onClose}
+        className="flex items-center gap-3 px-3 py-3 text-left text-[12px] text-slate-400 transition hover:text-white lg:hidden"
+      >
+        <PanelLeftClose className="h-4 w-4" />
+        Close Menu
+      </button>
       </div>
       </nav>
     </aside>
+    </>
   );
 }
 

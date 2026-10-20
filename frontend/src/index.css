@@ -1,9 +1,92 @@
-@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Manrope:wght@500;700&family=Space+Grotesk:wght@400;500&display=swap");
 @import "tailwindcss";
 
+@theme {
+  --color-brand-50:  #eff6ff;
+  --color-brand-100: #dbeafe;
+  --color-brand-500: #3b82f6;
+  --color-brand-600: #2563eb;
+  --color-brand-700: #1d4ed8;
+  --color-brand-900: #1e3a8a;
+
+  --color-ink-300:   #8993a7;
+  --color-ink-400:   #68758e;
+  --color-ink-600:   #52607a;
+  --color-ink-800:   #17213a;
+  --color-ink-900:   #14213d;
+
+  --color-panel-800: #131c31;
+  --color-panel-900: #0b1220;
+
+  --color-line:      #d6dbe6;
+  --color-surface:        #ffffff;
+  --color-surface-muted:  #f8faff;
+}
+
 body {
-  font-family: "Outfit", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+  font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
     sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6, .brand-wordmark {
+  font-family: "Manrope", ui-sans-serif, system-ui, sans-serif;
+}
+
+label, th, dt, code, .font-mono, .technical-label {
+  font-family: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+}
+
+/* One monochrome Lucide treatment site-wide; icon badge wrappers stay clear. */
+svg.lucide {
+  color: #111827 !important;
+}
+
+/* Opt-in accents for pages whose design calls for coloured icons. Needs the
+   `svg.lucide` prefix to outrank the site-wide rule above. */
+svg.lucide.icon-accent {
+  color: #2563eb !important;
+}
+
+svg.lucide.icon-on-primary {
+  color: #ffffff !important;
+}
+
+aside.app-sidebar svg.lucide {
+  color: #fff !important;
+}
+
+/* Auth dark brand panel Lucide icon color override so icons don't render black */
+.auth-brand-panel svg.lucide {
+  color: currentColor !important;
+}
+
+:is(div, span):is(
+    [class~="h-7"][class~="w-7"],
+    [class~="h-8"][class~="w-8"],
+    [class~="h-9"][class~="w-9"],
+    [class~="h-10"][class~="w-10"],
+    [class~="h-11"][class~="w-11"],
+    [class~="h-14"][class~="w-14"],
+    [class~="h-16"][class~="w-16"]
+  ):has(> svg.lucide) {
+  background-color: transparent !important;
+}
+
+/* =========================================
+   Hidden scrollbar (webkit)
+   ========================================= */
+
+/* Sidebar nav scrolls when the menu outgrows the viewport, but a visible track
+   against the dark navy reads as clutter. Scroll stays; the bar does not. */
+.scrollbar-hidden {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
 }
 
 /* =========================================
@@ -312,6 +395,58 @@ body {
   }
 }
 
+/* =========================================
+   Auth entrance and aurora animations
+   ========================================= */
+
+@keyframes auth-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.auth-rise {
+  animation: auth-rise 400ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes auth-aurora-drift-1 {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(6%, 10%) scale(1.06);
+  }
+}
+
+@keyframes auth-aurora-drift-2 {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(-8%, -6%) scale(1.1);
+  }
+}
+
+.auth-aurora-1 {
+  animation: auth-aurora-drift-1 18s ease-in-out infinite;
+}
+
+.auth-aurora-2 {
+  animation: auth-aurora-drift-2 22s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-rise,
+  .auth-aurora-1,
+  .auth-aurora-2 {
+    animation: none;
+  }
+}
 /* Hide the sidebar scrollbar while preserving scrolling */
 .sidebar-scrollbar {
   scrollbar-width: none; /* Firefox */

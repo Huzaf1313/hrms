@@ -156,3 +156,47 @@ class MyAttendanceStatus(BaseModel):
     in_time: str | None = None
     out_time: str | None = None
     working_hours: str | None = None
+
+
+class BulkAttendanceMark(BaseModel):
+    """Admin bulk marks/updates attendance records."""
+
+    employee_ids: list[str] = Field(default_factory=list)
+    select_all_matching: bool = False
+    excluded_employee_ids: list[str] = Field(default_factory=list)
+
+    # Filter parameters if select_all_matching is True
+    filter_date: date | None = None
+    department_id: str | None = None
+    filter_status: str | None = None
+    search: str | None = None
+    filter_shift_id: str | None = None
+    overtime_only: bool = False
+    work_location: str | None = None
+
+    # Shared attendance values
+    date: date
+    status: str
+    shift_id: str | None = None
+    shift: str | None = None
+    shift_start: str | None = None
+    shift_end: str | None = None
+    in_time: str | None = None
+    out_time: str | None = None
+    notes: str | None = None
+
+
+class BulkAttendanceItemResult(BaseModel):
+    employee_id: str
+    employee_name: str | None = None
+    employee_code: str | None = None
+    success: bool
+    attendance: AttendanceResponse | None = None
+    error: str | None = None
+
+
+class BulkAttendanceResponse(BaseModel):
+    total: int
+    success_count: int
+    failure_count: int
+    results: list[BulkAttendanceItemResult]

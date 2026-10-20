@@ -13,6 +13,8 @@ from app.schemas.attendance import (
     AttendanceResponse,
     AttendanceSummaryResponse,
     AttendanceUpdate,
+    BulkAttendanceMark,
+    BulkAttendanceResponse,
     MyAttendanceStatus,
 )
 from app.schemas.common import APIResponse
@@ -50,6 +52,39 @@ async def mark_attendance(
         message="Attendance marked successfully",
         data=attendance,
     )
+
+
+@router.post(
+    "/attendance/bulk",
+    response_model=APIResponse[BulkAttendanceResponse],
+)
+async def bulk_mark_attendance(
+    data: BulkAttendanceMark,
+    current_user: dict | None = Depends(
+        require_permission(Permission.ATTENDANCE_CREATE)
+    ),
+):
+    """Bulk marks/updates attendance for selected employees or all matching
+    filtered employees across pages. Applies the caller's employee-visibility
+    scope and returns per-employee results."""
+    marked_by = str(current_user["_id"]) if current_user and "_id" in current_user else None
+
+    result = await service.bulk_mark_attendance(
+        data=data,
+        marked_by=marked_by,
+        current_user=current_user,
+    )
+
+    message = f"Marked attendance for {result.success_count} employee(s)"
+    if result.failure_count > 0:
+        message += f" ({result.failure_count} failed)"
+
+    return APIResponse(
+        success=True,
+        message=message,
+        data=result,
+    )
+
 
 
 @router.get(
