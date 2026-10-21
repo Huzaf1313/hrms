@@ -38,7 +38,7 @@ async def create_salary_structure(
     response_model=APIResponse[list[AdminSalaryStructureResponse]],
 )
 async def get_salary_structures(
-    current_user: dict = Depends(require_permission(Permission.SALARY_STRUCTURE_READ)),
+    current_user: dict = Depends(require_permission(Permission.PAYROLL_MANAGE)),
 ):
     structures = await service.get_all_structures()
 
@@ -55,7 +55,7 @@ async def get_salary_structures(
 )
 async def get_salary_structure(
     structure_id: str,
-    current_user: dict = Depends(require_permission(Permission.SALARY_STRUCTURE_READ)),
+    current_user: dict = Depends(require_permission(Permission.PAYROLL_MANAGE)),
 ):
     structure = await service.get_structure(structure_id)
 

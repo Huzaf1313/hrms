@@ -3,8 +3,6 @@ import { CalendarDays, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 
 import AddHolidayModal from "./AddHolidayModal";
 import { holidayService } from "../services/holidayService";
-import { useGlobalDate } from "../context/globalDateContext";
-import { toDateKey } from "../utils/dateKeys";
 import {
   HOLIDAY_DOT_STYLE,
   HOLIDAY_TYPE_LABELS,
@@ -17,6 +15,16 @@ const weekdayLabels = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 interface DatePickerProps {
   /** Admins get the add/edit controls. Employees see the dots only. */
   canManageHolidays?: boolean;
+}
+
+/** "YYYY-MM-DD" for a local Date, so it matches the backend's date strings
+ * without a timezone shifting the day. */
+function toDateKey(date: Date): string {
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("-");
 }
 
 function formatDate(date: Date): string {
@@ -37,51 +45,13 @@ function sameDate(first: Date, second: Date): boolean {
 }
 
 function DatePicker({ canManageHolidays = false }: DatePickerProps) {
-  const { date: selectedDateKey, setDate, isDefault, resetDate } =
-    useGlobalDate();
-
   const today = useMemo(() => new Date(), []);
-  const selectedDate = useMemo(
-    () => new Date(`${selectedDateKey}T00:00:00`),
-    [selectedDateKey],
+  const [selectedDate, setSelectedDate] = useState(today);
+  const [visibleMonth, setVisibleMonth] = useState(
+    () => new Date(today.getFullYear(), today.getMonth(), 1),
   );
-// The month on screen. It tracks the selected day until the reader pages away
-  // with the arrows, after which the manual choice sticks. Adjusting during
-  // render rather than in an effect keeps the dropdown correct on the same paint
-  // when the date changes elsewhere, without a cascading render.
-  const [manualMonth, setManualMonth] = useState<Date | null>(null);
-  const [syncedToDate, setSyncedToDate] = useState(selectedDateKey);
-
-  if (syncedToDate !== selectedDateKey) {
-    setSyncedToDate(selectedDateKey);
-    setManualMonth(null);
-  }
-
-  const visibleMonth = useMemo(
-    () =>
-      manualMonth ??
-      new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1),
-    [manualMonth, selectedDate],
-  );
-
-  const yearOptions = useMemo(() => {
-    const currentYear = new Date().getFullYear();
-    const visibleYear = manualMonth?.getFullYear() ?? selectedDate.getFullYear();
-    const firstYear = Math.min(currentYear - 10, selectedDate.getFullYear() - 1, visibleYear - 1);
-    const lastYear = Math.max(currentYear + 10, selectedDate.getFullYear() + 1, visibleYear + 1);
-
-    return Array.from(
-      { length: lastYear - firstYear + 1 },
-      (_, index) => firstYear + index,
-    );
-  }, [manualMonth, selectedDate]);
-
   const [isOpen, setIsOpen] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
-
-  // The day the holiday form opens on. Held apart from the selected day so an
-  // admin can add a holiday to a date the app is not currently filtered to.
-  const [holidayDraftDate, setHolidayDraftDate] = useState(selectedDateKey);
 
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [isHolidayModalOpen, setIsHolidayModalOpen] = useState(false);
@@ -172,17 +142,9 @@ function DatePicker({ canManageHolidays = false }: DatePickerProps) {
   );
 
   function changeMonth(amount: number) {
-    setManualMonth(
-      new Date(
-        visibleMonth.getFullYear(),
-        visibleMonth.getMonth() + amount,
-        1,
-      ),
+    setVisibleMonth(
+      (current) => new Date(current.getFullYear(), current.getMonth() + amount, 1),
     );
-  }
-
-  function changeYear(year: number) {
-    setManualMonth(new Date(year, visibleMonth.getMonth(), 1));
   }
 
   function selectDate(day: number) {
@@ -191,16 +153,12 @@ function DatePicker({ canManageHolidays = false }: DatePickerProps) {
       visibleMonth.getMonth(),
       day,
     );
-
-    setDate(toDateKey(nextDate));
-    setHolidayDraftDate(toDateKey(nextDate));
-    setManualMonth(null);
+    setSelectedDate(nextDate);
     setIsOpen(false);
   }
 
   function openAddHoliday() {
     setEditingHoliday(null);
-    setHolidayDraftDate(selectedDateKey);
     setIsHolidayModalOpen(true);
   }
 
@@ -216,25 +174,10 @@ function DatePicker({ canManageHolidays = false }: DatePickerProps) {
         onClick={() => setIsOpen((current) => !current)}
         aria-expanded={isOpen}
         aria-haspopup="dialog"
-        title={
-          isDefault
-            ? "Showing today"
-            : "Filtering every page by this date"
-        }
-        className={`flex items-center gap-2 rounded-full border px-3.5 py-2 text-sm font-medium transition ${
-          isDefault
-            ? "border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50"
-            : "border-blue-200 bg-blue-50 text-blue-700 hover:border-blue-300 hover:bg-blue-100"
-        }`}
+        className="flex items-center gap-2 rounded-full border border-gray-200 px-3.5 py-2 text-sm font-medium text-gray-700 transition hover:border-gray-300 hover:bg-gray-50"
       >
         <CalendarDays className="h-4 w-4 text-gray-500" />
         <span className="hidden sm:inline">{formatDate(selectedDate)}</span>
-        {!isDefault && (
-          <span
-            aria-hidden="true"
-            className="h-1.5 w-1.5 rounded-full bg-[#2563eb]"
-          />
-        )}
       </button>
 
       {isOpen && (
@@ -244,29 +187,12 @@ function DatePicker({ canManageHolidays = false }: DatePickerProps) {
           className="absolute right-0 top-12 z-50 w-72 rounded-2xl border border-gray-100 bg-white p-4 shadow-xl"
         >
           <div className="mb-4 flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <p className="text-sm font-semibold text-gray-900">
-                {visibleMonth.toLocaleDateString("en-US", {
-                  month: "long",
-                })}
-              </p>
-              <label className="sr-only" htmlFor="calendar-year">
-                Choose year
-              </label>
-              <select
-                id="calendar-year"
-                value={visibleMonth.getFullYear()}
-                onChange={(event) => changeYear(Number(event.target.value))}
-                className="rounded-md border border-gray-200 bg-white px-1.5 py-1 text-sm font-semibold text-gray-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                aria-label="Choose year"
-              >
-                {yearOptions.map((year) => (
-                  <option key={year} value={year}>
-                    {year}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <p className="text-sm font-semibold text-gray-900">
+              {visibleMonth.toLocaleDateString("en-US", {
+                month: "long",
+                year: "numeric",
+              })}
+            </p>
             <div className="flex gap-1">
               <button
                 type="button"
@@ -410,33 +336,16 @@ function DatePicker({ canManageHolidays = false }: DatePickerProps) {
             </div>
           )}
 
-          <div className="mt-3 flex items-center gap-2">
-            {canManageHolidays && (
-              <button
-                type="button"
-                onClick={openAddHoliday}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#2563eb] px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-700"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                Add Holiday
-              </button>
-            )}
-
-            {/* Only offered when a day other than today is actually in force,
-                so there is nothing to undo the rest of the time. */}
-            {!isDefault && (
-              <button
-                type="button"
-                onClick={() => {
-                  resetDate();
-                  setIsOpen(false);
-                }}
-                className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 transition hover:bg-gray-50"
-              >
-                Today
-              </button>
-            )}
-          </div>
+          {canManageHolidays && (
+            <button
+              type="button"
+              onClick={openAddHoliday}
+              className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg bg-[#2563eb] px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-700"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Add Holiday
+            </button>
+          )}
         </div>
       )}
 
@@ -444,9 +353,9 @@ function DatePicker({ canManageHolidays = false }: DatePickerProps) {
           starts blank instead of being reset from inside an effect. */}
       {isHolidayModalOpen && (
         <AddHolidayModal
-          key={`${editingHoliday?.id ?? "new"}-${holidayDraftDate}`}
+          key={`${editingHoliday?.id ?? "new"}-${toDateKey(selectedDate)}`}
           onClose={() => setIsHolidayModalOpen(false)}
-          initialDate={holidayDraftDate}
+          initialDate={toDateKey(selectedDate)}
           holiday={editingHoliday}
           onSaved={loadHolidays}
         />

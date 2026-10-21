@@ -45,6 +45,8 @@ class UserCreate(BaseModel):
 
     reference: str = Field(default="", max_length=100)
 
+    role: UserRole
+
     @field_validator("full_name")
     @classmethod
     def validate_full_name(cls, value: str) -> str:
@@ -75,11 +77,6 @@ class UserCreate(BaseModel):
         return validate_password_strength(value)
 
 
-class ManagerCreate(UserCreate):
-    """Manager account request. The role is fixed server-side so a client
-    cannot ask for anything else."""
-
-
 class UserResponse(BaseModel):
     id: str
     employee_id: str | None = None
@@ -106,6 +103,13 @@ class TokenResponse(BaseModel):
 class RefreshTokenRequest(BaseModel):
     refresh_token: str = Field(min_length=1)
 
+class VerifyOTPRequest(BaseModel):
+    email: EmailStr
+    otp: str = Field(
+        min_length=6,
+        max_length=6,
+    )
+
 class VerifyPasswordResetOTPRequest(BaseModel):
     email: EmailStr
     otp: str = Field(
@@ -117,31 +121,6 @@ class ResetPasswordRequest(BaseModel):
     email: EmailStr
     reset_token: str = Field(
         min_length=1,
-    )
-    new_password: str = Field(
-        min_length=8,
-        max_length=128,
-    )
-    confirm_password: str = Field(
-        min_length=8,
-        max_length=128,
-    )
-
-    @field_validator("new_password")
-    @classmethod
-    def validate_new_password(cls, value: str) -> str:
-        return validate_password_strength(value)
-
-    @field_validator("confirm_password")
-    @classmethod
-    def validate_confirm_password(cls, value: str) -> str:
-        return value
-
-
-class ChangePasswordRequest(BaseModel):
-    current_password: str = Field(
-        min_length=1,
-        max_length=128,
     )
     new_password: str = Field(
         min_length=8,

@@ -3,7 +3,6 @@ from datetime import date, datetime, time
 from bson import ObjectId
 from pymongo import ASCENDING, DESCENDING
 
-from app.core.leave_dates import day_covering_filters
 from app.db.database import database
 
 
@@ -86,7 +85,6 @@ class EmployeeLeaveRepository:
         skip: int = 0,
         limit: int = 100,
         status: str | None = None,
-        leave_date: date | None = None,
     ):
         filters = {
             "employee_id": employee_id,
@@ -94,9 +92,6 @@ class EmployeeLeaveRepository:
 
         if status:
             filters["status"] = status
-
-        if leave_date:
-            filters.update(day_covering_filters(leave_date))
 
         cursor = (
             self.collection
@@ -114,7 +109,6 @@ class EmployeeLeaveRepository:
         self,
         employee_id: str,
         status: str | None = None,
-        leave_date: date | None = None,
     ):
         filters = {
             "employee_id": employee_id,
@@ -122,9 +116,6 @@ class EmployeeLeaveRepository:
 
         if status:
             filters["status"] = status
-
-        if leave_date:
-            filters.update(day_covering_filters(leave_date))
 
         return await self.collection.count_documents(
             filters

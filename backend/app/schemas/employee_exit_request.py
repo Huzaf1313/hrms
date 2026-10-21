@@ -17,8 +17,8 @@ ResignationReason = Literal[
 ]
 
 HandoverStatus = Literal["Pending", "In Progress", "Completed"]
-ExitType = Literal["Resignation", "Termination"]
-EXIT_TYPE_ORDER = ("Resignation", "Termination")
+ExitType = Literal["Resignation", "Termination", "Contract End", "Retirement"]
+EXIT_TYPE_ORDER = ("Resignation", "Termination", "Contract End", "Retirement")
 
 
 class HandoverTask(BaseModel):
@@ -51,10 +51,6 @@ class ExitStatusUpdate(BaseModel):
     # Validated in the service so the client gets a readable message.
     status: str
     admin_note: str | None = Field(default=None, max_length=500)
-
-
-class HandoverTasksUpdate(BaseModel):
-    handover_tasks: list[HandoverTask] = Field(default_factory=list, max_length=10)
 
 
 class ExitAttachmentResponse(BaseModel):

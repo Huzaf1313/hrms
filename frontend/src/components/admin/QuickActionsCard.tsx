@@ -12,7 +12,6 @@ import {
 import DashboardCard from "./DashboardCard";
 
 import { quickActions } from "./dashboardData";
-import { canAccessPage } from "../../lib/access";
 
 const ICONS: Record<string, LucideIcon> = {
   "user-plus": UserPlus,
@@ -44,29 +43,19 @@ interface QuickActionsCardProps {
   onNavigate?: (page: string) => void;
   /** Sends the admin to the announcement form instead of the list. */
   onCreateAnnouncement?: () => void;
-  /** Managers cannot open payroll, so that quick action is dropped. */
-  showHrWidgets?: boolean;
 }
 
 export default function QuickActionsCard({
   onNavigate,
   onCreateAnnouncement,
-  showHrWidgets = true,
 }: QuickActionsCardProps) {
-  const actions = showHrWidgets
-    ? quickActions
-    : quickActions.filter(
-        (action) =>
-          !targetPageFor(action) || canAccessPage(targetPageFor(action)!),
-      );
-
   return (
     <DashboardCard
       title="Quick Actions"
       className="col-span-12 md:col-span-6 xl:col-span-4"
     >
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-        {actions.map((action, index) => {
+        {quickActions.map((action, index) => {
           const Icon = ICONS[action.icon] ?? Briefcase;
           const targetPage = targetPageFor(action);
 
