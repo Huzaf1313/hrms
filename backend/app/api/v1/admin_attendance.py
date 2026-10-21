@@ -41,8 +41,7 @@ async def mark_attendance(
 
     attendance = await service.mark_attendance(
         data.model_dump(),
-        marked_by=str(current_user["_id"]) if current_user else None,
-        current_user=current_user,
+        marked_by=marked_by,
     )
 
     return APIResponse(
@@ -111,7 +110,6 @@ async def get_attendance_list(
         shift_id=shift_id,
         overtime_only=overtime,
         work_location=work_location,
-        current_user=current_user,
     )
 
     return APIResponse(
@@ -137,7 +135,6 @@ async def get_employee_attendance(
     result = await service.get_employee_attendance(
         employee_id=employee_id,
         pagination=PaginationParams(page=page, limit=limit),
-        current_user=current_user,
     )
 
     return APIResponse(
@@ -158,9 +155,7 @@ async def get_attendance_options(
 ):
     """Values for the filter dropdowns. Declared before
     /attendance/{attendance_id} so "options" is never parsed as an id."""
-    work_locations = await service.get_work_locations(
-        current_user=current_user,
-    )
+    work_locations = await service.get_work_locations()
 
     return APIResponse(
         success=True,
@@ -202,10 +197,7 @@ async def get_attendance(
         require_permission(Permission.ATTENDANCE_READ)
     ),
 ):
-    attendance = await service.get_attendance(
-        attendance_id,
-        current_user=current_user
-    )
+    attendance = await service.get_attendance(attendance_id)
 
     return APIResponse(
         success=True,
@@ -250,7 +242,6 @@ async def approve_regularization(
     attendance = await service.update_attendance(
         attendance_id=attendance_id,
         update_data={},
-        current_user=current_user,
     )
 
     return APIResponse(

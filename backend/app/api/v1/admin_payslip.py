@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends
 
 from app.core.roles import Permission
 from app.api.deps import require_permission
@@ -78,7 +78,7 @@ async def get_all_payslips(
     search: str | None = None,
     status: str | None = None,
     current_user: dict = Depends(
-        require_permission(Permission.PAYROLL_READ)
+        require_permission(Permission.PAYSLIPS_READ)
     ),
 ):
     payslips = await service.get_all_payslips(
@@ -90,6 +90,11 @@ async def get_all_payslips(
         status=status,
     )
 
+    return {
+        "success": True,
+        "message": "Payslips retrieved successfully",
+        "data": payslips,
+    }
 
 
 @router.patch(

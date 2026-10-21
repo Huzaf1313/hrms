@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel, EmailStr
 
-from app.api.deps import get_current_user, require_hr_admin, require_permission
+from app.api.deps import get_current_user, require_permission
 from app.core.roles import Permission, UserRole
 from app.schemas.common import APIResponse
-from app.schemas.user import ManagerCreate, UserResponse
+from app.schemas.user import UserCreate, UserResponse
 from app.services.user_service import UserService, resolve_full_name
 
 
@@ -67,21 +67,22 @@ async def get_my_profile(
     response_model=UserResponse,
     status_code=status.HTTP_201_CREATED,
 )
-async def create_manager_account(
-    user_data: ManagerCreate,
-    current_user: dict = Depends(require_hr_admin),
+async def create_user(
+    user_data: UserCreate,
+    current_user: dict = Depends(
+        require_permission(Permission.USERS_CREATE)
+    ),
 ):
-    """HR is the only role that can mint admin accounts. Managers are created
-    here and then appear in the employee form's reporting-manager list."""
-    user = await user_service.create_manager_account(
+    user = await user_service.create_user(
         full_name=user_data.full_name,
         email=user_data.email,
         password=user_data.password,
+        role=user_data.role,
     )
 
     return UserResponse(
         id=str(user["_id"]),
-        employee_id=None,
+        employee_id=current_user.get("employee_id"),
         full_name=user["full_name"],
         email=user["email"],
         role=user["role"],

@@ -74,7 +74,5 @@ class AssetRequestRepository:
 
         return await self.get_by_id(request_id)
 
-    async def count_pending(self, filters: dict | None = None) -> int:
-        return await self.collection.count_documents(
-            {**(filters or {}), "status": "pending"}
-        )
+    async def count_pending(self) -> int:
+        return await self.collection.count_documents({"status": "pending"})

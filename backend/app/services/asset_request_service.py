@@ -23,15 +23,9 @@ class AssetRequestService:
         self.asset_service = AssetService()
         self.admin_notification_service = AdminNotificationService()
 
-    async def create_request(self, data: dict, current_user: dict | None = None):
-        asset = await self.asset_service.get_asset(
-            data["asset_id"], current_user
-        )
+    async def create_request(self, data: dict):
+        asset = await self.asset_service.get_asset(data["asset_id"])
         employee = await self.asset_service._resolve_employee(data["employee_id"])
-
-        await self.asset_service._assert_assignable(
-            employee["employee_id"], current_user
-        )
 
         request_type = data["request_type"]
         request_type_value = (
@@ -115,15 +109,8 @@ class AssetRequestService:
         status: str | None = None,
         search: str | None = None,
         pagination: PaginationParams | None = None,
-        current_user: dict | None = None,
     ):
-        scope = await self.asset_service._scope_filter(current_user)
-
-        # Asset requests reference the employee by `employee_id`, not by the
-        # `assigned_to_employee_id` an asset carries.
-        filters: dict = (
-            {"employee_id": scope["assigned_to_employee_id"]["$in"]} if scope else {}
-        )
+        filters: dict = {}
 
         if request_type:
             filters["request_type"] = request_type
@@ -163,20 +150,10 @@ class AssetRequestService:
 
         return requests, total
 
-    async def get_request(self, request_id: str, current_user: dict | None = None):
+    async def get_request(self, request_id: str):
         request = await self.repository.get_by_id(request_id)
 
         if not request:
-            raise AppException("Asset request not found", 404)
-
-        scope = await self.asset_service._scope_filter(current_user)
-
-        if (
-            scope
-            and request.get("employee_id")
-            not in scope["assigned_to_employee_id"]["$in"]
-        ):
-            # 404 rather than 403, so request ids do not leak across teams.
             raise AppException("Asset request not found", 404)
 
         return request
@@ -187,9 +164,8 @@ class AssetRequestService:
         status: AssetRequestStatus | str,
         admin_note: str | None,
         reviewed_by: str | None,
-        current_user: dict | None = None,
     ):
-        request = await self.get_request(request_id, current_user)
+        request = await self.get_request(request_id)
 
         if request["status"] != AssetRequestStatus.PENDING.value:
             raise AppException(

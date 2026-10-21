@@ -33,33 +33,6 @@ class UserRepository:
         )
 
 
-    async def get_admin_account_by_name(self, full_name: str):
-        """Resolve a stored reporting_manager name to its account.
-
-        Case- and whitespace-insensitive because the value was typed or picked
-        from a <select> before manager_id existed.
-        """
-        return await self.collection.find_one(
-            {
-                "role": {
-                    "$in": [
-                        UserRole.HR_ADMIN.value,
-                        UserRole.MANAGER.value,
-                    ]
-                },
-                "$expr": {
-                    "$eq": [
-                        {
-                            "$toLower": {
-                                "$trim": {"$ifNull": ["$full_name", ""]}
-                            }
-                        },
-                        full_name.strip().lower(),
-                    ]
-                },
-            }
-        )
-
     async def get_by_id(self, user_id: str):
         if not ObjectId.is_valid(user_id):
             return None

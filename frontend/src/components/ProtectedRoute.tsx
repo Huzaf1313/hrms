@@ -1,7 +1,19 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
-
-import { isAdminRole } from "../lib/access";
 import { getAccessToken } from "../services/api";
+
+const ADMIN_ROLES = ["hr_admin", "manager"];
+
+function readRole(): string | null {
+  try {
+    const raw = localStorage.getItem("user");
+
+    if (!raw) return null;
+
+    return (JSON.parse(raw) as { role?: string }).role ?? null;
+  } catch {
+    return null;
+  }
+}
 
 /** Requires a valid session. */
 function ProtectedRoute() {
@@ -28,7 +40,7 @@ export function AdminRoute() {
     return <Navigate to="/login" replace />;
   }
 
-  if (!isAdminRole()) {
+  if (!ADMIN_ROLES.includes(readRole() ?? "")) {
     return <Navigate to="/employee" replace state={{ from: location }} />;
   }
 

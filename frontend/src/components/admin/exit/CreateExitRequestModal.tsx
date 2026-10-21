@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, LogOut, Plus, X } from "lucide-react";
+import { ChevronDown, LogOut, X } from "lucide-react";
 
 import { SELECT_CLASS, INPUT_CLASS } from "./exitUiUtils";
 import { adminExitRequestService } from "../../../services/exitRequestService";
@@ -19,13 +19,6 @@ const DEFAULT_HANDOVER = [
   "Document Collection",
   "Final Settlement",
 ];
-
-/** Mirrors the backend's `handover_tasks` cap so the form cannot build a
- *  request the API will reject. */
-const MAX_HANDOVER_TASKS = 10;
-
-/** Mirrors the backend's per-task `max_length`. */
-const MAX_TASK_LENGTH = 100;
 
 interface CreateExitRequestModalProps {
   /** Locks the type, e.g. when opened from "Initiate Termination". */
@@ -48,17 +41,6 @@ export default function CreateExitRequestModal({
   const [reason, setReason] = useState("");
   const [remarks, setRemarks] = useState("");
   const [tasks, setTasks] = useState<string[]>(DEFAULT_HANDOVER);
-
-  /** Steps HR typed in, kept apart from the preset ones so the defaults can
-   *  never be edited away and only the custom ones are removable. */
-  const [customTasks, setCustomTasks] = useState<string[]>([]);
-  const [customTaskDraft, setCustomTaskDraft] = useState("");
-  const [customTaskError, setCustomTaskError] = useState("");
-  const [showCustomTaskInput, setShowCustomTaskInput] = useState(false);
-
-  /** Set once the form validates, so the confirmation step can review before
-   *  anything is sent. */
-  const [isConfirming, setIsConfirming] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -94,64 +76,7 @@ export default function CreateExitRequestModal({
         : [...current, task],
     );
 
-  // Preset first, then whatever HR added, so the defaults keep their order.
-  const availableTasks = useMemo(
-    () => [...DEFAULT_HANDOVER, ...customTasks],
-    [customTasks],
-  );
-
-  const selectedEmployee = useMemo(
-    () => employees.find((employee) => employee.employee_id === employeeId),
-    [employeeId, employees],
-  );
-
-  // Falls back to the raw id so the confirmation never reads as blank while the
-  // employee list is still loading.
-  const employeeLabel = selectedEmployee
-    ? `${selectedEmployee.employee_id} - ${`${selectedEmployee.first_name ?? ""} ${selectedEmployee.last_name ?? ""}`.trim()}`
-    : employeeId;
-
-  function addCustomTask() {
-    const next = customTaskDraft.trim();
-
-    setCustomTaskError("");
-
-    if (!next) return;
-
-    if (next.length > MAX_TASK_LENGTH) {
-      setCustomTaskError(
-        `Keep the step under ${MAX_TASK_LENGTH} characters.`,
-      );
-      return;
-    }
-
-    // Compared case-insensitively, since the list is free text and "Asset
-    // Return" twice would look like a bug.
-    if (availableTasks.some((task) => task.toLowerCase() === next.toLowerCase())) {
-      setCustomTaskError("That step is already on the list.");
-      return;
-    }
-
-    if (availableTasks.length >= MAX_HANDOVER_TASKS) {
-      setCustomTaskError(
-        `A request can carry at most ${MAX_HANDOVER_TASKS} clearance steps.`,
-      );
-      return;
-    }
-
-    setCustomTasks((current) => [...current, next]);
-    // Selected straight away, since the point of adding it is to run it.
-    setTasks((current) => [...current, next]);
-    setCustomTaskDraft("");
-    setShowCustomTaskInput(false);
-  }
-
-  function removeCustomTask(task: string) {
-    setCustomTasks((current) => current.filter((entry) => entry !== task));
-    setTasks((current) => current.filter((entry) => entry !== task));
-  }
-
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (submitting) return;
@@ -173,20 +98,7 @@ export default function CreateExitRequestModal({
       return;
     }
 
-    if (tasks.length === 0) {
-      setError("Please select at least one clearance step.");
-      return;
-    }
-
-    // Nothing is sent yet: the confirmation step decides.
-    setIsConfirming(true);
-  };
-
-  const confirmCreate = async () => {
-    if (submitting) return;
-
     setSubmitting(true);
-    setError("");
 
     try {
       await adminExitRequestService.create({
@@ -201,7 +113,6 @@ export default function CreateExitRequestModal({
       onCreated(`${exitType} recorded successfully.`);
       onClose();
     } catch (cause) {
-      setIsConfirming(false);
       setError(
         cause instanceof ApiError
           ? cause.message
@@ -348,133 +259,29 @@ export default function CreateExitRequestModal({
 
             <div>
               <p className={LABEL_CLASS}>Clearance Checklist</p>
-
-              <div className="mt-3 flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap gap-2">
                 {DEFAULT_HANDOVER.map((task) => {
                   const checked = tasks.includes(task);
 
                   return (
-                    <span
+                    <button
                       key={task}
-                      className={`inline-flex items-center rounded-full border text-xs font-medium transition ${
+                      type="button"
+                      disabled={submitting}
+                      onClick={() => toggleTask(task)}
+                      className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
                         checked
                           ? "border-blue-600 bg-blue-600 text-white"
-                          : "border-slate-200 bg-white text-slate-600"
+                          : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
                       }`}
                     >
-                      <button
-                        type="button"
-                        disabled={submitting || isConfirming}
-                        onClick={() => toggleTask(task)}
-                        className="px-3 py-1 text-left disabled:cursor-not-allowed"
-                      >
-                        {task}
-                      </button>
-                    </span>
+                      {task}
+                    </button>
                   );
                 })}
-                {customTasks.map((task) => {
-                  const checked = tasks.includes(task);
-
-                  return (
-                    <span
-                      key={task}
-                      className={`inline-flex items-center rounded-full border text-xs font-medium transition ${
-                        checked
-                          ? "border-blue-600 bg-blue-600 text-white"
-                          : "border-slate-200 bg-white text-slate-600"
-                      }`}
-                    >
-                      <button
-                        type="button"
-                        disabled={submitting || isConfirming}
-                        onClick={() => toggleTask(task)}
-                        className="px-3 py-1 text-left disabled:cursor-not-allowed"
-                      >
-                        {task}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => removeCustomTask(task)}
-                        disabled={submitting || isConfirming}
-                        aria-label={`Remove ${task}`}
-                        title={`Remove ${task}`}
-                        className="pr-2.5 pl-0.5 opacity-60 transition hover:opacity-100 disabled:cursor-not-allowed"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </span>
-                  );
-                })}
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCustomTaskError("");
-                    setShowCustomTaskInput(true);
-                  }}
-                  disabled={submitting || isConfirming || availableTasks.length >= MAX_HANDOVER_TASKS}
-                  aria-label="Add a custom clearance step"
-                  title="Add a custom clearance step"
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-dashed border-blue-300 text-blue-600 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <Plus className="h-4 w-4" />
-                </button>
               </div>
-
-              {showCustomTaskInput && (
-                <div className="mt-3 flex gap-2">
-                  <input
-                    type="text"
-                    autoFocus
-                    value={customTaskDraft}
-                    disabled={submitting || isConfirming}
-                    maxLength={MAX_TASK_LENGTH}
-                    onChange={(event) => setCustomTaskDraft(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        event.preventDefault();
-                        addCustomTask();
-                      }
-                    }}
-                    placeholder="Enter a clearance step"
-                    aria-label="Custom clearance step"
-                    className={`${INPUT_CLASS} flex-1`}
-                  />
-
-                  <button
-                    type="button"
-                    onClick={addCustomTask}
-                    disabled={submitting || isConfirming || !customTaskDraft.trim()}
-                    className="inline-flex h-9 shrink-0 items-center rounded-lg bg-blue-600 px-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Add
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCustomTaskDraft("");
-                      setCustomTaskError("");
-                      setShowCustomTaskInput(false);
-                    }}
-                    disabled={submitting || isConfirming}
-                    aria-label="Cancel adding clearance step"
-                    className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              )}
-
-              {customTaskError && (
-                <p className="mt-1.5 text-[11px] font-medium text-rose-600">
-                  {customTaskError}
-                </p>
-              )}
-
               <p className="mt-2 text-[11px] text-slate-400">
-                Selected steps ({tasks.length} of {availableTasks.length}) are
-                attached as the request&apos;s handover tasks.
+                Selected steps are attached as the request&apos;s handover tasks.
               </p>
             </div>
 
@@ -512,108 +319,6 @@ export default function CreateExitRequestModal({
           </footer>
         </form>
       </div>
-
-      {/* Sits above the form rather than inside it, so the details being
-          confirmed stay visible behind it. */}
-      {isConfirming && (
-        <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/60 px-4 py-6 backdrop-blur-[2px]"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget && !submitting) {
-              setIsConfirming(false);
-            }
-          }}
-        >
-          <div
-            role="alertdialog"
-            aria-modal="true"
-            aria-label="Confirm exit request"
-            className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl"
-          >
-            <header className="flex items-start gap-3 border-b border-slate-200 px-6 py-5">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50">
-                <LogOut className="h-5 w-5 text-amber-600" />
-              </span>
-
-              <div>
-                <h3 className="text-lg font-bold text-slate-900">
-                  Create this exit request?
-                </h3>
-
-                <p className="mt-1 text-sm text-slate-500">
-                  This starts clearance for the employee below.
-                </p>
-              </div>
-            </header>
-
-            <div className="space-y-2.5 px-6 py-5 text-sm">
-              <ConfirmRow label="Employee" value={employeeLabel} />
-              <ConfirmRow label="Exit type" value={exitType} />
-              <ConfirmRow label="Last working day" value={lastWorkingDay} />
-              <ConfirmRow label="Reason" value={reason.trim()} />
-
-              {remarks.trim() && (
-                <ConfirmRow label="Remarks" value={remarks.trim()} />
-              )}
-
-              <div>
-                <p className="text-xs font-semibold text-slate-500">
-                  Clearance steps
-                </p>
-
-                <p className="mt-1 text-sm text-slate-700">{tasks.length}</p>
-
-                <ul className="mt-1.5 flex flex-wrap gap-1.5">
-                  {tasks.map((task) => (
-                    <li
-                      key={task}
-                      className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-600"
-                    >
-                      {task}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            <footer className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50/60 px-6 py-4">
-              <button
-                type="button"
-                onClick={() => setIsConfirming(false)}
-                disabled={submitting}
-                className="h-10 rounded-lg border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
-              >
-                Back
-              </button>
-
-              <button
-                type="button"
-                onClick={() => void confirmCreate()}
-                disabled={submitting}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-60"
-              >
-                {submitting ? (
-                  <>
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-                    Saving...
-                  </>
-                ) : (
-                  "Confirm & create"
-                )}
-              </button>
-            </footer>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ConfirmRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-xs font-semibold text-slate-500">{label}</p>
-      <p className="mt-0.5 break-words text-slate-700">{value}</p>
     </div>
   );
 }
