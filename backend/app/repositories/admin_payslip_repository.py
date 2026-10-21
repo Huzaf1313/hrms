@@ -115,4 +115,4 @@ class AdminPayslipRepository:
 
     async def get_all_records(self, query: dict | None = None):
         cursor = self.collection.find(query or {}).sort("pay_period_start", 1)
-        return await cursor.to_list(length=2000)
+        return await cursor.to_list(length=2000)

@@ -91,6 +91,7 @@ class LeaveRepository:
             }
         )
 
+    
     async def get_summary_counts(
         self,
         month_start: datetime,
@@ -98,66 +99,87 @@ class LeaveRepository:
         today_start: datetime,
         tomorrow_start: datetime,
         upcoming_end: datetime,
+        employee_ids: list[str] | None = None,
     ):
+        employee_scope = (
+            {"employee_id": {"$in": employee_ids}}
+            if employee_ids is not None
+            else {}
+        )
+
+        def scoped(query: dict) -> dict:
+            return {**query, **employee_scope}
+
         total = await self.collection.count_documents(
-            {
+            scoped({
                 "created_at": {
                     "$gte": month_start,
                     "$lt": month_end,
                 }
-            }
+            })
         )
 
         pending = await self.collection.count_documents(
-            {
+            scoped({
                 "created_at": {
                     "$gte": month_start,
                     "$lt": month_end,
                 },
-                "status": {"$regex": "^pending$", "$options": "i"},
-            }
+                "status": {
+                    "$regex": "^pending$",
+                    "$options": "i",
+                },
+            })
         )
 
         approved = await self.collection.count_documents(
-            {
+            scoped({
                 "created_at": {
                     "$gte": month_start,
                     "$lt": month_end,
                 },
-                "status": {"$regex": "^approved$", "$options": "i"},
-            }
+                "status": {
+                    "$regex": "^approved$",
+                    "$options": "i",
+                },
+            })
         )
 
         rejected = await self.collection.count_documents(
-            {
+            scoped({
                 "created_at": {
                     "$gte": month_start,
                     "$lt": month_end,
                 },
-                "status": {"$regex": "^rejected$", "$options": "i"},
-            }
+                "status": {
+                    "$regex": "^rejected$",
+                    "$options": "i",
+                },
+            })
         )
 
         on_leave_today = await self.collection.count_documents(
-            {
-                "status": {"$regex": "^approved$", "$options": "i"},
-                "start_date": {
-                    "$lte": today_start
+            scoped({
+                "status": {
+                    "$regex": "^approved$",
+                    "$options": "i",
                 },
-                "end_date": {
-                    "$gte": today_start
-                },
-            }
+                "start_date": {"$lte": today_start},
+                "end_date": {"$gte": today_start},
+            })
         )
 
         upcoming_leaves = await self.collection.count_documents(
-            {
-                "status": {"$regex": "^approved$", "$options": "i"},
+            scoped({
+                "status": {
+                    "$regex": "^approved$",
+                    "$options": "i",
+                },
                 "start_date": {
                     "$gte": tomorrow_start,
                     "$lt": upcoming_end,
                 },
-            }
+            })
         )
 
         return {

@@ -247,6 +247,14 @@ function errorMessage(payload: unknown, status: number): string {
 
     if (typeof record.detail === "string") return record.detail;
     if (typeof record.message === "string") return record.message;
+
+    // FastAPI validation errors arrive as a list of issues under `detail`.
+    // Surfacing the first one beats "Request failed with status 422".
+    if (Array.isArray(record.detail) && record.detail.length > 0) {
+      const first = record.detail[0] as { msg?: unknown };
+
+      if (typeof first?.msg === "string") return first.msg;
+    }
   }
 
   return `Request failed with status ${status}`;
@@ -320,6 +328,11 @@ export const api = {
 // The /auth/* endpoints return their payload directly (no {success, message,
 // data} envelope), unlike every other router in this API. requestRaw skips
 // the envelope-unwrapping step that `request` above does.
+//
+// It also skips the refresh-on-401 that `request` does. On /auth/login a 401
+// means the credentials were wrong, not that the session died - retrying with
+// a refresh token there throws "Session expired" and throws away the real
+// message the server sent.
 async function requestRaw<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { method = "GET", body } = options;
 
@@ -349,12 +362,9 @@ async function requestRaw<T>(path: string, options: RequestOptions = {}): Promis
   }
 
   const payload = await response.json().catch(() => null);
-
+  
   if (!response.ok) {
-    const message =
-      (payload && typeof payload === "object" && "message" in payload
-        ? String((payload as { message?: unknown }).message)
-        : undefined) ?? `Request failed with status ${response.status}`;
+    const message = errorMessage(payload, response.status);
     throw new ApiError(message, response.status);
   }
 

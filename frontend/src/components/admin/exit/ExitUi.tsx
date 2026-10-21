@@ -30,8 +30,6 @@ export function ExitStatusBadge({ status }: { status: ExitStatus }) {
 const TYPE_CHIP: Record<ExitType, string> = {
   Resignation: "bg-blue-50 text-blue-700",
   Termination: "bg-rose-50 text-rose-700",
-  "Contract End": "bg-purple-50 text-purple-700",
-  Retirement: "bg-violet-50 text-violet-700",
 };
 
 export function ExitTypeBadge({ type }: { type: string }) {

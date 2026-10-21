@@ -113,7 +113,28 @@ function EmployeePayroll() {
   fetchPayroll();
 }, []);
 
-const payslips: Payslip[] = payrollData.map((record) => ({
+// Payroll runs a whole month at a time, so the header calendar's day is
+// resolved to its month here. Filtered in the browser rather than by the
+// backend, because the list endpoint only offers paging.
+const { date: globalDate, isDefault: isGlobalDateDefault } = useGlobalDate();
+
+const globalMonthKey = globalDate.slice(0, 7);
+
+const visiblePayrollData = isGlobalDateDefault
+  ? payrollData
+  : payrollData.filter((record) => {
+      // pay_period_start arrives as an ISO date, so its year-month prefix lines
+      // up with the header date's without any parsing.
+      const periodStart = record?.pay_period_start;
+
+      if (typeof periodStart !== "string" || periodStart.length < 7) {
+        return false;
+      }
+
+      return periodStart.slice(0, 7) === globalMonthKey;
+    });
+
+const payslips: Payslip[] = visiblePayrollData.map((record) => ({
   id: record.id,
   month: record.month,
   paidOn: record.payment?.paid_on
@@ -506,9 +527,13 @@ const salaryComponents: SalaryComponent[] = latestPayroll
                         </p>
                       </div>
 
-                      <span className="text-sm text-slate-500">
-                        {payslips.length} payslips
-                      </span>
+                      <div className="flex items-center gap-3">
+                        <GlobalDateBadge prefix="Period" />
+
+                        <span className="text-sm text-slate-500">
+                          {payslips.length} payslips
+                        </span>
+                      </div>
                     </div>
 
                     {/* Desktop Table */}

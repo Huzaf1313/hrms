@@ -4,15 +4,12 @@ import {
   CalendarDays,
   ChevronDown,
   ClipboardPlus,
-  Search,
   Send,
-  UserRound,
   X,
 } from "lucide-react";
 
-import { employeeService } from "../../services/employeeService";
-import type { Department } from "../../types/department";
-import type { Employee } from "../../types/employee";
+import { adminProfileService } from "../../services/adminProfileService";
+import type { AdminProfile } from "../../types/adminProfile";
 import { LEAVE_TYPES, type LeaveRequestDraft, type LeaveType } from "../../types/leave";
 import { countWorkingDays, parseDateOnly } from "../../utils/workingDays";
 
@@ -47,32 +44,21 @@ function formatDate(value: string): string {
   });
 }
 
-function employeeName(employee: Employee): string {
-  return `${employee.first_name ?? ""} ${employee.last_name ?? ""}`.trim();
-}
-
 interface NewLeaveRequestModalProps {
-  departments: Department[];
   onClose: () => void;
   onSubmit: (draft: LeaveRequestDraft) => void | Promise<void>;
   isSubmitting?: boolean;
 }
 
 export default function NewLeaveRequestModal({
-  departments,
   onClose,
   onSubmit,
   isSubmitting = false,
 }: NewLeaveRequestModalProps) {
   const today = todayAsInputValue();
 
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [loadingEmployees, setLoadingEmployees] = useState(true);
-  const [loadError, setLoadError] = useState("");
-
-  const [employeeSearch, setEmployeeSearch] = useState("");
-  const [departmentId, setDepartmentId] = useState("");
-  const [employeeId, setEmployeeId] = useState("");
+  const [profile, setProfile] = useState<AdminProfile | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(true);
   const [leaveType, setLeaveType] = useState<LeaveType>(LEAVE_TYPES[0]);
   const [fromDate, setFromDate] = useState(today);
   const [toDate, setToDate] = useState(today);
@@ -86,54 +72,24 @@ export default function NewLeaveRequestModal({
   useEffect(() => {
     let active = true;
 
-    employeeService
-      .listAll()
-      .then((rows) => {
-        if (active) setEmployees(rows);
+    adminProfileService
+      .getProfile()
+      .then((nextProfile) => {
+        if (active) setProfile(nextProfile);
       })
       .catch(() => {
         if (active) {
-          setEmployees([]);
-          setLoadError("Employees could not be loaded. You can still fill the rest of the form.");
+          setProfile(null);
         }
       })
       .finally(() => {
-        if (active) setLoadingEmployees(false);
+        if (active) setLoadingProfile(false);
       });
 
     return () => {
       active = false;
     };
   }, []);
-
-  const departmentNames = useMemo(() => {
-    const names = new Map<string, string>();
-
-    for (const department of departments) {
-      names.set(department.id, department.name);
-    }
-
-    return names;
-  }, [departments]);
-
-  const filteredEmployees = useMemo(() => {
-    const needle = employeeSearch.trim().toLowerCase();
-
-    return employees.filter((employee) => {
-      if (departmentId && employee.department_id !== departmentId) {
-        return false;
-      }
-
-      if (!needle) {
-        return true;
-      }
-
-      return (
-        employeeName(employee).toLowerCase().includes(needle) ||
-        employee.employee_id.toLowerCase().includes(needle)
-      );
-    });
-  }, [departmentId, employeeSearch, employees]);
 
   const totalDays = useMemo(
     () => (fromDate && toDate ? countWorkingDays(fromDate, toDate) : 0),
@@ -147,8 +103,8 @@ export default function NewLeaveRequestModal({
 
     setError("");
 
-    if (!employeeId) {
-      setError("Please choose the employee this leave belongs to.");
+    if (!profile?.employee_id) {
+      setError("Your HR profile is missing an employee ID.");
       return;
     }
 
@@ -184,7 +140,9 @@ export default function NewLeaveRequestModal({
 
     try {
       await onSubmit({
-        employee_id: employeeId,
+        employee_id: profile.employee_id,
+        employee_name: profile.full_name,
+        department_name: profile.department,
         leave_type: leaveType,
         start_date: fromDate,
         end_date: toDate,
@@ -214,7 +172,7 @@ export default function NewLeaveRequestModal({
             <div>
               <h2 className="text-xl font-bold text-slate-900">New Leave Request</h2>
               <p className="mt-1 text-sm text-slate-500">
-                Record a leave request on behalf of an employee.
+                 Apply for leave as the signed-in HR user.
               </p>
             </div>
           </div>
@@ -232,77 +190,14 @@ export default function NewLeaveRequestModal({
 
         <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
           <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-5">
-            {/* Employee */}
-            <div>
-              <label htmlFor="leave-employee-search" className="mb-2 block text-sm font-semibold text-slate-700">
-                Employee <span className="ml-1 text-red-500">*</span>
-              </label>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="relative">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-
-                  <input
-                    id="leave-employee-search"
-                    type="search"
-                    value={employeeSearch}
-                    disabled={busy}
-                    onChange={(event) => setEmployeeSearch(event.target.value)}
-                    placeholder="Search by name or ID"
-                    className={`${FIELD_CLASS} pl-9`}
-                  />
-                </div>
-
-                <div className="relative">
-                  <select
-                    value={departmentId}
-                    disabled={busy}
-                    onChange={(event) => setDepartmentId(event.target.value)}
-                    className={SELECT_CLASS}
-                    aria-label="Filter employees by department"
-                  >
-                    <option value="">All Departments</option>
-                    {departments.map((department) => (
-                      <option key={department.id} value={department.id}>
-                        {department.name}
-                      </option>
-                    ))}
-                  </select>
-
-                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                </div>
+            {/* Signed-in HR user */}
+            <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">Leave applicant</p>
+              <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                <ProfileValue label="Name" value={profile?.full_name ?? (loadingProfile ? "Loading..." : "HR user")} />
+                <ProfileValue label="Employee ID" value={profile?.employee_id ?? "—"} />
+                <ProfileValue label="Department" value={profile?.department ?? "Human Resources"} />
               </div>
-
-              <div className="relative mt-3">
-                <UserRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-
-                <select
-                  id="leave-employee"
-                  value={employeeId}
-                  disabled={busy || loadingEmployees}
-                  onChange={(event) => setEmployeeId(event.target.value)}
-                  className={`${SELECT_CLASS} pl-9`}
-                >
-                  <option value="">
-                    {loadingEmployees
-                      ? "Loading employees..."
-                      : filteredEmployees.length === 0
-                        ? "No employees match this filter"
-                        : "Select an employee"}
-                  </option>
-
-                  {filteredEmployees.map((employee) => (
-                    <option key={employee.employee_id} value={employee.employee_id}>
-                      {employee.employee_id} - {employeeName(employee)}
-                      {departmentNames.get(employee.department_id)
-                        ? ` (${departmentNames.get(employee.department_id)})`
-                        : ""}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {loadError && <p className="mt-2 text-xs text-amber-600">{loadError}</p>}
             </div>
 
             {/* Leave type */}
@@ -441,7 +336,7 @@ export default function NewLeaveRequestModal({
             <button
               type="button"
               onClick={onClose}
-              disabled={busy}
+              disabled={busy || loadingProfile}
               className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Cancel
@@ -467,6 +362,15 @@ export default function NewLeaveRequestModal({
           </footer>
         </form>
       </div>
+    </div>
+  );
+}
+
+function ProfileValue({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-xs text-blue-600">{label}</p>
+      <p className="mt-0.5 truncate text-sm font-semibold text-slate-900">{value}</p>
     </div>
   );
 }

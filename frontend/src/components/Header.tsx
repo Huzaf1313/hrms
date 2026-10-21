@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 
 import AdminNotificationDropdown from "./admin/AdminNotificationDropdown";
 import DatePicker from "./DatePicker";
+import { employeeService } from "../services/employeeService";
+import type { Employee } from "../types/employee";
 import { adminNotificationService } from "../services/adminNotificationService";
 
 interface HeaderProps {
@@ -13,12 +15,14 @@ interface HeaderProps {
   collapsed?: boolean;
   /** Mobile: opens the drawer. Desktop has no use for it. */
   onOpenSidebar?: () => void;
+  onSearchEmployee?: (query: string) => void;
+  onSelectEmployee?: (employeeId: string) => void;
 }
 
-// "Attendance › Daily Attendance" in the reference design. Only pages that
+// "Dashboard > Attendance" in the reference design. Only pages that
 // genuinely sit under a parent get a trail; the rest render flat.
 const trails: Record<string, string[]> = {
-  Attendance: ["Dashboard", "Attendance", "Daily Attendance"],
+  Attendance: ["Dashboard", "Attendance"],
   "Regularization Requests": ["Dashboard", "Attendance", "Regularization Requests"],
   Leave: ["Dashboard", "Leave"],
   "My Profile": ["Dashboard", "My Profile"],
@@ -28,25 +32,29 @@ function readUser() {
   try {
     const raw = localStorage.getItem("user");
 
-    return raw ? (JSON.parse(raw) as { full_name?: string; role?: string }) : null;
+    return raw
+      ? (JSON.parse(raw) as { full_name?: string; role?: string })
+      : null;
   } catch {
     return null;
   }
 }
 
-/** HR and Manager accounts are admin-level: display role "Admin" plus
- * their designation. Everyone else shows their own role. */
 function roleDisplay(role?: string): string {
   switch (role) {
     case "hr_admin":
-      return "Admin • HR";
+      return "Admin | HR";
     case "manager":
-      return "Admin • Manager";
+      return "Admin | Manager";
     case "employee":
       return "Employee";
     default:
       return role ? role.charAt(0).toUpperCase() + role.slice(1) : "";
   }
+}
+
+function employeeFullName(employee: Employee) {
+  return `${employee.first_name} ${employee.last_name}`.trim();
 }
 
 /** Only admin-level roles may create or edit holidays. */
@@ -60,15 +68,87 @@ function Header({
   pageTitle = "Dashboard",
   collapsed = false,
   onOpenSidebar,
+  onSearchEmployee,
+  onSelectEmployee,
 }: HeaderProps) {
   const navigate = useNavigate();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [employeeSearch, setEmployeeSearch] = useState("");
+  const [allEmployees, setAllEmployees] = useState<Employee[]>([]);
+  const [showEmployeeSuggestions, setShowEmployeeSuggestions] =
+    useState(false);
+
+  const user = useMemo(() => readUser(), []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    employeeService
+      .listAll()
+      .then((employees) => {
+        if (!cancelled) {
+          setAllEmployees(employees);
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to load employee search suggestions", error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const normalizedQuery = employeeSearch.trim().toLowerCase();
+
+  const employeeSuggestions = normalizedQuery
+    ? allEmployees
+        .filter((employee) => {
+          const fullName = employeeFullName(employee).toLowerCase();
+          const firstName = employee.first_name.toLowerCase();
+          const lastName = employee.last_name.toLowerCase();
+
+          return (
+            fullName.includes(normalizedQuery) ||
+            firstName.startsWith(normalizedQuery) ||
+            lastName.startsWith(normalizedQuery)
+          );
+        })
+        .slice(0, 8)
+    : [];
+
+  function selectEmployee(employee: Employee) {
+    setEmployeeSearch(employeeFullName(employee));
+    setShowEmployeeSuggestions(false);
+    onSelectEmployee?.(employee.id);
+  }
+
+  function handleEmployeeSearchKeyDown(
+    event: React.KeyboardEvent<HTMLInputElement>,
+  ) {
+    if (event.key === "Escape") {
+      setShowEmployeeSuggestions(false);
+      return;
+    }
+
+    if (event.key !== "Enter") return;
+
+    event.preventDefault();
+
+    const query = employeeSearch.trim();
+    if (!query) return;
+
+    if (employeeSuggestions.length > 0) {
+      selectEmployee(employeeSuggestions[0]);
+    } else {
+      setShowEmployeeSuggestions(false);
+      onSearchEmployee?.(query);
+    }
+  }
   const [showNotificationDropdown, setShowNotificationDropdown] =
     useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const notificationRef = useRef<HTMLDivElement>(null);
-
-  const user = useMemo(() => readUser(), []);
 
   // A newly created employee has no `created_by` on file yet, so notifications
   // route to every active admin until their creator is known.
@@ -121,7 +201,6 @@ function Header({
 
   return (
     <header className="sticky top-0 z-30 flex h-[72px] items-center justify-between gap-4 border-b border-gray-200 bg-white px-6">
-      {/* Left: menu + page title */}
       <div className="flex min-w-0 items-center gap-4">
         <button
           type="button"
@@ -166,16 +245,64 @@ function Header({
         </nav>
       </div>
 
-      {/* Right: search, bell, date, profile */}
       <div className="flex items-center gap-3">
         <div className="relative hidden lg:block">
           <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
 
           <input
             type="text"
+            value={employeeSearch}
+            onChange={(event) => {
+              setEmployeeSearch(event.target.value);
+              setShowEmployeeSuggestions(true);
+            }}
+            onFocus={() => setShowEmployeeSuggestions(true)}
+            onBlur={() => setShowEmployeeSuggestions(false)}
+            onKeyDown={handleEmployeeSearchKeyDown}
             placeholder="Search employees..."
+            aria-label="Search employees"
+            aria-autocomplete="list"
+            aria-expanded={
+              showEmployeeSuggestions && employeeSuggestions.length > 0
+            }
             className="w-64 rounded-full border border-gray-200 bg-[#f5f7fb] py-2.5 pl-10 pr-4 text-sm outline-none transition placeholder:text-gray-400 focus:border-[#2563eb] focus:bg-white focus:ring-2 focus:ring-[#2563eb]/15"
           />
+
+          {showEmployeeSuggestions && normalizedQuery && (
+            <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
+              {employeeSuggestions.length > 0 ? (
+                <ul role="listbox" className="max-h-80 overflow-y-auto py-2">
+                  {employeeSuggestions.map((employee) => (
+                    <li key={employee.id} role="option" aria-selected={false}>
+                      <button
+                        type="button"
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => selectEmployee(employee)}
+                        className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-blue-50"
+                      >
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-700">
+                          {employee.first_name.charAt(0).toUpperCase()}
+                        </span>
+
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-medium text-gray-900">
+                            {employeeFullName(employee)}
+                          </span>
+                          <span className="block text-xs text-gray-500">
+                            {employee.employee_id || "Employee"}
+                          </span>
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="px-4 py-4 text-sm text-gray-500">
+                  No matching employees found.
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         <div ref={notificationRef} className="relative">
@@ -194,7 +321,6 @@ function Header({
               </span>
             )}
           </button>
-
           {showNotificationDropdown && (
             <AdminNotificationDropdown
               onClose={() => setShowNotificationDropdown(false)}
@@ -216,11 +342,11 @@ function Header({
               {initials}
             </span>
 
-            <span className="hidden text-left sm:block">
-              <span className="block text-sm font-semibold leading-tight text-gray-900">
+            <span className="hidden min-w-0 max-w-[180px] text-left sm:block">
+              <span className="block truncate text-sm font-semibold leading-tight text-gray-900">
                 {fullName}
               </span>
-              <span className="block text-[11px] leading-tight text-gray-500">
+              <span className="block truncate text-[11px] leading-tight text-gray-500">
                 {roleDisplay(user?.role)}
               </span>
             </span>

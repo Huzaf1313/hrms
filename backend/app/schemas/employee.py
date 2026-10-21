@@ -92,6 +92,9 @@ class EmployeeCreate(BaseModel):
     employment_type: str = "Full-time"
     work_location: str | None = None
     reporting_manager: str | None = None
+    # Account id of the reporting manager. This is what scopes a manager to
+    # their own team; reporting_manager above is display only.
+    manager_id: str | None = None
     salary_structure: str | None = None
     salary: str | None = None
 
@@ -147,6 +150,9 @@ class EmployeeUpdate(BaseModel):
     employment_type: str | None = None
     work_location: str | None = None
     reporting_manager: str | None = None
+    # Account id of the reporting manager. This is what scopes a manager to
+    # their own team; reporting_manager above is display only.
+    manager_id: str | None = None
     salary_structure: str | None = None
     salary: str | None = None
 
@@ -204,6 +210,9 @@ class EmployeeResponse(BaseModel):
     employment_type: str
     work_location: str | None = None
     reporting_manager: str | None = None
+    # Account id of the reporting manager. This is what scopes a manager to
+    # their own team; reporting_manager above is display only.
+    manager_id: str | None = None
     salary_structure: str | None = None
     salary: str | None = None
 

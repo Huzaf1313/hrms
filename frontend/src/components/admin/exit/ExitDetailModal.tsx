@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Download, ExternalLink, X } from "lucide-react";
+import { Download, ExternalLink, Plus, X } from "lucide-react";
 
 import {
   EmployeeAvatar,
@@ -9,7 +9,7 @@ import {
 import { formatDate, formatDateTime } from "./exitUiUtils";
 import { adminExitRequestService, formatFileSize, saveBlob } from "../../../services/exitRequestService";
 import { ApiError } from "../../../services/api";
-import type { ExitRequest } from "../../../types/exitRequest";
+import type { ExitRequest, HandoverTask } from "../../../types/exitRequest";
 
 const HANDOVER_TONE: Record<string, string> = {
   Pending: "bg-amber-50 text-amber-700",
@@ -44,6 +44,8 @@ export default function ExitDetailModal({
   const [note, setNote] = useState("");
   const [acting, setActing] = useState(false);
   const [actionError, setActionError] = useState("");
+  const [taskDraft, setTaskDraft] = useState("");
+  const [showTaskInput, setShowTaskInput] = useState(false);
 
   const changeStatus = async (status: "In Progress" | "Completed" | "Rejected") => {
     if (status === "Rejected" && !note.trim()) {
@@ -79,6 +81,51 @@ export default function ExitDetailModal({
       );
     } catch (err) {
       setActionError(errorText(err, "Unable to download the file."));
+    }
+  };
+
+  const addHandoverTask = async () => {
+    const task = taskDraft.trim();
+    if (!task) return;
+
+    if (task.length > 100) {
+      setActionError("Keep the clearance step under 100 characters.");
+      return;
+    }
+
+    if (selected.handover_tasks.length >= 10) {
+      setActionError("A request can carry at most 10 clearance steps.");
+      return;
+    }
+
+    if (selected.handover_tasks.some((entry) => entry.task.toLowerCase() === task.toLowerCase())) {
+      setActionError("That clearance step is already on the list.");
+      return;
+    }
+
+    setActing(true);
+    setActionError("");
+
+    const nextTask: HandoverTask = {
+      task,
+      remarks: null,
+      status: "Pending",
+      is_checked: false,
+    };
+
+    try {
+      const updated = await adminExitRequestService.updateHandoverTasks(
+        selected.id,
+        [...selected.handover_tasks, nextTask],
+      );
+      setSelected(updated);
+      setTaskDraft("");
+      setShowTaskInput(false);
+      onChanged("Clearance checklist updated successfully.");
+    } catch (err) {
+      setActionError(errorText(err, "Unable to update the clearance checklist."));
+    } finally {
+      setActing(false);
     }
   };
 
@@ -227,6 +274,66 @@ export default function ExitDetailModal({
                   </li>
                 ))}
               </ul>
+            )}
+
+            {actionable && (
+              <div className="mt-3">
+                {!showTaskInput ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActionError("");
+                      setShowTaskInput(true);
+                    }}
+                    disabled={acting || selected.handover_tasks.length >= 10}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-dashed border-blue-300 text-blue-600 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    aria-label="Add a custom clearance step"
+                    title="Add a custom clearance step"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                ) : (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      autoFocus
+                      maxLength={100}
+                      value={taskDraft}
+                      onChange={(event) => setTaskDraft(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          void addHandoverTask();
+                        }
+                      }}
+                      placeholder="Enter a clearance step"
+                      aria-label="Custom clearance step"
+                      className="h-9 min-w-0 flex-1 rounded-lg border border-slate-200 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => void addHandoverTask()}
+                      disabled={acting || !taskDraft.trim()}
+                      className="h-9 rounded-lg bg-blue-600 px-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Add
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTaskDraft("");
+                        setActionError("");
+                        setShowTaskInput(false);
+                      }}
+                      disabled={acting}
+                      aria-label="Cancel adding clearance step"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
           </div>
 

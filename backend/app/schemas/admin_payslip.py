@@ -80,4 +80,4 @@ class PayrollAnalyticsResponse(BaseModel):
     summary: PayrollSummaryMetrics
     available_years: list[int]
     recent_runs: list[PayrollRecentRun] = []
-    departments: list[PayrollDepartmentSummary] = []
+    departments: list[PayrollDepartmentSummary] = []

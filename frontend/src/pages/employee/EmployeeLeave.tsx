@@ -253,6 +253,11 @@ function EmployeeLeave() {
   const [activeFilter, setActiveFilter] = useState<StatusFilter>("All");
   const [currentPage, setCurrentPage] = useState(1);
 
+  // The header calendar's day. Only sent once a day other than today has been
+  // picked: leave is a list spanning time, so filtering it to a single day by
+  // default would hide every request that does not happen to cover today.
+  const { date: globalDate, isDefault: isGlobalDateDefault } = useGlobalDate();
+
   const [isApplyLeaveOpen, setIsApplyLeaveOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] =
     useState<LeaveRequest | null>(null);
@@ -318,6 +323,7 @@ function EmployeeLeave() {
             {
               page: 1,
               limit: 100,
+              date: isGlobalDateDefault ? undefined : globalDate,
             },
           ),
 
@@ -380,7 +386,7 @@ function EmployeeLeave() {
         setLoading(false);
       }
     },
-    [getEmployeeId],
+    [getEmployeeId, globalDate, isGlobalDateDefault],
   );
 
   useEffect(() => {
@@ -690,6 +696,8 @@ function EmployeeLeave() {
                           View and track your leave applications.
                         </p>
                       </div>
+
+                      <GlobalDateBadge prefix="Covering" />
                     </div>
 
                     {/* Status Filters */}
