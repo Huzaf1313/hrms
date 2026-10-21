@@ -9,10 +9,19 @@ import {
   setAccessToken,
   setRefreshToken,
 } from "../services/api";
-import { AuthShell } from "../components/auth/AuthShell";
-import { AuthField } from "../components/auth/AuthField";
-import { OtpInput } from "../components/auth/OtpInput";
-import { PasswordStrength } from "../components/auth/PasswordStrength";
+import { clearAuthQueries } from "../lib/queryClient";
+
+const roles = [
+  "Manager",
+  "HR",
+  "Employee",
+];
+
+const roleMap: Record<string, string> = {
+  Manager: "manager",
+  HR: "hr_admin",
+  Employee: "employee",
+};
 
 interface LoginResponse {
   access_token: string;
@@ -104,6 +113,9 @@ function Login() {
       );
 
       const { access_token, refresh_token, token_type } = loginResponse;
+
+      // Clear any cached data from previous session
+      clearAuthQueries();
 
       setAccessToken(access_token);
       setRefreshToken(refresh_token);

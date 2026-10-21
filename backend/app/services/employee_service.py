@@ -1,5 +1,7 @@
-from datetime import datetime
+import logging
+from datetime import datetime, timezone
 
+from app.core.config import settings
 from app.core.exceptions import AppException
 from app.core.roles import UserRole
 from app.core.scope import visibility_scope
@@ -12,98 +14,23 @@ from app.repositories.employee_repository import EmployeeRepository
 from app.repositories.shift_repository import ShiftRepository
 from app.repositories.user_repository import UserRepository
 from app.services.admin_salary_structure_service import parse_salary_floor
+from app.services.email_service import EmailService
+from app.services.otp_service import OTPService
 from app.utils.filtering import build_filter
 from app.utils.pagination import PaginationParams
+
+logger = logging.getLogger(__name__)
 
 
 class EmployeeService:
     def __init__(self):
         self.repository = EmployeeRepository()
+        self.user_repository = UserRepository()
         self.department_repository = DepartmentRepository()
         self.salary_structure_repository = AdminSalaryStructureRepository()
         self.shift_repository = ShiftRepository()
-        self.user_repository = UserRepository()
-
-
-    @staticmethod
-    def _visibility_scope(current_user: dict | None) -> dict:
-        """See app.core.scope.visibility_scope."""
-        return visibility_scope(current_user)
-
-
-    async def _resolve_manager(
-        self,
-        data: dict,
-        existing: dict | None = None,
-    ) -> None:
-        """Validate the reporting manager on `data` in place.
-
-        `manager_id` is the authoritative link a manager's scope is built on.
-        `reporting_manager` stays as the display name. Records written before
-        manager_id existed only have the name, so fall back to matching an
-        active admin account by exact name.
-        """
-        has_manager_id = "manager_id" in data
-        has_manager_name = "reporting_manager" in data
-
-        if not has_manager_id and not has_manager_name:
-            return
-
-        manager_id = (data.get("manager_id") or "").strip()
-
-        if manager_id:
-            manager = await self.user_repository.get_by_id(manager_id)
-
-            if not manager:
-                raise AppException(
-                    "Reporting manager not found",
-                    400,
-                )
-
-            manager_role = getattr(manager.get("role"), "value", manager.get("role"))
-
-            if manager_role not in (
-                UserRole.HR_ADMIN.value,
-                UserRole.MANAGER.value,
-            ):
-                raise AppException(
-                    "Reporting manager must be an HR or manager account",
-                    400,
-                )
-
-            if not manager.get("is_active", True) or manager.get("is_locked"):
-                raise AppException(
-                    "Reporting manager account is not active",
-                    400,
-                )
-
-            data["manager_id"] = str(manager_id)
-
-            # Keep the display name in step with the id.
-            if not (data.get("reporting_manager") or "").strip():
-                data["reporting_manager"] = manager.get("full_name")
-
-            return
-
-        # No manager_id: the caller cleared the dropdown, or this is a legacy
-        # record that only carries a name. Try to resolve the name so the
-        # record still lands under the right manager.
-        name = (data.get("reporting_manager") or "").strip()
-
-        if not name:
-            data.pop("manager_id", None)
-            return
-
-        match = await self.user_repository.get_admin_account_by_name(name)
-
-        if match:
-            data["manager_id"] = str(match["_id"])
-            data["reporting_manager"] = match["full_name"]
-        elif existing is not None or has_manager_id:
-            # Explicitly selected a manager that cannot be resolved - drop it
-            # rather than leaving a name no manager will ever match.
-            data["manager_id"] = None
-            data["reporting_manager"] = None
+        self.otp_service = OTPService()
+        self.email_service = EmailService()
 
     async def _validate_shift(self, shift_id: str | None):
         if not shift_id:
@@ -169,6 +96,15 @@ class EmployeeService:
         employee_data: dict,
         current_user: dict | None = None,
     ):
+        # 1. Require and extract email verification token
+        verification_token = employee_data.pop("email_verification_token", None)
+        if not verification_token or not str(verification_token).strip():
+            raise AppException(
+                "A valid email verification token is required to add an employee.",
+                400,
+            )
+
+        # 2. Check Employee ID uniqueness
         existing_employee = await self.repository.get_by_employee_id(
             employee_data["employee_id"]
         )
@@ -179,15 +115,23 @@ class EmployeeService:
                 400,
             )
 
-        existing_email = await self.repository.get_by_email(
+        # 3. Check Email uniqueness across all accounts
+        existing_user = await self.user_repository.get_by_email(
             employee_data["email"]
         )
 
-        if existing_email:
+        if existing_user:
             raise AppException(
-                "Employee email already exists",
+                "An account with this email address already exists",
                 400,
             )
+
+        # 4. Atomically validate and consume verification token
+        await self.otp_service.consume_employee_email_verification(
+            token=str(verification_token),
+            submitted_email=employee_data["email"],
+            admin_id=created_by or "",
+        )
 
         department = await self.department_repository.get_by_id(
             employee_data["department_id"]
@@ -219,8 +163,8 @@ class EmployeeService:
         employee_data["is_active"] = True
         employee_data["is_locked"] = False
         employee_data["failed_login_attempts"] = 0
-        employee_data["created_at"] = datetime.utcnow()
-        employee_data["updated_at"] = datetime.utcnow()
+        employee_data["created_at"] = datetime.now(timezone.utc)
+        employee_data["updated_at"] = datetime.now(timezone.utc)
 
         await self._resolve_manager(employee_data)
 
@@ -231,7 +175,36 @@ class EmployeeService:
 
         employee = await self.repository.create(employee_data)
 
-        return employee, temporary_password
+        # Dispatch welcome email (do not fail employee creation if SMTP encounters issues)
+        welcome_email_sent = False
+        try:
+            company_name = "HRMS"
+            if created_by:
+                creator = await self.user_repository.get_by_id(created_by)
+                if creator and creator.get("company_name"):
+                    company_name = creator["company_name"]
+
+            await self.email_service.send_html_email_async(
+                to_email=employee["email"],
+                subject=f"Welcome to {company_name}!",
+                template_name="emails/welcome_email.html",
+                template_data={
+                    "company_name": company_name,
+                    "employee_name": employee.get("full_name", "Employee"),
+                    "hr_team": "HR Team",
+                    "login_url": settings.login_url,
+                },
+            )
+            welcome_email_sent = True
+        except Exception as exc:
+            logger.warning(
+                "Welcome email could not be delivered to %s: %s",
+                employee.get("email"),
+                type(exc).__name__,
+            )
+            welcome_email_sent = False
+
+        return employee, temporary_password, welcome_email_sent
 
     async def get_employee(
         self,

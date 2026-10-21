@@ -106,6 +106,12 @@ class EmployeeCreate(BaseModel):
     emergency_contact: EmergencyContact | None = None
     bank_information: BankInformation | None = None
 
+    # Email verification token
+    email_verification_token: str = Field(
+        default="",
+        description="Verification token issued after verifying employee email OTP",
+    )
+
     @field_validator("first_name")
     @classmethod
     def validate_first_name(cls, value: str) -> str:
@@ -227,3 +233,36 @@ class EmployeeResponse(BaseModel):
 
     # Login credentials (only populated right after creation)
     credentials: EmployeeCredentials | None = None
+
+    # Welcome email delivery outcome
+    welcome_email_sent: bool | None = None
+
+
+class EmployeeOTPRequest(BaseModel):
+    email: EmailStr
+
+
+class EmployeeOTPVerifyRequest(BaseModel):
+    email: EmailStr
+    otp: str = Field(min_length=6, max_length=6)
+
+    @field_validator("otp")
+    @classmethod
+    def validate_otp_digits(cls, value: str) -> str:
+        value = value.strip()
+        if not value.isdigit() or len(value) != 6:
+            raise ValueError("OTP must be exactly 6 digits")
+        return value
+
+
+class EmployeeOTPRequestResponse(BaseModel):
+    message: str
+    expires_in_minutes: int
+    cooldown_seconds: int
+
+
+class EmployeeOTPVerifyResponse(BaseModel):
+    message: str
+    email: str
+    verification_token: str
+    expires_in_minutes: int

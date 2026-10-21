@@ -7,6 +7,8 @@ import {
   type DeductionCreatePayload,
   type DeductionCalculationResponse,
 } from "../../services/admin_deduction_service";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "../../lib/queryKeys";
 
 type ComponentType = "Deduction" | "Contribution";
 
@@ -559,6 +561,7 @@ function ComponentModal({
 ========================================================= */
 
 export default function DeductionsTab() {
+  const queryClient = useQueryClient();
   const [components, setComponents] =
     useState<DeductionComponent[]>([]);
 
@@ -704,6 +707,12 @@ export default function DeductionsTab() {
       }
 
       await loadComponents();
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.reference.deductions(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.admin.payrollAnalytics(),
+      });
 
       setEditingComponent(null);
       setIsCreating(false);
@@ -735,6 +744,12 @@ export default function DeductionsTab() {
       await adminDeductionService.delete(id);
 
       await loadComponents();
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.reference.deductions(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.admin.payrollAnalytics(),
+      });
     } catch (err) {
       console.error(err);
 
@@ -751,6 +766,15 @@ export default function DeductionsTab() {
       setApplyMessage(null);
 
       const response = await adminDeductionService.apply(component.id);
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.reference.deductions(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.reference.salaryStructures(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.admin.payrollAnalytics(),
+      });
 
       setApplyMessage(
         `${component.name} applied to ${response.updated_structures} salary structure${response.updated_structures === 1 ? "" : "s"}.`,

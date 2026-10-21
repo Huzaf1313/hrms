@@ -13,8 +13,8 @@ import {
 import EmployeeLeaveModal from "./EmployeeLeaveModal";
 import EmployeeLeaveDetailsModal from "./EmployeeLeaveDetailsModal";
 import { ApiError, api } from "../../services/api";
-import { useGlobalDate } from "../../context/globalDateContext";
-import { GlobalDateBadge } from "../../components/GlobalDateBadge";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "../../lib/queryKeys";
 
 type LeaveStatus = "Pending" | "Approved" | "Rejected" | "Cancelled";
 
@@ -272,6 +272,7 @@ function EmployeeLeave() {
   const [error, setError] = useState("");
   const [actionError, setActionError] = useState("");
 
+  const queryClient = useQueryClient();
   const [employeeId, setEmployeeId] = useState<string | null>(null);
 
   const getEmployeeId = useCallback(() => {
@@ -483,6 +484,19 @@ function EmployeeLeave() {
 
       setIsApplyLeaveOpen(false);
 
+      const targetEmployeeId = employeeId ?? getEmployeeId();
+      if (targetEmployeeId) {
+        void queryClient.invalidateQueries({
+          queryKey: queryKeys.employee.leaves(targetEmployeeId),
+        });
+        void queryClient.invalidateQueries({
+          queryKey: queryKeys.employee.leaveBalances(targetEmployeeId),
+        });
+      }
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.admin.leaveSummary(),
+      });
+
       await fetchLeaveData(false);
     } catch (err) {
       if (err instanceof ApiError) {
@@ -518,6 +532,16 @@ function EmployeeLeave() {
       );
 
       setSelectedRequest(null);
+
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.employee.leaves(employeeId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.employee.leaveBalances(employeeId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.admin.leaveSummary(),
+      });
 
       await fetchLeaveData(false);
     } catch (err) {

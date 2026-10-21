@@ -115,6 +115,20 @@ export interface EmployeeCreate {
 
   emergency_contact?: EmergencyContact;
   bank_information?: BankInformation;
+  email_verification_token?: string;
+}
+
+export interface EmployeeOTPRequestResponse {
+  message: string;
+  expires_in_minutes: number;
+  cooldown_seconds: number;
+}
+
+export interface EmployeeOTPVerifyResponse {
+  message: string;
+  email: string;
+  verification_token: string;
+  expires_in_minutes: number;
 }
 
 export interface EmployeeUpdate {

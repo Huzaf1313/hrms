@@ -14,6 +14,9 @@ import {
   type Earning,
   type SalaryStructure,
 } from "../../services/admin_salary_structure_service";
+import { useQueryClient } from "@tanstack/react-query";
+import { useSalaryStructures } from "../../hooks/useSalaryStructures";
+import { queryKeys } from "../../lib/queryKeys";
 
 function formatCurrency(value: number): string {
   return `₹${Math.round(value).toLocaleString("en-IN")}`;
@@ -471,36 +474,32 @@ function EditStructureModal({
 }
 
 function SalaryStructureTab() {
+  const queryClient = useQueryClient();
+  const { data: structuresData, isLoading: loading, error: queryError, refetch } = useSalaryStructures();
   const [structures, setStructures] = useState<SalaryStructure[]>([]);
   const [editingStructure, setEditingStructure] = useState<SalaryStructure | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [deletingStructure, setDeletingStructure] = useState<SalaryStructure | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [deleteModalError, setDeleteModalError] = useState<string | null>(null);
 
-  const fetchStructures = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await salaryStructureService.list();
-      setStructures(data);
-    } catch (requestError: unknown) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Failed to load salary structures."
-      );
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    if (structuresData) {
+      setStructures(structuresData);
     }
-  };
+  }, [structuresData]);
 
   useEffect(() => {
-    void fetchStructures();
-  }, []);
+    if (queryError) {
+      setError(
+        queryError instanceof Error
+          ? queryError.message
+          : "Failed to load salary structures."
+      );
+    }
+  }, [queryError]);
 
   // Auto-hide success message after 4s
   useEffect(() => {
@@ -527,6 +526,13 @@ function SalaryStructureTab() {
       saved = await salaryStructureService.update(updated.id, payload);
       setSuccessMessage(`Salary structure '${saved.name}' updated successfully.`);
     }
+
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.reference.salaryStructures(),
+    });
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.admin.payrollAnalytics(),
+    });
 
     setStructures((current) => {
       const exists = current.some((s) => s.id === saved.id);
@@ -567,6 +573,12 @@ function SalaryStructureTab() {
       setDeleteModalError(null);
       await salaryStructureService.delete(deletingStructure.id);
       setSuccessMessage(`Salary structure '${deletingStructure.name}' deleted successfully.`);
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.reference.salaryStructures(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.admin.payrollAnalytics(),
+      });
       setStructures((current) =>
         current.filter((s) => s.id !== deletingStructure.id)
       );
@@ -616,7 +628,7 @@ function SalaryStructureTab() {
           </div>
           <button
             type="button"
-            onClick={() => void fetchStructures()}
+            onClick={() => void refetch()}
             className="text-xs font-bold underline hover:text-rose-900"
           >
             Retry
