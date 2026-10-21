@@ -1572,8 +1572,6 @@ export default function AdminAssets() {
     {
       label: "Asset Categories",
       value: String(counts.categories),
-      note: "View All →",
-      noteClass: "text-[#2563eb]",
       icon: FileText,
       iconBg: "bg-violet-50",
       iconColor: "text-violet-600",
@@ -1621,9 +1619,13 @@ export default function AdminAssets() {
                   <p className="mt-1 truncate text-2xl font-bold leading-tight text-gray-900">
                     {card.value}
                   </p>
-                  <p className={`mt-0.5 truncate text-xs font-semibold ${card.noteClass}`}>
-                    {card.note}
-                  </p>
+                  {/* Only the cards that carry a note render one, so a card
+                      without it leaves no blank line behind. */}
+                  {card.note && (
+                    <p className={`mt-0.5 truncate text-xs font-semibold ${card.noteClass}`}>
+                      {card.note}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>

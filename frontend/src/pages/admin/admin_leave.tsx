@@ -22,6 +22,8 @@ import {
 } from "lucide-react";
 import { departmentService } from "../../services/departmentService";
 import { leaveService, type LeaveRequest, type LeaveStatus, type LeaveSummary } from "../../services/admin_leave_service";
+import { useGlobalDate } from "../../context/globalDateContext";
+import { GlobalDateBadge } from "../../components/GlobalDateBadge";
 import NewLeaveRequestModal from "../../components/admin/NewLeaveRequestModal";
 import type { Department } from "../../types/department";
 import type { LeaveRequestDraft } from "../../types/leave";
@@ -272,9 +274,35 @@ function LeaveCalendar({
   department: string;
   leaveType: string;
 }) {
-  const [viewDate, setViewDate] = useState(() => new Date());
   const today = new Date();
   const todayKey = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+
+  // Follows the header calendar's month, so the grid and the filtered list
+  // below it are never showing different months. Paging by hand is navigation
+  // and leaves the shared date alone.
+  //
+  // The month is derived rather than stored so it cannot fall out of step, and
+  // it has to be memoised: writing a freshly built Date back into state on
+  // every render never compares equal, which loops forever.
+  const { date: globalDateKey } = useGlobalDate();
+
+  const globalDate = useMemo(
+    () => new Date(`${globalDateKey}T00:00:00`),
+    [globalDateKey],
+  );
+
+  const [monthOverride, setMonthOverride] = useState<Date | null>(null);
+  const [syncedToDate, setSyncedToDate] = useState(globalDateKey);
+
+  if (syncedToDate !== globalDateKey) {
+    setSyncedToDate(globalDateKey);
+    setMonthOverride(null);
+  }
+
+  const viewDate = useMemo(
+    () => monthOverride ?? globalDate,
+    [monthOverride, globalDate],
+  );
 
   const filteredRequests = requests.filter(
     (request) =>
@@ -321,7 +349,11 @@ function LeaveCalendar({
       <div className="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-1">
         <button
           type="button"
-          onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1))}
+          onClick={() => {
+            setMonthOverride(
+              new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1),
+            );
+          }}
           className="flex h-7 w-7 items-center justify-center rounded-lg border border-gray-200 bg-white text-base font-semibold text-gray-600 hover:bg-gray-100"
           aria-label="Previous month"
         >
@@ -332,7 +364,11 @@ function LeaveCalendar({
         </span>
         <button
           type="button"
-          onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1))}
+          onClick={() => {
+            setMonthOverride(
+              new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1),
+            );
+          }}
           className="flex h-7 w-7 items-center justify-center rounded-lg border border-gray-200 bg-white text-base font-semibold text-gray-600 hover:bg-gray-100"
           aria-label="Next month"
         >
@@ -497,6 +533,11 @@ function LeaveByTypeKpi({ requests }: { requests: LeaveRequest[] }) {
 
 function AdminLeave() {
   const [departmentFilter, setDepartmentFilter] = useState("");
+  // The header calendar's day. Only sent once a day other than today has been
+  // picked, so the default view stays the full unfiltered list. Leave spans
+  // time, so narrowing it to a single day on load would hide every request
+  // that does not happen to cover today.
+  const { date: globalDate, isDefault: isGlobalDateDefault } = useGlobalDate();
   const [statusFilter, setStatusFilter] = useState<LeaveStatus | "">("");
   const [leaveTypeFilter, setLeaveTypeFilter] = useState("");
   const [requests, setRequests] = useState<LeaveRequest[]>([]);
@@ -511,6 +552,7 @@ function AdminLeave() {
   const [selectedRequest, setSelectedRequest] = useState<LeaveRequest | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [chartRequests, setChartRequests] = useState<LeaveRequest[]>([]);
+  const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -535,7 +577,7 @@ function AdminLeave() {
   useEffect(() => {
     let cancelled = false;
     Promise.allSettled([
-      leaveService.list({ page, limit: pageSize, status: statusFilter || undefined, leave_type: leaveTypeFilter || undefined, department_id: departmentFilter || undefined }),
+      leaveService.list({ page, limit: pageSize, status: statusFilter || undefined, leave_type: leaveTypeFilter || undefined, department_id: departmentFilter || undefined, date: isGlobalDateDefault ? undefined : globalDate }),
       leaveService.summary(),
       departmentService.list(),
     ]).then(([listResult, summaryResult, departmentsResult]) => {
@@ -565,7 +607,7 @@ function AdminLeave() {
       if (!cancelled) setIsLoading(false);
     });
     return () => { cancelled = true; };
-  }, [departmentFilter, leaveTypeFilter, page, pageSize, statusFilter]);
+  }, [departmentFilter, globalDate, isGlobalDateDefault, leaveTypeFilter, page, pageSize, statusFilter]);
 
   const statCards = [
     { label: "Total Leave Requests", value: summary?.total_leave_requests ?? "-", sub: "This Month", icon: CalendarDays, iconBg: "bg-blue-500" },
@@ -586,10 +628,36 @@ function AdminLeave() {
     }
   }
 
-  // TODO: POST the draft to /admin/leaves once the create endpoint is ready.
-  // The modal only collects and validates for now.
   function createRequest(draft: LeaveRequestDraft) {
-    void draft;
+    const localRequest: LeaveRequest = {
+      id: `local-leave-${Date.now()}`,
+      employee_id: draft.employee_id,
+      employee_name: draft.employee_name ?? "HR User",
+      department_id: draft.department_id ?? null,
+      department_name: draft.department_name ?? "Human Resources",
+      leave_type: draft.leave_type,
+      start_date: draft.start_date,
+      end_date: draft.end_date,
+      total_days: countWorkingDays(draft.start_date, draft.end_date),
+      reason: draft.reason,
+      status: "pending",
+      created_at: new Date().toISOString(),
+    };
+
+    setRequests((current) => [localRequest, ...current]);
+    setChartRequests((current) => [localRequest, ...current]);
+    setTotal((current) => current + 1);
+    setSummary((current) =>
+      current
+        ? {
+            ...current,
+            total_leave_requests: current.total_leave_requests + 1,
+            pending_requests: current.pending_requests + 1,
+          }
+        : current,
+    );
+    setPage(1);
+    setSuccessMessage("Your leave request was added as pending.");
   }
 
   return (
@@ -603,6 +671,20 @@ function AdminLeave() {
           </p>
         </div>
       </div>
+
+      {successMessage && (
+        <div className="mb-6 flex items-center justify-between rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          <span>{successMessage}</span>
+          <button
+            type="button"
+            onClick={() => setSuccessMessage("")}
+            className="font-semibold text-emerald-700 hover:text-emerald-900"
+            aria-label="Dismiss success message"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {/* Stat cards */}
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
@@ -679,6 +761,7 @@ function AdminLeave() {
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h3 className="font-bold text-gray-900">Recent Leave Requests</h3>
           <div className="flex flex-wrap items-center gap-2">
+            <GlobalDateBadge prefix="Covering" />
             <select
               value={departmentFilter}
               onChange={(event) => { setPage(1); setDepartmentFilter(event.target.value); }}
@@ -1065,7 +1148,6 @@ function AdminLeave() {
 
       {isCreateOpen && (
         <NewLeaveRequestModal
-          departments={departments}
           onClose={() => setIsCreateOpen(false)}
           onSubmit={createRequest}
         />
@@ -1075,4 +1157,3 @@ function AdminLeave() {
 }
 
 export default AdminLeave;
-

@@ -31,16 +31,17 @@ import {
   type BulkAttendanceResponse,
   type BulkMarkParams,
 } from "../../services/attendanceService";
-
-import { departmentService } from "../../services/departmentService";
-import { formatShiftTime, shiftService } from "../../services/shiftService";
+import { useGlobalDate } from "../../context/globalDateContext";
+import { formatShiftTime } from "../../services/shiftService";
+import { useQuery } from "@tanstack/react-query";
+import { useDepartments } from "../../hooks/useDepartments";
+import { useShifts } from "../../hooks/useShifts";
+import { queryKeys } from "../../lib/queryKeys";
 import type {
   AttendanceRecord,
   AttendanceStatus,
   AttendanceSummary,
 } from "../../types/attendance";
-import type { Department } from "../../types/department";
-import type { Shift } from "../../types/shift";
 import RegularizationRequestsCard from "../../components/admin/RegularizationRequestsCard";
 import ShiftManagerModal from "../../components/admin/ShiftManagerModal";
 
@@ -201,17 +202,18 @@ function AttendanceDonut({ summary }: { summary: AttendanceSummary | null }) {
   );
 }
 
-function getToday(): string {
-  const today = new Date();
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Kolkata",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(today);
-  const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+/** The header date is already an ISO string, so it only needs reading out. */
+function formatSelectedDate(value: string): string {
+  const parsed = new Date(`${value}T00:00:00`);
 
-  return `${values.year}-${values.month}-${values.day}`;
+  if (Number.isNaN(parsed.getTime())) return value;
+
+  return parsed.toLocaleDateString("en-GB", {
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 function displayPunchTime(value: string | null | undefined): string {
@@ -271,12 +273,26 @@ function displayOvertime(row: AttendanceRecord): { text: string; computable: boo
 function AdminAttendance() {
   const [activeTab, setActiveTab] = useState(0);
   const [search, setSearch] = useState("");
-  const [date, setDate] = useState(getToday);
+  // The day comes from the header calendar, so every date-driven page in the
+  // app is looking at the same one.
+  const { date, isDefault: isGlobalDateDefault, resetDate: resetGlobalDate } =
+    useGlobalDate();
   const [departmentId, setDepartmentId] = useState("");
+  const [workLocation, setWorkLocation] = useState("");
   const [status, setStatus] = useState("");
   const [shiftId, setShiftId] = useState("");
-  const [workLocation, setWorkLocation] = useState("");
-  const [workLocations, setWorkLocations] = useState<string[]>([]);
+  const { data: departmentsData } = useDepartments();
+  const { data: shiftsData } = useShifts();
+  const { data: optionsData } = useQuery({
+    queryKey: queryKeys.admin.attendanceOptions(),
+    queryFn: () => attendanceService.listOptions(),
+    staleTime: 30 * 60 * 1000,
+  });
+
+  const departments = departmentsData ?? [];
+  const shifts = shiftsData ?? [];
+  const workLocations = optionsData?.work_locations ?? [];
+
   const [overtimeOnly, setOvertimeOnly] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(1);
@@ -284,8 +300,6 @@ function AdminAttendance() {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [total, setTotal] = useState(0);
   const [summary, setSummary] = useState<AttendanceSummary | null>(null);
-  const [departments, setDepartments] = useState<Department[]>([]);
-  const [shifts, setShifts] = useState<Shift[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
@@ -295,7 +309,7 @@ function AdminAttendance() {
   const [detailRow, setDetailRow] = useState<AttendanceRecord | null>(null);
   const [markForm, setMarkForm] = useState({
     employee_id: "",
-    date: getToday(),
+    date: date,
     status: "present" as AttendanceStatus,
     shift_id: "",
     in_time: "",
@@ -407,7 +421,7 @@ function AdminAttendance() {
     setBulkResult(null);
     setMarkForm({
       employee_id: !bulk && records.length > 0 ? records[0].employee.id : "",
-      date: date || getToday(),
+      date,
       status: "present",
       shift_id: "",
       in_time: "",
@@ -421,24 +435,20 @@ function AdminAttendance() {
 
     async function loadAttendance() {
       setError("");
-      const [attendanceResult, summaryResult, departmentsResult, shiftsResult, optionsResult] =
-        await Promise.allSettled([
-          attendanceService.list({
-            date,
-            department_id: departmentId || undefined,
-            status: status || undefined,
-            search: search || undefined,
-            shift_id: shiftId || undefined,
-            work_location: workLocation || undefined,
-            overtime: overtimeOnly || undefined,
-            page,
-            limit,
-          }),
-          attendanceService.summary(date, departmentId || undefined),
-          departmentService.list(),
-          shiftService.listAll(),
-          attendanceService.listOptions(),
-        ]);
+      const [attendanceResult, summaryResult] = await Promise.allSettled([
+        attendanceService.list({
+          date,
+          department_id: departmentId || undefined,
+          status: status || undefined,
+          search: search || undefined,
+          shift_id: shiftId || undefined,
+          work_location: workLocation || undefined,
+          overtime: overtimeOnly || undefined,
+          page,
+          limit,
+        }),
+        attendanceService.summary(date, departmentId || undefined),
+      ]);
 
       if (!isCurrent) return;
 
@@ -464,18 +474,6 @@ function AdminAttendance() {
         setSummary(summaryResult.value);
       } else {
         setSummary(null);
-      }
-
-      if (departmentsResult.status === "fulfilled") {
-        setDepartments(departmentsResult.value);
-      }
-
-      if (shiftsResult.status === "fulfilled") {
-        setShifts(shiftsResult.value);
-      }
-
-      if (optionsResult.status === "fulfilled") {
-        setWorkLocations(optionsResult.value.work_locations ?? []);
       }
 
       setIsLoading(false);
@@ -605,7 +603,7 @@ function AdminAttendance() {
         setConfirmStep(false);
         setMarkForm({
           employee_id: "",
-          date: getToday(),
+          date,
           status: "present",
           shift_id: "",
           in_time: "",
@@ -813,13 +811,24 @@ function AdminAttendance() {
 
         <div className={`${showFilters ? "grid" : "hidden"} grid-cols-1 items-end gap-x-3 gap-y-4 sm:grid-cols-2 lg:grid lg:grid-cols-4 2xl:grid-cols-8`}>
         <div className="min-w-0">
-          <label className="mb-1.5 block text-xs font-medium text-gray-500">Date</label>
-          <input
-            type="date"
-            value={date}
-            onChange={(event) => { setDate(event.target.value); clearSelection(); }}
-            className="h-10 w-full rounded-full border border-gray-200 bg-white px-4 text-sm text-gray-700 transition hover:border-gray-300 focus:border-[#2563eb] focus:outline-none focus:ring-2 focus:ring-[#2563eb]/10"
-          />
+          <label className="mb-1.5 block text-xs font-medium text-gray-500">
+            Date
+          </label>
+          {/* The header calendar owns this value, so the page shows it rather
+              than offering a second control that could disagree with it. */}
+          <div className="flex h-10 items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-4 text-sm font-medium text-gray-700">
+            <CalendarDays className="h-4 w-4 text-gray-400" />
+            <span className="truncate">{formatSelectedDate(date)}</span>
+            {!isGlobalDateDefault && (
+              <button
+                type="button"
+                onClick={resetGlobalDate}
+                className="ml-auto shrink-0 text-xs font-semibold text-[#2563eb] hover:underline"
+              >
+                Today
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="min-w-0">
@@ -1837,4 +1846,3 @@ function AdminAttendance() {
 }
 
 export default AdminAttendance;
-

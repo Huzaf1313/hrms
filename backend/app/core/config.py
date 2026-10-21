@@ -37,6 +37,8 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+    FRONTEND_URL: str = "http://localhost:5173"
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [
@@ -44,6 +46,11 @@ class Settings(BaseSettings):
             for origin in self.CORS_ORIGINS.split(",")
             if origin.strip()
         ]
+
+    @property
+    def login_url(self) -> str:
+        base = self.FRONTEND_URL or (self.cors_origins_list[0] if self.cors_origins_list else "http://localhost:5173")
+        return f"{base.rstrip('/')}/login"
 
 
 try:

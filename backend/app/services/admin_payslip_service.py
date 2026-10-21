@@ -1,5 +1,6 @@
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timezone, timedelta, time
 from calendar import monthrange
+import re
 
 from app.core.exceptions import AppException
 from app.repositories.employee_repository import EmployeeRepository
@@ -170,12 +171,74 @@ class AdminPayslipService:
             payroll_data
         )
 
-        return self._serialize(payroll)
+        return await self._enrich_payslip(payroll)
+
+    async def _enrich_payslips(self, documents: list[dict]) -> list[dict]:
+        if not documents:
+            return []
+
+        emp_ids = list({d.get("employee_id") for d in documents if d.get("employee_id")})
+        emp_docs = await self.employee_repository.collection.find(
+            {"employee_id": {"$in": emp_ids}}
+        ).to_list(length=len(emp_ids))
+        emp_map = {e["employee_id"]: e for e in emp_docs}
+
+        dept_docs = await self.payslip_repository.collection.database["departments"].find({}).to_list(length=100)
+        dept_map = {str(d["_id"]): d.get("name", "General") for d in dept_docs}
+
+        results = []
+        for doc in documents:
+            serialized = self._serialize(doc)
+            eid = doc.get("employee_id", "")
+            emp = emp_map.get(eid, {})
+
+            emp_name = " ".join(filter(None, [emp.get("first_name"), emp.get("last_name")])).strip()
+            if not emp_name:
+                emp_name = emp.get("full_name") or eid
+
+            d_id = str(emp.get("department_id", ""))
+            department_name = dept_map.get(d_id, emp.get("department") or "General")
+
+            bank_info = emp.get("bank_information") or {}
+            doc_bank = doc.get("bank_details") or {}
+            bank_name = doc_bank.get("bank_name") or bank_info.get("bank_name") or "-"
+            account_number = bank_info.get("account_number") or ""
+            if not account_number and doc_bank.get("account_last4"):
+                account_number = f"•••• {doc_bank.get('account_last4')}"
+            if not account_number:
+                account_number = "-"
+
+            month_value = ""
+            p_start = doc.get("pay_period_start")
+            if isinstance(p_start, (datetime, date)):
+                month_value = f"{p_start.year}-{p_start.month:02d}"
+
+            serialized["employee_name"] = emp_name
+            serialized["employee_code"] = eid
+            serialized["designation"] = emp.get("designation") or "Employee"
+            serialized["department"] = department_name
+            serialized["bank_name"] = bank_name
+            serialized["account_number"] = account_number
+            serialized["month_value"] = month_value
+            serialized["status"] = doc.get("payment", {}).get("status", "Processing")
+
+            results.append(serialized)
+        return results
+
+    async def _enrich_payslip(self, document: dict) -> dict | None:
+        if not document:
+            return None
+        enriched_list = await self._enrich_payslips([document])
+        return enriched_list[0] if enriched_list else None
 
     async def get_all_payslips(
         self,
         page: int = 1,
-        limit: int = 20,
+        limit: int = 50,
+        month: str | None = None,
+        year: int | None = None,
+        search: str | None = None,
+        status: str | None = None,
     ):
         if page < 1:
             raise AppException(
@@ -183,30 +246,82 @@ class AdminPayslipService:
                 400,
             )
 
-        if limit < 1 or limit > 100:
+        if limit < 1 or limit > 200:
             raise AppException(
-                "Limit must be between 1 and 100",
+                "Limit must be between 1 and 200",
                 400,
             )
 
         skip = (page - 1) * limit
+        query: dict = {}
+
+        if status and status.strip():
+            st = status.strip()
+            if st.lower() in {"paid", "credited"}:
+                query["payment.status"] = {"$in": ["Paid", "Credited"]}
+            else:
+                query["payment.status"] = {"$regex": f"^{re.escape(st)}$", "$options": "i"}
+
+        if month and month.strip():
+            m_val = month.strip()
+            if len(m_val) == 7 and m_val[4] == "-":
+                try:
+                    y_part = int(m_val[:4])
+                    m_part = int(m_val[5:7])
+                    month_names = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+                    month_short = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+                    m_full = month_names[m_part]
+                    m_s = month_short[m_part]
+                    query["$or"] = [
+                        {"month": {"$regex": f"({m_full}|{m_s})", "$options": "i"}},
+                        {"pay_period_start": {
+                            "$gte": datetime(y_part, m_part, 1),
+                            "$lt": datetime(y_part, m_part + 1, 1) if m_part < 12 else datetime(y_part + 1, 1, 1),
+                        }}
+                    ]
+                except (ValueError, IndexError):
+                    query["month"] = {"$regex": re.escape(m_val), "$options": "i"}
+            else:
+                query["month"] = {"$regex": re.escape(m_val), "$options": "i"}
+
+        if year:
+            y_start = datetime(year, 1, 1)
+            y_end = datetime(year + 1, 1, 1)
+            if "pay_period_start" not in query and "$or" not in query:
+                query["pay_period_start"] = {"$gte": y_start, "$lt": y_end}
+
+        if search and search.strip():
+            term = search.strip()
+            emp_cursor = self.employee_repository.collection.find({
+                "$or": [
+                    {"employee_id": {"$regex": re.escape(term), "$options": "i"}},
+                    {"first_name": {"$regex": re.escape(term), "$options": "i"}},
+                    {"last_name": {"$regex": re.escape(term), "$options": "i"}},
+                    {"full_name": {"$regex": re.escape(term), "$options": "i"}},
+                ]
+            }, {"employee_id": 1})
+            matching_emps = await emp_cursor.to_list(length=100)
+            matching_ids = [e["employee_id"] for e in matching_emps if e.get("employee_id")]
+            if matching_ids:
+                query["employee_id"] = {"$in": matching_ids}
+            else:
+                query["employee_id"] = {"$regex": re.escape(term), "$options": "i"}
 
         payslips = await self.payslip_repository.get_all(
+            query=query,
             skip=skip,
             limit=limit,
         )
 
-        total = await self.payslip_repository.count()
+        total = await self.payslip_repository.count(query=query)
+        enriched = await self._enrich_payslips(payslips)
 
         return {
-            "items": [
-                self._serialize(payslip)
-                for payslip in payslips
-            ],
+            "items": enriched,
             "page": page,
             "limit": limit,
             "total": total,
-            "total_pages": (total + limit - 1) // limit,
+            "total_pages": (total + limit - 1) // limit if limit else 1,
         }
 
     async def get_payslip_by_id(self, payslip_id: str):
@@ -220,20 +335,35 @@ class AdminPayslipService:
                 404,
             )
 
-        return self._serialize(payslip)
+        return await self._enrich_payslip(payslip)
 
-    async def download_payslip(self, payslip_id: str):
-        payslip = await self.payslip_repository.get_by_id(
-            payslip_id
-        )
-
+    async def update_payslip_status(
+        self,
+        payslip_id: str,
+        status: str,
+    ):
+        payslip = await self.payslip_repository.get_by_id(payslip_id)
         if not payslip:
             raise AppException(
                 "Payslip not found",
-                 404,
-          )
+                404,
+            )
 
-        return payslip
+        normalized_status = status.strip()
+        paid_on = datetime.now(timezone.utc) if normalized_status.lower() in {"paid", "credited"} else None
+        updated = await self.payslip_repository.update_status(
+            payroll_id=payslip_id,
+            status=normalized_status,
+            paid_on=paid_on,
+        )
+
+        return await self._enrich_payslip(updated)
+
+    async def download_payslip(self, payslip_id: str):
+        raise AppException(
+            "Payslip PDF download has been disabled",
+            410,
+        )
 
     @staticmethod
     def _get_basic_salary(earnings: list[dict]) -> float:
@@ -466,10 +596,37 @@ class AdminPayslipService:
 
         pending_payroll = max(0, total_employees - processed_count)
 
+        thirty_days_ago = now - timedelta(days=30)
+        all_emps = await self.employee_repository.collection.find(
+            {"employee_id": {"$exists": True}}
+        ).to_list(length=1000)
+
+        new_joiners = 0
+        unassigned_structures = 0
+        for emp in all_emps:
+            if emp.get("status") in {"Inactive", "Terminated"}:
+                continue
+
+            j_date = emp.get("joining_date") or emp.get("created_at")
+            if isinstance(j_date, datetime):
+                if j_date.tzinfo is None:
+                    j_date = j_date.replace(tzinfo=timezone.utc)
+                if j_date >= thirty_days_ago:
+                    new_joiners += 1
+            elif isinstance(j_date, date):
+                dt_join = datetime.combine(j_date, time.min, timezone.utc)
+                if dt_join >= thirty_days_ago:
+                    new_joiners += 1
+
+            if not emp.get("salary_structure") or str(emp.get("salary_structure")).strip() == "":
+                unassigned_structures += 1
+
         summary = {
             "total_employees": total_employees,
             "processed_payroll": processed_count,
             "pending_payroll": pending_payroll,
+            "new_joiners": new_joiners,
+            "unassigned_salary_structures": unassigned_structures,
             "total_payroll_amount": total_payroll_amount,
             "latest_month": latest_month_str,
             "period_gross": round(period_gross, 2),

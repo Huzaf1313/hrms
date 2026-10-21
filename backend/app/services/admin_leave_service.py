@@ -3,6 +3,7 @@ from datetime import date, datetime, time, timedelta, timezone
 from bson import ObjectId
 
 from app.core.exceptions import AppException
+from app.core.leave_dates import day_covering_filters
 from app.core.scope import scope_matches, visibility_scope
 from app.core.working_days import count_working_days
 from app.repositories.department_repository import DepartmentRepository
@@ -175,9 +176,13 @@ class AdminLeaveService:
         employee_id: str | None = None,
         leave_type: str | None = None,
         department_id: str | None = None,
+        leave_date: date | None = None,
         current_user: dict | None = None,
     ):
         filters = {}
+
+        if leave_date:
+            filters.update(day_covering_filters(leave_date))
 
         if status:
             # Employee-created records may use title case (for example,

@@ -442,8 +442,8 @@ class ExitRequestService:
         """Record a departure HR raised themselves.
 
         The employee form only ever produces resignations, so without this a
-        termination or a contract end could never exist and the type tabs and
-        donut would be permanently empty.
+        termination could never exist and the type tabs and donut would be
+        permanently empty.
         """
 
         employee = await self.employee_repository.get_by_employee_id(
@@ -569,6 +569,25 @@ class ExitRequestService:
                 "reviewed_at": now,
                 "updated_at": now,
             },
+        )
+        if not changed:
+            raise AppException("This request was just updated. Please refresh.", 409)
+
+        return await self.repository.get_by_id(request_id)
+
+    async def update_handover_tasks(self, request_id: str, payload) -> dict:
+        document = await self.get_request(request_id)
+
+        if document["status"] not in self.ACTIVE_STATUSES:
+            raise AppException(
+                "Clearance steps can only be updated while the request is active", 400
+            )
+
+        changed = await self.repository.replace_handover_tasks_if_active(
+            request_id,
+            self.ACTIVE_STATUSES,
+            [task.model_dump() for task in payload.handover_tasks],
+            datetime.now(timezone.utc),
         )
         if not changed:
             raise AppException("This request was just updated. Please refresh.", 409)

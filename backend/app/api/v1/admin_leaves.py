@@ -1,3 +1,5 @@
+from datetime import date
+
 from fastapi import APIRouter, Depends, Query
 
 from app.api.deps import require_permission
@@ -46,6 +48,14 @@ async def get_leaves(
     employee_id: str | None = None,
     leave_type: str | None = None,
     department_id: str | None = None,
+    leave_date: date | None = Query(
+        default=None,
+        alias="date",
+        description=(
+            "Only leaves covering this day. Matches when the day falls "
+            "anywhere inside the request's start and end dates."
+        ),
+    ),
 ):
     data = await service.get_leaves(
     page=page,
@@ -54,6 +64,7 @@ async def get_leaves(
     employee_id=employee_id,
     leave_type=leave_type,
     department_id=department_id,
+    leave_date=leave_date,
     current_user=current_user,
 )
 

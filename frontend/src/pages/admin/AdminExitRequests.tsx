@@ -341,7 +341,7 @@ export default function AdminExitRequests() {
       ];
     }
 
-    // Contract End and Retirement share the generic four-card row.
+    // Termination, and any type the app does not know about, share this row.
     return [
       card(
         `Total ${view}`,

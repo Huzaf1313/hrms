@@ -13,6 +13,7 @@ from app.schemas.employee_exit_request import (
     ExitRequestResponse,
     ExitRequestSummary,
     ExitStatusUpdate,
+    HandoverTasksUpdate,
 )
 from app.services.employee_exit_request_service import ExitRequestService
 
@@ -131,6 +132,20 @@ async def update_exit_request_status(
     return APIResponse(
         success=True,
         message=f"Request marked as {document['status']}",
+        data=service._serialize(document),
+    )
+
+
+@router.patch("/{request_id}/handover-tasks", response_model=APIResponse[ExitRequestResponse])
+async def update_exit_request_handover_tasks(
+    request_id: str,
+    payload: HandoverTasksUpdate,
+    _: dict = Depends(require_exit_requests_manage),
+):
+    document = await service.update_handover_tasks(request_id, payload)
+    return APIResponse(
+        success=True,
+        message="Clearance checklist updated successfully",
         data=service._serialize(document),
     )
 
