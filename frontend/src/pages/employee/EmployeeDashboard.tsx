@@ -1,13 +1,8 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Hand, Check } from "lucide-react";
 
-import {
-  useEmployeeAttendance,
-  useEmployeeLeaves,
-  useEmployeeLeaveBalances,
-  useEmployeeAnnouncements,
-} from "../../hooks/useEmployeeData";
+import { api } from "../../services/api";
 
 interface User {
   id: string;
@@ -21,6 +16,15 @@ interface User {
   updated_at: string;
 }
 
+interface AttendanceRecord {
+  date: string;
+  check_in: string | null;
+  check_out: string | null;
+  in_time?: string | null;
+  out_time?: string | null;
+  status?: string | null;
+}
+
 interface LeaveRequest {
   id: string;
   leave_type: string;
@@ -32,13 +36,38 @@ interface LeaveRequest {
   requested_at?: string | null;
 }
 
-interface AttendanceRecord {
-  date: string;
-  check_in: string | null;
-  check_out: string | null;
-  in_time?: string | null;
-  out_time?: string | null;
-  status?: string | null;
+interface LeaveListResponse {
+  items: LeaveRequest[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
+interface LeaveBalance {
+  leave_type: string;
+  available: number;
+  allocated: number;
+  used: number;
+}
+
+interface Announcement {
+  id?: string;
+  title: string;
+  description: string;
+  category?: string;
+  priority?: string;
+  status?: string;
+  published_at?: string | null;
+  is_important?: boolean;
+}
+
+interface AnnouncementResponse {
+  announcements: Announcement[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
 }
 
 function normalizeAttendance(
@@ -277,53 +306,140 @@ function EmployeeDashboard() {
 
   const currentDate = new Date();
 
-  const { data: rawAttendanceRecords } = useEmployeeAttendance(
-    user?.employee_id,
-  );
-  const {
-    data: leaveListResponse,
-    isLoading: loadingLeave,
-    isError: hasLeaveError,
-  } = useEmployeeLeaves(user?.employee_id);
-  const { data: balanceListResponse } = useEmployeeLeaveBalances(
-    user?.employee_id,
-  );
-  const {
-    data: announcementResponse,
-    isLoading: loadingAnnouncements,
-    isError: hasAnnouncementError,
-  } = useEmployeeAnnouncements(1, 3);
+  const [todayAttendance, setTodayAttendance] =
+    useState<AttendanceRecord | null>(null);
 
-  const attendanceRecords = useMemo(() => {
-    return (rawAttendanceRecords || []).map(normalizeAttendance);
-  }, [rawAttendanceRecords]);
+  const [attendanceRecords, setAttendanceRecords] = useState<
+    AttendanceRecord[]
+  >([]);
 
-  const todayAttendance = useMemo(() => {
-    const todayKey = getDateKey(new Date());
-    return (
-      attendanceRecords.find((item) => getDateKey(item.date) === todayKey) ??
-      null
-    );
-  }, [attendanceRecords]);
+  const [leaveRequests, setLeaveRequests] = useState<
+    LeaveRequest[]
+  >([]);
 
-  const leaveRequests = useMemo(
-    () => leaveListResponse?.items || [],
-    [leaveListResponse],
-  );
-  const leaveBalances = useMemo(
-    () => balanceListResponse || [],
-    [balanceListResponse],
-  );
-  const announcements = useMemo(
-    () => (announcementResponse?.announcements || []).slice(0, 3),
-    [announcementResponse],
-  );
-  const leaveError = hasLeaveError
-    ? "Unable to load leave information."
-    : "";
-  const announcementError = hasAnnouncementError
-    ? "Unable to load announcements."
-    : "";
+  const [leaveBalances, setLeaveBalances] = useState<
+    LeaveBalance[]
+  >([]);
+
+  const [announcements, setAnnouncements] = useState<
+    Announcement[]
+  >([]);
+
+  const [loadingLeave, setLoadingLeave] = useState(true);
+  const [loadingAnnouncements, setLoadingAnnouncements] =
+    useState(true);
+
+  const [leaveError, setLeaveError] = useState("");
+  const [announcementError, setAnnouncementError] =
+    useState("");
+
+  /* =========================================================
+     ATTENDANCE
+  ========================================================= */
+
+  useEffect(() => {
+    if (!user?.employee_id) {
+      return;
+    }
+
+    api
+      .get<AttendanceRecord[]>(
+        `/employee-attendance/employees/${user.employee_id}`,
+        {
+          page: 1,
+          limit: 100,
+        },
+      )
+      .then((records) => {
+        const normalizedRecords = records.map(
+          normalizeAttendance,
+        );
+
+        setAttendanceRecords(normalizedRecords);
+
+        const todayKey = getDateKey(new Date());
+
+        const today = normalizedRecords.find(
+          (item) => getDateKey(item.date) === todayKey,
+        );
+
+        setTodayAttendance(today ?? null);
+      })
+      .catch(() => {
+        setAttendanceRecords([]);
+        setTodayAttendance(null);
+      });
+  }, [user?.employee_id]);
+
+  /* =========================================================
+     LEAVE
+  ========================================================= */
+
+  useEffect(() => {
+    if (!user?.employee_id) {
+      setLoadingLeave(false);
+      return;
+    }
+
+    const employeeId = user.employee_id;
+
+    setLoadingLeave(true);
+    setLeaveError("");
+
+    Promise.all([
+      api.get<LeaveListResponse>(
+        `/employee-leave/employees/${employeeId}`,
+        {
+          page: 1,
+          limit: 100,
+        },
+      ),
+      api.get<LeaveBalance[]>(
+        `/employee-leave/employees/${employeeId}/balance`,
+      ),
+    ])
+      .then(([leaveResponse, balanceResponse]) => {
+        setLeaveRequests(leaveResponse.items || []);
+        setLeaveBalances(balanceResponse || []);
+      })
+      .catch(() => {
+        setLeaveRequests([]);
+        setLeaveBalances([]);
+        setLeaveError("Unable to load leave information.");
+      })
+      .finally(() => {
+        setLoadingLeave(false);
+      });
+  }, [user?.employee_id]);
+
+  /* =========================================================
+     ANNOUNCEMENTS
+  ========================================================= */
+
+  useEffect(() => {
+    setLoadingAnnouncements(true);
+    setAnnouncementError("");
+
+    api
+      .get<AnnouncementResponse>("/employee-announcements", {
+        page: 1,
+        page_size: 3,
+      })
+      .then((response) => {
+        setAnnouncements(
+          (response.announcements || []).slice(0, 3),
+        );
+      })
+      .catch(() => {
+        setAnnouncements([]);
+        setAnnouncementError(
+          "Unable to load announcements.",
+        );
+      })
+      .finally(() => {
+        setLoadingAnnouncements(false);
+      });
+  }, []);
 
   /* =========================================================
      TIME FORMATTER

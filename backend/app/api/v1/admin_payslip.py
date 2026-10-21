@@ -5,10 +5,8 @@ from app.api.deps import require_permission
 from app.schemas.admin_payslip import (
     AdminPayslipCreate,
     PayrollAnalyticsResponse,
-    PayslipStatusUpdate,
 )
 from app.schemas.common import APIResponse
-from app.core.exceptions import AppException
 from app.services.admin_payslip_service import AdminPayslipService
 
 
@@ -49,6 +47,15 @@ async def create_payslip(
 async def get_payroll_analytics(
     year: int | None = None,
     months: int | None = 6,
+    month: int | None = Query(
+        default=None,
+        ge=1,
+        le=12,
+        description=(
+            "Narrows the whole response to a single payroll month. "
+            "Requires year to be set."
+        ),
+    ),
     current_user: dict = Depends(
         require_permission(Permission.PAYROLL_READ)
     ),
@@ -56,6 +63,7 @@ async def get_payroll_analytics(
     analytics = await service.get_payroll_analytics(
         year=year,
         months=months,
+        month=month,
     )
 
     return APIResponse(
@@ -68,51 +76,24 @@ async def get_payroll_analytics(
 @router.get(
     "",
     summary="Get All Admin Payslips",
-    description="Get all employee payslips with pagination and filtering.",
+    description="Get all employee payslips with pagination.",
 )
 async def get_all_payslips(
     page: int = 1,
     limit: int = 20,
-    month: str | None = None,
-    year: int | None = None,
-    search: str | None = None,
-    status: str | None = None,
     current_user: dict = Depends(
-        require_permission(Permission.PAYROLL_READ)
+        require_permission(Permission.PAYSLIPS_READ)
     ),
 ):
     payslips = await service.get_all_payslips(
         page=page,
         limit=limit,
-        month=month,
-        year=year,
-        search=search,
-        status=status,
-    )
-
-
-
-@router.patch(
-    "/{payslip_id}/status",
-    summary="Update Payslip Status",
-    description="Update payslip payment status (e.g., Paid, Credited, Processing).",
-)
-async def update_payslip_status(
-    payslip_id: str,
-    payload: PayslipStatusUpdate,
-    current_user: dict = Depends(
-        require_permission(Permission.PAYROLL_PROCESS)
-    ),
-):
-    updated = await service.update_payslip_status(
-        payslip_id=payslip_id,
-        status=payload.status,
     )
 
     return {
         "success": True,
-        "message": "Payslip status updated successfully",
-        "data": updated,
+        "message": "Payslips retrieved successfully",
+        "data": payslips,
     }
 
 
@@ -136,16 +117,4 @@ async def get_payslip_by_id(
         "message": "Payslip retrieved successfully",
         "data": payslip,
     }
-
-
-@router.get(
-    "/{payslip_id}/download",
-    summary="Download Admin Payslip (Disabled)",
-    description="Payslip PDF download has been retired and disabled.",
-)
-async def download_payslip(payslip_id: str):
-    raise AppException(
-        "Payslip PDF download has been disabled",
-        410,
-    )
 

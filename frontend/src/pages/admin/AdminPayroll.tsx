@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
   BarChart3,
@@ -17,10 +17,13 @@ import SalaryStructureTab from "../../components/admin/SalaryStructureTab";
 import DeductionsTab from "../../components/admin/DeductionsTab";
 import PayslipsTab from "../../components/admin/PayslipsTab";
 import Reports from "../../components/admin/Reports";
+import { useGlobalDate } from "../../context/globalDateContext";
+import { GlobalDateBadge } from "../../components/GlobalDateBadge";
 import {
+  adminPayrollService,
   type MonthlyPayrollItem,
+  type PayrollAnalyticsData,
 } from "../../services/adminPayrollService";
-import { usePayrollAnalytics } from "../../hooks/useAdminPayroll";
 
 type TabKey = "overview" | "structure" | "deductions" | "payslips" | "reports";
 
@@ -288,38 +291,75 @@ function PayrollChart({ timeline, hoveredIndex, onHover }: PayrollChartProps) {
 export default function AdminPayroll() {
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
   const [periodFilter, setPeriodFilter] = useState<string>("last_6");
+  const [analytics, setAnalytics] = useState<PayrollAnalyticsData | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
   const [hoveredBarIndex, setHoveredBarIndex] = useState<number | null>(null);
 
-  const analyticsParams = useMemo(() => {
-    if (periodFilter === "last_6") {
-      return { months: 6 };
-    } else if (periodFilter === "last_12") {
-      return { months: 12 };
-    } else {
-      const parsedYear = Number(periodFilter);
-      return !isNaN(parsedYear) ? { year: parsedYear } : {};
+  // Payroll runs a whole month at a time, so the header calendar's day is
+  // resolved to its month and year here rather than passed through.
+  const { date: globalDate, isDefault: isGlobalDateDefault } = useGlobalDate();
+
+  const globalYear = Number(globalDate.slice(0, 4));
+  const globalMonth = Number(globalDate.slice(5, 7));
+
+  const fetchAnalytics = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      let params: { year?: number; months?: number; month?: number } = {};
+
+      if (!isGlobalDateDefault) {
+        params = { year: globalYear, month: globalMonth };
+      } else if (periodFilter === "last_6") {
+        params = { months: 6 };
+      } else if (periodFilter === "last_12") {
+        params = { months: 12 };
+      } else {
+        const parsedYear = Number(periodFilter);
+        if (!isNaN(parsedYear)) {
+          params = { year: parsedYear };
+        }
+      }
+
+      const data = await adminPayrollService.getAnalytics(params);
+      setAnalytics(data);
+    } catch (err: unknown) {
+      console.error("Failed to load payroll analytics:", err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to load payroll overview data."
+      );
+    } finally {
+      setLoading(false);
     }
-  }, [periodFilter]);
+  }, [globalMonth, globalYear, isGlobalDateDefault, periodFilter]);
 
-  const {
-    data: analyticsData,
-    isLoading: loading,
-    error: queryError,
-    refetch,
-  } = usePayrollAnalytics(analyticsParams);
-
-  const analytics = analyticsData ?? null;
-  const error = queryError
-    ? queryError instanceof Error
-      ? queryError.message
-      : "Failed to load payroll overview data."
-    : null;
+  // Refresh analytics whenever overview tab is opened or period filter changes
+  useEffect(() => {
+    if (activeTab === "overview") {
+      void fetchAnalytics();
+    }
+  }, [activeTab, fetchAnalytics]);
 
   const filterLabel = useMemo(() => {
+    if (!isGlobalDateDefault) {
+      const parsed = new Date(`${globalDate}T00:00:00`);
+
+      return Number.isNaN(parsed.getTime())
+        ? globalDate
+        : parsed.toLocaleDateString("en-GB", {
+            month: "long",
+            year: "numeric",
+          });
+    }
+
     if (periodFilter === "last_6") return "Last 6 Months";
     if (periodFilter === "last_12") return "Last 12 Months";
     return `Year ${periodFilter}`;
-  }, [periodFilter]);
+  }, [globalDate, isGlobalDateDefault, periodFilter]);
 
   const summary = analytics?.summary;
 
@@ -389,14 +429,12 @@ export default function AdminPayroll() {
     ["Payroll Reports", BarChart3, () => setActiveTab("reports")],
   ];
 
-  const pendingItems: Array<[string, string, typeof Users, () => void]> = useMemo(() => {
+  const pendingItems: Array<[string, string, typeof Users]> = useMemo(() => {
     const pendingCount = summary?.pending_payroll ?? 0;
-    const newJoiners = summary?.new_joiners ?? 0;
-    const unassignedStructures = summary?.unassigned_salary_structures ?? 0;
     return [
-      [String(pendingCount), "Employees - Pending Payroll", Users, () => setActiveTab("payslips")],
-      [String(newJoiners), "New Joiners (Last 30 Days)", Users, () => setActiveTab("payslips")],
-      [String(unassignedStructures), "Employees Missing Salary Structure", ClipboardList, () => setActiveTab("structure")],
+      [String(pendingCount), "Employees - Pending Payroll", Users],
+      ["0", "New Joiners - Add to Payroll", Users],
+      ["0", "Employee Updates - Pending", ClipboardList],
     ];
   }, [summary]);
 
@@ -467,30 +505,36 @@ export default function AdminPayroll() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500">
-                  {/* Filter select */}
-                  <div className="relative">
-                    <select
-                      value={periodFilter}
-                      onChange={(e) => setPeriodFilter(e.target.value)}
-                      disabled={loading}
-                      aria-label="Select payroll chart period"
-                      className="cursor-pointer appearance-none rounded-full border border-gray-200 bg-white py-1.5 pl-3 pr-8 text-xs font-medium text-gray-700 outline-none transition hover:border-gray-300 focus:border-[#2563eb]"
-                    >
-                      <option value="last_6">Last 6 Months</option>
-                      <option value="last_12">Last 12 Months</option>
-                      {analytics?.available_years?.map((yr) => (
-                        <option key={yr} value={String(yr)}>
-                          Year {yr}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
-                  </div>
+                  {/* The header calendar's day already pins the page to one
+                      month, so a competing period control would only be able
+                      to contradict it. */}
+                  {isGlobalDateDefault ? (
+                    <div className="relative">
+                      <select
+                        value={periodFilter}
+                        onChange={(e) => setPeriodFilter(e.target.value)}
+                        disabled={loading}
+                        aria-label="Select payroll chart period"
+                        className="cursor-pointer appearance-none rounded-full border border-gray-200 bg-white py-1.5 pl-3 pr-8 text-xs font-medium text-gray-700 outline-none transition hover:border-gray-300 focus:border-[#2563eb]"
+                      >
+                        <option value="last_6">Last 6 Months</option>
+                        <option value="last_12">Last 12 Months</option>
+                        {analytics?.available_years?.map((yr) => (
+                          <option key={yr} value={String(yr)}>
+                            Year {yr}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+                    </div>
+                  ) : (
+                    <GlobalDateBadge prefix="Period" />
+                  )}
 
                   {/* Refresh button */}
                   <button
                     type="button"
-                    onClick={() => void refetch()}
+                    onClick={() => void fetchAnalytics()}
                     disabled={loading}
                     title="Refresh payroll data"
                     className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700"
@@ -524,7 +568,7 @@ export default function AdminPayroll() {
                   <p className="text-xs font-medium text-red-700">{error}</p>
                   <button
                     type="button"
-                    onClick={() => void refetch()}
+                    onClick={() => void fetchAnalytics()}
                     className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700"
                   >
                     Try Again
@@ -650,7 +694,7 @@ export default function AdminPayroll() {
               </div>
 
               <div className="flex flex-col gap-3">
-                {pendingItems.map(([count, label, Icon, action]) => (
+                {pendingItems.map(([count, label, Icon]) => (
                   <div
                     key={label}
                     className="flex items-center gap-3 rounded-2xl border border-gray-100 p-4"
@@ -664,7 +708,7 @@ export default function AdminPayroll() {
 
                     <button
                       type="button"
-                      onClick={action}
+                      onClick={() => setActiveTab("payslips")}
                       className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50"
                     >
                       View

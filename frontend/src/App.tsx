@@ -21,7 +21,8 @@ import { authService } from "./services/authService";
 import EmployeeLayout from "./layouts/EmployeeLayout";
 import EmployeeExit from "./pages/employee/EmployeeExit";
 import EmployeeResignation from "./pages/employee/EmployeeResignation";
-import { clearAuthQueries } from "./lib/queryClient";
+import { GlobalDateProvider } from "./context/GlobalDateProvider";
+
 
 function App() {
   async function handleLogout() {
@@ -29,9 +30,9 @@ function App() {
 
     if (refreshToken) {
       await authService.logout(refreshToken);
+    } else {
+      clearSession();
     }
-    clearSession();
-    clearAuthQueries();
 
     window.location.href = "/login";
   }

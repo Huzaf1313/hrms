@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  ArrowDownToLine,
   Banknote,
   CalendarDays,
   ChevronLeft,
@@ -12,7 +13,9 @@ import {
   ShieldCheck,
   Wallet,
 } from "lucide-react";
-import { api } from "../../services/api";
+import { api, downloadFile } from "../../services/api";
+import { useGlobalDate } from "../../context/globalDateContext";
+import { GlobalDateBadge } from "../../components/GlobalDateBadge";
 
 type PayrollTab =
   | "Payslips"
@@ -157,6 +160,10 @@ useEffect(() => {
   }
 }, [payslips, selectedPayrollId]);
 
+const selectedDownloadPayslip =
+  payslips.find((payslip) => payslip.id === selectedPayrollId) ??
+  payslips[0] ??
+  null;
 
 const salaryComponents: SalaryComponent[] = latestPayroll
   ? [
@@ -291,6 +298,38 @@ const salaryComponents: SalaryComponent[] = latestPayroll
     setCurrentPage((page) => Math.min(Math.max(totalPages, 1), page + 1));
   }
 
+async function handleDownloadPayslip(payslip?: Payslip | null) {
+  if (!payslip?.id) {
+    window.alert("Payslip information is not available.");
+    return;
+  }
+
+  try {
+    const pdfBlob = await downloadFile(
+      `/employee-payslip/${payslip.id}/download`,
+    );
+
+    const downloadUrl = window.URL.createObjectURL(pdfBlob);
+
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.download = `payslip_${(payslip.month || "statement").replace(/\s+/g, "_")}.pdf`;
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    window.URL.revokeObjectURL(downloadUrl);
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Unable to download payslip.";
+
+    window.alert(message);
+  }
+}
+
   return (
     <>
       <div className="min-h-screen bg-slate-50">
@@ -343,33 +382,29 @@ const salaryComponents: SalaryComponent[] = latestPayroll
           </div>
 
           {/* Summary Cards */}
-          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {/* Net Salary */}
-            <div className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-slate-500">
-                      Net Salary
-                    </p>
-                    <p className="mt-2 text-xl font-bold text-slate-900">
-                      {latestPayroll
-                        ? formatCurrency(Number(latestPayroll.net_salary ?? 0))
-                        : "—"}
-                    </p>
-                  </div>
-
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50">
-                    <Banknote className="h-5 w-5 text-emerald-600" />
-                  </div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-500">
+                    Net Salary
+                  </p>
+                  {latestPayroll
+                    ? formatCurrency(Number(latestPayroll.net_salary ?? 0))
+                    : "—"}
                 </div>
 
-                <div className="mt-4 flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-                    <CircleCheck className="h-3.5 w-3.5" />
-                    {latestPayroll?.payment?.status ?? "—"}
-                  </span>
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50">
+                  <Banknote className="h-5 w-5 text-emerald-600" />
                 </div>
+              </div>
+
+              <div className="mt-4 flex items-center gap-2">
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                  <CircleCheck className="h-3.5 w-3.5" />
+                  {latestPayroll?.payment?.status ?? "—"}
+                </span>
               </div>
 
               <div className="mt-4 grid grid-cols-2 gap-3 border-t border-slate-100 pt-3">
@@ -394,90 +429,112 @@ const salaryComponents: SalaryComponent[] = latestPayroll
             </div>
 
             {/* Pay Period */}
-            <div className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-slate-500">
-                      Pay Period
-                    </p>
-                    <p className="mt-2 text-xl font-bold text-slate-900">
-                      {latestPayroll?.month ?? "—"}
-                    </p>
-                  </div>
-
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50">
-                    <CalendarDays className="h-5 w-5 text-blue-600" />
-                  </div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-500">
+                    Pay Period
+                  </p>
+                  <p className="mt-2 text-xl font-bold text-slate-900">
+                    {latestPayroll?.month ?? "—"}
+                  </p>
                 </div>
 
-                <p className="mt-4 text-sm text-slate-500">
-                  {latestPayroll
-                    ? `${new Date(latestPayroll.pay_period_start).toLocaleDateString(
-                        "en-IN",
-                        {
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric",
-                        }
-                      )} – ${new Date(latestPayroll.pay_period_end).toLocaleDateString(
-                        "en-IN",
-                        {
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric",
-                        }
-                      )}`
-                    : "—"}
-                </p>
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50">
+                  <CalendarDays className="h-5 w-5 text-blue-600" />
+                </div>
               </div>
 
-              <div className="mt-4 border-t border-slate-100 pt-3">
-                <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
-                  <div className="h-full w-full rounded-full bg-blue-600" />
-                </div>
+              <p className="mt-5 text-sm text-slate-500">
+                {latestPayroll
+                  ? `${new Date(latestPayroll.pay_period_start).toLocaleDateString(
+                      "en-IN",
+                      {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      }
+                    )} – ${new Date(latestPayroll.pay_period_end).toLocaleDateString(
+                      "en-IN",
+                      {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      }
+                    )}`
+                  : "—"}
+              </p>
+
+              <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                <div className="h-full w-full rounded-full bg-blue-600" />
               </div>
             </div>
 
             {/* Bank Account */}
-            <div className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-slate-500">
-                      Bank Account
-                    </p>
-                    <p className="mt-2 text-xl font-bold text-slate-900">
-                      {latestPayroll?.bank_details?.bank_name ?? "—"}
-                    </p>
-                  </div>
-
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50">
-                    <Landmark className="h-5 w-5 text-violet-600" />
-                  </div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-500">
+                    Bank Account
+                  </p>
+                  <p className="mt-2 text-xl font-bold text-slate-900">
+                    {latestPayroll?.bank_details?.bank_name ?? "—"}
+                  </p>
                 </div>
 
-                <div className="mt-4 flex items-center gap-2">
-                  <CreditCard className="h-4 w-4 text-slate-400" />
-                  <span className="text-sm font-medium text-slate-600">
-                    {latestPayroll?.bank_details?.account_last4
-                      ? `•••• ${latestPayroll.bank_details.account_last4}`
-                      : "—"}
-                  </span>
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50">
+                  <Landmark className="h-5 w-5 text-violet-600" />
                 </div>
               </div>
 
-              <div className="mt-4 border-t border-slate-100 pt-3">
+              <div className="mt-4 flex items-center gap-2">
+                <CreditCard className="h-4 w-4 text-slate-400" />
+                <span className="text-sm font-medium text-slate-600">
+                  {latestPayroll?.bank_details?.account_last4
+                    ? `•••• ${latestPayroll.bank_details.account_last4}`
+                    : "—"}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                className="mt-3 text-sm font-semibold text-blue-600 transition hover:text-blue-700"
+                onClick={() =>
+                  window.alert("Bank account details will be connected to the backend later.")
+                }
+              >
+                View Details
+              </button>
+            </div>
+
+            {/* Payslip Banner */}
+            <div className="relative overflow-hidden rounded-2xl bg-[#0d1e3e] p-5 shadow-sm">
+              <div className="relative z-10">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10">
+                  <FileText className="h-5 w-5 text-white" />
+                </div>
+
+                <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-blue-200">
+                  {latestPayroll?.month
+                    ? `${latestPayroll.month} Payslip`
+                    : "Payslip"}
+                </p>
+                <h2 className="mt-1 text-lg font-bold text-white">
+                  Your payslip is ready!
+                </h2>
+
                 <button
                   type="button"
-                  className="text-sm font-semibold text-blue-600 transition hover:text-blue-700"
-                  onClick={() =>
-                    window.alert("Bank account details will be connected to the backend later.")
-                  }
+                  onClick={() => handleDownloadPayslip(selectedDownloadPayslip)}
+                  className="mt-4 inline-flex items-center gap-2 rounded-lg bg-white px-3.5 py-2 text-sm font-semibold text-[#0d1e3e] transition hover:bg-slate-100"
                 >
-                  View Details
+                  <ArrowDownToLine className="h-4 w-4" />
+                  Download Payslip
                 </button>
               </div>
+
+              <div className="absolute -right-8 -top-8 h-28 w-28 rounded-full bg-blue-500/20" />
+              <div className="absolute -bottom-12 -right-2 h-32 w-32 rounded-full bg-blue-500/10" />
             </div>
           </section>
 
@@ -906,7 +963,7 @@ const salaryComponents: SalaryComponent[] = latestPayroll
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedPayslip(null); }}>
           <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4"><div><h2 className="text-lg font-bold text-slate-900">Payslip Details</h2><p className="mt-0.5 text-sm text-slate-500">{selectedPayslip.month}</p></div><button type="button" onClick={() => setSelectedPayslip(null)} className="h-9 w-9 rounded-lg text-slate-400" aria-label="Close">x</button></div>
-            <div className="space-y-5 p-5"><div className="rounded-xl bg-slate-50 p-4"><div className="flex items-center justify-between"><span className="text-sm text-slate-500">Net Salary</span><span className="text-xl font-bold text-slate-900">{formatCurrency(selectedPayslip.amount)}</span></div><div className="mt-3 flex items-center justify-between border-t border-slate-200 pt-3"><span className="text-sm text-slate-500">Paid On</span><span className="text-sm font-semibold text-slate-700">{selectedPayslip.paidOn}</span></div><div className="mt-3 flex items-center justify-between"><span className="text-sm text-slate-500">Status</span><span className="text-sm font-semibold text-emerald-700">{selectedPayslip.status}</span></div></div><div><h3 className="text-sm font-bold text-slate-800">Salary Summary</h3><div className="mt-3 space-y-3"><div className="flex justify-between text-sm"><span className="text-slate-500">Gross Salary</span><span className="font-semibold text-slate-800">{formatCurrency(grossSalary)}</span></div><div className="flex justify-between text-sm"><span className="text-slate-500">Total Deductions</span><span className="font-semibold text-slate-800">{formatCurrency(totalDeductions)}</span></div><div className="flex justify-between border-t border-slate-100 pt-3 text-sm"><span className="font-semibold text-slate-700">Net Salary</span><span className="font-bold text-blue-600">{formatCurrency(netSalary)}</span></div></div></div><button type="button" onClick={() => setSelectedPayslip(null)} className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-200">Close</button></div>
+            <div className="space-y-5 p-5"><div className="rounded-xl bg-slate-50 p-4"><div className="flex items-center justify-between"><span className="text-sm text-slate-500">Net Salary</span><span className="text-xl font-bold text-slate-900">{formatCurrency(selectedPayslip.amount)}</span></div><div className="mt-3 flex items-center justify-between border-t border-slate-200 pt-3"><span className="text-sm text-slate-500">Paid On</span><span className="text-sm font-semibold text-slate-700">{selectedPayslip.paidOn}</span></div><div className="mt-3 flex items-center justify-between"><span className="text-sm text-slate-500">Status</span><span className="text-sm font-semibold text-emerald-700">{selectedPayslip.status}</span></div></div><div><h3 className="text-sm font-bold text-slate-800">Salary Summary</h3><div className="mt-3 space-y-3"><div className="flex justify-between text-sm"><span className="text-slate-500">Gross Salary</span><span className="font-semibold text-slate-800">{formatCurrency(grossSalary)}</span></div><div className="flex justify-between text-sm"><span className="text-slate-500">Total Deductions</span><span className="font-semibold text-slate-800">{formatCurrency(totalDeductions)}</span></div><div className="flex justify-between border-t border-slate-100 pt-3 text-sm"><span className="font-semibold text-slate-700">Net Salary</span><span className="font-bold text-blue-600">{formatCurrency(netSalary)}</span></div></div></div><button type="button" onClick={() => handleDownloadPayslip(selectedPayslip)} className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white"><ArrowDownToLine className="h-4 w-4" />Download Payslip</button></div>
           </div>
         </div>
       )}
