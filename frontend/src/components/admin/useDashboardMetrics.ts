@@ -1,5 +1,4 @@
-import { useCallback, useMemo } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useState } from "react";
 
 import { attendanceService } from "../../services/attendanceService";
 import { departmentService } from "../../services/departmentService";
@@ -10,7 +9,7 @@ import type {
   CandidateStage,
   UpcomingInterview,
 } from "../../types/recruitment";
-import { queryKeys } from "../../lib/queryKeys";
+
 import { DEPARTMENT_COLORS } from "./dashboardData";
 
 export interface DepartmentCount {
@@ -67,171 +66,130 @@ function todayKey(): string {
 }
 
 /**
- * Loads the dashboard figures with TanStack Query caching and deduplication.
+ * Loads the dashboard figures that the API can already answer.
  *
- * Each metric is settled independently and cached according to volatility:
- * - Attendance summary: 60s
- * - Leave summary: 2m
- * - Active employees: 5m
- * - Departments: 10m
- * - Recruitment stats & interviews: 3m
- *
- * Navigating between dashboard tabs reuses fresh data without hitting MongoDB.
+ * Every request is settled independently and each metric stays `null` when its
+ * endpoint is missing or fails, so the UI can keep showing the placeholder for
+ * that one card instead of blanking the whole dashboard.
  */
 export function useDashboardMetrics(
   seedTotalEmployees: number | null,
 ): DashboardMetricsState {
-  const queryClient = useQueryClient();
-  const currentTodayKey = todayKey();
+  const [metrics, setMetrics] = useState<DashboardMetrics>(EMPTY_METRICS);
+  const [reloadToken, setReloadToken] = useState(0);
 
-  const attendanceQuery = useQuery({
-    queryKey: queryKeys.admin.attendanceSummary(currentTodayKey),
-    queryFn: () => attendanceService.summary(currentTodayKey),
-    staleTime: 60 * 1000,
-  });
+  useEffect(() => {
+    let active = true;
 
-  const leaveQuery = useQuery({
-    queryKey: queryKeys.admin.leaveSummary(),
-    queryFn: () => leaveService.summary(),
-    staleTime: 2 * 60 * 1000,
-  });
-
-  const employeesQuery = useQuery({
-    queryKey: queryKeys.admin.employees({ status: "active" }),
-    queryFn: () => employeeService.listAll({ status: "active" }),
-    staleTime: 5 * 60 * 1000,
-  });
-
-  const departmentsQuery = useQuery({
-    queryKey: queryKeys.reference.departments(),
-    queryFn: () => departmentService.listAll(),
-    staleTime: 10 * 60 * 1000,
-  });
-
-  const recruitmentStatsQuery = useQuery({
-    queryKey: queryKeys.admin.recruitmentStats(),
-    queryFn: () => recruitmentService.getStats(),
-    staleTime: 3 * 60 * 1000,
-  });
-
-  const upcomingInterviewsQuery = useQuery({
-    queryKey: queryKeys.admin.recruitmentInterviews(UPCOMING_INTERVIEW_LIMIT),
-    queryFn: () =>
+    void Promise.allSettled([
+      attendanceService.summary(todayKey()),
+      leaveService.summary(),
+      employeeService.listAll({ status: "active" }),
+      departmentService.listAll(),
+      recruitmentService.getStats(),
       recruitmentService.getUpcomingInterviews(UPCOMING_INTERVIEW_LIMIT),
-    staleTime: 3 * 60 * 1000,
-  });
+    ]).then(
+      ([attendance, leave, employees, departments, recruitment, interviews]) => {
+        const next: DashboardMetrics = { ...EMPTY_METRICS };
 
-  const metrics = useMemo<DashboardMetrics>(() => {
-    const next: DashboardMetrics = { ...EMPTY_METRICS };
+        if (seedTotalEmployees) {
+          next.totalEmployees = seedTotalEmployees;
+        }
 
-    if (seedTotalEmployees) {
-      next.totalEmployees = seedTotalEmployees;
-    }
+        if (attendance.status === "fulfilled") {
+          const summary = attendance.value;
 
-    if (attendanceQuery.data) {
-      const summary = attendanceQuery.data;
-      next.presentToday = summary.present_count ?? null;
-      next.presentPercent = summary.present_percentage ?? null;
-      next.onLeaveToday = summary.on_leave_count ?? null;
-      next.onLeavePercent = summary.on_leave_percentage ?? null;
+          next.presentToday = summary.present_count ?? null;
+          next.presentPercent = summary.present_percentage ?? null;
+          next.onLeaveToday = summary.on_leave_count ?? null;
+          next.onLeavePercent = summary.on_leave_percentage ?? null;
 
-      if (!next.totalEmployees && summary.total_employees > 0) {
-        next.totalEmployees = summary.total_employees;
-      }
-    }
+          if (!next.totalEmployees && summary.total_employees > 0) {
+            next.totalEmployees = summary.total_employees;
+          }
+        }
 
-    if (leaveQuery.data) {
-      next.pendingLeaveRequests = leaveQuery.data.pending_requests ?? null;
-    }
+        if (leave.status === "fulfilled") {
+          next.pendingLeaveRequests = leave.value.pending_requests ?? null;
+        }
 
-    if (recruitmentStatsQuery.data) {
-      next.recruitmentStageCounts = recruitmentStatsQuery.data.stage_counts;
-      next.activeJobPositions =
-        recruitmentStatsQuery.data.active_job_positions ?? null;
-    }
+        // The same stats call the recruitment page reads, so the dashboard
+        // funnel and the pipeline board can never disagree.
+        if (recruitment.status === "fulfilled") {
+          next.recruitmentStageCounts = recruitment.value.stage_counts;
+          next.activeJobPositions =
+            recruitment.value.active_job_positions ?? null;
+        }
 
-    if (upcomingInterviewsQuery.data) {
-      next.upcomingInterviews = upcomingInterviewsQuery.data;
-    }
+        // An empty array is a real answer ("nothing booked"), so it is kept
+        // distinct from null, which means the request failed.
+        if (interviews.status === "fulfilled") {
+          next.upcomingInterviews = interviews.value;
+        }
 
-    // Department headcount: the attendance summary already reports total
-    // employees per department, so one call covers the donut.
-    if (attendanceQuery.data) {
-      const presence = attendanceQuery.data.department_presence ?? [];
+        // Department headcount: the attendance summary already reports total
+        // employees per department, so one call covers the donut.
+        if (attendance.status === "fulfilled") {
+          const presence = attendance.value.department_presence ?? [];
 
-      const counts = presence
-        .filter((entry) => entry.total_employees > 0)
-        .map((entry) => ({
-          label: entry.department_name,
-          value: entry.total_employees,
-        }))
-        .sort((a, b) => b.value - a.value)
-        .slice(0, DEPARTMENT_COLORS.length);
+          const counts = presence
+            .filter((entry) => entry.total_employees > 0)
+            .map((entry) => ({
+              label: entry.department_name,
+              value: entry.total_employees,
+            }))
+            .sort((a, b) => b.value - a.value)
+            .slice(0, DEPARTMENT_COLORS.length);
 
-      if (counts.length > 0) {
-        next.departmentCounts = counts;
-      }
-    }
+          if (counts.length > 0) {
+            next.departmentCounts = counts;
+          }
+        }
 
-    // Fall back to counting active employees per department when the summary
-    // carries no per-department breakdown.
-    if (
-      !next.departmentCounts &&
-      employeesQuery.data &&
-      departmentsQuery.data &&
-      employeesQuery.data.length > 0
-    ) {
-      const nameById = new Map(
-        departmentsQuery.data.map((department) => [
-          department.id,
-          department.name,
-        ]),
-      );
+        // Fall back to counting active employees per department when the summary
+        // carries no per-department breakdown.
+        if (
+          !next.departmentCounts &&
+          employees.status === "fulfilled" &&
+          departments.status === "fulfilled" &&
+          employees.value.length > 0
+        ) {
+          const nameById = new Map(
+            departments.value.map((department) => [
+              department.id,
+              department.name,
+            ]),
+          );
 
-      const counts = new Map<string, number>();
+          const counts = new Map<string, number>();
 
-      for (const employee of employeesQuery.data) {
-        const name = nameById.get(employee.department_id) ?? "Unassigned";
-        counts.set(name, (counts.get(name) ?? 0) + 1);
-      }
+          for (const employee of employees.value) {
+            const name =
+              nameById.get(employee.department_id) ?? "Unassigned";
 
-      next.departmentCounts = [...counts.entries()]
-        .map(([label, value]) => ({ label, value }))
-        .sort((a, b) => b.value - a.value)
-        .slice(0, DEPARTMENT_COLORS.length);
-    }
+            counts.set(name, (counts.get(name) ?? 0) + 1);
+          }
 
-    return next;
-  }, [
-    seedTotalEmployees,
-    attendanceQuery.data,
-    leaveQuery.data,
-    recruitmentStatsQuery.data,
-    upcomingInterviewsQuery.data,
-    employeesQuery.data,
-    departmentsQuery.data,
-  ]);
+          next.departmentCounts = [...counts.entries()]
+            .map(([label, value]) => ({ label, value }))
+            .sort((a, b) => b.value - a.value)
+            .slice(0, DEPARTMENT_COLORS.length);
+        }
+
+        if (active) {
+          setMetrics(next);
+        }
+      },
+    );
+
+    return () => {
+      active = false;
+    };
+  }, [seedTotalEmployees, reloadToken]);
 
   const refresh = useCallback(() => {
-    void queryClient.invalidateQueries({
-      queryKey: queryKeys.admin.attendanceSummary(currentTodayKey),
-    });
-    void queryClient.invalidateQueries({
-      queryKey: queryKeys.admin.leaveSummary(),
-    });
-    void queryClient.invalidateQueries({
-      queryKey: queryKeys.admin.employees({ status: "active" }),
-    });
-    void queryClient.invalidateQueries({
-      queryKey: queryKeys.reference.departments(),
-    });
-    void queryClient.invalidateQueries({
-      queryKey: queryKeys.admin.recruitmentStats(),
-    });
-    void queryClient.invalidateQueries({
-      queryKey: queryKeys.admin.recruitmentInterviews(UPCOMING_INTERVIEW_LIMIT),
-    });
-  }, [queryClient, currentTodayKey]);
+    setReloadToken((token) => token + 1);
+  }, []);
 
   return { metrics, refresh };
 }

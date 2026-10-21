@@ -1,10 +1,5 @@
 import { api } from "./api";
-import type {
-  Employee,
-  EmployeeCreate,
-  EmployeeOTPRequestResponse,
-  EmployeeOTPVerifyResponse,
-} from "../types/employee";
+import type { Employee, EmployeeCreate } from "../types/employee";
 
 export type EmployeeUpdate = Partial<EmployeeCreate>;
 
@@ -57,20 +52,6 @@ export const employeeService = {
 
   create(data: EmployeeCreate) {
     return api.post<Employee>("/employees", data);
-  },
-
-  requestEmailOtp(email: string) {
-    return api.post<EmployeeOTPRequestResponse>(
-      "/employees/request-email-otp",
-      { email },
-    );
-  },
-
-  verifyEmailOtp(email: string, otp: string) {
-    return api.post<EmployeeOTPVerifyResponse>(
-      "/employees/verify-email-otp",
-      { email, otp },
-    );
   },
 
   update(employeeId: string, data: EmployeeUpdate) {

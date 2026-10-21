@@ -9,10 +9,6 @@ class AdminPayslipCreate(BaseModel):
     year: int = Field(ge=2000, le=2100)
 
 
-class PayslipStatusUpdate(BaseModel):
-    status: str = Field(min_length=1)
-
-
 class AdminPayslipResponse(BaseModel):
     id: str
     employee_id: str
@@ -56,8 +52,6 @@ class PayrollSummaryMetrics(BaseModel):
     period_deductions: float = 0.0
     period_net: float = 0.0
     period_expense: float = 0.0
-    new_joiners: int = 0
-    unassigned_salary_structures: int = 0
 
 
 class PayrollRecentRun(BaseModel):
@@ -80,4 +74,4 @@ class PayrollAnalyticsResponse(BaseModel):
     summary: PayrollSummaryMetrics
     available_years: list[int]
     recent_runs: list[PayrollRecentRun] = []
-    departments: list[PayrollDepartmentSummary] = []
+    departments: list[PayrollDepartmentSummary] = []
