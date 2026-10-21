@@ -93,8 +93,6 @@ from app.repositories.asset_repository import AssetRepository
 from app.repositories.asset_request_repository import AssetRequestRepository
 from app.repositories.candidate_repository import CandidateRepository
 from app.repositories.job_position_repository import JobPositionRepository
-from app.repositories.employee_repository import EmployeeRepository
-from app.services.user_service import UserService
 
 
 @asynccontextmanager
@@ -102,20 +100,6 @@ async def lifespan(app: FastAPI):
     await connect_to_database()
 
     os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
-
-    if settings.BOOTSTRAP_HR_EMAIL and settings.BOOTSTRAP_HR_PASSWORD:
-        created = await UserService().bootstrap_hr_admin(
-            email=settings.BOOTSTRAP_HR_EMAIL,
-            password=settings.BOOTSTRAP_HR_PASSWORD,
-            full_name=settings.BOOTSTRAP_HR_NAME,
-        )
-
-        if created:
-            print(
-                f"Bootstrapped HR account: {settings.BOOTSTRAP_HR_EMAIL}"
-            )
-
-    await EmployeeRepository().ensure_indexes()
 
     shift_repository = ShiftRepository()
     await shift_repository.ensure_indexes()

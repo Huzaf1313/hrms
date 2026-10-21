@@ -2,7 +2,6 @@ from datetime import datetime
 
 from app.core.exceptions import AppException
 from app.core.roles import UserRole
-from app.core.scope import visibility_scope
 from app.core.security import hash_password
 from app.repositories.admin_salary_structure_repository import (
     AdminSalaryStructureRepository,
@@ -167,7 +166,7 @@ class EmployeeService:
     async def create_employee(
         self,
         employee_data: dict,
-        current_user: dict | None = None,
+        created_by: str | None = None,
     ):
         existing_employee = await self.repository.get_by_employee_id(
             employee_data["employee_id"]
@@ -222,29 +221,22 @@ class EmployeeService:
         employee_data["created_at"] = datetime.utcnow()
         employee_data["updated_at"] = datetime.utcnow()
 
-        await self._resolve_manager(employee_data)
-
-        if current_user:
-            # The admin who added this person is who their requests route back to.
-            # Same convention as assets and job openings.
-            employee_data["created_by"] = str(current_user.get("_id"))
+        # The admin who added this person is who their requests route back to.
+        # Same convention as assets and job openings.
+        employee_data["created_by"] = created_by
 
         employee = await self.repository.create(employee_data)
 
         return employee, temporary_password
 
-    async def get_employee(
-        self,
-        employee_id: str,
-        current_user: dict | None = None,
-    ):
-        employee = await self.repository.get_by_id(
-            employee_id,
-            scope=self._visibility_scope(current_user),
-        )
+    async def get_employee(self, employee_id: str):
+        employee = await self.repository.get_by_id(employee_id)
 
         if not employee:
-            raise AppException("Employee not found", 404)
+            raise AppException(
+                "Employee not found",
+                404,
+            )
 
         return employee
 
@@ -254,7 +246,6 @@ class EmployeeService:
         department_id: str | None,
         status: str | None,
         pagination: PaginationParams,
-        current_user: dict | None = None,
     ):
         filters = build_filter(
             {
@@ -295,19 +286,14 @@ class EmployeeService:
             filters=filters,
             skip=pagination.skip,
             limit=pagination.limit,
-            scope=self._visibility_scope(current_user),
         )
 
     async def update_employee(
         self,
         employee_id: str,
         update_data: dict,
-        current_user: dict | None = None
     ):
-        employee = await self.repository.get_by_id(
-            employee_id,
-            scope=self._visibility_scope(current_user),
-        )
+        employee = await self.repository.get_by_id(employee_id)
 
         if not employee:
             raise AppException(
@@ -373,59 +359,43 @@ class EmployeeService:
         if "shift_id" in update_data:
             await self._validate_shift(update_data["shift_id"])
 
-        if "manager_id" in update_data or "reporting_manager" in update_data:
-            await self._resolve_manager(update_data, existing=employee)
-
         update_data["updated_at"] = datetime.utcnow()
 
         return await self.repository.update(
             employee_id,
             update_data,
-            scope=self._visibility_scope(current_user),
         )
 
-    
     async def deactivate_employee(
         self,
         employee_id: str,
-        current_user: dict | None = None,
     ):
-        scope = self._visibility_scope(current_user)
-
-        employee = await self.repository.get_by_id(
-            employee_id,
-            scope=scope,
-        )
+        employee = await self.repository.get_by_id(employee_id)
 
         if not employee:
-            raise AppException("Employee not found", 404)
+            raise AppException(
+                "Employee not found",
+                404,
+            )
 
-        updated_employee = await self.repository.update_status(
+        return await self.repository.update_status(
             employee_id=employee_id,
             status="inactive",
             update_data={
                 "deactivated_at": datetime.utcnow(),
             },
-            scope=scope,
         )
-
-        if not updated_employee:
-            raise AppException("Employee not found", 404)
-
-        return updated_employee
-
 
     async def delete_employee(
         self,
         employee_id: str,
-        current_user: dict | None = None,
     ):
-        deleted = await self.repository.delete(
-            employee_id,
-            scope=self._visibility_scope(current_user),
-        )
+        deleted = await self.repository.delete(employee_id)
 
         if not deleted:
-            raise AppException("Employee not found", 404)
+            raise AppException(
+                "Employee not found",
+                404,
+            )
 
         return True

@@ -62,7 +62,6 @@ function toFormState(employee?: Employee): EmployeeCreate {
       employment_type: "full_time",
       work_location: "",
       reporting_manager: "",
-      manager_id: "",
       salary_structure: "",
       salary: "",
       shift_id: "",
@@ -85,7 +84,6 @@ function toFormState(employee?: Employee): EmployeeCreate {
     employment_type: employee.employment_type,
     work_location: employee.work_location ?? "",
     reporting_manager: employee.reporting_manager ?? "",
-    manager_id: employee.manager_id ?? "",
     salary_structure: employee.salary_structure ?? "",
     salary: employee.salary ?? "",
     shift_id: employee.shift_id ?? "",
@@ -161,27 +159,6 @@ function AdminEmployeeForm({
 
   const unmatchedManager =
     currentManager !== "" && !managerIsListed ? currentManager : null;
-
-  function handleManagerChange(value: string) {
-    // Manager ids are what scope a manager's team. reporting_manager is kept
-    // in step as the display name the details page reads.
-    if (!value) {
-      updateField("reporting_manager", "");
-      updateField("manager_id", "");
-      return;
-    }
-
-    const manager = managers.find((entry) => entry.id === value);
-
-    if (!manager) {
-      updateField("reporting_manager", value);
-      updateField("manager_id", "");
-      return;
-    }
-
-    updateField("reporting_manager", manager.full_name);
-    updateField("manager_id", manager.id);
-  }
 
   function validateSalary(): boolean {
     if (!form.salary_structure) {
@@ -869,8 +846,10 @@ function AdminEmployeeForm({
             </label>
 
             <select
-              value={form.manager_id || unmatchedManager || ""}
-              onChange={(event) => handleManagerChange(event.target.value)}
+              value={form.reporting_manager ?? ""}
+              onChange={(event) =>
+                updateField("reporting_manager", event.target.value)
+              }
               className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
             >
               <option value="">Select reporting manager</option>
@@ -882,7 +861,7 @@ function AdminEmployeeForm({
               )}
 
               {managers.map((manager) => (
-                <option key={manager.id} value={manager.id}>
+                <option key={manager.id} value={manager.full_name}>
                   {manager.full_name}
                 </option>
               ))}

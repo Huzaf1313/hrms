@@ -11,6 +11,7 @@ from app.core.security import hash_password, verify_password
 from app.repositories.user_repository import UserRepository
 from app.repositories.otp_repository import OTPRepository
 from app.services.session_service import SessionService
+from app.services.email_service import EmailService
 
 
 def resolve_full_name(user: dict) -> str:
@@ -33,37 +34,76 @@ class UserService:
     def __init__(self):
         self.repository = UserRepository()
         self.session_service = SessionService()
+        self.email_service = EmailService()
 
-    async def bootstrap_hr_admin(self, email: str, password: str, full_name: str):
-        """Create the one HR account the whole hierarchy hangs off.
+    async def create_verified_user(
+        self,
+        registration_data: dict,
+    ):
+        email = registration_data["email"].lower().strip()
 
-        Idempotent: if the email already exists this is a no-op, so it is safe
-        to call on every startup.
-        """
-        email = email.lower().strip()
+        existing_user = await self.repository.get_by_email(email)
 
-        if await self.repository.get_by_email(email):
-            return None
+        if existing_user:
+            raise AppException(
+                "User with this email already exists",
+                409,
+            )
+
+        allowed_registration_roles = {
+            UserRole.HR_ADMIN,
+            UserRole.MANAGER,
+        }
+
+        role = UserRole(registration_data["role"])
+
+        if role not in allowed_registration_roles:
+            raise AppException(
+                "This role cannot be selected during public registration",
+                403,
+            )
 
         now = datetime.utcnow()
 
-        user = await self.repository.create(
-            {
-                "full_name": full_name.strip(),
-                "email": email,
-                "phone_number": "",
-                "password_hash": hash_password(password),
-                "company_name": "",
-                "company_address": "",
-                "reference": "",
-                "role": UserRole.HR_ADMIN.value,
-                "is_active": True,
-                "is_locked": False,
-                "failed_login_attempts": 0,
-                "created_at": now,
-                "updated_at": now,
-            }
+        user_data = {
+            "full_name": registration_data["full_name"].strip(),
+            "email": email,
+            "phone_number": registration_data["phone_number"].strip(),
+            "password_hash": registration_data["password_hash"],
+            "company_name": registration_data.get(
+                "company_name",
+                "",
+            ).strip(),
+            "company_address": registration_data.get(
+                "company_address",
+                "",
+            ).strip(),
+            "reference": registration_data.get(
+                "reference",
+                "",
+            ).strip(),
+            "role": role.value,
+            "is_active": True,
+            "is_locked": False,
+            "failed_login_attempts": 0,
+            "created_at": now,
+            "updated_at": now,
+        }
+
+        user = await self.repository.create(user_data)
+
+        self.email_service.send_html_email(
+            to_email=email,
+            subject=f"Welcome to {user_data['company_name']}",
+            template_name="emails/welcome_email.html",
+            template_data={
+                "employee_name": user_data["full_name"],
+                "company_name": "AarMarks Media Pvt Ltd.",
+                "hr_team": "HR Team",
+            },
         )
+
+        user.pop("password_hash", None)
 
         return user
 
@@ -81,40 +121,61 @@ class UserService:
             for user in users
         ]
 
-    async def create_manager_account(
+    async def register_user(
         self,
         full_name: str,
         email: str,
+        phone_number: str,
         password: str,
+        role: UserRole,
+        company_name: str = "",
+        company_address: str = "",
+        reference: str = "",
     ):
-        """Called by HR only - see api/v1/users.create_manager_account."""
         email = email.lower().strip()
 
-        if await self.repository.get_by_email(email):
+        existing_user = await self.repository.get_by_email(email)
+
+        if existing_user:
             raise AppException(
                 "User with this email already exists",
                 409,
             )
 
+        # Employees are created by admins (with shared credentials) - public
+        # signup is for admin-level accounts only.
+        allowed_registration_roles = {
+            UserRole.HR_ADMIN,
+            UserRole.MANAGER,
+        }
+
+        if role not in allowed_registration_roles:
+            raise AppException(
+                "This role cannot be selected during public registration",
+                403,
+            )
+
         now = datetime.utcnow()
 
-        return await self.repository.create(
-            {
-                "full_name": full_name.strip(),
-                "email": email,
-                "phone_number": "",
-                "password_hash": hash_password(password),
-                "company_name": "",
-                "company_address": "",
-                "reference": "",
-                "role": UserRole.MANAGER.value,
-                "is_active": True,
-                "is_locked": False,
-                "failed_login_attempts": 0,
-                "created_at": now,
-                "updated_at": now,
-            }
-        )
+        user_data = {
+            "full_name": full_name.strip(),
+            "email": email,
+            "phone_number": phone_number.strip(),
+            "password_hash": hash_password(password),
+            "company_name": company_name.strip(),
+            "company_address": company_address.strip(),
+            "reference": reference.strip(),
+            "role": role.value,
+            "is_active": True,
+            "is_locked": False,
+            "failed_login_attempts": 0,
+            "created_at": now,
+            "updated_at": now,
+        }
+
+        user = await self.repository.create(user_data)
+
+        return user
 
     async def reset_password(
         self,
@@ -342,52 +403,4 @@ class UserService:
 
         return {
             "message": "Logout successful"
-        }
-  
-    async def change_password(
-        self,
-        user_id: str,
-        current_password: str,
-        new_password: str,
-        confirm_password: str,
-    ):
-        if new_password != confirm_password:
-            raise AppException(
-                "New password and confirmation do not match",
-                400,
-            )
-
-        user = await self.repository.get_by_id(user_id)
-
-        if not user:
-            raise AppException(
-                "User not found",
-                404,
-            )
-
-        if not verify_password(
-            current_password,
-            user["password_hash"],
-        ):
-            raise AppException(
-                "Current password is incorrect",
-                400,
-            )
-
-        if verify_password(new_password, user["password_hash"]):
-            raise AppException(
-                "New password must be different from the current password",
-                400,
-            )
-
-        await self.repository.update(
-            str(user["_id"]),
-            {
-                "password_hash": hash_password(new_password),
-                "updated_at": datetime.now(timezone.utc),
-            },
-        )
-
-        return {
-            "message": "Password changed successfully",
         }

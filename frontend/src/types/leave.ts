@@ -13,9 +13,6 @@ export type LeaveType = (typeof LEAVE_TYPES)[number];
  */
 export interface LeaveRequestDraft {
   employee_id: string;
-  employee_name?: string;
-  department_id?: string;
-  department_name?: string;
   leave_type: LeaveType;
   start_date: string;
   end_date: string;

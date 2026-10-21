@@ -23,14 +23,6 @@ class Settings(BaseSettings):
     UPLOAD_DIR: str = "uploads"
     PRIVATE_UPLOAD_DIR: str = "private_uploads"
 
-    # First HR account, created on startup if no user with this email exists.
-    # This is the only way an admin account comes into existence without HR
-    # already existing - every other account is created by an existing one.
-    # Leave empty to skip bootstrapping entirely.
-    BOOTSTRAP_HR_EMAIL: str = ""
-    BOOTSTRAP_HR_PASSWORD: str = ""
-    BOOTSTRAP_HR_NAME: str = "HR Admin"
-
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

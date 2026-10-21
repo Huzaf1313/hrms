@@ -48,10 +48,6 @@ import type {
   SessionInfo,
 } from "../../types/adminProfile";
 
-function roleLabel(role: string): string {
-  return role === "hr_admin" ? "HR Admin" : role.replaceAll("_", " ");
-}
-
 /** Opens a picked image in memory so the preview works before any upload. */
 function readAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -236,7 +232,7 @@ export default function AdminMyProfile() {
             { label: "Reporting Manager", value: profile.reporting_manager },
             { label: "Shift", value: profile.shift },
             { label: "Date of Joining", value: formatProfileDate(profile.date_of_joining) },
-            { label: "Role", value: roleLabel(profile.role) },
+            { label: "Role", value: profile.role },
             {
               label: "Employee Status",
               value: (
@@ -438,7 +434,7 @@ export default function AdminMyProfile() {
         <InfoGrid
           items={[
             { label: "Designation", value: profile.designation },
-            { label: "Role", value: roleLabel(profile.role) },
+            { label: "Role", value: profile.role },
             { label: "Department", value: profile.department },
             { label: "Department Head", value: profile.department_head },
             { label: "Reporting Manager", value: profile.reporting_manager },
@@ -781,18 +777,14 @@ export default function AdminMyProfile() {
 
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2.5">
-              <h1 className="min-w-0 break-words text-2xl font-bold text-gray-900">
-                {profile.full_name}
-              </h1>
+              <h1 className="text-2xl font-bold text-gray-900">{profile.full_name}</h1>
 
-              <span className="inline-flex shrink-0 items-center whitespace-nowrap rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-[#2563eb]">
-                {roleLabel(profile.role)}
+              <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-[#2563eb]">
+                {profile.role}
               </span>
             </div>
 
-            <p className="mt-1 break-words text-sm font-medium text-gray-600">
-              {profile.designation}
-            </p>
+            <p className="mt-1 text-sm font-medium text-gray-600">{profile.designation}</p>
 
             <div className="mt-3 space-y-1.5">
               {[

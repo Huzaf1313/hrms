@@ -23,7 +23,7 @@ async def get_dashboard(
         require_permission(Permission.ORGANIZATION_READ)
     ),
 ):
-    dashboard = await service.get_dashboard_data(current_user=current_user)
+    dashboard = await service.get_dashboard_data()
 
     return APIResponse(
         success=True,

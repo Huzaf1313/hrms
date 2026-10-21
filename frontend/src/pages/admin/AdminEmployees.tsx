@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Check } from "lucide-react";
 
 import AdminEmployeeDetailsPage from "../../components/admin/AdminEmployeeDetailsPage";
 import AdminEmployeeForm from "../../components/admin/AdminEmployeeForm";
 import AdminEmployeeTable from "../../components/admin/AdminEmployeeTable";
-import { TableSkeleton } from "../../components/ui";
 import { ApiError } from "../../services/api";
 import {
   salaryStructureService,
@@ -115,27 +114,11 @@ function CredentialsModal({
   );
 }
 
-interface EmployeeSearchRequest {
-  query: string;
-  requestId: number;
-}
-
-interface EmployeeSelectionRequest {
-  employeeId: string;
-  requestId: number;
-}
-
 interface AdminEmployeesProps {
   autoOpenCreateForm?: boolean;
-  employeeSearchRequest?: EmployeeSearchRequest;
-  employeeSelectionRequest?: EmployeeSelectionRequest;
 }
 
-function AdminEmployees({
-  autoOpenCreateForm = false,
-  employeeSearchRequest,
-  employeeSelectionRequest,
-}: AdminEmployeesProps) {
+function AdminEmployees({ autoOpenCreateForm = false }: AdminEmployeesProps) {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [salaryStructures, setSalaryStructures] = useState<SalaryStructure[]>(
@@ -161,7 +144,6 @@ function AdminEmployees({
   } | null>(null);
 
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
-  const lastHandledSearchRequest = useRef<number | null>(null);
 
   async function loadEmployees() {
     setIsLoading(true);
@@ -175,57 +157,10 @@ function AdminEmployees({
         page,
         limit: PAGE_SIZE,
       });
-
       setEmployees(data);
-
-      const request = employeeSearchRequest;
-      const query = request?.query.trim().toLowerCase();
-
-      const shouldHandleRequest =
-        request &&
-        query &&
-        search.trim().toLowerCase() === query &&
-        lastHandledSearchRequest.current !== request.requestId;
-
-      if (shouldHandleRequest && request) {
-        lastHandledSearchRequest.current = request.requestId;
-
-        const normalize = (value: string) =>
-          value.trim().toLowerCase().replace(/\s+/g, " ");
-
-        const normalizedQuery = normalize(request.query);
-
-        const getFullName = (employee: Employee) =>
-          normalize(`${employee.first_name} ${employee.last_name}`);
-
-        // Prefer an exact full-name match.
-        let matchedEmployee = data.find(
-          (employee) => getFullName(employee) === normalizedQuery,
-        );
-
-        // Otherwise, match all search terms against the employee's full name.
-        if (!matchedEmployee) {
-          const searchTerms = normalizedQuery.split(" ");
-
-          matchedEmployee = data.find((employee) => {
-            const fullName = getFullName(employee);
-
-            return searchTerms.every((term) => fullName.includes(term));
-          });
-        }
-
-        if (matchedEmployee) {
-          setViewingEmployee(matchedEmployee);
-        } else {
-          setError(
-            `No employee found matching "${request.query}". Try searching with their full name.`,
-          );
-        }
-      }
     } catch (err) {
       const message =
         err instanceof ApiError ? err.message : "Failed to load employees.";
-
       setError(message);
     } finally {
       setIsLoading(false);
@@ -246,13 +181,7 @@ function AdminEmployees({
       isCancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-        search,
-        departmentFilter,
-        statusFilter,
-        page,
-        employeeSearchRequest?.requestId,
-      ]);
+  }, [search, departmentFilter, statusFilter, page]);
 
   useEffect(() => {
     departmentService
@@ -281,70 +210,6 @@ function AdminEmployees({
       .then(setShifts)
       .catch(() => setShifts([]));
   }, []);
-
-  // Both requests arrive as new prop objects from the layout. Resetting state
-  // during render (rather than in an effect) keeps the list and the spinner in
-  // step with the request in the same commit, with no cascading render.
-  const [appliedSearchRequest, setAppliedSearchRequest] =
-    useState(employeeSearchRequest);
-
-  if (employeeSearchRequest !== appliedSearchRequest) {
-    setAppliedSearchRequest(employeeSearchRequest);
-
-    if (employeeSearchRequest) {
-      setViewingEmployee(undefined);
-      setSearch(employeeSearchRequest.query);
-      setDepartmentFilter("");
-      setStatusFilter("");
-      setPage(1);
-    }
-  }
-
-  const [appliedSelectionRequest, setAppliedSelectionRequest] =
-    useState(employeeSelectionRequest);
-
-  if (employeeSelectionRequest !== appliedSelectionRequest) {
-    setAppliedSelectionRequest(employeeSelectionRequest);
-
-    if (employeeSelectionRequest) {
-      setViewingEmployee(undefined);
-      setError(null);
-      setIsLoading(true);
-    }
-  }
-
-  useEffect(() => {
-    if (!employeeSelectionRequest) return;
-
-    let cancelled = false;
-
-    employeeService
-      .get(employeeSelectionRequest.employeeId)
-      .then((employee) => {
-        if (!cancelled) {
-          setViewingEmployee(employee);
-        }
-      })
-      .catch((err) => {
-        if (cancelled) return;
-
-        const message =
-          err instanceof ApiError
-            ? err.message
-            : "Failed to load the selected employee.";
-
-        setError(message);
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [employeeSelectionRequest]);
 
   function openCreateForm() {
     setEditingEmployee(undefined);
@@ -523,7 +388,7 @@ function AdminEmployees({
               setPage(1);
               setSearch(event.target.value);
             }}
-            placeholder="Search employees..."
+            placeholder="Search employees…"
             className="min-w-[220px] flex-1 rounded-full border border-gray-200 px-4 py-2.5 text-sm focus:border-[#2563eb] focus:outline-none"
           />
 
@@ -562,13 +427,13 @@ function AdminEmployees({
             onClick={clearFilters}
             className="rounded-full border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
           >
-            Clear Filters
+            ⇅ Clear Filters
           </button>
         </div>
 
         {isLoading && (
-          <div className="py-2">
-            <TableSkeleton rows={6} columns={6} />
+          <div className="py-10 text-center text-gray-500">
+            Loading employees…
           </div>
         )}
 
@@ -671,3 +536,5 @@ function AdminEmployees({
 }
 
 export default AdminEmployees;
+
+

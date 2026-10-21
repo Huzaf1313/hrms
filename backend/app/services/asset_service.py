@@ -4,7 +4,6 @@ from datetime import date, datetime, timezone
 from pymongo.errors import DuplicateKeyError
 
 from app.core.exceptions import AppException
-from app.core.scope import visibility_scope, visible_employee_codes
 from app.repositories.asset_repository import AssetRepository
 from app.repositories.asset_request_repository import AssetRequestRepository
 from app.repositories.department_repository import DepartmentRepository
@@ -52,60 +51,6 @@ class AssetService:
         self.department_repository = DepartmentRepository()
 
     # ---------------------------------------------------------------- Helpers
-
-    async def _scope_filter(self, current_user: dict | None) -> dict:
-        """Restrict assets to the holder codes the caller may see.
-
-        An asset points at its holder by business code, so the scope resolves
-        through the employee records first. Unassigned stock belongs to nobody
-        and so drops out for a manager - it stays with HR.
-        """
-        codes = await visible_employee_codes(
-            self.employee_repository,
-            current_user,
-        )
-
-        if codes is None:
-            return {}
-
-        return {"assigned_to_employee_id": {"$in": codes}}
-
-    async def _assert_assignable(
-        self,
-        employee_id: str | None,
-        current_user: dict | None,
-    ) -> None:
-        """A manager may only put assets into their own team's hands."""
-        if not employee_id:
-            return
-
-        scope_filter = await self._scope_filter(current_user)
-
-        if not scope_filter:
-            return
-
-        if employee_id not in scope_filter["assigned_to_employee_id"]["$in"]:
-            raise AppException(
-                "You can only assign assets to your own team",
-                403,
-            )
-
-    async def _assert_asset_access(
-        self,
-        asset: dict | None,
-        current_user: dict | None,
-    ) -> dict:
-        """404 rather than 403 when out of scope, so asset ids do not leak."""
-        if not asset:
-            raise AppException("Asset not found", 404)
-
-        holder = asset.get("assigned_to_employee_id")
-        scope_filter = await self._scope_filter(current_user)
-
-        if scope_filter and holder not in scope_filter["assigned_to_employee_id"]["$in"]:
-            raise AppException("Asset not found", 404)
-
-        return asset
 
     async def _department_name(self, department_id: str | None) -> str | None:
         if not department_id:
@@ -159,10 +104,7 @@ class AssetService:
             "department_name": employee["department_name"],
         }
 
-    async def _employee_and_department_index(
-        self,
-        current_user: dict | None = None,
-    ) -> tuple[dict, dict]:
+    async def _employee_and_department_index(self) -> tuple[dict, dict]:
         """Fetch every employee and department once.
 
         The allocation table needs to turn dozens of employee codes into names
@@ -170,14 +112,7 @@ class AssetService:
         dashboard would otherwise pay on every render.
         """
 
-        scope = visibility_scope(current_user)
-
-        employees = await self.employee_repository.get_all(
-            {},
-            0,
-            10000,
-            scope=scope,
-        )
+        employees = await self.employee_repository.get_all({}, 0, 10000)
         departments = await self.department_repository.get_all({}, 0, 1000)
 
         return (
@@ -187,12 +122,10 @@ class AssetService:
 
     # ------------------------------------------------------------------ Create
 
-    async def create_asset(self, data: dict, created_by: str | None, current_user: dict | None = None):
+    async def create_asset(self, data: dict, created_by: str | None):
         now = _now()
         employee_id = data.get("assigned_to_employee_id")
         employee = await self._resolve_employee(employee_id) if employee_id else None
-
-        await self._assert_assignable(employee_id, current_user)
 
         sequence = await self.repository.next_sequence("asset_tag")
         asset_tag = f"AST-{sequence:03d}"
@@ -230,10 +163,13 @@ class AssetService:
 
     # -------------------------------------------------------------------- Read
 
-    async def get_asset(self, asset_id: str, current_user: dict | None = None):
+    async def get_asset(self, asset_id: str):
         asset = await self.repository.get_by_id(asset_id)
 
-        return await self._assert_asset_access(asset, current_user)
+        if not asset:
+            raise AppException("Asset not found", 404)
+
+        return asset
 
     async def get_assets(
         self,
@@ -243,9 +179,8 @@ class AssetService:
         employee_id: str | None = None,
         department_id: str | None = None,
         pagination: PaginationParams | None = None,
-        current_user: dict | None = None,
     ):
-        filters: dict = await self._scope_filter(current_user)
+        filters: dict = {}
 
         if status:
             filters["status"] = status
@@ -295,24 +230,21 @@ class AssetService:
 
     # ------------------------------------------------------------------- Stats
 
-    async def get_stats(self, current_user: dict | None = None):
+    async def get_stats(self):
         """Everything the summary cards and the donut need, in one call.
 
         Reporting both from the same snapshot means the cards and the chart can
         never disagree with each other mid-render.
         """
 
-        scope = await self._scope_filter(current_user)
-
         status_counts = {status: 0 for status in ASSET_STATUS_ORDER}
 
-        for row in await self.repository.status_counts(scope):
+        for row in await self.repository.status_counts():
             if row["_id"] in status_counts:
                 status_counts[row["_id"]] = row["count"]
 
         raw_categories = {
-            row["_id"]: row["count"]
-            for row in await self.repository.category_counts(scope)
+            row["_id"]: row["count"] for row in await self.repository.category_counts()
         }
 
         total_assets = sum(status_counts.values())
@@ -340,12 +272,11 @@ class AssetService:
             "available": status_counts[AssetStatus.AVAILABLE.value],
             "pending_return": status_counts[AssetStatus.PENDING_RETURN.value],
             "maintenance": status_counts[AssetStatus.MAINTENANCE.value],
-            "total_purchase_value": await self.repository.total_purchase_value(scope),
-            "pending_requests": await self.request_repository.count_pending(scope),
+            "total_purchase_value": await self.repository.total_purchase_value(),
+            "pending_requests": await self.request_repository.count_pending(),
             "allocated_this_month": await self.repository.allocated_this_month(
                 month_start,
                 month_end,
-                scope,
             ),
             "category_counts": category_counts,
         }
@@ -358,7 +289,6 @@ class AssetService:
         search: str | None = None,
         category: str | None = None,
         pagination: PaginationParams | None = None,
-        current_user: dict | None = None,
     ):
         """Rows for the Asset Allocation table, by employee or by department.
 
@@ -366,12 +296,7 @@ class AssetService:
         stays a stable list of who has a device rather than only who has one.
         """
 
-        scope = await self._scope_filter(current_user)
-
-        filters = {
-            **(scope or {}),
-            **({"category": category} if category else {}),
-        }
+        filters = {"category": category} if category else {}
 
         counts = (
             await self.repository.employee_allocation_counts(filters)
@@ -380,9 +305,7 @@ class AssetService:
         )
         count_by_key = {row["_id"]: row["count"] for row in counts}
 
-        employees, departments = await self._employee_and_department_index(
-            current_user
-        )
+        employees, departments = await self._employee_and_department_index()
 
         query = (search or "").strip().lower()
 
@@ -446,8 +369,8 @@ class AssetService:
 
     # ------------------------------------------------------------------ Update
 
-    async def update_asset(self, asset_id: str, data: dict, current_user: dict | None = None):
-        existing = await self.get_asset(asset_id, current_user)
+    async def update_asset(self, asset_id: str, data: dict):
+        existing = await self.get_asset(asset_id)
 
         update_data: dict = {}
 
@@ -490,8 +413,8 @@ class AssetService:
 
         return await self.repository.update(asset_id, update_data)
 
-    async def delete_asset(self, asset_id: str, current_user: dict | None = None):
-        asset = await self.get_asset(asset_id, current_user)
+    async def delete_asset(self, asset_id: str):
+        asset = await self.get_asset(asset_id)
 
         if asset.get("assigned_to_employee_id"):
             raise AppException(
@@ -508,9 +431,8 @@ class AssetService:
         asset_id: str,
         employee_id: str,
         issue_date: date | None = None,
-        current_user: dict | None = None,
     ):
-        asset = await self.get_asset(asset_id, current_user)
+        asset = await self.get_asset(asset_id)
 
         current_holder = asset.get("assigned_to_employee_id")
 
@@ -521,8 +443,6 @@ class AssetService:
                 "assigning it to someone else.",
                 409,
             )
-
-        await self._assert_assignable(employee_id, current_user)
 
         employee = await self._resolve_employee(employee_id)
 
@@ -536,8 +456,8 @@ class AssetService:
 
         return await self.repository.update(asset_id, update_data)
 
-    async def return_asset(self, asset_id: str, current_user: dict | None = None):
-        asset = await self.get_asset(asset_id, current_user)
+    async def return_asset(self, asset_id: str):
+        asset = await self.get_asset(asset_id)
 
         if not asset.get("assigned_to_employee_id"):
             raise AppException(

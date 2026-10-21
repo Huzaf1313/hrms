@@ -43,8 +43,6 @@ export const leaveService = {
     status?: LeaveStatus;
     leave_type?: string;
     department_id?: string;
-    /** "YYYY-MM-DD". Only returns leaves covering that day. */
-    date?: string;
   } = {}) {
     return api.get<LeaveListResponse>("/admin/leaves", params);
   },
