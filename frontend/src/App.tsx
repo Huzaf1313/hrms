@@ -7,7 +7,6 @@ import {
 
 import Login from "./pages/login";
 import ProtectedRoute, { AdminRoute } from "./components/ProtectedRoute";
-import Registration from "./pages/Registration";
 import DashboardLayout from "./layouts/DashboardLayout";
 import EmployeeDashboard from "./pages/employee/EmployeeDashboard";
 import EmployeeProfile from "./pages/employee/EmployeeProfile";
@@ -22,6 +21,7 @@ import { authService } from "./services/authService";
 import EmployeeLayout from "./layouts/EmployeeLayout";
 import EmployeeExit from "./pages/employee/EmployeeExit";
 import EmployeeResignation from "./pages/employee/EmployeeResignation";
+import { GlobalDateProvider } from "./context/GlobalDateProvider";
 
 
 function App() {
@@ -39,46 +39,49 @@ function App() {
 
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Registration />} />
+      {/* Above the routes so one header date serves the admin and employee
+          shells, and survives navigating between them. */}
+      <GlobalDateProvider>
+        <Routes>
+          <Route path="/login" element={<Login />} />
 
-        <Route element={<AdminRoute />}>
-          <Route
-            path="/dashboard/*"
-            element={<DashboardLayout onLogout={handleLogout} />}
-          />
-        </Route>
-
-        <Route element={<ProtectedRoute />}>
-          <Route
-            path="/employee"
-            element={<EmployeeLayout onLogout={handleLogout} />}
-          >
-            <Route index element={<EmployeeDashboard />} />
-            <Route path="dashboard" element={<EmployeeDashboard />} />
-            <Route path="profile" element={<EmployeeProfile />} />
-            <Route path="attendance" element={<EmployeeAttendance />} />
-            <Route path="leave" element={<EmployeeLeave />} />
-            <Route path="payroll" element={<EmployeePayroll />} />
-            <Route path="documents" element={<EmployeeDocuments />} />
-            <Route path="announcements" element={<EmployeeAnnouncements />} />
-            <Route path="help" element={<EmployeeHelpSupport />} />
-            <Route path="exit" element={<EmployeeExit />} />
-            <Route path="exit/resignation" element={<EmployeeResignation />} />
+          <Route element={<AdminRoute />}>
+            <Route
+              path="/dashboard/*"
+              element={<DashboardLayout onLogout={handleLogout} />}
+            />
           </Route>
-        </Route>
 
-        <Route
-          path="/"
-          element={<Navigate to="/login" replace />}
-        />
+          <Route element={<ProtectedRoute />}>
+            <Route
+              path="/employee"
+              element={<EmployeeLayout onLogout={handleLogout} />}
+            >
+              <Route index element={<EmployeeDashboard />} />
+              <Route path="dashboard" element={<EmployeeDashboard />} />
+              <Route path="profile" element={<EmployeeProfile />} />
+              <Route path="attendance" element={<EmployeeAttendance />} />
+              <Route path="leave" element={<EmployeeLeave />} />
+              <Route path="payroll" element={<EmployeePayroll />} />
+              <Route path="documents" element={<EmployeeDocuments />} />
+              <Route
+                path="announcements"
+                element={<EmployeeAnnouncements />}
+              />
+              <Route path="help" element={<EmployeeHelpSupport />} />
+              <Route path="exit" element={<EmployeeExit />} />
+              <Route
+                path="exit/resignation"
+                element={<EmployeeResignation />}
+              />
+            </Route>
+          </Route>
 
-        <Route
-          path="*"
-          element={<Navigate to="/login" replace />}
-        />
-      </Routes>
+          <Route path="/" element={<Navigate to="/login" replace />} />
+
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </GlobalDateProvider>
     </BrowserRouter>
   );
 }

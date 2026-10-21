@@ -15,20 +15,13 @@ export const EXIT_STATUSES: ExitStatus[] = [
   "Cancelled",
 ];
 
-export const EXIT_TYPES = [
-  "Resignation",
-  "Termination",
-  "Contract End",
-  "Retirement",
-] as const;
+export const EXIT_TYPES = ["Resignation", "Termination"] as const;
 
 export type ExitType = (typeof EXIT_TYPES)[number];
 
 export const EXIT_TYPE_META: Record<ExitType, { label: string; color: string; dot: string }> = {
   Resignation: { label: "Resignation", color: "#2563eb", dot: "bg-blue-600" },
   Termination: { label: "Termination", color: "#e11d48", dot: "bg-rose-600" },
-  "Contract End": { label: "Contract End", color: "#9333ea", dot: "bg-purple-600" },
-  Retirement: { label: "Retirement", color: "#7c3aed", dot: "bg-violet-600" },
 };
 
 // Must match the backend Literals in schemas/exit_request.py.
@@ -67,6 +60,10 @@ export interface HandoverTask {
   remarks: string | null;
   status: HandoverStatus;
   is_checked: boolean;
+}
+
+export interface HandoverTasksUpdate {
+  handover_tasks: HandoverTask[];
 }
 
 export interface ExitAttachment {
@@ -135,7 +132,7 @@ export interface ExitRequestSummary {
   completed: number;
   rejected: number;
   cancelled: number;
-  /** Always all four types, including zeroes, so the cards keep a stable set. */
+  /** Every type, including zeroes, so the cards keep a stable set. */
   by_type: Record<ExitType, number>;
   by_department: DepartmentExitCount[];
 }

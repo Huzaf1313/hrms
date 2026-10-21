@@ -190,6 +190,18 @@ class ExitRequestRepository:
         )
         return result.modified_count == 1
 
+    async def replace_handover_tasks_if_active(
+        self, request_id: str, active_statuses: list[str], handover_tasks: list[dict], now: datetime
+    ) -> bool:
+        if not ObjectId.is_valid(request_id):
+            return False
+
+        result = await self.collection.update_one(
+            {"_id": ObjectId(request_id), "status": {"$in": active_statuses}},
+            {"$set": {"handover_tasks": handover_tasks, "updated_at": now}},
+        )
+        return result.modified_count == 1
+
     async def delete_if_status(
         self, request_id: str, allowed_statuses: list[str]
     ) -> bool:

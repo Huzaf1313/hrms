@@ -215,6 +215,7 @@ async def get_overtime_report(
         end_date=end_date,
         department_id=department_id,
         shift_id=shift_id,
+        current_user=current_user,
     )
 
     return APIResponse(

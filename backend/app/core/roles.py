@@ -69,6 +69,8 @@ class Permission(str, Enum):
     PAYROLL_PROCESS = "payroll.process"
     PAYROLL_REPORTS = "payroll.reports"
 
+    SALARY_STRUCTURE_READ = "salary_structure.read"
+
     # Documents
     DOCUMENTS_READ = "documents.read"
     DOCUMENTS_CREATE = "documents.create"
@@ -134,8 +136,35 @@ class Permission(str, Enum):
     PAYSLIPS_READ = "payslips.read"
 
 
-# Full admin access - HR and Manager both act as admins.
+# HR sees and does everything.
 ADMIN_PERMISSIONS = set(Permission)
+
+# Managers run a team day to day. Hiring, payroll and payslips stay with HR:
+# they are organisation-wide, carry compensation data, and are not
+# team-scoped - a manager has no business seeing another team's pay.
+HR_ONLY_PERMISSIONS = {
+    # Recruitment
+    Permission.RECRUITMENT_READ,
+    Permission.RECRUITMENT_CREATE,
+    Permission.RECRUITMENT_UPDATE,
+    Permission.RECRUITMENT_DELETE,
+
+    # Payroll
+    Permission.PAYROLL_READ,
+    Permission.PAYROLL_CREATE,
+    Permission.PAYROLL_UPDATE,
+    Permission.PAYROLL_MANAGE,
+    Permission.PAYROLL_PROCESS,
+    Permission.PAYROLL_REPORTS,
+
+    # Payslips
+    Permission.PAYSLIPS_READ,
+}
+
+# Deliberately NOT in HR_ONLY_PERMISSIONS: salary structures are a config
+# lookup (like departments and shifts) that the employee form reads to render
+# a salary band. Only the writes - PAYROLL_MANAGE - stay with HR.
+MANAGER_PERMISSIONS = ADMIN_PERMISSIONS - HR_ONLY_PERMISSIONS
 
 EMPLOYEE_PERMISSIONS = {
     # Attendance
@@ -179,7 +208,7 @@ EMPLOYEE_PERMISSIONS = {
 
 ROLE_PERMISSIONS: dict[UserRole, set[Permission]] = {
     UserRole.HR_ADMIN: ADMIN_PERMISSIONS,
-    UserRole.MANAGER: ADMIN_PERMISSIONS,
+    UserRole.MANAGER: MANAGER_PERMISSIONS,
     UserRole.EMPLOYEE: EMPLOYEE_PERMISSIONS,
 }
 

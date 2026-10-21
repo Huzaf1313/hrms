@@ -23,7 +23,12 @@ interface DashboardKpiRowProps {
   metrics: DashboardMetrics;
   onOpenLeave: () => void;
   onOpenPayroll: () => void;
+  /** Managers have no payroll or hiring permission, so those cards are hidden. */
+  showHrWidgets?: boolean;
 }
+
+/** Cards that depend on a permission only HR holds. */
+const HR_ONLY_CARD_IDS = new Set(["kpi-openings", "kpi-payroll"]);
 
 interface KpiCard {
   id: string;
@@ -81,6 +86,7 @@ export default function DashboardKpiRow({
   metrics,
   onOpenLeave,
   onOpenPayroll,
+  showHrWidgets = true,
 }: DashboardKpiRowProps) {
   const placeholders = dashboardPlaceholders;
 
@@ -202,9 +208,13 @@ export default function DashboardKpiRow({
     },
   ];
 
+  const visibleCards = showHrWidgets
+    ? cards
+    : cards.filter((card) => !HR_ONLY_CARD_IDS.has(card.id));
+
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
-      {cards.map((card) => {
+      {visibleCards.map((card) => {
         const Icon = card.icon;
 
         return (

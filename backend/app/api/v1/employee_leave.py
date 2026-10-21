@@ -1,3 +1,5 @@
+from datetime import date
+
 from fastapi import APIRouter, Depends, Query
 
 from app.api.deps import get_current_user
@@ -87,6 +89,14 @@ async def get_employee_leave_requests(
         le=100,
     ),
     status: str | None = None,
+    leave_date: date | None = Query(
+        default=None,
+        alias="date",
+        description=(
+            "Only leaves covering this day. Matches when the day falls "
+            "anywhere inside the request's start and end dates."
+        ),
+    ),
     current_user: dict = Depends(get_current_user),
 ):
     employee = await get_employee_from_user(
@@ -104,6 +114,7 @@ async def get_employee_leave_requests(
         page=page,
         limit=limit,
         status=status,
+        leave_date=leave_date,
     )
 
     return {

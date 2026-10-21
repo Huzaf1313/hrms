@@ -21,7 +21,9 @@ import {
   SlidersHorizontal,
   X,
 } from "lucide-react";
+import { CardSkeleton, TableRowSkeleton } from "../../components/ui";
 import { ApiError } from "../../services/api";
+import { useGlobalDate } from "../../context/globalDateContext";
 import { attendanceService } from "../../services/attendanceService";
 import { departmentService } from "../../services/departmentService";
 import { formatShiftTime, shiftService } from "../../services/shiftService";
@@ -192,17 +194,18 @@ function AttendanceDonut({ summary }: { summary: AttendanceSummary | null }) {
   );
 }
 
-function getToday(): string {
-  const today = new Date();
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Kolkata",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(today);
-  const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+/** The header date is already an ISO string, so it only needs reading out. */
+function formatSelectedDate(value: string): string {
+  const parsed = new Date(`${value}T00:00:00`);
 
-  return `${values.year}-${values.month}-${values.day}`;
+  if (Number.isNaN(parsed.getTime())) return value;
+
+  return parsed.toLocaleDateString("en-GB", {
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 function displayPunchTime(value: string | null | undefined): string {
@@ -262,7 +265,10 @@ function displayOvertime(row: AttendanceRecord): { text: string; computable: boo
 function AdminAttendance() {
   const [activeTab, setActiveTab] = useState(0);
   const [search, setSearch] = useState("");
-  const [date, setDate] = useState(getToday);
+  // The day comes from the header calendar, so every date-driven page in the
+  // app is looking at the same one.
+  const { date, isDefault: isGlobalDateDefault, resetDate: resetGlobalDate } =
+    useGlobalDate();
   const [departmentId, setDepartmentId] = useState("");
   const [status, setStatus] = useState("");
   const [shiftId, setShiftId] = useState("");
@@ -286,7 +292,7 @@ function AdminAttendance() {
   const [detailRow, setDetailRow] = useState<AttendanceRecord | null>(null);
   const [markForm, setMarkForm] = useState({
     employee_id: "",
-    date: getToday(),
+    date: date,
     status: "present" as AttendanceStatus,
     shift_id: "",
     in_time: "",
@@ -438,7 +444,7 @@ function AdminAttendance() {
       setShowMarkModal(false);
       setMarkForm({
         employee_id: "",
-        date: getToday(),
+        date: date,
         status: "present",
         shift_id: "",
         in_time: "",
@@ -667,13 +673,24 @@ function AdminAttendance() {
 
         <div className={`${showFilters ? "grid" : "hidden"} grid-cols-1 items-end gap-x-3 gap-y-4 sm:grid-cols-2 lg:grid lg:grid-cols-4 2xl:grid-cols-8`}>
         <div className="min-w-0">
-          <label className="mb-1.5 block text-xs font-medium text-gray-500">Date</label>
-          <input
-            type="date"
-            value={date}
-            onChange={(event) => setDate(event.target.value)}
-            className="h-10 w-full rounded-full border border-gray-200 bg-white px-4 text-sm text-gray-700 transition hover:border-gray-300 focus:border-[#2563eb] focus:outline-none focus:ring-2 focus:ring-[#2563eb]/10"
-          />
+          <label className="mb-1.5 block text-xs font-medium text-gray-500">
+            Date
+          </label>
+          {/* The header calendar owns this value, so the page shows it rather
+              than offering a second control that could disagree with it. */}
+          <div className="flex h-10 items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-4 text-sm font-medium text-gray-700">
+            <CalendarDays className="h-4 w-4 text-gray-400" />
+            <span className="truncate">{formatSelectedDate(date)}</span>
+            {!isGlobalDateDefault && (
+              <button
+                type="button"
+                onClick={resetGlobalDate}
+                className="ml-auto shrink-0 text-xs font-semibold text-[#2563eb] hover:underline"
+              >
+                Today
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="min-w-0">
@@ -876,7 +893,7 @@ function AdminAttendance() {
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr><td colSpan={10} className="py-10 text-center text-gray-500">Loading attendance...</td></tr>
+                  <TableRowSkeleton rows={6} columns={10} />
                 ) : error ? (
                   <tr><td colSpan={10} className="py-10 text-center text-rose-600">{error}</td></tr>
                 ) : sortedRecords.length === 0 ? (
@@ -960,7 +977,7 @@ function AdminAttendance() {
               horizontal scroll hides half the row behind the viewport edge. */}
           <div className="mt-4 space-y-3 md:hidden">
             {isLoading ? (
-              <p className="py-6 text-center text-sm text-gray-500">Loading attendance...</p>
+              <CardSkeleton count={3} lines={2} className="space-y-3" />
             ) : error ? (
               <p className="py-6 text-center text-sm text-rose-600">{error}</p>
             ) : sortedRecords.length === 0 ? (

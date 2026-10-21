@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft, Check, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { TableSkeleton } from "../../components/ui";
 
 import { api, ApiError } from "../../services/api";
 
@@ -131,7 +132,9 @@ function AdminRegularizationRequests() {
 
       <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
         {isLoading ? (
-          <p className="p-6 text-sm text-gray-500">Loading requests...</p>
+          <div className="p-4">
+            <TableSkeleton rows={5} columns={6} />
+          </div>
         ) : error ? (
           <p className="p-6 text-sm text-red-600">{error}</p>
         ) : requests.length === 0 ? (

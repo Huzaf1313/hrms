@@ -101,21 +101,23 @@ class AssetRepository:
 
         return result.deleted_count > 0
 
-    async def category_counts(self) -> list[dict]:
+    async def category_counts(self, filters: dict | None = None) -> list[dict]:
         pipeline = [
+            {"$match": filters or {}},
             {"$group": {"_id": "$category", "count": {"$sum": 1}}},
         ]
 
         return await self.collection.aggregate(pipeline).to_list(length=None)
 
-    async def status_counts(self) -> list[dict]:
+    async def status_counts(self, filters: dict | None = None) -> list[dict]:
         pipeline = [
+            {"$match": filters or {}},
             {"$group": {"_id": "$status", "count": {"$sum": 1}}},
         ]
 
         return await self.collection.aggregate(pipeline).to_list(length=None)
 
-    async def total_purchase_value(self) -> float:
+    async def total_purchase_value(self, filters: dict | None = None) -> float:
         """Sum of every recorded purchase cost.
 
         Assets with no cost recorded yet contribute 0 rather than dropping out
@@ -123,6 +125,7 @@ class AssetRepository:
         """
 
         pipeline = [
+            {"$match": filters or {}},
             {
                 "$group": {
                     "_id": None,
@@ -135,11 +138,17 @@ class AssetRepository:
 
         return float(rows[0]["total"]) if rows else 0.0
 
-    async def allocated_this_month(self, month_start, month_end) -> int:
+    async def allocated_this_month(
+        self,
+        month_start,
+        month_end,
+        filters: dict | None = None,
+    ) -> int:
         return await self.collection.count_documents(
             {
                 "issue_date": {"$gte": month_start, "$lt": month_end},
                 "assigned_to_employee_id": {"$ne": None},
+                **(filters or {}),
             }
         )
 

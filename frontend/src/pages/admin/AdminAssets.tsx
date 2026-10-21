@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { DependencyList, ReactNode } from "react";
+import { TableSkeleton } from "../../components/ui";
 import {
   BarChart3,
   Check,
@@ -239,7 +240,11 @@ function PanelState({
   children: ReactNode;
 }) {
   if (loading) {
-    return <p className="py-10 text-center text-sm text-gray-400">Loading...</p>;
+    return (
+      <div className="py-4">
+        <TableSkeleton rows={4} columns={5} />
+      </div>
+    );
   }
 
   if (error) {
@@ -1566,8 +1571,6 @@ export default function AdminAssets() {
     {
       label: "Asset Categories",
       value: String(counts.categories),
-      note: "View All →",
-      noteClass: "text-[#2563eb]",
       icon: FileText,
       iconBg: "bg-violet-50",
       iconColor: "text-violet-600",
@@ -1615,9 +1618,13 @@ export default function AdminAssets() {
                   <p className="mt-1 truncate text-2xl font-bold leading-tight text-gray-900">
                     {card.value}
                   </p>
-                  <p className={`mt-0.5 truncate text-xs font-semibold ${card.noteClass}`}>
-                    {card.note}
-                  </p>
+                  {/* Only the cards that carry a note render one, so a card
+                      without it leaves no blank line behind. */}
+                  {card.note && (
+                    <p className={`mt-0.5 truncate text-xs font-semibold ${card.noteClass}`}>
+                      {card.note}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
