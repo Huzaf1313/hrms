@@ -8,6 +8,12 @@ import {
   useEmployeeLeaveBalances,
   useEmployeeAnnouncements,
 } from "../../hooks/useEmployeeData";
+import type {
+  Announcement,
+  AttendanceRecord,
+  LeaveBalance,
+  LeaveRequest,
+} from "../../hooks/useEmployeeData";
 
 interface User {
   id: string;
@@ -19,26 +25,6 @@ interface User {
   is_locked: boolean;
   created_at: string;
   updated_at: string;
-}
-
-interface LeaveRequest {
-  id: string;
-  leave_type: string;
-  start_date: string;
-  end_date: string;
-  total_days: number;
-  status: string;
-  reason?: string | null;
-  requested_at?: string | null;
-}
-
-interface AttendanceRecord {
-  date: string;
-  check_in: string | null;
-  check_out: string | null;
-  in_time?: string | null;
-  out_time?: string | null;
-  status?: string | null;
 }
 
 function normalizeAttendance(
@@ -301,7 +287,9 @@ function EmployeeDashboard() {
   const todayAttendance = useMemo(() => {
     const todayKey = getDateKey(new Date());
     return (
-      attendanceRecords.find((item) => getDateKey(item.date) === todayKey) ??
+      attendanceRecords.find(
+        (item: AttendanceRecord) => getDateKey(item.date) === todayKey,
+      ) ??
       null
     );
   }, [attendanceRecords]);
@@ -362,7 +350,7 @@ function EmployeeDashboard() {
 
   const getBalanceForType = (type: string) => {
     const balance = leaveBalances.find(
-      (item) =>
+      (item: LeaveBalance) =>
         item.leave_type.trim().toLowerCase() ===
         type.trim().toLowerCase(),
     );
@@ -372,7 +360,7 @@ function EmployeeDashboard() {
 
   const totalLeaveBalance = useMemo(() => {
     return leaveBalances.reduce(
-      (total, balance) =>
+      (total: number, balance: LeaveBalance) =>
         total + Number(balance.available || 0),
       0,
     );
@@ -404,7 +392,7 @@ const attendanceChart = useMemo(() => {
     const dateKey = getDateKey(date);
 
     const record = attendanceRecords.find(
-      (item) => item.date === dateKey
+      (item: AttendanceRecord) => item.date === dateKey
     );
 
     let present = 0;
@@ -811,7 +799,7 @@ const attendanceChart = useMemo(() => {
                 No announcements available.
               </div>
             ) : (
-              announcements.map((announcement) => (
+              announcements.map((announcement: Announcement) => (
                 <div
                   key={
                     announcement.id ??
@@ -895,7 +883,7 @@ const attendanceChart = useMemo(() => {
                 <tbody>
                   {leaveRequests
                     .slice(0, 5)
-                    .map((request) => {
+                    .map((request: LeaveRequest) => {
                       const status =
                         getDisplayLeaveStatus(
                           request.status,

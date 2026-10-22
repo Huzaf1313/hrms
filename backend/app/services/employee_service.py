@@ -236,10 +236,11 @@ class EmployeeService:
 
         await self._validate_shift(employee_data.get("shift_id"))
 
-        employee_data["status"] = "active"
-        employee_data["full_name"] = (
+        employee_name = (
             f'{employee_data["first_name"]} {employee_data["last_name"]}'
         ).strip()
+        employee_data["status"] = "active"
+        employee_data["full_name"] = employee_name
         employee_data["phone_number"] = employee_data["phone"]
         temporary_password = employee_data["password"]
         employee_data["password_hash"] = hash_password(
@@ -278,7 +279,7 @@ class EmployeeService:
                 template_name="emails/welcome_email.html",
                 template_data={
                     "company_name": company_name,
-                    "employee_name": employee.get("full_name", "Employee"),
+                    "employee_name": employee_name,
                     "hr_team": "HR Team",
                     "login_url": settings.login_url,
                 },

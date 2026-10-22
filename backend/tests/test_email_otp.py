@@ -401,7 +401,7 @@ class TestEmailOTPWorkflow(unittest.IsolatedAsyncioTestCase):
             mock_emp_create.return_value = {
                 "_id": ObjectId(),
                 **employee_data,
-                "full_name": "Alice Smith",
+                "full_name": "Aabshar Mukadam",
             }
 
             emp, temp_pass, welcome_sent = await employee_service.create_employee(
@@ -418,6 +418,10 @@ class TestEmailOTPWorkflow(unittest.IsolatedAsyncioTestCase):
                 admin_id=self.admin_id,
             )
             mock_send_welcome.assert_awaited_once()
+            self.assertEqual(
+                mock_send_welcome.await_args.kwargs["template_data"]["employee_name"],
+                "Alice Smith",
+            )
 
     @patch.object(OTPService, "consume_employee_email_verification", new_callable=AsyncMock)
     async def test_employee_creation_rejected_without_token(self, mock_consume_token):

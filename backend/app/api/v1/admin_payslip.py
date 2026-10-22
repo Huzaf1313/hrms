@@ -90,6 +90,11 @@ async def get_all_payslips(
         status=status,
     )
 
+    return {
+        "success": True,
+        "message": "Payslips retrieved successfully",
+        "data": payslips,
+    }
 
 
 @router.patch(
@@ -148,4 +153,3 @@ async def download_payslip(payslip_id: str):
         "Payslip PDF download has been disabled",
         410,
     )
-
