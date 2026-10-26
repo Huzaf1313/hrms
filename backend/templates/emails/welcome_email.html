@@ -106,6 +106,23 @@
                     </p>
                 </div>
 
+                {% if login_url %}
+                <div style="margin: 28px 0; text-align: center;">
+                    <a href="{{ login_url }}" style="
+                        display: inline-block;
+                        padding: 12px 28px;
+                        background-color: #2563eb;
+                        color: #ffffff;
+                        font-size: 15px;
+                        font-weight: 600;
+                        text-decoration: none;
+                        border-radius: 8px;
+                    ">
+                        Log In to Your HRMS Account
+                    </a>
+                </div>
+                {% endif %}
+
                 <p style="
                     margin: 0;
                     font-size: 15px;

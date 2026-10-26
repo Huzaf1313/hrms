@@ -1,3 +1,5 @@
+from datetime import date
+
 from fastapi import APIRouter, Depends, Query
 
 from app.api.deps import require_permission
@@ -14,25 +16,11 @@ router = APIRouter(
 
 service = AdminLeaveService()
 
-# Authentication is currently disabled for the other active admin modules
-# while the frontend session/role flow is being wired up.
-AUTH_ENABLED = False
-
-
-def require_permission_toggle(permission: Permission):
-    if AUTH_ENABLED:
-        return require_permission(permission)
-
-    async def bypass_auth() -> None:
-        return None
-
-    return bypass_auth
-
 
 @router.get("/summary")
 async def get_leave_summary(
     current_user: dict | None = Depends(
-        require_permission_toggle(Permission.LEAVE_READ)
+        require_permission(Permission.LEAVE_READ)
     ),
 ):
     return {
@@ -45,7 +33,7 @@ async def get_leave_summary(
 @router.get("")
 async def get_leaves(
     current_user: dict | None = Depends(
-        require_permission_toggle(Permission.LEAVE_READ)
+        require_permission(Permission.LEAVE_READ)
     ),
     page: int = Query(
         default=1,
@@ -60,15 +48,25 @@ async def get_leaves(
     employee_id: str | None = None,
     leave_type: str | None = None,
     department_id: str | None = None,
+    leave_date: date | None = Query(
+        default=None,
+        alias="date",
+        description=(
+            "Only leaves covering this day. Matches when the day falls "
+            "anywhere inside the request's start and end dates."
+        ),
+    ),
 ):
     data = await service.get_leaves(
-        page=page,
-        limit=limit,
-        status=status,
-        employee_id=employee_id,
-        leave_type=leave_type,
-        department_id=department_id,
-    )
+    page=page,
+    limit=limit,
+    status=status,
+    employee_id=employee_id,
+    leave_type=leave_type,
+    department_id=department_id,
+    leave_date=leave_date,
+    current_user=current_user,
+)
 
     return {
         "success": True,
@@ -81,13 +79,16 @@ async def get_leaves(
 async def get_leave(
     leave_id: str,
     current_user: dict | None = Depends(
-        require_permission_toggle(Permission.LEAVE_READ)
+        require_permission(Permission.LEAVE_READ)
     ),
 ):
     return {
         "success": True,
         "message": "Leave request fetched successfully",
-        "data": await service.get_leave(leave_id),
+        "data": await service.get_leave(
+            leave_id,
+            current_user=current_user,
+        ),
     }
 
 
@@ -95,11 +96,12 @@ async def get_leave(
 async def create_leave(
     payload: LeaveCreate,
     current_user: dict | None = Depends(
-        require_permission_toggle(Permission.LEAVE_CREATE)
+        require_permission(Permission.LEAVE_CREATE)
     ),
 ):
     data = await service.create_leave(
-        payload.model_dump()
+        payload.model_dump(),
+        current_user=current_user,
     )
 
     return {
@@ -114,7 +116,7 @@ async def update_leave_status(
     leave_id: str,
     payload: LeaveStatusUpdate,
     current_user: dict | None = Depends(
-        require_permission_toggle(Permission.LEAVE_APPROVE)
+        require_permission(Permission.LEAVE_APPROVE)
     ),
 ):
     data = await service.update_status(
@@ -122,6 +124,7 @@ async def update_leave_status(
         status=payload.status,
         admin_note=payload.admin_note,
         admin_user_id=str(current_user["_id"]) if current_user else None,
+        current_user=current_user,
     )
 
     return {
@@ -135,10 +138,13 @@ async def update_leave_status(
 async def delete_leave(
     leave_id: str,
     current_user: dict | None = Depends(
-        require_permission_toggle(Permission.LEAVE_UPDATE)
+        require_permission(Permission.LEAVE_UPDATE)
     ),
 ):
-    await service.delete_leave(leave_id)
+    await service.delete_leave(
+        leave_id,
+        current_user=current_user,
+    )
 
     return {
         "success": True,

@@ -89,7 +89,7 @@ function Section({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-800">
           <span className="text-blue-600">{icon}</span>
@@ -511,7 +511,7 @@ function AdminRecruitment() {
     donutTotal === 0 ? "#e2e8f0" : `conic-gradient(${donutSegments.join(", ")})`;
 
   const departmentCounts = stats?.applications_by_department ?? [];
-  const maxDepartmentCount = Math.max(1, ...departmentCounts.map((d) => d.count));
+  const totalDepartmentApplications = departmentCounts.reduce((sum, d) => sum + d.count, 0);
 
   const kpiCards = [
     {
@@ -581,11 +581,11 @@ function AdminRecruitment() {
       )}
 
       {/* Top cards */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {kpiCards.map((card) => (
           <div
             key={card.label}
-            className={`flex items-center gap-4 rounded-2xl border p-5 ${card.tone}`}
+            className={`flex items-center gap-4 rounded-2xl border border-gray-100 p-5 shadow-sm ${card.tone}`}
           >
             <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white">
               {card.icon}
@@ -679,7 +679,7 @@ function AdminRecruitment() {
         </div>
       </Section>
 
-      <div className="grid gap-6 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         {/* Job positions */}
         <Section
           title="Job Positions"
@@ -911,9 +911,8 @@ function AdminRecruitment() {
         </Section>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-2">
-        {/* Resumes */}
-        <Section title="Resume" icon={<Download className="h-5 w-5" />}>
+      {/* Resumes */}
+      <Section title="Resume" icon={<Download className="h-5 w-5" />}>
           {!resumes || resumes.items.length === 0 ? (
             <EmptyText>No resumes uploaded yet.</EmptyText>
           ) : (
@@ -978,124 +977,125 @@ function AdminRecruitment() {
               </table>
             </div>
           )}
-        </Section>
+      </Section>
 
-        {/* Reports */}
-        <Section title="Recruitment Reports" icon={<Briefcase className="h-5 w-5" />}>
-          <div className="grid gap-8 lg:grid-cols-2">
-            {/* Stage mix */}
-            <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-center sm:gap-8">
-              <div className="relative h-40 w-40 shrink-0">
-                <div
-                  className="h-full w-full rounded-full"
-                  style={{ background: donutBackground }}
-                />
-                <div className="absolute inset-[26px] flex flex-col items-center justify-center rounded-full bg-white">
-                  <span className="text-3xl font-bold tracking-tight text-slate-800">
-                    {donutTotal}
-                  </span>
-                  <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
-                    Candidates
-                  </span>
-                </div>
+      {/* Reports */}
+      <Section title="Recruitment Reports" icon={<Briefcase className="h-5 w-5" />}>
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+          {/* Stage mix */}
+          <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-center sm:gap-8">
+            <div className="relative h-40 w-40 shrink-0">
+              <div
+                className="h-full w-full rounded-full"
+                style={{ background: donutBackground }}
+              />
+              <div className="absolute inset-[26px] flex flex-col items-center justify-center rounded-full bg-white">
+                <span className="text-3xl font-bold tracking-tight text-slate-800">
+                  {donutTotal}
+                </span>
+                <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
+                  Candidates
+                </span>
               </div>
+            </div>
 
-              <ul className="w-full min-w-0 flex-1 space-y-1.5">
-                {stageEntries.map((entry) => {
-                  const percent =
-                    donutTotal > 0
-                      ? Math.round((entry.count / donutTotal) * 100)
-                      : 0;
+            <ul className="w-full min-w-0 flex-1 space-y-1">
+              {stageEntries.map((entry) => {
+                const percent =
+                  donutTotal > 0
+                    ? Math.round((entry.count / donutTotal) * 100)
+                    : 0;
 
-                  return (
-                    <li
-                      key={entry.stage}
-                      className="flex items-center gap-2.5 rounded-lg px-2 py-1 transition hover:bg-slate-50"
-                    >
+                return (
+                  <li
+                    key={entry.stage}
+                    className="flex items-center justify-between gap-3 rounded-lg px-2.5 py-1 text-xs transition hover:bg-slate-50"
+                  >
+                    <div className="flex min-w-0 items-center gap-2">
                       <span
                         className="h-2.5 w-2.5 shrink-0 rounded-full"
                         style={{ backgroundColor: STAGE_COLORS[entry.stage] }}
                       />
-
-                      <span className="min-w-0 flex-1 truncate text-xs font-medium text-slate-600">
+                      <span className="whitespace-nowrap font-medium text-slate-700">
                         {STAGE_LABELS[entry.stage]}
                       </span>
+                    </div>
 
-                      {/* nowrap keeps the count and share on one line instead
-                          of the share wrapping under a squeezed count. */}
-                      <span className="shrink-0 whitespace-nowrap text-xs text-slate-400 tabular-nums">
+                    <div className="flex shrink-0 items-center gap-3">
+                      <span className="text-slate-400 tabular-nums">
                         {percent}%
                       </span>
-
-                      <span className="w-7 shrink-0 text-right text-sm font-semibold text-slate-800 tabular-nums">
+                      <span className="w-5 text-right font-bold text-slate-800 tabular-nums">
                         {entry.count}
                       </span>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+
+          {/* Department split */}
+          <div className="min-w-0 border-t border-slate-100 pt-6 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
+            <div className="mb-4 flex items-baseline justify-between gap-3">
+              <p className="text-sm font-semibold text-slate-800">
+                Applications by Department
+              </p>
+
+              {departmentCounts.length > 0 && (
+                <p className="text-xs font-medium text-slate-400">
+                  {departmentCounts.length} department
+                  {departmentCounts.length === 1 ? "" : "s"}
+                </p>
+              )}
+            </div>
+
+            {departmentCounts.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-slate-200 py-8 text-center text-sm text-slate-400">
+                No applications yet.
+              </p>
+            ) : (
+              <ul className="max-h-[240px] space-y-3 overflow-y-auto overscroll-contain pr-1">
+                {departmentCounts.map((item) => {
+                  const percent = totalDepartmentApplications > 0
+                    ? Math.round((item.count / totalDepartmentApplications) * 100)
+                    : 0;
+
+                  return (
+                    <li key={item.department}>
+                      <div className="mb-1.5 flex items-baseline justify-between gap-3 text-xs">
+                        <span className="min-w-0 truncate font-medium text-slate-700">
+                          {item.department}
+                        </span>
+
+                        <span className="shrink-0 whitespace-nowrap text-slate-400 tabular-nums">
+                          <span className="font-semibold text-slate-800">
+                            {item.count}
+                          </span>{" "}
+                          · {percent}%
+                        </span>
+                      </div>
+
+                      <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500"
+                          style={{
+                            width: `${
+                              totalDepartmentApplications > 0
+                                ? (item.count / totalDepartmentApplications) * 100
+                                : 0
+                            }%`,
+                          }}
+                        />
+                      </div>
                     </li>
                   );
                 })}
               </ul>
-            </div>
-
-            {/* Department split */}
-            <div className="min-w-0">
-              <div className="mb-3 flex items-baseline justify-between gap-3">
-                <p className="text-sm font-semibold text-slate-700">
-                  Applications by Department
-                </p>
-
-                {departmentCounts.length > 0 && (
-                  <p className="text-xs text-slate-400">
-                    {departmentCounts.length} department
-                    {departmentCounts.length === 1 ? "" : "s"}
-                  </p>
-                )}
-              </div>
-
-              {departmentCounts.length === 0 ? (
-                <p className="rounded-xl border border-dashed border-slate-200 py-8 text-center text-sm text-slate-400">
-                  No applications yet.
-                </p>
-              ) : (
-                <ul className="max-h-[220px] space-y-2.5 overflow-y-auto overscroll-contain pr-1">
-                  {departmentCounts.map((item) => {
-                    const percent = donutTotal
-                      ? Math.round((item.count / donutTotal) * 100)
-                      : 0;
-
-                    return (
-                      <li key={item.department}>
-                        <div className="mb-1 flex items-baseline justify-between gap-3 text-xs">
-                          <span className="min-w-0 truncate font-medium text-slate-600">
-                            {item.department}
-                          </span>
-
-                          <span className="shrink-0 whitespace-nowrap text-slate-400 tabular-nums">
-                            <span className="font-semibold text-slate-800">
-                              {item.count}
-                            </span>{" "}
-                            · {percent}%
-                          </span>
-                        </div>
-
-                        <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-                          <div
-                            className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500"
-                            style={{
-                              width: `${
-                                (item.count / maxDepartmentCount) * 100
-                              }%`,
-                            }}
-                          />
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
+            )}
           </div>
-        </Section>
-      </div>
+        </div>
+      </Section>
 
       {pendingDelete && (
         <div

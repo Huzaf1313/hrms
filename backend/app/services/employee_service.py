@@ -1,7 +1,10 @@
-from datetime import datetime
+import logging
+from datetime import datetime, timezone
 
+from app.core.config import settings
 from app.core.exceptions import AppException
 from app.core.roles import UserRole
+from app.core.scope import visibility_scope
 from app.core.security import hash_password
 from app.repositories.admin_salary_structure_repository import (
     AdminSalaryStructureRepository,
@@ -11,18 +14,23 @@ from app.repositories.employee_repository import EmployeeRepository
 from app.repositories.shift_repository import ShiftRepository
 from app.repositories.user_repository import UserRepository
 from app.services.admin_salary_structure_service import parse_salary_floor
+from app.services.email_service import EmailService
+from app.services.otp_service import OTPService
 from app.utils.filtering import build_filter
 from app.utils.pagination import PaginationParams
+
+logger = logging.getLogger(__name__)
 
 
 class EmployeeService:
     def __init__(self):
         self.repository = EmployeeRepository()
+        self.user_repository = UserRepository()
         self.department_repository = DepartmentRepository()
         self.salary_structure_repository = AdminSalaryStructureRepository()
         self.shift_repository = ShiftRepository()
-        self.user_repository = UserRepository()
-
+        self.otp_service = OTPService()
+        self.email_service = EmailService()
 
     @staticmethod
     def _visibility_scope(current_user: dict | None) -> dict:
@@ -103,7 +111,6 @@ class EmployeeService:
             # rather than leaving a name no manager will ever match.
             data["manager_id"] = None
             data["reporting_manager"] = None
-
     async def _validate_shift(self, shift_id: str | None):
         if not shift_id:
             return
@@ -166,8 +173,24 @@ class EmployeeService:
     async def create_employee(
         self,
         employee_data: dict,
+        current_user: dict | None = None,
         created_by: str | None = None,
     ):
+        admin_id = (
+            str(current_user.get("_id"))
+            if current_user
+            else str(created_by or "")
+        )
+
+        # 1. Require and extract email verification token
+        verification_token = employee_data.pop("email_verification_token", None)
+        if not verification_token or not str(verification_token).strip():
+            raise AppException(
+                "A valid email verification token is required to add an employee.",
+                400,
+            )
+
+        # 2. Check Employee ID uniqueness
         existing_employee = await self.repository.get_by_employee_id(
             employee_data["employee_id"]
         )
@@ -178,15 +201,23 @@ class EmployeeService:
                 400,
             )
 
-        existing_email = await self.repository.get_by_email(
+        # 3. Check Email uniqueness across all accounts
+        existing_user = await self.user_repository.get_by_email(
             employee_data["email"]
         )
 
-        if existing_email:
+        if existing_user:
             raise AppException(
-                "Employee email already exists",
+                "An account with this email address already exists",
                 400,
             )
+
+        # 4. Atomically validate and consume verification token
+        await self.otp_service.consume_employee_email_verification(
+            token=str(verification_token),
+            submitted_email=employee_data["email"],
+            admin_id=admin_id,
+        )
 
         department = await self.department_repository.get_by_id(
             employee_data["department_id"]
@@ -205,10 +236,11 @@ class EmployeeService:
 
         await self._validate_shift(employee_data.get("shift_id"))
 
-        employee_data["status"] = "active"
-        employee_data["full_name"] = (
+        employee_name = (
             f'{employee_data["first_name"]} {employee_data["last_name"]}'
         ).strip()
+        employee_data["status"] = "active"
+        employee_data["full_name"] = employee_name
         employee_data["phone_number"] = employee_data["phone"]
         temporary_password = employee_data["password"]
         employee_data["password_hash"] = hash_password(
@@ -218,25 +250,63 @@ class EmployeeService:
         employee_data["is_active"] = True
         employee_data["is_locked"] = False
         employee_data["failed_login_attempts"] = 0
-        employee_data["created_at"] = datetime.utcnow()
-        employee_data["updated_at"] = datetime.utcnow()
+        employee_data["created_at"] = datetime.now(timezone.utc)
+        employee_data["updated_at"] = datetime.now(timezone.utc)
 
-        # The admin who added this person is who their requests route back to.
-        # Same convention as assets and job openings.
-        employee_data["created_by"] = created_by
+        await self._resolve_manager(employee_data)
+
+        if current_user:
+            # The admin who added this person is who their requests route back to.
+            # Same convention as assets and job openings.
+            employee_data["created_by"] = str(current_user.get("_id"))
+        elif admin_id:
+            employee_data["created_by"] = admin_id
 
         employee = await self.repository.create(employee_data)
 
-        return employee, temporary_password
+        # Dispatch welcome email (do not fail employee creation if SMTP encounters issues)
+        welcome_email_sent = False
+        try:
+            company_name = "HRMS"
+            if admin_id:
+                creator = await self.user_repository.get_by_id(admin_id)
+                if creator and creator.get("company_name"):
+                    company_name = creator["company_name"]
 
-    async def get_employee(self, employee_id: str):
-        employee = await self.repository.get_by_id(employee_id)
+            await self.email_service.send_html_email_async(
+                to_email=employee["email"],
+                subject=f"Welcome to {company_name}!",
+                template_name="emails/welcome_email.html",
+                template_data={
+                    "company_name": company_name,
+                    "employee_name": employee_name,
+                    "hr_team": "HR Team",
+                    "login_url": settings.login_url,
+                },
+            )
+            welcome_email_sent = True
+        except Exception as exc:
+            logger.warning(
+                "Welcome email could not be delivered to %s: %s",
+                employee.get("email"),
+                type(exc).__name__,
+            )
+            welcome_email_sent = False
+
+        return employee, temporary_password, welcome_email_sent
+
+    async def get_employee(
+        self,
+        employee_id: str,
+        current_user: dict | None = None,
+    ):
+        employee = await self.repository.get_by_id(
+            employee_id,
+            scope=self._visibility_scope(current_user),
+        )
 
         if not employee:
-            raise AppException(
-                "Employee not found",
-                404,
-            )
+            raise AppException("Employee not found", 404)
 
         return employee
 
@@ -246,6 +316,7 @@ class EmployeeService:
         department_id: str | None,
         status: str | None,
         pagination: PaginationParams,
+        current_user: dict | None = None,
     ):
         filters = build_filter(
             {
@@ -286,14 +357,19 @@ class EmployeeService:
             filters=filters,
             skip=pagination.skip,
             limit=pagination.limit,
+            scope=self._visibility_scope(current_user),
         )
 
     async def update_employee(
         self,
         employee_id: str,
         update_data: dict,
+        current_user: dict | None = None
     ):
-        employee = await self.repository.get_by_id(employee_id)
+        employee = await self.repository.get_by_id(
+            employee_id,
+            scope=self._visibility_scope(current_user),
+        )
 
         if not employee:
             raise AppException(
@@ -359,43 +435,59 @@ class EmployeeService:
         if "shift_id" in update_data:
             await self._validate_shift(update_data["shift_id"])
 
+        if "manager_id" in update_data or "reporting_manager" in update_data:
+            await self._resolve_manager(update_data, existing=employee)
+
         update_data["updated_at"] = datetime.utcnow()
 
         return await self.repository.update(
             employee_id,
             update_data,
+            scope=self._visibility_scope(current_user),
         )
 
+    
     async def deactivate_employee(
         self,
         employee_id: str,
+        current_user: dict | None = None,
     ):
-        employee = await self.repository.get_by_id(employee_id)
+        scope = self._visibility_scope(current_user)
+
+        employee = await self.repository.get_by_id(
+            employee_id,
+            scope=scope,
+        )
 
         if not employee:
-            raise AppException(
-                "Employee not found",
-                404,
-            )
+            raise AppException("Employee not found", 404)
 
-        return await self.repository.update_status(
+        updated_employee = await self.repository.update_status(
             employee_id=employee_id,
             status="inactive",
             update_data={
                 "deactivated_at": datetime.utcnow(),
             },
+            scope=scope,
         )
+
+        if not updated_employee:
+            raise AppException("Employee not found", 404)
+
+        return updated_employee
+
 
     async def delete_employee(
         self,
         employee_id: str,
+        current_user: dict | None = None,
     ):
-        deleted = await self.repository.delete(employee_id)
+        deleted = await self.repository.delete(
+            employee_id,
+            scope=self._visibility_scope(current_user),
+        )
 
         if not deleted:
-            raise AppException(
-                "Employee not found",
-                404,
-            )
+            raise AppException("Employee not found", 404)
 
         return True

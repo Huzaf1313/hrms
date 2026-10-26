@@ -295,8 +295,8 @@ function AdminSupportTickets() {
         </section>
 
         {/* KPI row */}
-        <section className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+        <section className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
             <div className="flex items-start justify-between">
               <Tile icon={Layers} tone="bg-blue-50 text-[#2563eb]" />
               <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[11px] font-semibold text-gray-600">
@@ -312,7 +312,7 @@ function AdminSupportTickets() {
             </p>
           </div>
 
-          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
             <div className="flex items-start justify-between">
               <Tile icon={Inbox} tone="bg-amber-50 text-amber-600" />
               {analytics && analytics.urgent_open_count > 0 && (
@@ -330,7 +330,7 @@ function AdminSupportTickets() {
             </p>
           </div>
 
-          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
             <div className="flex items-start justify-between">
               <Tile icon={Timer} tone="bg-emerald-50 text-emerald-600" />
             </div>
@@ -346,7 +346,7 @@ function AdminSupportTickets() {
             </p>
           </div>
 
-          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
             <div className="flex items-start justify-between">
               <Tile icon={Gauge} tone="bg-purple-50 text-purple-600" />
             </div>
@@ -364,9 +364,9 @@ function AdminSupportTickets() {
         </section>
 
         {/* Breakdown + aging */}
-        <section className="mb-6 grid gap-4 lg:grid-cols-3">
+        <section className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {/* Status distribution */}
-          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
             <div className="flex items-center gap-3">
               <Tile icon={TrendingUp} tone="bg-blue-50 text-[#2563eb]" />
               <div>
@@ -434,7 +434,7 @@ function AdminSupportTickets() {
           </div>
 
           {/* Category + priority */}
-          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
             <div className="flex items-center gap-3">
               <Tile icon={Headphones} tone="bg-indigo-50 text-indigo-600" />
               <div>
@@ -507,7 +507,7 @@ function AdminSupportTickets() {
           </div>
 
           {/* Aging */}
-          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm md:col-span-2 lg:col-span-1">
             <div className="flex items-center gap-3">
               <Tile icon={Clock3} tone="bg-orange-50 text-orange-600" />
               <div>
@@ -563,7 +563,7 @@ function AdminSupportTickets() {
         </section>
 
         {/* Filters */}
-        <section className="mb-6 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+        <section className="mb-6 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
           <div className="flex flex-wrap items-center gap-3">
             <div className="relative min-w-[240px] flex-1">
               <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -629,7 +629,7 @@ onChange={(event) => changeFilter(setSearch, event.target.value)}
         </section>
 
         {/* Ticket queue */}
-        <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+        <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm sm:p-6">
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <Tile icon={Ticket} tone="bg-indigo-50 text-indigo-600" />

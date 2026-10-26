@@ -5,6 +5,7 @@ import type {
   ExitRequestSummary,
   ExitStatus,
   ExitType,
+  HandoverTasksUpdate,
   HandoverTask,
 } from "../types/exitRequest";
 
@@ -80,9 +81,8 @@ export const adminExitRequestService = {
   },
 
   /**
-   * Records a departure HR raised themselves - the only way a Termination,
-   * Contract End or Retirement can exist, since the employee form always
-   * submits a Resignation.
+   * Records a departure HR raised themselves - the only way a Termination can
+   * exist, since the employee form always submits a Resignation.
    */
   create(data: AdminExitRequestInput) {
     return api.post<ExitRequest>("/admin/exit-requests", data);
@@ -101,6 +101,11 @@ export const adminExitRequestService = {
       status,
       admin_note: adminNote || null,
     });
+  },
+
+  updateHandoverTasks(id: string, handover_tasks: HandoverTask[]) {
+    const payload: HandoverTasksUpdate = { handover_tasks };
+    return api.patch<ExitRequest>(`/admin/exit-requests/${id}/handover-tasks`, payload);
   },
 
   downloadDocument(id: string, documentKey: string) {

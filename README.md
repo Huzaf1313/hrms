@@ -6,7 +6,7 @@ It covers the two audiences a company actually has: an **admin portal** for HR a
 
 | Layer | Stack |
 | --- | --- |
-| Backend | Python 3.10+, FastAPI, Pydantic v2, Motor (async MongoDB), PyJWT, ReportLab, Jinja2 |
+| Backend | Python 3.10+, FastAPI, Pydantic v2, Motor (async MongoDB), PyJWT, Jinja2 |
 | Frontend | React 19, TypeScript, Vite, Tailwind CSS v4, React Router v7, lucide-react |
 | Database | MongoDB (Atlas or local) |
 
@@ -20,7 +20,7 @@ It covers the two audiences a company actually has: an **admin portal** for HR a
 
 **Leave** — apply for Casual, Sick, Earned or Comp Off leave with balance tracking and overlapping-request detection. **Weekends are excluded**: leave days count working days only, and a range that falls purely on Saturdays and Sundays is rejected.
 
-**Payroll** — salary structures, deductions and contributions, payslip generation as PDF, and employee-facing payslip download.
+**Payroll** — salary structures, deductions and contributions, on-screen payslip viewing, and employee-facing payroll history.
 
 **Announcements, documents, departments, shifts, and reports** round out the module set.
 
@@ -188,7 +188,7 @@ Base URL `http://localhost:8000/api/v1`. Interactive reference at `/docs`.
 | Employee attendance | `GET/POST /employee-attendance`, `GET /employee-attendance/range`, regularization request + review routes |
 | Leave | `GET/POST /employee-leave`, `PATCH /employee-leave/{id}/cancel`, balance / upcoming / pending-count |
 | Admin leave | `GET/POST /admin/leaves`, `GET /admin/leaves/summary`, `PATCH /admin/leaves/{id}/status` |
-| Payroll | `GET /admin/salary-structures`, `GET/POST /admin/deductions`, `GET/POST /admin-payslip`, `GET /employee-payroll/...`, `GET /employee-payslip/{id}/download` |
+| Payroll | `GET /admin/salary-structures`, `GET/POST /admin/deductions`, `GET/POST /admin-payslip`, `GET /employee-payroll/...`, `GET /employee-payslip/{id}` |
 | Announcements | `GET/POST /announcements`, `GET/POST /employee-announcements` |
 | Dashboard | `GET /dashboard` |
 

@@ -4,6 +4,7 @@ import type {
   AttendanceOptions,
   AttendanceSummary,
   AttendanceRecord,
+  AttendanceTrendResponse,
   EmployeeAttendanceRecord,
 } from "../types/attendance";
 
@@ -17,6 +18,54 @@ export interface GetAttendanceParams {
   overtime?: boolean;
   page?: number;
   limit?: number;
+}
+
+export interface BulkMarkParams {
+  employee_ids?: string[];
+  select_all_matching?: boolean;
+  excluded_employee_ids?: string[];
+  filter_date?: string;
+  department_id?: string;
+  filter_status?: string;
+  search?: string;
+  filter_shift_id?: string;
+  overtime_only?: boolean;
+  work_location?: string;
+  date: string;
+  status: string;
+  shift_id?: string | null;
+  shift?: string;
+  shift_start?: string;
+  shift_end?: string;
+  in_time?: string;
+  out_time?: string;
+  notes?: string;
+}
+
+export interface BulkAttendanceItemResult {
+  employee_id: string;
+  employee_name?: string | null;
+  employee_code?: string | null;
+  success: boolean;
+  attendance?: AttendanceRecord | null;
+  error?: string | null;
+}
+
+export interface BulkAttendanceResponse {
+  total: number;
+  success_count: number;
+  failure_count: number;
+  results: BulkAttendanceItemResult[];
+}
+
+/** Self-service payload from GET /attendance/me and POST /attendance/me/punch.
+ *  status/in_time are null when nothing has been marked for the date yet. */
+export interface MyAttendanceStatus {
+  date: string;
+  status: string | null;
+  in_time: string | null;
+  out_time: string | null;
+  working_hours: string | null;
 }
 
 export const attendanceService = {
@@ -36,6 +85,22 @@ export const attendanceService = {
     });
   },
 
+  /**
+   * Daily counts across a date range. One request covers the whole range,
+   * which is what the dashboard chart needs.
+   */
+  trend(params: {
+    start_date: string;
+    end_date: string;
+    department_id?: string;
+  }) {
+    return api.get<AttendanceTrendResponse>("/attendance/trend", {
+      start_date: params.start_date,
+      end_date: params.end_date,
+      department_id: params.department_id,
+    });
+  },
+
   mark(params: {
     employee_id: string;
     date: string;
@@ -48,7 +113,28 @@ export const attendanceService = {
   }) {
     return api.post<AttendanceRecord>("/attendance", params);
   },
+
+  bulkMark(params: BulkMarkParams) {
+    return api.post<BulkAttendanceResponse>("/attendance/bulk", params);
+  },
+
+  /** The signed-in user's own attendance status. Without a date the backend
+   *  answers for today (its business timezone). */
+  myStatus(attendanceDate?: string) {
+    return api.get<MyAttendanceStatus>("/attendance/me", {
+      date: attendanceDate,
+    });
+  },
+
+  /** HR self-punch: first call of the day records the in-time with the
+   *  server clock, the second records the out-time, later ones return 409.
+   *  The record always belongs to the logged-in user - the employee is
+   *  resolved server-side from the session email. */
+  punchSelf() {
+    return api.post<MyAttendanceStatus>("/attendance/me/punch");
+  },
 };
+
 
 /** The employee-facing attendance endpoints, kept separate from the admin
  *  ones above because they live under a different router and return a different

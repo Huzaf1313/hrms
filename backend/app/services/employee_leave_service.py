@@ -175,6 +175,7 @@ class EmployeeLeaveService:
         page: int = 1,
         limit: int = 100,
         status: str | None = None,
+        leave_date: date | None = None,
     ):
         skip = (page - 1) * limit
 
@@ -183,11 +184,13 @@ class EmployeeLeaveService:
             skip=skip,
             limit=limit,
             status=status,
+            leave_date=leave_date,
         )
 
         total = await self.repository.count_by_employee(
             employee_id=employee_id,
             status=status,
+            leave_date=leave_date,
         )
 
         return {

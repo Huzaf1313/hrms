@@ -7,14 +7,6 @@
  * replacing the constant in `dashboardPlaceholders` and nothing else.
  */
 
-export interface AttendancePoint {
-  day: number;
-  present: number;
-  late: number;
-  absent: number;
-  onLeave: number;
-}
-
 export interface RecruitmentStage {
   label: string;
   value: number;
@@ -47,54 +39,6 @@ export interface PayrollSummary {
   totalExpenses: number;
   expenseChangePercent: number;
 }
-
-const MONTH_LABELS = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
-
-/** 1 May – 31 May, matching the month shown in the attendance chart. */
-const CHART_MONTH_INDEX = 4;
-const CHART_DAYS = 31;
-
-function buildAttendanceSeries(): AttendancePoint[] {
-  return Array.from({ length: CHART_DAYS }, (_, index) => {
-    const day = index + 1;
-
-    // Deterministic wobble so the chart reads like real headcount noise
-    // instead of a flat line, without any randomness between renders.
-    const wave = Math.sin(day / 2.4) * 14;
-    const drift = day * 1.6;
-
-    return {
-      day,
-      present: Math.round(168 + wave + drift),
-      late: Math.round(48 + Math.sin(day / 1.7) * 9),
-      absent: Math.round(22 + Math.cos(day / 2.1) * 6),
-      onLeave: Math.round(12 + Math.sin(day / 3.1) * 4),
-    };
-  });
-}
-
-export const attendanceSeries = buildAttendanceSeries();
-
-export const attendanceMonthLabel = `${MONTH_LABELS[CHART_MONTH_INDEX]} 2024`;
-
-export const attendanceMonthOptions = [
-  `${MONTH_LABELS[3]} 2024`,
-  `${MONTH_LABELS[4]} 2024`,
-  `${MONTH_LABELS[5]} 2024`,
-];
 
 export const recruitmentStages: RecruitmentStage[] = [
   { label: "Applied", value: 82, color: "#2563eb" },

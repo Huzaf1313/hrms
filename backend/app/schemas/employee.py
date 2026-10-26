@@ -92,6 +92,9 @@ class EmployeeCreate(BaseModel):
     employment_type: str = "Full-time"
     work_location: str | None = None
     reporting_manager: str | None = None
+    # Account id of the reporting manager. This is what scopes a manager to
+    # their own team; reporting_manager above is display only.
+    manager_id: str | None = None
     salary_structure: str | None = None
     salary: str | None = None
 
@@ -102,6 +105,12 @@ class EmployeeCreate(BaseModel):
     # Additional Information
     emergency_contact: EmergencyContact | None = None
     bank_information: BankInformation | None = None
+
+    # Email verification token
+    email_verification_token: str = Field(
+        default="",
+        description="Verification token issued after verifying employee email OTP",
+    )
 
     @field_validator("first_name")
     @classmethod
@@ -141,6 +150,9 @@ class EmployeeUpdate(BaseModel):
     employment_type: str | None = None
     work_location: str | None = None
     reporting_manager: str | None = None
+    # Account id of the reporting manager. This is what scopes a manager to
+    # their own team; reporting_manager above is display only.
+    manager_id: str | None = None
     salary_structure: str | None = None
     salary: str | None = None
 
@@ -198,6 +210,9 @@ class EmployeeResponse(BaseModel):
     employment_type: str
     work_location: str | None = None
     reporting_manager: str | None = None
+    # Account id of the reporting manager. This is what scopes a manager to
+    # their own team; reporting_manager above is display only.
+    manager_id: str | None = None
     salary_structure: str | None = None
     salary: str | None = None
 
@@ -218,3 +233,36 @@ class EmployeeResponse(BaseModel):
 
     # Login credentials (only populated right after creation)
     credentials: EmployeeCredentials | None = None
+
+    # Welcome email delivery outcome
+    welcome_email_sent: bool | None = None
+
+
+class EmployeeOTPRequest(BaseModel):
+    email: EmailStr
+
+
+class EmployeeOTPVerifyRequest(BaseModel):
+    email: EmailStr
+    otp: str = Field(min_length=6, max_length=6)
+
+    @field_validator("otp")
+    @classmethod
+    def validate_otp_digits(cls, value: str) -> str:
+        value = value.strip()
+        if not value.isdigit() or len(value) != 6:
+            raise ValueError("OTP must be exactly 6 digits")
+        return value
+
+
+class EmployeeOTPRequestResponse(BaseModel):
+    message: str
+    expires_in_minutes: int
+    cooldown_seconds: int
+
+
+class EmployeeOTPVerifyResponse(BaseModel):
+    message: str
+    email: str
+    verification_token: str
+    expires_in_minutes: int

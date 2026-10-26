@@ -13,6 +13,8 @@ import {
   PanelLeftClose,
 } from "lucide-react";
 
+import { canAccessPage } from "../lib/access";
+
 interface SidebarProps {
   activePage: string;
   onNavigate: (page: string) => void;
@@ -27,6 +29,8 @@ interface NavItem {
   label: string;
   icon: typeof LayoutDashboard;
   page?: string;
+  /** Pages only HR may open. Hidden from a manager's menu. */
+  hrOnly?: boolean;
 }
 
 interface NavSection {
@@ -46,25 +50,40 @@ const sections: NavSection[] = [
     title: "Organization",
     items: [
       { label: "Employees", icon: Users, page: "Employees" },
-      { label: "Recruitment", icon: Briefcase, page: "Recruitment" },
+      {
+        label: "Recruitment",
+        icon: Briefcase,
+        page: "Recruitment",
+        hrOnly: true,
+      },
       /*{ label: "Departments", icon: Building2 },*/
     ],
   },
   {
     title: "Attendance",
     items: [
-      { label: "Daily Attendance", icon: CalendarCheck, page: "Attendance" },
+      { label: "Attendance", icon: CalendarCheck, page: "Attendance" },
       { label: "Leave", icon: CalendarDays, page: "Leave" },
     ],
   },
   {
     title: "Management",
     items: [
-      { label: "Payroll", icon: Wallet, page: "Payroll" },
+      {
+        label: "Payroll",
+        icon: Wallet,
+        page: "Payroll",
+        hrOnly: true,
+      },
       { label: "Assets", icon: Package, page: "Assets" },
       { label: "Announcement", icon: Megaphone, page: "Announcement" },
+      {
+        label: "Exit Requests",
+        icon: DoorOpen,
+        page: "Exit Requests",
+        hrOnly: true,
+      },
       { label: "Support Tickets", icon: LifeBuoy, page: "Support Tickets" },
-      { label: "Exit Requests", icon: DoorOpen, page: "Exit Requests" },
       { label: "Settings", icon: Settings, page: "Settings" },
     ],
   },
@@ -117,8 +136,15 @@ function Sidebar({ activePage, onNavigate, collapsed, open, onClose }: SidebarPr
       </button>
 
       {/* Navigation */}
-      <nav className="min-h-0 flex-1 overflow-hidden">
-        {sections.map((section) => (
+      <nav className="sidebar-scrollbar min-h-0 flex-1 overflow-y-auto">
+        {sections.map((section) => {
+          const items = section.items.filter(
+            (item) => !item.hrOnly || canAccessPage(item.page ?? ""),
+          );
+
+          if (items.length === 0) return null;
+
+          return (
           <div key={section.title} className="mb-3">
             {!collapsed ? (
               <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
@@ -132,7 +158,7 @@ function Sidebar({ activePage, onNavigate, collapsed, open, onClose }: SidebarPr
             )}
 
             <div className="flex flex-col gap-1">
-              {section.items.map((item) => {
+              {items.map((item) => {
                 const Icon = item.icon;
                 const isActive = Boolean(item.page) && activePage === item.page;
                 const isDisabled = !item.page;
@@ -173,7 +199,8 @@ function Sidebar({ activePage, onNavigate, collapsed, open, onClose }: SidebarPr
               })}
             </div>
           </div>
-        ))}
+          );
+        })}
       </nav>
 
       {/* Footer */}

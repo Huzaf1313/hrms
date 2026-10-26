@@ -980,7 +980,7 @@ function AdminEmployeeDetailsPage({
                 <X size={18} />
               </button>
             </div>
-             (
+
               {/* BANK INFORMATION FORM */}
               <div className="mt-6 space-y-4">
                 {/* BANK NAME */}

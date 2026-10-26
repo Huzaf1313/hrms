@@ -2,7 +2,7 @@ from datetime import date
 
 from fastapi import APIRouter, Depends, Query
 
-from app.api.deps import get_current_user, require_permission
+from app.api.deps import get_current_user, require_hr_admin, require_permission
 from app.core.exceptions import AppException
 from app.core.roles import Permission
 from app.repositories.employee_repository import EmployeeRepository
@@ -12,7 +12,10 @@ from app.schemas.attendance import (
     AttendanceOptionsResponse,
     AttendanceResponse,
     AttendanceSummaryResponse,
+    AttendanceTrendResponse,
     AttendanceUpdate,
+    BulkAttendanceMark,
+    BulkAttendanceResponse,
     MyAttendanceStatus,
 )
 from app.schemas.common import APIResponse
@@ -41,7 +44,8 @@ async def mark_attendance(
 
     attendance = await service.mark_attendance(
         data.model_dump(),
-        marked_by=marked_by,
+        marked_by=str(current_user["_id"]) if current_user else None,
+        current_user=current_user,
     )
 
     return APIResponse(
@@ -49,6 +53,39 @@ async def mark_attendance(
         message="Attendance marked successfully",
         data=attendance,
     )
+
+
+@router.post(
+    "/attendance/bulk",
+    response_model=APIResponse[BulkAttendanceResponse],
+)
+async def bulk_mark_attendance(
+    data: BulkAttendanceMark,
+    current_user: dict | None = Depends(
+        require_permission(Permission.ATTENDANCE_CREATE)
+    ),
+):
+    """Bulk marks/updates attendance for selected employees or all matching
+    filtered employees across pages. Applies the caller's employee-visibility
+    scope and returns per-employee results."""
+    marked_by = str(current_user["_id"]) if current_user and "_id" in current_user else None
+
+    result = await service.bulk_mark_attendance(
+        data=data,
+        marked_by=marked_by,
+        current_user=current_user,
+    )
+
+    message = f"Marked attendance for {result.success_count} employee(s)"
+    if result.failure_count > 0:
+        message += f" ({result.failure_count} failed)"
+
+    return APIResponse(
+        success=True,
+        message=message,
+        data=result,
+    )
+
 
 
 @router.get(
@@ -77,6 +114,28 @@ async def get_my_attendance_status(
     return APIResponse(
         success=True,
         message="Attendance status retrieved successfully",
+        data=status,
+    )
+
+
+@router.post(
+    "/attendance/me/punch",
+    response_model=APIResponse[MyAttendanceStatus],
+)
+async def punch_my_attendance(
+    current_user: dict = Depends(require_hr_admin),
+):
+    """HR self-punch: marks the signed-in user's OWN attendance for today
+    with the server clock. First call of the day records the in-time, the
+    second records the out-time, later calls return 409. The employee is
+    resolved from the session's email, so no other employee can be marked
+    through this route. Declared before /attendance/{attendance_id} so
+    "me" is never matched as an attendance_id path param."""
+    status = await service.punch_self(current_user=current_user)
+
+    return APIResponse(
+        success=True,
+        message="Attendance punched successfully",
         data=status,
     )
 
@@ -110,6 +169,7 @@ async def get_attendance_list(
         shift_id=shift_id,
         overtime_only=overtime,
         work_location=work_location,
+        current_user=current_user,
     )
 
     return APIResponse(
@@ -135,6 +195,7 @@ async def get_employee_attendance(
     result = await service.get_employee_attendance(
         employee_id=employee_id,
         pagination=PaginationParams(page=page, limit=limit),
+        current_user=current_user,
     )
 
     return APIResponse(
@@ -155,7 +216,9 @@ async def get_attendance_options(
 ):
     """Values for the filter dropdowns. Declared before
     /attendance/{attendance_id} so "options" is never parsed as an id."""
-    work_locations = await service.get_work_locations()
+    work_locations = await service.get_work_locations(
+        current_user=current_user,
+    )
 
     return APIResponse(
         success=True,
@@ -188,6 +251,37 @@ async def get_attendance_summary(
 
 
 @router.get(
+    "/attendance/trend",
+    response_model=APIResponse[AttendanceTrendResponse],
+)
+async def get_attendance_trend(
+    start_date: date = Query(...),
+    end_date: date = Query(...),
+    department_id: str | None = Query(default=None),
+    current_user: dict | None = Depends(
+        require_permission(Permission.ATTENDANCE_READ)
+    ),
+):
+    """Daily attendance counts across a date range.
+
+    Declared before /attendance/{attendance_id} so "trend" is never parsed as
+    an attendance id.
+    """
+    trend = await service.get_trend(
+        start_date=start_date,
+        end_date=end_date,
+        department_id=department_id,
+        current_user=current_user,
+    )
+
+    return APIResponse(
+        success=True,
+        message="Attendance trend retrieved successfully",
+        data=trend,
+    )
+
+
+@router.get(
     "/attendance/{attendance_id}",
     response_model=APIResponse[AttendanceResponse],
 )
@@ -197,7 +291,10 @@ async def get_attendance(
         require_permission(Permission.ATTENDANCE_READ)
     ),
 ):
-    attendance = await service.get_attendance(attendance_id)
+    attendance = await service.get_attendance(
+        attendance_id,
+        current_user=current_user
+    )
 
     return APIResponse(
         success=True,
@@ -242,6 +339,7 @@ async def approve_regularization(
     attendance = await service.update_attendance(
         attendance_id=attendance_id,
         update_data={},
+        current_user=current_user,
     )
 
     return APIResponse(

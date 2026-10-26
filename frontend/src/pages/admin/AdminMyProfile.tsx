@@ -3,7 +3,6 @@ import {
   Bell,
   Briefcase,
   CheckCircle2,
-  Clock,
   FileText,
   Headphones,
   Lock,
@@ -11,9 +10,6 @@ import {
   MapPin,
   Pencil,
   Phone,
-  Quote,
-  RotateCcw,
-  ShieldCheck,
   SlidersHorizontal,
   Upload,
   UserRound,
@@ -33,20 +29,28 @@ import {
 import {
   DOCUMENT_STATUS_STYLES,
   EMPLOYMENT_STATUS_STYLES,
-  PROFILE_QUOTE,
   experienceFrom,
   formatProfileDate,
-  formatProfileDateTime,
 } from "../../components/admin/profile/profileFields";
 import { adminProfileService } from "../../services/adminProfileService";
+import { authService } from "../../services/authService";
 import type {
   AdminProfile,
   NotificationPreferences,
-  ProfileActivity,
   ProfileDocument,
   ProfileTab,
-  SessionInfo,
 } from "../../types/adminProfile";
+
+function roleLabel(role: string): string {
+  return role === "hr_admin" ? "HR Admin" : role.replaceAll("_", " ");
+}
+
+/** Brings a panel into view, so a quick action can jump to it. */
+function scrollToSection(id: string) {
+  document
+    .getElementById(id)
+    ?.scrollIntoView({ behavior: "smooth", block: "center" });
+}
 
 /** Opens a picked image in memory so the preview works before any upload. */
 function readAsDataUrl(file: File): Promise<string> {
@@ -102,8 +106,6 @@ function Toggle({
 
 export default function AdminMyProfile() {
   const [profile, setProfile] = useState<AdminProfile | null>(null);
-  const [session, setSession] = useState<SessionInfo | null>(null);
-  const [activities, setActivities] = useState<ProfileActivity[]>([]);
   const [documents, setDocuments] = useState<ProfileDocument[]>([]);
   const [notifications, setNotifications] = useState<NotificationPreferences | null>(null);
 
@@ -114,7 +116,6 @@ export default function AdminMyProfile() {
 
   const [activeTab, setActiveTab] = useState<ProfileTab>("Overview");
   const [isEditing, setIsEditing] = useState(false);
-  const [showLoginHistory, setShowLoginHistory] = useState(false);
   const [pendingAvatar, setPendingAvatar] = useState<string | null>(null);
 
   const support = adminProfileService.getSupportContact();
@@ -122,29 +123,19 @@ export default function AdminMyProfile() {
   useEffect(() => {
     let cancelled = false;
 
-    // Each panel degrades on its own: a failed session lookup must not take the
-    // whole profile page down with it.
+    // Each panel degrades on its own: a failed document lookup must not take
+    // the whole profile page down with it.
     Promise.allSettled([
       adminProfileService.getProfile(),
-      adminProfileService.getSession(),
-      adminProfileService.listActivities(),
       adminProfileService.listDocuments(),
       adminProfileService.getNotificationPreferences(),
-    ]).then(([profileResult, sessionResult, activityResult, documentsResult, notificationsResult]) => {
+    ]).then(([profileResult, documentsResult, notificationsResult]) => {
       if (cancelled) return;
 
       let hasError = false;
 
       if (profileResult.status === "fulfilled") {
         setProfile(profileResult.value);
-      } else {
-        hasError = true;
-      }
-
-      if (sessionResult.status === "fulfilled") setSession(sessionResult.value);
-
-      if (activityResult.status === "fulfilled") {
-        setActivities(activityResult.value);
       } else {
         hasError = true;
       }
@@ -232,7 +223,7 @@ export default function AdminMyProfile() {
             { label: "Reporting Manager", value: profile.reporting_manager },
             { label: "Shift", value: profile.shift },
             { label: "Date of Joining", value: formatProfileDate(profile.date_of_joining) },
-            { label: "Role", value: profile.role },
+            { label: "Role", value: roleLabel(profile.role) },
             {
               label: "Employee Status",
               value: (
@@ -276,80 +267,6 @@ export default function AdminMyProfile() {
             <DetailRow label="Email" value={profile.emergency_email} />
           </DetailCard>
         </div>
-      </ProfileSection>
-    );
-  }
-
-  function renderWorkInformation() {
-    if (!profile) return null;
-
-    return (
-      <ProfileSection icon={<Briefcase className="icon-accent h-4 w-4" />} title="Work Information">
-        <InfoGrid
-          columns="sm:grid-cols-2 xl:grid-cols-4"
-          items={[
-            { label: "Office Email", value: profile.office_email },
-            { label: "Work Phone", value: profile.work_phone },
-            { label: "Manager", value: profile.department_head },
-            { label: "Department Head", value: profile.department_head },
-          ]}
-        />
-      </ProfileSection>
-    );
-  }
-
-  function renderActivityTable() {
-    return (
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[640px] text-left text-sm">
-          <thead>
-            <tr className="border-b border-gray-100 text-xs font-semibold uppercase tracking-wide text-gray-400">
-              <th className="pb-3">Date &amp; Time</th>
-              <th className="pb-3">Activity</th>
-              <th className="pb-3">Module</th>
-              <th className="pb-3">Details</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {activities.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="py-8 text-center text-gray-500">
-                  No recent activity.
-                </td>
-              </tr>
-            ) : (
-              activities.map((entry) => (
-                <tr key={entry.id} className="border-b border-gray-50 last:border-0">
-                  <td className="py-3.5 text-gray-600">{formatProfileDateTime(entry.occurred_at)}</td>
-                  <td className="py-3.5 font-medium text-[#2563eb]">{entry.activity}</td>
-                  <td className="py-3.5 text-gray-600">{entry.module}</td>
-                  <td className="py-3.5 text-gray-600">{entry.details}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-    );
-  }
-
-  function renderRecentActivities() {
-    return (
-      <ProfileSection
-        icon={<Clock className="icon-accent h-4 w-4" />}
-        title="Recent Activities"
-        action={
-          <button
-            type="button"
-            onClick={() => setActiveTab("Account Settings")}
-            className="text-xs font-semibold text-[#2563eb] hover:underline"
-          >
-            View All
-          </button>
-        }
-      >
-        {renderActivityTable()}
       </ProfileSection>
     );
   }
@@ -434,7 +351,7 @@ export default function AdminMyProfile() {
         <InfoGrid
           items={[
             { label: "Designation", value: profile.designation },
-            { label: "Role", value: profile.role },
+            { label: "Role", value: roleLabel(profile.role) },
             { label: "Department", value: profile.department },
             { label: "Department Head", value: profile.department_head },
             { label: "Reporting Manager", value: profile.reporting_manager },
@@ -493,7 +410,7 @@ export default function AdminMyProfile() {
         </ProfileSection>
 
         <ProfileSection icon={icon} title="Addresses">
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <DetailCard title="Permanent Address">
               <DetailRow label="Address" value={profile.permanent_address} />
             </DetailCard>
@@ -526,7 +443,7 @@ export default function AdminMyProfile() {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px] text-left text-sm">
             <thead>
-              <tr className="border-b border-gray-100 text-xs font-semibold uppercase tracking-wide text-gray-400">
+              <tr className="border-b border-gray-100 text-xs font-semibold uppercase tracking-wide text-gray-600">
                 <th className="pb-3">Document</th>
                 <th className="pb-3">Type</th>
                 <th className="pb-3">Uploaded On</th>
@@ -574,95 +491,77 @@ export default function AdminMyProfile() {
     );
   }
 
-  function renderAccountTab() {
+  /**
+   * Change Password sits under the tab content, so on the Documents tab it
+   * lands right below My Documents.
+   */
+  function renderChangePasswordSection() {
     return (
-      <>
-        <ProfileSection icon={<ShieldCheck className="icon-accent h-4 w-4" />} title="Session & Security">
-          <div className="space-y-4">
-            <div className="grid gap-x-6 gap-y-5 sm:grid-cols-2 xl:grid-cols-4">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Login Status</p>
-                <div className="mt-1">
-                  <StatusPill tone="bg-emerald-50 text-emerald-600">
-                    {session?.login_status ?? "Active"}
-                  </StatusPill>
-                </div>
-              </div>
+      <ProfileSection
+        id="profile-change-password"
+        icon={<Lock className="icon-accent h-4 w-4" />}
+        title="Change Password"
+      >
+        <ChangePasswordForm
+          onSubmit={(message) => setNotice(message)}
+          isSaving={isSaving}
+        />
+      </ProfileSection>
+    );
+  }
 
-              <InfoGrid
-                columns="sm:col-span-3 sm:grid-cols-3"
-                items={[
-                  { label: "Last Login", value: formatProfileDateTime(session?.last_login) },
-                  { label: "Device", value: session?.device ?? "—" },
-                  { label: "IP Address", value: session?.ip_address ?? "—" },
-                ]}
-              />
-            </div>
+  /** Notification Settings lives in the side rail, as it always has. */
+  function renderNotificationSection() {
+    return (
+      <ProfileSection
+        id="profile-notifications"
+        icon={<Bell className="icon-accent h-4 w-4" />}
+        title="Notification Settings"
+        // The toggles carry their own vertical padding, so the heading and the
+        // body's top padding are both trimmed to keep the gap small.
+        headerClassName="px-5 pb-2 pt-4"
+        bodyClassName="px-5 pb-5 pt-0"
+      >
+        {notifications && (
+          <div className="divide-y divide-gray-100">
+            <Toggle
+              label="Email Notifications"
+              description="Receive a digest of activity over email."
+              checked={notifications.email_notifications}
+              onChange={(next) =>
+                updateNotifications({ ...notifications, email_notifications: next })
+              }
+            />
 
-            {showLoginHistory ? (
-              renderActivityTable()
-            ) : (
-              <button
-                type="button"
-                onClick={() => setShowLoginHistory(true)}
-                className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
-              >
-                <RotateCcw className="h-4 w-4" />
-                View Login History
-              </button>
-            )}
+            <Toggle
+              label="Push Notifications"
+              description="Show in-app alerts while you are signed in."
+              checked={notifications.push_notifications}
+              onChange={(next) =>
+                updateNotifications({ ...notifications, push_notifications: next })
+              }
+            />
+
+            <Toggle
+              label="Leave Updates"
+              description="New and decided leave requests."
+              checked={notifications.leave_updates}
+              onChange={(next) =>
+                updateNotifications({ ...notifications, leave_updates: next })
+              }
+            />
+
+            <Toggle
+              label="Payroll Alerts"
+              description="Payslips and payroll announcements."
+              checked={notifications.payroll_alerts}
+              onChange={(next) =>
+                updateNotifications({ ...notifications, payroll_alerts: next })
+              }
+            />
           </div>
-        </ProfileSection>
-
-        <ProfileSection icon={<Lock className="icon-accent h-4 w-4" />} title="Change Password">
-          <ChangePasswordForm
-            onSubmit={(message) => setNotice(message)}
-            isSaving={isSaving}
-          />
-        </ProfileSection>
-
-        <ProfileSection icon={<Bell className="icon-accent h-4 w-4" />} title="Notification Settings">
-          {notifications && (
-            <div className="divide-y divide-gray-100">
-              <Toggle
-                label="Email Notifications"
-                description="Receive a digest of activity over email."
-                checked={notifications.email_notifications}
-                onChange={(next) =>
-                  updateNotifications({ ...notifications, email_notifications: next })
-                }
-              />
-
-              <Toggle
-                label="Push Notifications"
-                description="Show in-app alerts while you are signed in."
-                checked={notifications.push_notifications}
-                onChange={(next) =>
-                  updateNotifications({ ...notifications, push_notifications: next })
-                }
-              />
-
-              <Toggle
-                label="Leave Updates"
-                description="New and decided leave requests."
-                checked={notifications.leave_updates}
-                onChange={(next) =>
-                  updateNotifications({ ...notifications, leave_updates: next })
-                }
-              />
-
-              <Toggle
-                label="Payroll Alerts"
-                description="Payslips and payroll announcements."
-                checked={notifications.payroll_alerts}
-                onChange={(next) =>
-                  updateNotifications({ ...notifications, payroll_alerts: next })
-                }
-              />
-            </div>
-          )}
-        </ProfileSection>
-      </>
+        )}
+      </ProfileSection>
     );
   }
 
@@ -680,8 +579,6 @@ export default function AdminMyProfile() {
         return renderContactTab();
       case "Documents":
         return renderDocumentsTab();
-      case "Account Settings":
-        return renderAccountTab();
       default:
         return (
           <>
@@ -706,9 +603,6 @@ export default function AdminMyProfile() {
                 {renderProfileDetails()}
               </>
             )}
-
-            {renderWorkInformation()}
-            {renderRecentActivities()}
           </>
         );
     }
@@ -777,14 +671,18 @@ export default function AdminMyProfile() {
 
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2.5">
-              <h1 className="text-2xl font-bold text-gray-900">{profile.full_name}</h1>
+              <h1 className="min-w-0 break-words text-2xl font-bold text-gray-900">
+                {profile.full_name}
+              </h1>
 
-              <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-[#2563eb]">
-                {profile.role}
+              <span className="inline-flex shrink-0 items-center whitespace-nowrap rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-[#2563eb]">
+                {roleLabel(profile.role)}
               </span>
             </div>
 
-            <p className="mt-1 text-sm font-medium text-gray-600">{profile.designation}</p>
+            <p className="mt-1 break-words text-sm font-medium text-gray-600">
+              {profile.designation}
+            </p>
 
             <div className="mt-3 space-y-1.5">
               {[
@@ -800,41 +698,31 @@ export default function AdminMyProfile() {
             </div>
           </div>
 
-          <div className="flex w-full flex-wrap items-center gap-4 sm:w-auto">
-            <div className="min-w-0 flex-1 rounded-xl bg-blue-50/60 px-5 py-4 sm:max-w-xs">
-              <Quote className="icon-accent h-4 w-4" />
-
-              <p className="mt-2 text-sm font-semibold italic leading-relaxed text-[#1e3a8a]">
-                &ldquo;{PROFILE_QUOTE}&rdquo;
-              </p>
-
-              <p className="mt-2 text-xs font-semibold text-gray-500">
-                &mdash; {profile.full_name}
-              </p>
-            </div>
-
-            {!isEditing && (
-              <button
-                type="button"
-                onClick={startEditing}
-                className="inline-flex h-10 shrink-0 items-center gap-2 rounded-lg border border-[#2563eb] px-4 text-sm font-semibold text-[#2563eb] transition hover:bg-blue-50"
-              >
-                <Pencil className="h-4 w-4" />
-                Edit Profile
-              </button>
-            )}
-          </div>
+          {!isEditing && (
+            <button
+              type="button"
+              onClick={startEditing}
+              className="inline-flex h-10 shrink-0 items-center gap-2 rounded-lg border border-[#2563eb] px-4 text-sm font-semibold text-[#2563eb] transition hover:bg-blue-50"
+            >
+              <Pencil className="h-4 w-4" />
+              Edit Profile
+            </button>
+          )}
         </div>
       </div>
 
       {/* Body: profile tabs + action rail */}
-      <div className="mt-6 grid gap-6 xl:grid-cols-3">
+      <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-3">
         <div className="min-w-0 xl:col-span-2">
           <div className="rounded-2xl border border-gray-100 bg-white px-5 pt-4 shadow-sm">
             <ProfileTabBar active={activeTab} onChange={setActiveTab} />
           </div>
 
           <div className="mt-4 space-y-4">{renderTabContent()}</div>
+
+          {/* Change Password sits under the tab content, so on the Documents
+              tab it lands right below My Documents. */}
+          <div className="mt-4 space-y-4">{renderChangePasswordSection()}</div>
         </div>
 
         <aside className="space-y-4">
@@ -854,10 +742,7 @@ export default function AdminMyProfile() {
               icon={<Lock className="icon-accent h-4 w-4" />}
               title="Change Password"
               description="Update your account password"
-              onClick={() => {
-                setIsEditing(false);
-                setActiveTab("Account Settings");
-              }}
+              onClick={() => scrollToSection("profile-change-password")}
             />
 
             <QuickActionRow
@@ -874,59 +759,11 @@ export default function AdminMyProfile() {
               icon={<Bell className="icon-accent h-4 w-4" />}
               title="Notification Settings"
               description="Configure your notification preferences"
-              onClick={() => {
-                setIsEditing(false);
-                setActiveTab("Account Settings");
-              }}
+              onClick={() => scrollToSection("profile-notifications")}
             />
           </ProfileSection>
 
-          <ProfileSection icon={<ShieldCheck className="icon-accent h-4 w-4" />} title="System Access">
-            <div className="space-y-3.5">
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-sm text-gray-600">Login Status</span>
-                <StatusPill tone="bg-emerald-50 text-emerald-600">
-                  {session?.login_status ?? "Active"}
-                </StatusPill>
-              </div>
-
-              <div className="flex items-center justify-between gap-4">
-                <span className="shrink-0 text-sm text-gray-600">Last Login</span>
-                <span className="min-w-0 text-right text-sm font-semibold text-gray-800">
-                  {formatProfileDateTime(session?.last_login)}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between gap-4">
-                <span className="shrink-0 text-sm text-gray-600">Device</span>
-                <span className="min-w-0 text-right text-sm font-semibold text-gray-800">
-                  {session?.device ?? "—"}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between gap-4">
-                <span className="shrink-0 text-sm text-gray-600">IP Address</span>
-                <span className="min-w-0 text-right text-sm font-semibold text-gray-800">
-                  {session?.ip_address ?? "—"}
-                </span>
-              </div>
-
-              <div className="border-t border-gray-100 pt-3.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsEditing(false);
-                    setActiveTab("Account Settings");
-                    setShowLoginHistory(true);
-                  }}
-                  className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
-                >
-                  <RotateCcw className="h-4 w-4" />
-                  View Login History
-                </button>
-              </div>
-            </div>
-          </ProfileSection>
+          {renderNotificationSection()}
 
           <ProfileSection icon={<Headphones className="icon-accent h-4 w-4" />} title="Help &amp; Support">
             <p className="text-sm font-bold text-gray-900">Need help?</p>
@@ -962,8 +799,12 @@ export default function AdminMyProfile() {
 /* --------------------------------------------------------- password form */
 
 /**
- * Validated locally. The submit reports that the auth endpoint is not wired up
- * yet rather than pretending the password changed.
+ * Changes the signed-in admin's password.
+ *
+ * The rules here mirror the server's (`validate_password_strength` in the
+ * auth schemas) so a weak password is caught inline instead of coming back
+ * as a 422. The current password is checked by the server, which answers
+ * "Current password is incorrect" when it does not match.
  */
 function ChangePasswordForm({
   isSaving,
@@ -976,19 +817,36 @@ function ChangePasswordForm({
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
+  const [isChanging, setIsChanging] = useState(false);
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  const busy = isSaving || isChanging;
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (busy) return;
 
     setError("");
 
-    if (currentPassword.length < 6) {
+    if (!currentPassword) {
       setError("Enter your current password.");
       return;
     }
 
-    if (newPassword.length < 8) {
-      setError("The new password must be at least 8 characters.");
+    if (newPassword.length < 8 || newPassword.length > 128) {
+      setError("The new password must be between 8 and 128 characters.");
+      return;
+    }
+
+    const failedRule = [
+      { label: "an uppercase letter", ok: /[A-Z]/.test(newPassword) },
+      { label: "a lowercase letter", ok: /[a-z]/.test(newPassword) },
+      { label: "a number", ok: /[0-9]/.test(newPassword) },
+      { label: "a special character", ok: /[^A-Za-z0-9]/.test(newPassword) },
+    ].find((rule) => !rule.ok);
+
+    if (failedRule) {
+      setError(`The new password needs ${failedRule.label}.`);
       return;
     }
 
@@ -1002,11 +860,29 @@ function ChangePasswordForm({
       return;
     }
 
-    onSubmit("Password changes will be connected once the auth endpoint is updated.");
+    setIsChanging(true);
 
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
+    try {
+      await authService.changePassword({
+        current_password: currentPassword,
+        new_password: newPassword,
+        confirm_password: confirmPassword,
+      });
+
+      onSubmit("Password changed successfully.");
+
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "Unable to change your password. Please try again.",
+      );
+    } finally {
+      setIsChanging(false);
+    }
   }
 
   const inputClass =
@@ -1018,13 +894,15 @@ function ChangePasswordForm({
       <div className="grid gap-4 sm:grid-cols-3">
         <div>
           <label htmlFor="current-password" className="mb-1.5 block text-xs font-semibold text-slate-600">
-            Current Password
+            Current Password <span className="ml-1 text-red-500">*</span>
           </label>
           <input
             id="current-password"
             type="password"
+            required
+            autoComplete="current-password"
             value={currentPassword}
-            disabled={isSaving}
+            disabled={busy}
             onChange={(event) => setCurrentPassword(event.target.value)}
             className={inputClass}
           />
@@ -1032,27 +910,36 @@ function ChangePasswordForm({
 
         <div>
           <label htmlFor="new-password" className="mb-1.5 block text-xs font-semibold text-slate-600">
-            New Password
+            New Password <span className="ml-1 text-red-500">*</span>
           </label>
           <input
             id="new-password"
             type="password"
+            required
+            autoComplete="new-password"
             value={newPassword}
-            disabled={isSaving}
+            disabled={busy}
             onChange={(event) => setNewPassword(event.target.value)}
             className={inputClass}
           />
+
+          <p className="mt-1.5 text-[11px] text-slate-400">
+            At least 8 characters with an uppercase letter, a lowercase letter,
+            a number and a special character.
+          </p>
         </div>
 
         <div>
           <label htmlFor="confirm-password" className="mb-1.5 block text-xs font-semibold text-slate-600">
-            Confirm Password
+            Confirm Password <span className="ml-1 text-red-500">*</span>
           </label>
           <input
             id="confirm-password"
             type="password"
+            required
+            autoComplete="new-password"
             value={confirmPassword}
-            disabled={isSaving}
+            disabled={busy}
             onChange={(event) => setConfirmPassword(event.target.value)}
             className={inputClass}
           />
@@ -1067,11 +954,11 @@ function ChangePasswordForm({
 
       <button
         type="submit"
-        disabled={isSaving}
+        disabled={busy}
         className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#2563eb] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1d4ed8] disabled:opacity-60"
       >
         <Lock className="h-4 w-4" />
-        Update Password
+        {busy ? "Updating..." : "Update Password"}
       </button>
     </form>
   );

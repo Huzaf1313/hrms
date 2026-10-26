@@ -73,12 +73,13 @@ class AdminPayslipRepository:
 
     async def get_all(
         self,
+        query: dict | None = None,
         skip: int = 0,
         limit: int = 100,
     ):
         cursor = (
             self.collection
-            .find({})
+            .find(query or {})
             .sort("pay_period_start", DESCENDING)
             .skip(skip)
             .limit(limit)
@@ -86,9 +87,32 @@ class AdminPayslipRepository:
 
         return await cursor.to_list(length=limit)
 
-    async def count(self):
-        return await self.collection.count_documents({})
+    async def count(self, query: dict | None = None):
+        return await self.collection.count_documents(query or {})
+
+    async def update_status(
+        self,
+        payroll_id: str,
+        status: str,
+        paid_on: datetime | None = None,
+    ):
+        if not ObjectId.is_valid(payroll_id):
+            return None
+
+        update_fields: dict = {
+            "payment.status": status,
+            "updated_at": datetime.utcnow(),
+        }
+        if paid_on is not None:
+            update_fields["payment.paid_on"] = paid_on
+
+        await self.collection.update_one(
+            {"_id": ObjectId(payroll_id)},
+            {"$set": update_fields},
+        )
+
+        return await self.get_by_id(payroll_id)
 
     async def get_all_records(self, query: dict | None = None):
         cursor = self.collection.find(query or {}).sort("pay_period_start", 1)
-        return await cursor.to_list(length=2000)
+        return await cursor.to_list(length=2000)

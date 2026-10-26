@@ -69,6 +69,9 @@ export interface Employee {
   employment_type: EmploymentType;
   work_location?: string;
   reporting_manager?: string;
+  /** Account id of the reporting manager - this is what scopes a
+   *  manager to their own team. */
+  manager_id?: string | null;
   salary_structure?: string;
   salary?: string;
   shift_id?: string;
@@ -103,12 +106,29 @@ export interface EmployeeCreate {
   employment_type: EmploymentType;
   work_location?: string;
   reporting_manager?: string;
+  /** Account id of the reporting manager - this is what scopes a
+   *  manager to their own team. */
+  manager_id?: string | null;
   salary_structure?: string;
   salary?: string;
   shift_id?: string;
 
   emergency_contact?: EmergencyContact;
   bank_information?: BankInformation;
+  email_verification_token?: string;
+}
+
+export interface EmployeeOTPRequestResponse {
+  message: string;
+  expires_in_minutes: number;
+  cooldown_seconds: number;
+}
+
+export interface EmployeeOTPVerifyResponse {
+  message: string;
+  email: string;
+  verification_token: string;
+  expires_in_minutes: number;
 }
 
 export interface EmployeeUpdate {
@@ -127,6 +147,9 @@ export interface EmployeeUpdate {
   employment_type?: EmploymentType;
   work_location?: string;
   reporting_manager?: string;
+  /** Account id of the reporting manager - this is what scopes a
+   *  manager to their own team. */
+  manager_id?: string | null;
   salary_structure?: string;
   salary?: string;
   shift_id?: string;

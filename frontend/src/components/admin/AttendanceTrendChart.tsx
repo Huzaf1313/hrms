@@ -1,22 +1,16 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { ChevronDown } from "lucide-react";
 
 import DashboardCard from "./DashboardCard";
 
-import {
-  attendanceMonthLabel,
-  attendanceMonthOptions,
-  attendanceSeries,
-  type AttendancePoint,
-} from "./dashboardData";
+import { attendanceService } from "../../services/attendanceService";
+import { queryKeys } from "../../lib/queryKeys";
 
 const CHART_WIDTH = 620;
 const CHART_HEIGHT = 190;
 const CHART_PADDING_TOP = 10;
 const CHART_PADDING_BOTTOM = 8;
-const CHART_MAX = 250;
-
-const Y_TICKS = [0, 50, 100, 150, 200, 250];
 
 const SERIES_META = [
   { key: "present", label: "Present", color: "#16a34a" },
@@ -27,11 +21,84 @@ const SERIES_META = [
 
 type SeriesKey = (typeof SERIES_META)[number]["key"];
 
+interface TrendPoint {
+  day: number;
+  present: number;
+  late: number;
+  absent: number;
+  onLeave: number;
+}
+
 const USABLE_HEIGHT =
   CHART_HEIGHT - CHART_PADDING_TOP - CHART_PADDING_BOTTOM;
 
+function pad(value: number): string {
+  return String(value).padStart(2, "0");
+}
+
+function monthKeyOf(date: Date): string {
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}`;
+}
+
+function monthLabelOf(key: string): string {
+  const [year, month] = key.split("-").map(Number);
+
+  return new Date(year, month - 1, 1).toLocaleDateString("en-GB", {
+    month: "long",
+    year: "numeric",
+  });
+}
+
+/** First and last day of the month, as "YYYY-MM-DD". */
+function monthBounds(key: string): { start: string; end: string } {
+  const [year, month] = key.split("-").map(Number);
+  const lastDay = new Date(year, month, 0).getDate();
+
+  return {
+    start: `${year}-${pad(month)}-01`,
+    end: `${year}-${pad(month)}-${pad(lastDay)}`,
+  };
+}
+
+/** The last twelve months, so the picker always has something to pick. */
+const MONTH_OPTIONS: { key: string; label: string }[] = (() => {
+  const options: { key: string; label: string }[] = [];
+  const now = new Date();
+
+  for (let back = 11; back >= 0; back -= 1) {
+    const key = monthKeyOf(new Date(now.getFullYear(), now.getMonth() - back, 1));
+
+    options.push({ key, label: monthLabelOf(key) });
+  }
+
+  return options;
+})();
+
+/**
+ * Rounds the axis top up to a readable number that splits evenly into four
+ * gridlines, so the labels stay whole numbers whatever the headcount is.
+ */
+const AXIS_STEPS = [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10];
+
+function buildAxis(peak: number): { max: number; ticks: number[] } {
+  if (peak <= 0) {
+    return { max: 4, ticks: [0, 1, 2, 3, 4] };
+  }
+
+  const magnitude = Math.pow(10, Math.floor(Math.log10(peak)));
+  const normalized = peak / magnitude;
+
+  const factor = AXIS_STEPS.find((step) => step >= normalized) ?? 10;
+
+  // Rounded up to a multiple of four so the four gridlines land on whole
+  // numbers.
+  const max = Math.ceil((factor * magnitude) / 4) * 4;
+
+  return { max, ticks: [0, max / 4, max / 2, (max * 3) / 4, max] };
+}
+
 function buildSeriesPoints(
-  series: AttendancePoint[],
+  series: TrendPoint[],
   key: SeriesKey,
   maxValue: number,
 ): string {
@@ -50,24 +117,55 @@ function buildSeriesPoints(
 }
 
 export default function AttendanceTrendChart() {
-  const [month, setMonth] = useState(attendanceMonthLabel);
+  const [month, setMonth] = useState(() => monthKeyOf(new Date()));
 
-  const peak = Math.max(
-    ...attendanceSeries.flatMap((point) => [
-      point.present,
-      point.late,
-      point.absent,
-      point.onLeave,
-    ]),
+  const bounds = useMemo(() => monthBounds(month), [month]);
+
+  const { data, isPending, isError } = useQuery({
+    queryKey: queryKeys.admin.attendanceTrend(bounds.start, bounds.end),
+    queryFn: () =>
+      attendanceService.trend({
+        start_date: bounds.start,
+        end_date: bounds.end,
+      }),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const series = useMemo<TrendPoint[]>(
+    () =>
+      (data?.days ?? []).map((day) => ({
+        day: Number(day.date.slice(8, 10)),
+        present: day.present,
+        late: day.late,
+        absent: day.absent,
+        onLeave: day.on_leave,
+      })),
+    [data],
   );
 
+  const peak = useMemo(
+    () =>
+      Math.max(
+        0,
+        ...series.flatMap((point) => [
+          point.present,
+          point.late,
+          point.absent,
+          point.onLeave,
+        ]),
+      ),
+    [series],
+  );
+
+  const { max, ticks } = useMemo(() => buildAxis(peak), [peak]);
+
   const areaPath = `M 0,${CHART_HEIGHT} L ${buildSeriesPoints(
-    attendanceSeries,
+    series,
     "present",
-    CHART_MAX,
+    max,
   ).replace(/ /g, " L ")} L ${CHART_WIDTH},${CHART_HEIGHT} Z`;
 
-  const shortMonth = attendanceMonthLabel.split(" ")[0]?.slice(0, 3) ?? "";
+  const shortMonth = monthLabelOf(month).split(" ")[0]?.slice(0, 3) ?? "";
 
   return (
     <DashboardCard
@@ -83,9 +181,9 @@ export default function AttendanceTrendChart() {
             onChange={(event) => setMonth(event.target.value)}
             className="cursor-pointer appearance-none rounded-full border border-gray-200 bg-white py-1 pl-3 pr-7 text-[11px] font-medium text-gray-600 outline-none transition hover:border-gray-300 focus:border-[#2563eb]"
           >
-            {attendanceMonthOptions.map((option) => (
-              <option key={option} value={option}>
-                {option}
+            {MONTH_OPTIONS.map((option) => (
+              <option key={option.key} value={option.key}>
+                {option.label}
               </option>
             ))}
           </select>
@@ -95,129 +193,141 @@ export default function AttendanceTrendChart() {
       }
     >
       <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1">
-        {SERIES_META.map((series) => (
+        {SERIES_META.map((meta) => (
           <span
-            key={series.key}
+            key={meta.key}
             className="dashboard-fade-in flex items-center gap-1.5 text-[11px] text-gray-600"
             style={{ animationDelay: "900ms" }}
           >
             <span
               className="h-2 w-2 rounded-full"
-              style={{ backgroundColor: series.color }}
+              style={{ backgroundColor: meta.color }}
             />
-            {series.label}
+            {meta.label}
           </span>
         ))}
       </div>
 
-      <div className="flex gap-2">
-        <div className="flex w-7 shrink-0 flex-col justify-between pb-1 text-right text-[9px] text-gray-300">
-          {[...Y_TICKS].reverse().map((tick) => (
-            <span key={tick}>{tick}</span>
-          ))}
+      {isPending ? (
+        <div className="flex h-[168px] items-center justify-center text-[11px] text-gray-400">
+          Loading attendance…
         </div>
+      ) : isError ? (
+        <div className="flex h-[168px] items-center justify-center text-[11px] text-rose-500">
+          Could not load attendance for this month.
+        </div>
+      ) : series.length === 0 ? (
+        <div className="flex h-[168px] items-center justify-center text-[11px] text-gray-400">
+          No attendance data for this month.
+        </div>
+      ) : (
+        <>
+          <div className="flex gap-2">
+            <div className="flex w-7 shrink-0 flex-col justify-between pb-1 text-right text-[9px] text-gray-300">
+              {[...ticks].reverse().map((tick) => (
+                <span key={tick}>{tick}</span>
+              ))}
+            </div>
 
-        <div className="min-w-0 flex-1">
-          <svg
-            viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
-            preserveAspectRatio="none"
-            className="h-[168px] w-full"
-            role="img"
-            aria-label="Daily attendance trend for the selected month"
-          >
-            {Y_TICKS.map((tick) => {
-              const y =
-                CHART_PADDING_TOP +
-                USABLE_HEIGHT * (1 - tick / CHART_MAX);
-
-              return (
-                <line
-                  key={tick}
-                  x1={0}
-                  x2={CHART_WIDTH}
-                  y1={y}
-                  y2={y}
-                  stroke="#f1f5f9"
-                  strokeWidth={1}
-                  vectorEffect="non-scaling-stroke"
-                />
-              );
-            })}
-
-            <path
-              d={areaPath}
-              fill="url(#attendance-area)"
-              className="dashboard-fade-in"
-              style={{ animationDelay: "1100ms" }}
-            />
-
-            {SERIES_META.map((series, index) => (
-              <polyline
-                key={series.key}
-                points={buildSeriesPoints(
-                  attendanceSeries,
-                  series.key,
-                  CHART_MAX,
-                )}
-                pathLength={1}
-                fill="none"
-                stroke={series.color}
-                strokeWidth={series.key === "present" ? 2.4 : 1.6}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                vectorEffect="non-scaling-stroke"
-                className="dashboard-line-draw"
-                style={{ animationDelay: `${index * 220}ms` }}
-              />
-            ))}
-
-            <defs>
-              <linearGradient
-                id="attendance-area"
-                x1="0"
-                y1="0"
-                x2="0"
-                y2="1"
+            <div className="min-w-0 flex-1">
+              <svg
+                viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
+                preserveAspectRatio="none"
+                className="h-[168px] w-full"
+                role="img"
+                aria-label="Daily attendance trend for the selected month"
               >
-                <stop
-                  offset="0%"
-                  stopColor="#22c55e"
-                  stopOpacity={0.22}
-                />
-                <stop
-                  offset="100%"
-                  stopColor="#22c55e"
-                  stopOpacity={0}
-                />
-              </linearGradient>
-            </defs>
-          </svg>
+                {ticks.map((tick) => {
+                  const y =
+                    CHART_PADDING_TOP + USABLE_HEIGHT * (1 - tick / max);
 
-          {/* Labels sit on their own data point; even spacing would drift. */}
-          <div className="relative mt-1 h-3 px-3 text-[9px] text-gray-300">
-            {attendanceSeries
-              .filter((point) => point.day % 5 === 0 || point.day === 1)
-              .map((point) => {
-                const percent =
-                  ((point.day - 1) / (attendanceSeries.length - 1)) * 100;
+                  return (
+                    <line
+                      key={tick}
+                      x1={0}
+                      x2={CHART_WIDTH}
+                      y1={y}
+                      y2={y}
+                      stroke="#f1f5f9"
+                      strokeWidth={1}
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  );
+                })}
 
-                return (
-                  <span
-                    key={point.day}
-                    className="absolute -translate-x-1/2 whitespace-nowrap"
-                    style={{ left: `${percent}%` }}
+                <path
+                  d={areaPath}
+                  fill="url(#attendance-area)"
+                  className="dashboard-fade-in"
+                  style={{ animationDelay: "1100ms" }}
+                />
+
+                {SERIES_META.map((meta, index) => (
+                  <polyline
+                    key={meta.key}
+                    points={buildSeriesPoints(series, meta.key, max)}
+                    pathLength={1}
+                    fill="none"
+                    stroke={meta.color}
+                    strokeWidth={meta.key === "present" ? 2.4 : 1.6}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    vectorEffect="non-scaling-stroke"
+                    className="dashboard-line-draw"
+                    style={{ animationDelay: `${index * 220}ms` }}
+                  />
+                ))}
+
+                <defs>
+                  <linearGradient
+                    id="attendance-area"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
                   >
-                    {point.day} {shortMonth}
-                  </span>
-                );
-              })}
-          </div>
-        </div>
-      </div>
+                    <stop
+                      offset="0%"
+                      stopColor="#22c55e"
+                      stopOpacity={0.22}
+                    />
+                    <stop
+                      offset="100%"
+                      stopColor="#22c55e"
+                      stopOpacity={0}
+                    />
+                  </linearGradient>
+                </defs>
+              </svg>
 
-      <p className="mt-2 text-[10px] text-gray-400">
-        Peak {peak} · lines animate in on load
-      </p>
+              {/* Labels sit on their own data point; even spacing would drift. */}
+              <div className="relative mt-1 h-3 px-3 text-[9px] text-gray-300">
+                {series
+                  .map((point, index) => ({ point, index }))
+                  .filter(({ point }) => point.day % 5 === 0 || point.day === 1)
+                  .map(({ point, index }) => {
+                    const percent =
+                      ((index) / Math.max(series.length - 1, 1)) * 100;
+
+                    return (
+                      <span
+                        key={point.day}
+                        className="absolute -translate-x-1/2 whitespace-nowrap"
+                        style={{ left: `${percent}%` }}
+                      >
+                        {point.day} {shortMonth}
+                      </span>
+                    );
+                  })}
+              </div>
+            </div>
+          </div>
+
+          <p className="mt-2 text-[10px] text-gray-400">
+            Peak {peak} · {data?.total_employees ?? 0} employees
+          </p>
+        </>
+      )}
     </DashboardCard>
   );
 }

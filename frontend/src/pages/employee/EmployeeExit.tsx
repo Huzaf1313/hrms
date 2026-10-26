@@ -222,7 +222,7 @@ function EmployeeExit() {
       </div>
 
       {/* Progress stepper */}
-      <div className="grid grid-cols-2 gap-3 rounded-2xl border border-slate-200 bg-white p-4 md:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:grid-cols-2 md:grid-cols-4">
         {STEPPER.map((label, i) => {
           const done = i < step;
           const current = i === step;
@@ -251,8 +251,8 @@ function EmployeeExit() {
         <p className="rounded-lg border border-red-100 bg-red-50 px-4 py-2 text-sm text-red-700">{error}</p>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
-        <section className="rounded-2xl border border-slate-200 bg-white p-5">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_340px]">
+        <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
           <h2 className="text-lg font-semibold text-slate-900">My Resignation Request</h2>
 
           {loading ? (
@@ -315,7 +315,7 @@ function EmployeeExit() {
           )}
         </section>
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-5">
+        <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
           <h2 className="text-lg font-semibold text-slate-900">Quick Links</h2>
           <div className="mt-4 space-y-2">
             <button type="button" disabled className={`${linkClass} cursor-not-allowed text-slate-400`}>
@@ -344,7 +344,7 @@ function EmployeeExit() {
       </div>
 
       {request && showProgress && (
-        <section className="rounded-2xl border border-slate-200 bg-white p-5">
+        <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
           <h2 className="text-lg font-semibold text-slate-900">Exit Process Overview</h2>
           <p className="text-sm text-slate-500">Track your offboarding progress and complete pending tasks.</p>
 
@@ -378,8 +378,8 @@ function EmployeeExit() {
         </p>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <section className="rounded-2xl border border-slate-200 bg-white p-5">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-slate-900">Documents to Submit</h2>
             {request && active && pendingDocs > 0 && (
@@ -442,7 +442,7 @@ function EmployeeExit() {
           />
         </section>
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-5">
+        <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
           <h2 className="text-lg font-semibold text-slate-900">Contact HR</h2>
           <div className="mt-4 rounded-xl bg-blue-50/60 p-4">
             <p className="text-sm font-medium text-blue-700">Need help with the exit process?</p>

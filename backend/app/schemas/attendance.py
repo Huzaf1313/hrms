@@ -156,3 +156,74 @@ class MyAttendanceStatus(BaseModel):
     in_time: str | None = None
     out_time: str | None = None
     working_hours: str | None = None
+
+
+class AttendanceTrendDay(BaseModel):
+    """One day of the attendance trend."""
+
+    date: date
+    present: int = 0
+    late: int = 0
+    absent: int = 0
+    on_leave: int = 0
+    missing_punch: int = 0
+    total_employees: int = 0
+
+
+class AttendanceTrendResponse(BaseModel):
+    """Daily attendance counts across a date range, for the dashboard chart.
+
+    One request covers the whole range, so the chart does not have to ask for
+    a day at a time. `days` stops at today - the days that are still to come
+    are not counted, because nobody can be absent for a day that has not
+    happened yet.
+    """
+
+    start_date: date
+    end_date: date
+    total_employees: int = 0
+    days: list[AttendanceTrendDay] = Field(default_factory=list)
+
+
+class BulkAttendanceMark(BaseModel):
+    """Admin bulk marks/updates attendance records."""
+
+    employee_ids: list[str] = Field(default_factory=list)
+    select_all_matching: bool = False
+    excluded_employee_ids: list[str] = Field(default_factory=list)
+
+    # Filter parameters if select_all_matching is True
+    filter_date: date | None = None
+    department_id: str | None = None
+    filter_status: str | None = None
+    search: str | None = None
+    filter_shift_id: str | None = None
+    overtime_only: bool = False
+    work_location: str | None = None
+
+    # Shared attendance values
+    date: date
+    status: str
+    shift_id: str | None = None
+    shift: str | None = None
+    shift_start: str | None = None
+    shift_end: str | None = None
+    in_time: str | None = None
+    out_time: str | None = None
+    notes: str | None = None
+
+
+class BulkAttendanceItemResult(BaseModel):
+    employee_id: str
+    employee_name: str | None = None
+    employee_code: str | None = None
+    success: bool
+    attendance: AttendanceResponse | None = None
+    error: str | None = None
+
+
+class BulkAttendanceResponse(BaseModel):
+    total: int
+    success_count: int
+    failure_count: int
+    results: list[BulkAttendanceItemResult]

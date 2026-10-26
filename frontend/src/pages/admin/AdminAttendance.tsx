@@ -8,8 +8,6 @@ import {
   Download,
   UserPlus,
   Search,
-  ArrowDown,
-  ArrowUp,
   ChevronLeft,
   ChevronRight,
   FileText,
@@ -20,18 +18,25 @@ import {
   MoreVertical,
   SlidersHorizontal,
   X,
+  AlertCircle,
+  CheckCircle2,
 } from "lucide-react";
+import { CardSkeleton, TableRowSkeleton } from "../../components/ui";
 import { ApiError } from "../../services/api";
-import { attendanceService } from "../../services/attendanceService";
-import { departmentService } from "../../services/departmentService";
-import { formatShiftTime, shiftService } from "../../services/shiftService";
+import {
+  attendanceService,
+  type MyAttendanceStatus,
+} from "../../services/attendanceService";
+import { useGlobalDate } from "../../context/globalDateContext";
+import { useQuery } from "@tanstack/react-query";
+import { useDepartments } from "../../hooks/useDepartments";
+import { useShifts } from "../../hooks/useShifts";
+import { queryKeys } from "../../lib/queryKeys";
 import type {
   AttendanceRecord,
   AttendanceStatus,
   AttendanceSummary,
 } from "../../types/attendance";
-import type { Department } from "../../types/department";
-import type { Shift } from "../../types/shift";
 import RegularizationRequestsCard from "../../components/admin/RegularizationRequestsCard";
 import ShiftManagerModal from "../../components/admin/ShiftManagerModal";
 
@@ -72,7 +77,7 @@ const filterControlClass =
   "focus:border-[#2563eb] focus:outline-none focus:ring-2 focus:ring-[#2563eb]/10";
 
 const quickActions = [
-  { label: "Mark Attendance", icon: UserPlus, iconBg: "bg-blue-50", iconColor: "text-blue-600" },
+  { label: "Mark My Attendance", icon: UserPlus, iconBg: "bg-blue-50", iconColor: "text-blue-600" },
   { label: "Process Regularization", icon: ClipboardEdit, iconBg: "bg-orange-50", iconColor: "text-orange-500" },
   { label: "Generate Report", icon: FileText, iconBg: "bg-emerald-50", iconColor: "text-emerald-600" },
   { label: "Manage Shifts", icon: Users2, iconBg: "bg-violet-50", iconColor: "text-violet-600" },
@@ -180,29 +185,30 @@ function AttendanceDonut({ summary }: { summary: AttendanceSummary | null }) {
   )`;
 
   return (
-    <div className="relative flex h-40 w-40 items-center justify-center rounded-full">
-      <div className="h-40 w-40 rounded-full" style={{ background: gradient }} />
-      <div className="absolute flex h-28 w-28 flex-col items-center justify-center rounded-full bg-white text-center">
-        <span className="text-2xl font-bold text-gray-900">
+    <div className="relative flex h-32 w-32 items-center justify-center rounded-full">
+      <div className="h-32 w-32 rounded-full" style={{ background: gradient }} />
+      <div className="absolute flex h-20 w-20 flex-col items-center justify-center rounded-full bg-white text-center">
+        <span className="text-xl font-bold text-gray-900">
           {summary?.total_employees ?? "-"}
         </span>
-        <span className="text-xs text-gray-500">Total</span>
+        <span className="text-[10px] text-gray-500">Total</span>
       </div>
     </div>
   );
 }
 
-function getToday(): string {
-  const today = new Date();
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Kolkata",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(today);
-  const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+/** The header date is already an ISO string, so it only needs reading out. */
+function formatSelectedDate(value: string): string {
+  const parsed = new Date(`${value}T00:00:00`);
 
-  return `${values.year}-${values.month}-${values.day}`;
+  if (Number.isNaN(parsed.getTime())) return value;
+
+  return parsed.toLocaleDateString("en-GB", {
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 function displayPunchTime(value: string | null | undefined): string {
@@ -262,12 +268,26 @@ function displayOvertime(row: AttendanceRecord): { text: string; computable: boo
 function AdminAttendance() {
   const [activeTab, setActiveTab] = useState(0);
   const [search, setSearch] = useState("");
-  const [date, setDate] = useState(getToday);
+  // The day comes from the header calendar, so every date-driven page in the
+  // app is looking at the same one.
+  const { date, isDefault: isGlobalDateDefault, resetDate: resetGlobalDate } =
+    useGlobalDate();
   const [departmentId, setDepartmentId] = useState("");
+  const [workLocation, setWorkLocation] = useState("");
   const [status, setStatus] = useState("");
   const [shiftId, setShiftId] = useState("");
-  const [workLocation, setWorkLocation] = useState("");
-  const [workLocations, setWorkLocations] = useState<string[]>([]);
+  const { data: departmentsData } = useDepartments();
+  const { data: shiftsData } = useShifts();
+  const { data: optionsData } = useQuery({
+    queryKey: queryKeys.admin.attendanceOptions(),
+    queryFn: () => attendanceService.listOptions(),
+    staleTime: 30 * 60 * 1000,
+  });
+
+  const departments = departmentsData ?? [];
+  const shifts = shiftsData ?? [];
+  const workLocations = optionsData?.work_locations ?? [];
+
   const [overtimeOnly, setOvertimeOnly] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(1);
@@ -275,50 +295,43 @@ function AdminAttendance() {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [total, setTotal] = useState(0);
   const [summary, setSummary] = useState<AttendanceSummary | null>(null);
-  const [departments, setDepartments] = useState<Department[]>([]);
-  const [shifts, setShifts] = useState<Shift[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
-  const [showMarkModal, setShowMarkModal] = useState(false);
   const [showShiftManager, setShowShiftManager] = useState(false);
   const [detailRow, setDetailRow] = useState<AttendanceRecord | null>(null);
-  const [markForm, setMarkForm] = useState({
-    employee_id: "",
-    date: getToday(),
-    status: "present" as AttendanceStatus,
-    shift_id: "",
-    in_time: "",
-    out_time: "",
-  });
-  const [isMarkingAttendance, setIsMarkingAttendance] = useState(false);
-  const [markError, setMarkError] = useState("");
   const [attendanceRefreshKey, setAttendanceRefreshKey] = useState(0);
+
+  // HR self-punch state. The attendance record belongs to the signed-in
+  // user only; myStatus drives the Mark In / Mark Out button state.
+  const [myStatus, setMyStatus] = useState<MyAttendanceStatus | null>(null);
+  const [isPunching, setIsPunching] = useState(false);
+
+  type PunchPopup =
+    | { kind: "success"; title: string; fields: { label: string; value: string }[] }
+    | { kind: "error"; message: string };
+  const [punchPopup, setPunchPopup] = useState<PunchPopup | null>(null);
 
   useEffect(() => {
     let isCurrent = true;
 
     async function loadAttendance() {
       setError("");
-      const [attendanceResult, summaryResult, departmentsResult, shiftsResult, optionsResult] =
-        await Promise.allSettled([
-          attendanceService.list({
-            date,
-            department_id: departmentId || undefined,
-            status: status || undefined,
-            search: search || undefined,
-            shift_id: shiftId || undefined,
-            work_location: workLocation || undefined,
-            overtime: overtimeOnly || undefined,
-            page,
-            limit,
-          }),
-          attendanceService.summary(date, departmentId || undefined),
-          departmentService.list(),
-          shiftService.listAll(),
-          attendanceService.listOptions(),
-        ]);
+      const [attendanceResult, summaryResult] = await Promise.allSettled([
+        attendanceService.list({
+          date,
+          department_id: departmentId || undefined,
+          status: status || undefined,
+          search: search || undefined,
+          shift_id: shiftId || undefined,
+          work_location: workLocation || undefined,
+          overtime: overtimeOnly || undefined,
+          page,
+          limit,
+        }),
+        attendanceService.summary(date, departmentId || undefined),
+      ]);
 
       if (!isCurrent) return;
 
@@ -344,18 +357,6 @@ function AdminAttendance() {
         setSummary(summaryResult.value);
       } else {
         setSummary(null);
-      }
-
-      if (departmentsResult.status === "fulfilled") {
-        setDepartments(departmentsResult.value);
-      }
-
-      if (shiftsResult.status === "fulfilled") {
-        setShifts(shiftsResult.value);
-      }
-
-      if (optionsResult.status === "fulfilled") {
-        setWorkLocations(optionsResult.value.work_locations ?? []);
       }
 
       setIsLoading(false);
@@ -395,6 +396,14 @@ function AdminAttendance() {
     [departmentId, workLocation, shiftId, status].filter(Boolean).length +
     (overtimeOnly ? 1 : 0);
 
+  // Mark In until today's record has an in-time, Mark Out once it does,
+  // and done for the day once both times exist.
+  const punchState = myStatus?.in_time
+    ? myStatus?.out_time
+      ? "complete"
+      : "out"
+    : "in";
+
   const overtimeTotalMinutes = summary?.overtime_total_minutes ?? 0;
   const overtimeStaffCount = summary?.overtime_employee_count ?? 0;
 
@@ -409,69 +418,76 @@ function AdminAttendance() {
     setActiveTab(0);
   }
 
-  async function handleMarkAttendance() {
-    if (!markForm.employee_id) {
-      setMarkError("Please select an employee");
-      return;
-    }
-    if (!markForm.status) {
-      setMarkError("Please select a status");
-      return;
+  // The punch always applies to today (server business date), so this is
+  // fetched without the page's date filter and re-read whenever the list
+  // refreshes.
+  useEffect(() => {
+    let isCurrent = true;
+
+    async function loadMyStatus() {
+      try {
+        const status = await attendanceService.myStatus();
+
+        if (isCurrent) setMyStatus(status);
+      } catch {
+        // No employee record, network issue, etc. - the punch button falls
+        // back to "Mark In" and the error surfaces on click.
+        if (isCurrent) setMyStatus(null);
+      }
     }
 
-    setIsMarkingAttendance(true);
-    setMarkError("");
+    loadMyStatus();
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [attendanceRefreshKey]);
+
+  async function handleSelfPunch() {
+    if (isPunching) return;
+
+    setIsPunching(true);
 
     try {
-      await attendanceService.mark({
-        employee_id: markForm.employee_id,
-        date: markForm.date,
-        status: markForm.status,
-        // Empty means "use the employee's own assigned shift", which lets the
-        // backend resolve the shift and derive overtime from it.
-        shift_id: markForm.shift_id || null,
-        in_time: markForm.in_time || undefined,
-        out_time: markForm.out_time || undefined,
-      });
+      const result = await attendanceService.punchSelf();
 
-      // Reload data
-      setShowMarkModal(false);
-      setMarkForm({
-        employee_id: "",
-        date: getToday(),
-        status: "present",
-        shift_id: "",
-        in_time: "",
-        out_time: "",
-      });
+      setMyStatus(result);
+      setAttendanceRefreshKey((c) => c + 1);
 
-      // Refresh the attendance list
-      const attendanceResult = await attendanceService.list({
-        date,
-        department_id: departmentId || undefined,
-        status: status || undefined,
-        search: search || undefined,
-        shift_id: shiftId || undefined,
-        work_location: workLocation || undefined,
-        overtime: overtimeOnly || undefined,
-        page,
-        limit,
-      });
-      setRecords(attendanceResult.items);
-
-      const summaryResult = await attendanceService.summary(
-        date,
-        departmentId || undefined,
-      );
-      setSummary(summaryResult);
+      // An out-time on the fresh record means this call closed the day.
+      if (result.out_time) {
+        setPunchPopup({
+          kind: "success",
+          title: "Attendance Marked Out",
+          fields: [
+            { label: "Date", value: formatSelectedDate(result.date) },
+            { label: "Status", value: "Present" },
+            { label: "In time", value: result.in_time ?? "--" },
+            { label: "Out time", value: result.out_time },
+            { label: "Working hours", value: result.working_hours ?? "--" },
+          ],
+        });
+      } else {
+        setPunchPopup({
+          kind: "success",
+          title: "Attendance Marked In",
+          fields: [
+            { label: "Date", value: formatSelectedDate(result.date) },
+            { label: "Status", value: "Present" },
+            { label: "In time", value: result.in_time ?? "--" },
+          ],
+        });
+      }
     } catch (err) {
-      const errorMsg =
-        err instanceof ApiError
-          ? err.message
-          : "Failed to mark attendance";
-      setMarkError(errorMsg);
+      setPunchPopup({
+        kind: "error",
+        message:
+          err instanceof ApiError
+            ? err.message
+            : "Failed to mark your attendance.",
+      });
     } finally {
-      setIsMarkingAttendance(false);
+      setIsPunching(false);
     }
   }
 
@@ -612,11 +628,33 @@ function AdminAttendance() {
           </button>
           <button
             type="button"
-            className="flex items-center gap-2 rounded-full bg-[#2563eb] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1d4ed8]"
-            onClick={() => setShowMarkModal(true)}
+            className={`flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-white transition ${
+              punchState === "complete"
+                ? "cursor-default bg-emerald-600"
+                : "bg-[#2563eb] hover:bg-[#1d4ed8]"
+            } disabled:cursor-not-allowed disabled:opacity-70`}
+            onClick={handleSelfPunch}
+            disabled={isPunching || punchState === "complete"}
+            title={
+              punchState === "complete"
+                ? "Your attendance for today is complete"
+                : punchState === "out"
+                ? `Marked in at ${myStatus?.in_time}`
+                : undefined
+            }
           >
-            <UserPlus className="h-4 w-4" />
-            Mark Attendance
+            {punchState === "complete" ? (
+              <CheckCircle2 className="h-4 w-4" />
+            ) : (
+              <UserPlus className="h-4 w-4" />
+            )}
+            {isPunching
+              ? "Marking..."
+              : punchState === "complete"
+              ? "Attendance Complete"
+              : punchState === "out"
+              ? "Mark Out"
+              : "Mark In"}
           </button>
         </div>
       </div>
@@ -667,13 +705,24 @@ function AdminAttendance() {
 
         <div className={`${showFilters ? "grid" : "hidden"} grid-cols-1 items-end gap-x-3 gap-y-4 sm:grid-cols-2 lg:grid lg:grid-cols-4 2xl:grid-cols-8`}>
         <div className="min-w-0">
-          <label className="mb-1.5 block text-xs font-medium text-gray-500">Date</label>
-          <input
-            type="date"
-            value={date}
-            onChange={(event) => setDate(event.target.value)}
-            className="h-10 w-full rounded-full border border-gray-200 bg-white px-4 text-sm text-gray-700 transition hover:border-gray-300 focus:border-[#2563eb] focus:outline-none focus:ring-2 focus:ring-[#2563eb]/10"
-          />
+          <label className="mb-1.5 block text-xs font-medium text-gray-500">
+            Date
+          </label>
+          {/* The header calendar owns this value, so the page shows it rather
+              than offering a second control that could disagree with it. */}
+          <div className="flex h-10 items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-4 text-sm font-medium text-gray-700">
+            <CalendarDays className="h-4 w-4 text-gray-400" />
+            <span className="truncate">{formatSelectedDate(date)}</span>
+            {!isGlobalDateDefault && (
+              <button
+                type="button"
+                onClick={resetGlobalDate}
+                className="ml-auto shrink-0 text-xs font-semibold text-[#2563eb] hover:underline"
+              >
+                Today
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="min-w-0">
@@ -825,6 +874,7 @@ function AdminAttendance() {
                 className="w-72 rounded-full border border-gray-200 py-2.5 pl-10 pr-4 text-sm focus:border-[#2563eb] focus:outline-none"
               />
             </div>
+
             <div className="flex items-center gap-2 text-sm text-gray-500">
               Show
               <select value={limit} onChange={(event) => { setLimit(Number(event.target.value)); setPage(1); }} className="rounded-lg border border-gray-200 px-2 py-1 text-sm text-gray-700 focus:outline-none">
@@ -840,9 +890,6 @@ function AdminAttendance() {
             <table className="w-full min-w-[1080px] text-left text-sm">
               <thead>
                 <tr className="border-b border-gray-100 text-xs font-bold uppercase tracking-wide text-gray-600">
-                  <th className="w-8 pb-3">
-                    <input type="checkbox" className="rounded border-gray-300" />
-                  </th>
                   {columns.map((column) => {
                     const isActive = sortKey === column.key;
                     return (
@@ -856,18 +903,6 @@ function AdminAttendance() {
                           aria-label={`Sort by ${column.label}`}
                         >
                           {column.label}
-                          <span className="inline-flex flex-col leading-[7px]">
-                            <ArrowUp
-                              className={`h-2.5 w-2.5 ${
-                                isActive && sortDirection === "asc" ? "text-[#2563eb]" : "text-gray-300"
-                              }`}
-                            />
-                            <ArrowDown
-                              className={`h-2.5 w-2.5 ${
-                                isActive && sortDirection === "desc" ? "text-[#2563eb]" : "text-gray-300"
-                              }`}
-                            />
-                          </span>
                         </button>
                       </th>
                     );
@@ -876,16 +911,13 @@ function AdminAttendance() {
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr><td colSpan={10} className="py-10 text-center text-gray-500">Loading attendance...</td></tr>
+                  <TableRowSkeleton rows={6} columns={9} />
                 ) : error ? (
-                  <tr><td colSpan={10} className="py-10 text-center text-rose-600">{error}</td></tr>
+                  <tr><td colSpan={9} className="py-10 text-center text-rose-600">{error}</td></tr>
                 ) : sortedRecords.length === 0 ? (
-                  <tr><td colSpan={10} className="py-10 text-center text-gray-500">No attendance records found.</td></tr>
+                  <tr><td colSpan={9} className="py-10 text-center text-gray-500">No attendance records found.</td></tr>
                 ) : sortedRecords.map((row) => (
-                  <tr key={row.id} className="border-b border-gray-50 last:border-0">
-                    <td className="py-4">
-                      <input type="checkbox" className="rounded border-gray-300" />
-                    </td>
+                  <tr key={row.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50">
                     <td className="py-4">
                       <div className="flex items-center gap-3">
                         <div
@@ -960,7 +992,7 @@ function AdminAttendance() {
               horizontal scroll hides half the row behind the viewport edge. */}
           <div className="mt-4 space-y-3 md:hidden">
             {isLoading ? (
-              <p className="py-6 text-center text-sm text-gray-500">Loading attendance...</p>
+              <CardSkeleton count={3} lines={2} className="space-y-3" />
             ) : error ? (
               <p className="py-6 text-center text-sm text-rose-600">{error}</p>
             ) : sortedRecords.length === 0 ? (
@@ -972,6 +1004,7 @@ function AdminAttendance() {
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-semibold text-blue-700">
                       {initials(row)}
                     </span>
+
 
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold text-gray-900">
@@ -1074,18 +1107,18 @@ function AdminAttendance() {
         </div>
 
         {/* Right rail */}
-        <div className="order-first grid min-w-0 auto-rows-fr grid-cols-1 items-stretch gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="order-first grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           {/* Attendance Summary */}
-          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-            <h3 className="mb-4 font-bold text-gray-900">Attendance Summary</h3>
+          <div className="flex h-[340px] flex-col rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+            <h3 className="mb-2 shrink-0 font-bold text-gray-900">Attendance Summary</h3>
 
-            <div className="flex justify-center">
+            <div className="my-auto flex justify-center">
               <AttendanceDonut summary={summary} />
             </div>
 
-            <div className="mt-5 flex flex-col gap-2.5">
+            <div className="mt-3 flex shrink-0 flex-col gap-2">
               {summaryTotals.map((item) => (
-                <div key={item.label} className="flex items-center justify-between text-sm">
+                <div key={item.label} className="flex items-center justify-between text-xs">
                   <span className="flex items-center gap-2 text-gray-600">
                     <span className={`h-2 w-2 rounded-full ${item.color}`} />
                     {item.label}
@@ -1100,33 +1133,37 @@ function AdminAttendance() {
           </div>
 
           {/* Department Wise Present % */}
-          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-            <h3 className="mb-4 font-bold text-gray-900">Department Wise Present %</h3>
+          <div className="flex h-[340px] flex-col rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+            <h3 className="mb-3 shrink-0 font-bold text-gray-900">Department Wise Present %</h3>
 
-            <div className="flex flex-col gap-4">
-              {(summary?.department_presence ?? []).map((dept) => (
-                <div key={dept.department_id}>
-                  <div className="mb-1.5 flex items-center justify-between text-sm">
-                    <span className="text-gray-600">{dept.department_name}</span>
-                    <span className="font-semibold text-gray-900">{dept.present_percentage}%</span>
-                  </div>
+            <div className="flex-1 overflow-y-auto min-h-0 flex flex-col gap-3 pr-1 [scrollbar-width:thin]">
+              {(summary?.department_presence ?? []).length === 0 ? (
+                <p className="my-auto text-center text-xs text-gray-400">No department data</p>
+              ) : (
+                (summary?.department_presence ?? []).map((dept) => (
+                  <div key={dept.department_id}>
+                    <div className="mb-1 flex items-center justify-between text-xs">
+                      <span className="truncate text-gray-600">{dept.department_name}</span>
+                      <span className="font-semibold text-gray-900">{dept.present_percentage}%</span>
+                    </div>
 
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
-                    <div
-                      className="h-full rounded-full bg-[#2563eb]"
-                      style={{ width: `${dept.present_percentage}%` }}
-                    />
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
+                      <div
+                        className="h-full rounded-full bg-[#2563eb]"
+                        style={{ width: `${dept.present_percentage}%` }}
+                      />
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
 
           {/* Quick Actions */}
-          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-            <h3 className="mb-4 font-bold text-gray-900">Quick Actions</h3>
+          <div className="flex h-[340px] flex-col rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+            <h3 className="mb-3 shrink-0 font-bold text-gray-900">Quick Actions</h3>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2.5 flex-1 content-start">
               {quickActions.map((action) => {
                 const Icon = action.icon;
 
@@ -1135,13 +1172,13 @@ function AdminAttendance() {
                     key={action.label}
                     type="button"
                     onClick={() => {
-                      if (action.label === "Mark Attendance") setShowMarkModal(true);
+                      if (action.label === "Mark My Attendance") handleSelfPunch();
                       if (action.label === "Process Regularization")
                         document.getElementById("regularization-requests")?.scrollIntoView({ behavior: "smooth", block: "start" });
                       if (action.label === "Generate Report") exportAttendance();
                       if (action.label === "Manage Shifts") setShowShiftManager(true);
                     }}
-                    className="flex min-w-0 flex-col items-start gap-2 rounded-xl border border-gray-100 p-3 text-left transition hover:border-gray-200 hover:bg-gray-50"
+                    className="flex min-w-0 flex-col items-start gap-1.5 rounded-xl border border-gray-100 p-3 text-left transition hover:border-gray-200 hover:bg-gray-50"
                   >
                     <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${action.iconBg}`}>
                       <Icon className={`h-4 w-4 ${action.iconColor}`} />
@@ -1156,13 +1193,14 @@ function AdminAttendance() {
             </div>
           </div>
 
-          <div id="regularization-requests" className="scroll-mt-6">
+          <div id="regularization-requests" className="scroll-mt-6 h-[340px]">
             <RegularizationRequestsCard
               onReviewed={() => setAttendanceRefreshKey((current) => current + 1)}
             />
           </div>
         </div>
       </div>
+
 
       {/* Row detail. The Action column's View button and kebab both land here. */}
       {detailRow && (
@@ -1228,164 +1266,69 @@ function AdminAttendance() {
         </div>
       )}
 
-      {/* Mark Attendance Modal */}
-      {showMarkModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-lg">
-            <h2 className="mb-4 text-xl font-bold text-gray-900">Mark Attendance</h2>
-
-            {markError && (
-              <div className="mb-4 rounded-lg bg-rose-50 p-3 text-sm text-rose-600">
-                {markError}
+      {/* HR self-punch result popup */}
+      {punchPopup && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setPunchPopup(null)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-lg"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span
+                  className={`flex h-10 w-10 items-center justify-center rounded-xl ${
+                    punchPopup.kind === "error" ? "bg-rose-50" : "bg-emerald-50"
+                  }`}
+                >
+                  {punchPopup.kind === "error" ? (
+                    <AlertCircle className="h-5 w-5 text-rose-600" />
+                  ) : (
+                    <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                  )}
+                </span>
+                <h2 className="text-xl font-bold text-gray-900">
+                  {punchPopup.kind === "error"
+                    ? "Attendance Not Marked"
+                    : punchPopup.title}
+                </h2>
               </div>
+
+              <button
+                type="button"
+                onClick={() => setPunchPopup(null)}
+                aria-label="Close"
+                className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {punchPopup.kind === "error" ? (
+              <div className="rounded-xl border border-rose-100 bg-rose-50 p-4 text-sm text-rose-700">
+                {punchPopup.message}
+              </div>
+            ) : (
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-xl border border-gray-100 bg-gray-50 p-4 text-sm">
+                {punchPopup.fields.map((field) => (
+                  <div key={field.label}>
+                    <dt className="text-xs text-gray-400">{field.label}</dt>
+                    <dd className="font-semibold text-gray-800">{field.value}</dd>
+                  </div>
+                ))}
+              </dl>
             )}
 
-            <div className="space-y-4">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">
-                  Employee
-                </label>
-                <select
-                  value={markForm.employee_id}
-                  onChange={(e) =>
-                    setMarkForm((prev) => ({
-                      ...prev,
-                      employee_id: e.target.value,
-                    }))
-                  }
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#2563eb] focus:outline-none"
-                >
-                  <option value="">Select an employee</option>
-                  {records.map((record) => (
-                    <option key={record.id} value={record.employee.id}>
-                      {record.employee.first_name} {record.employee.last_name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">
-                    Date
-                  </label>
-                  <input
-                    type="date"
-                    value={markForm.date}
-                    onChange={(e) =>
-                      setMarkForm((prev) => ({
-                        ...prev,
-                        date: e.target.value,
-                      }))
-                    }
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#2563eb] focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">
-                    Status
-                  </label>
-                  <select
-                    value={markForm.status}
-                    onChange={(e) =>
-                      setMarkForm((prev) => ({
-                        ...prev,
-                        status: e.target.value as AttendanceStatus,
-                      }))
-                    }
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#2563eb] focus:outline-none"
-                  >
-                    <option value="present">Present</option>
-                    <option value="late">Late</option>
-                    <option value="absent">Absent</option>
-                    <option value="on_leave">On Leave</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700">
-                  Shift
-                </label>
-                <select
-                  value={markForm.shift_id}
-                  onChange={(e) =>
-                    setMarkForm((prev) => ({
-                      ...prev,
-                      shift_id: e.target.value,
-                    }))
-                  }
-                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-[#2563eb] focus:outline-none"
-                >
-                  <option value="">Employee's assigned shift</option>
-                  {shifts.map((shift) => (
-                    <option key={shift.id} value={shift.id}>
-                      {shift.name} ({formatShiftTime(shift.start_time)} -{" "}
-                      {formatShiftTime(shift.end_time)})
-                    </option>
-                  ))}
-                </select>
-                <p className="mt-1 text-xs text-gray-500">
-                  Overtime is worked time beyond this shift's length.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">
-                    In Time
-                  </label>
-                  <input
-                    type="time"
-                    value={markForm.in_time}
-                    onChange={(e) =>
-                      setMarkForm((prev) => ({
-                        ...prev,
-                        in_time: e.target.value,
-                      }))
-                    }
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#2563eb] focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">
-                    Out Time
-                  </label>
-                  <input
-                    type="time"
-                    value={markForm.out_time}
-                    onChange={(e) =>
-                      setMarkForm((prev) => ({
-                        ...prev,
-                        out_time: e.target.value,
-                      }))
-                    }
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#2563eb] focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowMarkModal(false);
-                    setMarkError("");
-                  }}
-                  disabled={isMarkingAttendance}
-                  className="flex-1 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleMarkAttendance}
-                  disabled={isMarkingAttendance}
-                  className="flex-1 rounded-lg bg-[#2563eb] px-4 py-2 text-sm font-medium text-white hover:bg-[#1d4ed8] disabled:opacity-50"
-                >
-                  {isMarkingAttendance ? "Saving..." : "Mark Attendance"}
-                </button>
-              </div>
+            <div className="mt-5 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setPunchPopup(null)}
+                className="rounded-lg bg-[#2563eb] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#1d4ed8]"
+              >
+                Done
+              </button>
             </div>
           </div>
         </div>
@@ -1403,4 +1346,3 @@ function AdminAttendance() {
 }
 
 export default AdminAttendance;
-

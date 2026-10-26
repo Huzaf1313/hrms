@@ -30,7 +30,6 @@ const statusStyles: Record<RegularizationStatus, string> = {
   Rejected: "bg-rose-50 text-rose-600",
 };
 
-const MAX_VISIBLE_REQUESTS = 4;
 
 const mockRequests: RegularizationRequest[] = [
   {
@@ -181,39 +180,47 @@ function RegularizationRequestsCard({
   }
 
   return (
-    <div className="flex h-full flex-col rounded-3xl bg-white p-6 shadow-sm">
-      <div className="mb-4 flex items-center justify-between">
+    <div className="flex h-full flex-col rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+      <div className="mb-3 flex shrink-0 items-center justify-between">
         <h3 className="font-bold text-gray-900">Regularization Requests</h3>
         <button
           type="button"
           onClick={() => navigate("/dashboard/regularization")}
-          className="text-sm font-semibold text-[#2563eb] hover:underline"
+          className="text-xs font-semibold text-[#2563eb] hover:underline"
         >
           View All
         </button>
       </div>
 
-      <div className="flex flex-1 flex-col divide-y divide-gray-100">
-        {requests.slice(0, MAX_VISIBLE_REQUESTS).map((request) => (
-          <button
-            key={request.id}
-            type="button"
-            onClick={() => setSelectedRequest(request)}
-            className="flex items-start justify-between gap-3 py-4 text-left first:pt-0 last:pb-0 hover:bg-gray-50"
-          >
-            <div>
-              <p className="text-sm font-semibold text-gray-900">{request.date}</p>
-              <p className="mt-1 text-sm text-gray-600">{request.reason}</p>
-              <p className="mt-1 text-xs text-gray-400">{request.requestedOn}</p>
-            </div>
-            <span
-              className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${statusStyles[request.status]}`}
+      <div className="flex-1 overflow-y-auto min-h-0 divide-y divide-gray-100 pr-1 [scrollbar-width:thin]">
+        {requests.length === 0 ? (
+          <div className="flex h-full items-center justify-center text-xs text-gray-400">
+            No regularization requests
+          </div>
+        ) : (
+          requests.map((request) => (
+            <button
+              key={request.id}
+              type="button"
+              onClick={() => setSelectedRequest(request)}
+              className="flex w-full items-start justify-between gap-2.5 py-2.5 text-left first:pt-0 last:pb-0 hover:bg-gray-50 rounded-lg px-1.5 -mx-1.5 transition"
             >
-              {request.status}
-            </span>
-          </button>
-        ))}
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs font-semibold text-gray-900">{request.employeeName}</p>
+                <p className="mt-0.5 text-xs font-medium text-gray-700">{request.date}</p>
+                <p className="mt-0.5 truncate text-[11px] text-gray-500">{request.reason}</p>
+                <p className="mt-0.5 text-[10px] text-gray-400">{request.requestedOn}</p>
+              </div>
+              <span
+                className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${statusStyles[request.status]}`}
+              >
+                {request.status}
+              </span>
+            </button>
+          ))
+        )}
       </div>
+
 
       {/* Request Details Modal */}
       {selectedRequest && (

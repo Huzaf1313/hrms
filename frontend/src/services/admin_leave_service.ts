@@ -15,6 +15,10 @@ export interface LeaveRequest {
   // predefined weekly offs and are never counted.
   total_days?: number | null;
   reason?: string | null;
+  /** Supporting document name, for requests created from the admin portal. */
+  attachment_name?: string | null;
+  /** Size of that document in bytes. */
+  attachment_size?: number | null;
   status: LeaveStatus;
   created_at: string;
 }
@@ -43,6 +47,8 @@ export const leaveService = {
     status?: LeaveStatus;
     leave_type?: string;
     department_id?: string;
+    /** "YYYY-MM-DD". Only returns leaves covering that day. */
+    date?: string;
   } = {}) {
     return api.get<LeaveListResponse>("/admin/leaves", params);
   },

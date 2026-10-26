@@ -8,10 +8,15 @@ from app.schemas.common import APIResponse
 from app.schemas.employee import (
     EmployeeCreate,
     EmployeeCredentials,
+    EmployeeOTPRequest,
+    EmployeeOTPRequestResponse,
+    EmployeeOTPVerifyRequest,
+    EmployeeOTPVerifyResponse,
     EmployeeResponse,
     EmployeeUpdate,
 )
 from app.services.employee_service import EmployeeService
+from app.services.otp_service import OTPService
 from app.utils.pagination import PaginationParams
 from app.core.exceptions import AppException
 
@@ -19,6 +24,7 @@ from app.core.exceptions import AppException
 router = APIRouter()
 
 service = EmployeeService()
+otp_service = OTPService()
 
 def to_datetime(value: date | None) -> datetime | None:
     """Mongo/BSON only stores datetime, not bare date - convert before saving."""
@@ -28,7 +34,10 @@ def to_datetime(value: date | None) -> datetime | None:
     return datetime(value.year, value.month, value.day)
 
 
-def serialize_employee(employee: dict) -> EmployeeResponse:
+def serialize_employee(
+    employee: dict,
+    welcome_email_sent: bool | None = None,
+) -> EmployeeResponse:
     return EmployeeResponse(
         id=str(employee["_id"]),
         employee_id=employee.get("employee_id", ""),
@@ -45,6 +54,7 @@ def serialize_employee(employee: dict) -> EmployeeResponse:
         employment_type=employee.get("employment_type", "Full-time"),
         work_location=employee.get("work_location"),
         reporting_manager=employee.get("reporting_manager"),
+        manager_id=employee.get("manager_id"),
         salary_structure=employee.get("salary_structure"),
         salary=employee.get("salary"),
         shift_id=employee.get("shift_id"),
@@ -52,6 +62,48 @@ def serialize_employee(employee: dict) -> EmployeeResponse:
         bank_information=employee.get("bank_information"),
         status=employee.get("status", "active"),
         created_by=employee.get("created_by"),
+        welcome_email_sent=welcome_email_sent,
+    )
+
+
+@router.post(
+    "/employees/request-email-otp",
+    response_model=APIResponse[EmployeeOTPRequestResponse],
+)
+async def request_employee_email_otp(
+    data: EmployeeOTPRequest,
+    current_user: dict = Depends(require_permission(Permission.EMPLOYEES_CREATE)),
+):
+    result = await otp_service.create_employee_verification_otp(
+        email=data.email,
+        admin_id=str(current_user["_id"]),
+    )
+
+    return APIResponse(
+        success=True,
+        message=result["message"],
+        data=EmployeeOTPRequestResponse(**result),
+    )
+
+
+@router.post(
+    "/employees/verify-email-otp",
+    response_model=APIResponse[EmployeeOTPVerifyResponse],
+)
+async def verify_employee_email_otp(
+    data: EmployeeOTPVerifyRequest,
+    current_user: dict = Depends(require_permission(Permission.EMPLOYEES_CREATE)),
+):
+    result = await otp_service.verify_employee_verification_otp(
+        email=data.email,
+        otp=data.otp,
+        admin_id=str(current_user["_id"]),
+    )
+
+    return APIResponse(
+        success=True,
+        message=result["message"],
+        data=EmployeeOTPVerifyResponse(**result),
     )
 
 
@@ -67,20 +119,26 @@ async def create_employee(
     employee_data["date_of_birth"] = to_datetime(employee_data.get("date_of_birth"))
     employee_data["joining_date"] = to_datetime(employee_data["joining_date"])
 
-    employee, temporary_password = await service.create_employee(
+    employee, temporary_password, welcome_email_sent = await service.create_employee(
         employee_data,
-        created_by=str(current_user["_id"]),
+        current_user=current_user,
     )
 
-    response = serialize_employee(employee)
+    response = serialize_employee(employee, welcome_email_sent=welcome_email_sent)
     response.credentials = EmployeeCredentials(
         email=response.email,
         temporary_password=temporary_password,
     )
 
+    message = (
+        "Employee created successfully. Welcome email sent."
+        if welcome_email_sent
+        else "Employee created successfully (welcome email delivery failed)."
+    )
+
     return APIResponse(
         success=True,
-        message="Employee created successfully",
+        message=message,
         data=response,
     )
 
@@ -104,6 +162,7 @@ async def get_employees(
         department_id=department_id,
         status=status,
         pagination=pagination,
+        current_user=current_user,
     )
 
     return APIResponse(
@@ -139,7 +198,10 @@ async def get_employee(
     employee_id: str,
     current_user: dict = Depends(require_permission(Permission.EMPLOYEES_READ)),
 ):
-    employee = await service.get_employee(employee_id)
+    employee = await service.get_employee(
+        employee_id=employee_id,
+        current_user=current_user,
+    )
 
     return APIResponse(
         success=True,
@@ -157,10 +219,7 @@ async def update_employee(
     data: EmployeeUpdate,
     current_user: dict = Depends(get_current_user),
 ):
-    print("🔥 UPDATE EMPLOYEE ENDPOINT HIT")
-    print("Current user:", current_user)
-    print("Employee ID from URL:", employee_id)
-
+   
     role = current_user.get("role")
     current_user_id = current_user.get("_id")
 
@@ -211,6 +270,7 @@ async def update_employee(
     employee = await service.update_employee(
         employee_id=employee_id,
         update_data=update_data,
+        current_user=current_user,
     )
 
     return APIResponse(
@@ -226,16 +286,20 @@ async def update_employee(
 )
 async def deactivate_employee(
     employee_id: str,
-    current_user: dict = Depends(require_permission(Permission.EMPLOYEES_UPDATE)),
+    current_user: dict = Depends(
+        require_permission(Permission.EMPLOYEES_UPDATE)
+    ),
 ):
-    employee = await service.deactivate_employee(employee_id)
+    employee = await service.deactivate_employee(
+        employee_id=employee_id,
+        current_user=current_user,
+    )
 
     return APIResponse(
         success=True,
         message="Employee deactivated successfully",
         data=serialize_employee(employee),
     )
-
 
 @router.delete(
     "/employees/{employee_id}",
@@ -245,7 +309,10 @@ async def delete_employee(
     employee_id: str,
     current_user: dict = Depends(require_permission(Permission.EMPLOYEES_DELETE)),
 ):
-    await service.delete_employee(employee_id)
+    await service.delete_employee(
+        employee_id=employee_id,
+        current_user=current_user,
+    )
 
     return APIResponse(
         success=True,

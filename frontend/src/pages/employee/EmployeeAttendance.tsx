@@ -4,6 +4,7 @@ import { api, ApiError } from "../../services/api";
 import { formatShiftTime, shiftService } from "../../services/shiftService";
 import { holidayService } from "../../services/holidayService";
 import { employeeAttendance } from "../../services/attendanceService";
+import { useGlobalDate } from "../../context/globalDateContext";
 import type { EmployeeAttendanceRecord } from "../../types/attendance";
 import type { Shift } from "../../types/shift";
 import {
@@ -191,10 +192,39 @@ function EmployeeAttendance() {
   const [showAllRequests, setShowAllRequests] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
 
+  // The day picked in the header calendar. It does not narrow this page down to
+  // one day the way it narrows the admin report, because this grid is a month of
+  // history rather than a filtered list: the day is highlighted in place and
+  // pulls the visible month along with it.
+  const { date: globalDateKey } = useGlobalDate();
+
+  const globalDate = useMemo(
+    () => new Date(`${globalDateKey}T00:00:00`),
+    [globalDateKey],
+  );
+
+  // Paging by hand is navigation, not filtering, so it must not be treated as
+  // one: the arrows move this page's month only and leave the shared date
+  // alone. A date arriving from the header clears that override.
+  //
+  // The month is derived rather than stored so it cannot fall out of step, and
+  // it has to be memoised: writing a freshly built Date back into state on
+  // every render never compares equal, which loops forever.
+  const [monthOverride, setMonthOverride] = useState<Date | null>(null);
+  const [syncedToDate, setSyncedToDate] = useState(globalDateKey);
+
+  if (syncedToDate !== globalDateKey) {
+    setSyncedToDate(globalDateKey);
+    setMonthOverride(null);
+  }
+
   /** The month the attendance calendar is showing. Everything in the calendar
    *  section follows this; today's punch card and history stay pinned to today. */
-  const [viewMonth, setViewMonth] = useState(
-    () => new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+  const viewMonth = useMemo(
+    () =>
+      monthOverride ??
+      new Date(globalDate.getFullYear(), globalDate.getMonth(), 1),
+    [monthOverride, globalDate],
   );
 
   /** Punches scoped to viewMonth, fetched separately so the history list above
@@ -272,9 +302,12 @@ useEffect(() => {
       loadedRange?.end !== viewRange.end);
 
   function shiftMonth(amount: number) {
-    setViewMonth(
-      (current) =>
-        new Date(current.getFullYear(), current.getMonth() + amount, 1),
+    setMonthOverride(
+      new Date(
+        viewMonth.getFullYear(),
+        viewMonth.getMonth() + amount,
+        1,
+      ),
     );
   }
   
@@ -858,7 +891,7 @@ if (
           <section className="mt-6">
 
             {isLoading && (
-              <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-sm">
+              <div className="rounded-2xl border border-gray-100 bg-white p-8 text-center shadow-sm">
                 <p className="text-sm text-gray-500">
                   Loading attendance...
                 </p>
@@ -878,10 +911,10 @@ if (
             )}
 
             {!isLoading && !error && (
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
 
                 {/* Present */}
-              <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+              <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
                 <p className="text-sm font-medium text-gray-500">
                   Present Days
                 </p>
@@ -923,7 +956,7 @@ if (
 
 
                 {/* Absent */}
-                <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
 
                   <p className="text-sm font-medium text-gray-500">
                     Absent Days
@@ -935,7 +968,7 @@ if (
                 </div>
 
                 {/* Late */}
-                <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
 
                   <p className="text-sm font-medium text-gray-500">
                     Late Days
@@ -947,7 +980,7 @@ if (
                 </div>
 
                 {/* Overtime */}
-                <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
 
                   <p className="text-sm font-medium text-gray-500">
                     Overtime
@@ -967,7 +1000,7 @@ if (
                 </div>
 
                 {/* Leave */}
-                <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
 
                   <p className="text-sm font-medium text-gray-500">
                     On Leave
@@ -979,7 +1012,7 @@ if (
                 </div>
 
                 {/* Working Hours */}
-                <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
 
                   <p className="text-sm font-medium text-gray-500">
                     Working Hours
@@ -1006,7 +1039,7 @@ if (
         <section className="mt-6 grid gap-6 lg:grid-cols-2">
 
         {/* Today's Attendance */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
 
             <div className="flex items-start justify-between">
 
@@ -1184,7 +1217,7 @@ if (
         </div>
 
         {/* Leave Balance */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
 
             <div className="flex items-start justify-between">
 
@@ -1289,7 +1322,7 @@ if (
         <section className="mt-6 grid grid-cols-1 gap-8 lg:grid-cols-2">
 
           {/* Punch In/Out History */}
-          <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
 
             <div className="flex items-start justify-between">
 
@@ -1422,7 +1455,7 @@ if (
 
 
           {/* Regularization Requests */}
-          <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
 
             <div className="flex items-start justify-between gap-4">
 
@@ -1779,6 +1812,11 @@ if (
                       calendarMonth + 1,
                     ).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 
+                    // The day chosen in the header, when it falls in the month
+                    // on screen. Ringed rather than filled, so it never hides
+                    // the day's attendance colour underneath.
+                    const isGlobalDate = dateKey === globalDateKey;
+
                     const calendarDate = new Date(
                       calendarYear,
                       calendarMonth,
@@ -1873,6 +1911,10 @@ if (
 
                         <div
                           className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
+                            isGlobalDate
+                              ? "ring-2 ring-[#2563eb] ring-offset-2"
+                              : ""
+                          } ${
                             isToday
                               ? "bg-[#2563eb] text-white"
                               : statusClass
