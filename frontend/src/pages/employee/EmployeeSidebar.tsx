@@ -11,6 +11,7 @@ import {
   DoorOpen,
   LogOut,
   PanelLeftClose,
+  Package,
 } from "lucide-react";
 
 interface EmployeeSidebarProps {
@@ -112,6 +113,17 @@ const sections: NavSection[] = [
       label: "Exit / Offboarding",
       icon: DoorOpen,
       path: "/employee/exit",
+      matchPrefix: true,
+    },
+  ],
+},
+{
+  title: "Assets",
+  items: [
+    {
+      label: "My Assets",
+      icon: Package,
+      path: "/employee/assets",
       matchPrefix: true,
     },
   ],

@@ -1,9 +1,10 @@
+
 from datetime import date, datetime
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
-from app.api.deps import require_permission
-from app.core.roles import Permission
+from app.api.deps import get_current_user, require_permission
+from app.core.roles import Permission, UserRole, has_permission
 from app.schemas.asset import (
     AllocationRow,
     AssetAssign,
@@ -25,18 +26,41 @@ from app.services.asset_request_service import AssetRequestService
 from app.services.asset_service import AssetService
 from app.utils.pagination import PaginationParams
 
-router = APIRouter(
-    prefix="/assets",
-    tags=["Assets"],
-)
+
+router = APIRouter(prefix="/assets", tags=["Assets"])
 
 asset_service = AssetService()
 request_service = AssetRequestService()
 
 
-def _as_date(value) -> date | None:
-    """Read a stored midnight datetime back as a plain date."""
+def _role_value(current_user: dict) -> str | None:
+    role = current_user.get("role")
+    return role.value if hasattr(role, "value") else role
 
+
+async def require_asset_read_access(
+    current_user: dict = Depends(get_current_user),
+):
+    role = _role_value(current_user)
+
+    if role == UserRole.EMPLOYEE.value:
+        if not current_user.get("employee_id"):
+            raise HTTPException(
+                status_code=403,
+                detail="Employee account is missing an employee ID.",
+            )
+        return current_user
+
+    if has_permission(role, Permission.ASSETS_READ):
+        return current_user
+
+    raise HTTPException(
+        status_code=403,
+        detail="You do not have permission to view assets.",
+    )
+
+
+def _as_date(value) -> date | None:
     if value is None:
         return None
 
@@ -45,6 +69,12 @@ def _as_date(value) -> date | None:
 
     if isinstance(value, date):
         return value
+
+    if isinstance(value, str):
+        try:
+            return date.fromisoformat(value[:10])
+        except ValueError:
+            return None
 
     return None
 
@@ -97,25 +127,20 @@ def serialize_request(request: dict) -> AssetRequestResponse:
     )
 
 
-# ---------------------------------------------------------------------------
-# Literal paths first. FastAPI matches routes in declaration order, so
-# "/stats", "/allocation" and "/requests" must be registered before
-# "/{asset_id}" or they would be swallowed by the path parameter.
+# Keep literal routes above /{asset_id} so they are matched correctly.
 
 
-@router.get(
-    "/stats",
-    response_model=APIResponse[AssetStats],
-)
+@router.get("/stats", response_model=APIResponse[AssetStats])
 async def get_asset_stats(
-    current_user: dict = Depends(require_permission(Permission.ASSETS_READ)),
+    current_user: dict = Depends(
+        require_permission(Permission.ASSETS_READ)
+    ),
 ):
     stats = await asset_service.get_stats(current_user)
-
     return APIResponse(
         success=True,
-        message="Asset stats retrieved successfully",
-        data=AssetStats(**stats),
+        message="Asset statistics retrieved successfully",
+        data=stats,
     )
 
 
@@ -125,17 +150,21 @@ async def get_asset_stats(
 )
 async def get_asset_allocation(
     view: str = Query(default="employee", pattern="^(employee|department)$"),
-    search: str | None = Query(default=None),
-    category: AssetCategory | None = Query(default=None),
+    search: str | None = None,
+    category: AssetCategory | None = None,
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=5, ge=1, le=100),
-    current_user: dict = Depends(require_permission(Permission.ASSETS_READ)),
+    current_user: dict = Depends(
+        require_permission(Permission.ASSETS_READ)
+    ),
 ):
+    pagination = PaginationParams(page=page, limit=limit)
+
     rows, total = await asset_service.get_allocation(
         view=view,
         search=search,
-        category=category.value if category else None,
-        pagination=PaginationParams(page=page, limit=limit),
+        category=category,
+        pagination=pagination,
         current_user=current_user,
     )
 
@@ -143,7 +172,7 @@ async def get_asset_allocation(
         success=True,
         message="Asset allocation retrieved successfully",
         data=Paginated(
-            items=[AllocationRow(**row) for row in rows],
+            items=rows,
             total=total,
             page=page,
             limit=limit,
@@ -156,18 +185,22 @@ async def get_asset_allocation(
     response_model=APIResponse[Paginated[AssetRequestResponse]],
 )
 async def get_asset_requests(
-    request_type: AssetRequestType | None = Query(default=None),
-    status: AssetRequestStatus | None = Query(default=None),
-    search: str | None = Query(default=None),
+    request_type: AssetRequestType | None = None,
+    status: AssetRequestStatus | None = None,
+    search: str | None = None,
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=10, ge=1, le=100),
-    current_user: dict = Depends(require_permission(Permission.ASSETS_READ)),
+    current_user: dict = Depends(
+        require_permission(Permission.ASSET_REQUESTS_READ)
+    ),
 ):
+    pagination = PaginationParams(page=page, limit=limit)
+
     requests, total = await request_service.get_requests(
-        request_type=request_type.value if request_type else None,
-        status=status.value if status else None,
+        request_type=request_type,
+        status=status,
         search=search,
-        pagination=PaginationParams(page=page, limit=limit),
+        pagination=pagination,
         current_user=current_user,
     )
 
@@ -189,9 +222,16 @@ async def get_asset_requests(
 )
 async def create_asset_request(
     data: AssetRequestCreate,
-    current_user: dict = Depends(require_permission(Permission.ASSETS_CREATE)),
+    current_user: dict = Depends(
+        require_permission(Permission.ASSET_REQUESTS_CREATE)
+    ),
 ):
-    request = await request_service.create_request(data.model_dump(), current_user)
+    # The service enforces employee/admin request rules as well, so the
+    # restriction cannot be bypassed by calling the API directly.
+    request = await request_service.create_request(
+        data.model_dump(mode="json"),
+        current_user,
+    )
 
     return APIResponse(
         success=True,
@@ -207,19 +247,21 @@ async def create_asset_request(
 async def review_asset_request(
     request_id: str,
     data: AssetRequestReview,
-    current_user: dict = Depends(require_permission(Permission.ASSETS_UPDATE)),
+    current_user: dict = Depends(
+        require_permission(Permission.ASSETS_UPDATE)
+    ),
 ):
     request = await request_service.review_request(
-        request_id,
-        data.status,
-        data.admin_note,
-        str(current_user["_id"]),
-        current_user,
+        request_id=request_id,
+        status=data.status,
+        admin_note=data.admin_note,
+        reviewed_by=str(current_user["_id"]),
+        current_user=current_user,
     )
 
     return APIResponse(
         success=True,
-        message=f"Asset request {data.status.value} successfully",
+        message="Asset request reviewed successfully",
         data=serialize_request(request),
     )
 
@@ -230,13 +272,15 @@ async def review_asset_request(
 )
 async def get_recent_allocations(
     limit: int = Query(default=5, ge=1, le=100),
-    current_user: dict = Depends(require_permission(Permission.ASSETS_READ)),
+    current_user: dict = Depends(
+        require_permission(Permission.ASSETS_READ)
+    ),
 ):
     assets = await asset_service.get_recent_allocations(limit)
 
     return APIResponse(
         success=True,
-        message="Recent allocations retrieved successfully",
+        message="Recent asset allocations retrieved successfully",
         data=[serialize_asset(asset) for asset in assets],
     )
 
@@ -247,23 +291,23 @@ async def get_recent_allocations(
 )
 async def complete_asset_return(
     request_id: str,
-    current_user: dict = Depends(require_permission(Permission.ASSETS_UPDATE)),
+    current_user: dict = Depends(
+        require_permission(Permission.ASSETS_UPDATE)
+    ),
 ):
+    # Pass the acting user so the service can enforce the same visibility
+    # scope as the other admin asset operations.
     request = await request_service.complete_return(
-        request_id,
-        str(current_user["_id"]),
+        request_id=request_id,
+        reviewed_by=str(current_user["_id"]),
+        current_user=current_user,
     )
 
     return APIResponse(
         success=True,
-        message="Asset return confirmed successfully",
+        message="Asset return completed successfully",
         data=serialize_request(request),
     )
-
-
-# ---------------------------------------------------------------------------
-# Assets
-# ---------------------------------------------------------------------------
 
 
 @router.get(
@@ -271,22 +315,24 @@ async def complete_asset_return(
     response_model=APIResponse[Paginated[AssetResponse]],
 )
 async def get_assets(
-    status: AssetStatus | None = Query(default=None),
-    category: AssetCategory | None = Query(default=None),
-    search: str | None = Query(default=None),
-    employee_id: str | None = Query(default=None),
-    department_id: str | None = Query(default=None),
+    status: AssetStatus | None = None,
+    category: AssetCategory | None = None,
+    search: str | None = None,
+    employee_id: str | None = None,
+    department_id: str | None = None,
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=7, ge=1, le=100),
-    current_user: dict = Depends(require_permission(Permission.ASSETS_READ)),
+    current_user: dict = Depends(require_asset_read_access),
 ):
+    pagination = PaginationParams(page=page, limit=limit)
+
     assets, total = await asset_service.get_assets(
-        status=status.value if status else None,
-        category=category.value if category else None,
+        status=status,
+        category=category,
         search=search,
         employee_id=employee_id,
         department_id=department_id,
-        pagination=PaginationParams(page=page, limit=limit),
+        pagination=pagination,
         current_user=current_user,
     )
 
@@ -308,10 +354,12 @@ async def get_assets(
 )
 async def create_asset(
     data: AssetCreate,
-    current_user: dict = Depends(require_permission(Permission.ASSETS_CREATE)),
+    current_user: dict = Depends(
+        require_permission(Permission.ASSETS_CREATE)
+    ),
 ):
     asset = await asset_service.create_asset(
-        data.model_dump(),
+        data.model_dump(mode="json"),
         created_by=str(current_user["_id"]),
         current_user=current_user,
     )
@@ -329,7 +377,7 @@ async def create_asset(
 )
 async def get_asset(
     asset_id: str,
-    current_user: dict = Depends(require_permission(Permission.ASSETS_READ)),
+    current_user: dict = Depends(require_asset_read_access),
 ):
     asset = await asset_service.get_asset(asset_id, current_user)
 
@@ -347,7 +395,9 @@ async def get_asset(
 async def update_asset(
     asset_id: str,
     data: AssetUpdate,
-    current_user: dict = Depends(require_permission(Permission.ASSETS_UPDATE)),
+    current_user: dict = Depends(
+        require_permission(Permission.ASSETS_UPDATE)
+    ),
 ):
     asset = await asset_service.update_asset(
         asset_id,
@@ -368,7 +418,9 @@ async def update_asset(
 )
 async def delete_asset(
     asset_id: str,
-    current_user: dict = Depends(require_permission(Permission.ASSETS_DELETE)),
+    current_user: dict = Depends(
+        require_permission(Permission.ASSETS_DELETE)
+    ),
 ):
     await asset_service.delete_asset(asset_id, current_user)
 
@@ -386,7 +438,9 @@ async def delete_asset(
 async def assign_asset(
     asset_id: str,
     data: AssetAssign,
-    current_user: dict = Depends(require_permission(Permission.ASSETS_UPDATE)),
+    current_user: dict = Depends(
+        require_permission(Permission.ASSETS_UPDATE)
+    ),
 ):
     asset = await asset_service.assign_asset(
         asset_id,
@@ -408,8 +462,11 @@ async def assign_asset(
 )
 async def return_asset(
     asset_id: str,
-    current_user: dict = Depends(require_permission(Permission.ASSETS_UPDATE)),
+    current_user: dict = Depends(
+        require_permission(Permission.ASSETS_UPDATE)
+    ),
 ):
+    # Preserve the existing direct admin return endpoint.
     asset = await asset_service.return_asset(asset_id, current_user)
 
     return APIResponse(

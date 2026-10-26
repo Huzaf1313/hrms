@@ -1,0 +1,230 @@
+﻿
+  frontend\src\pages\admin\AdminAssets.tsx:44:  ASSET_STATUS_ORDER,
+  frontend\src\pages\admin\AdminAssets.tsx:45:  type AllocationRow,
+  frontend\src\pages\admin\AdminAssets.tsx:46:  type Asset,
+  frontend\src\pages\admin\AdminAssets.tsx:47:  type AssetCategory,
+  frontend\src\pages\admin\AdminAssets.tsx:48:  type AssetRequest,
+> frontend\src\pages\admin\AdminAssets.tsx:49:  type AssetRequestStatus,
+  frontend\src\pages\admin\AdminAssets.tsx:50:  type AssetStatus,
+  frontend\src\pages\admin\AdminAssets.tsx:51:  type AssetStats,
+  frontend\src\pages\admin\AdminAssets.tsx:52:  type CategoryCount,
+  frontend\src\pages\admin\AdminAssets.tsx:53:  type Paginated,
+  frontend\src\pages\admin\AdminAssets.tsx:54:} from "../../types/asset";
+  frontend\src\pages\admin\AdminAssets.tsx:55:
+  frontend\src\pages\admin\AdminAssets.tsx:56:const PANEL_CLASS = "rounded-2xl border border-gray-100 bg-white p-6 shadow-sm";
+  frontend\src\pages\admin\AdminAssets.tsx:57:
+  frontend\src\pages\admin\AdminAssets.tsx:58:// KPI cards are narrow, so they clip instead of letting the big number
+  frontend\src\pages\admin\AdminAssets.tsx:59:// overflow into the neighbouring card.
+  frontend\src\pages\admin\AdminAssets.tsx:260:}
+  frontend\src\pages\admin\AdminAssets.tsx:261:
+  frontend\src\pages\admin\AdminAssets.tsx:262:const assetStatusStyles: Record<AssetStatus, string> = {
+  frontend\src\pages\admin\AdminAssets.tsx:263:  in_use: "bg-emerald-50 text-emerald-600",
+  frontend\src\pages\admin\AdminAssets.tsx:264:  available: "bg-blue-50 text-blue-600",
+> frontend\src\pages\admin\AdminAssets.tsx:265:  pending_return: "bg-orange-50 text-orange-500",
+  frontend\src\pages\admin\AdminAssets.tsx:266:  maintenance: "bg-violet-50 text-violet-600",
+  frontend\src\pages\admin\AdminAssets.tsx:267:};
+  frontend\src\pages\admin\AdminAssets.tsx:268:
+> frontend\src\pages\admin\AdminAssets.tsx:269:const requestStatusStyles: Record<AssetRequestStatus, string> = {
+  frontend\src\pages\admin\AdminAssets.tsx:270:  pending: "bg-orange-50 text-orange-500",
+> frontend\src\pages\admin\AdminAssets.tsx:271:  approved: "bg-emerald-50 text-emerald-600",
+> frontend\src\pages\admin\AdminAssets.tsx:272:  rejected: "bg-rose-50 text-rose-600",
+  frontend\src\pages\admin\AdminAssets.tsx:273:};
+  frontend\src\pages\admin\AdminAssets.tsx:274:
+  frontend\src\pages\admin\AdminAssets.tsx:275:function AssetStatusBadge({ status }: { status: AssetStatus }) {
+  frontend\src\pages\admin\AdminAssets.tsx:276:  return (
+  frontend\src\pages\admin\AdminAssets.tsx:277:    <span
+  frontend\src\pages\admin\AdminAssets.tsx:278:      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium 
+${assetStatusStyles[status]}`}
+  frontend\src\pages\admin\AdminAssets.tsx:279:    >
+  frontend\src\pages\admin\AdminAssets.tsx:280:      <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
+  frontend\src\pages\admin\AdminAssets.tsx:281:      {ASSET_STATUS_LABELS[status]}
+  frontend\src\pages\admin\AdminAssets.tsx:282:    </span>
+  frontend\src\pages\admin\AdminAssets.tsx:283:  );
+  frontend\src\pages\admin\AdminAssets.tsx:284:}
+  frontend\src\pages\admin\AdminAssets.tsx:285:
+> frontend\src\pages\admin\AdminAssets.tsx:286:function RequestStatusBadge({ status }: { status: AssetRequestStatus }) {
+  frontend\src\pages\admin\AdminAssets.tsx:287:  return (
+  frontend\src\pages\admin\AdminAssets.tsx:288:    <span
+> frontend\src\pages\admin\AdminAssets.tsx:289:      className={`inline-flex shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-medium ${requestStatusStyles[status]}`}
+  frontend\src\pages\admin\AdminAssets.tsx:290:    >
+  frontend\src\pages\admin\AdminAssets.tsx:291:      {status.charAt(0).toUpperCase() + status.slice(1)}
+  frontend\src\pages\admin\AdminAssets.tsx:292:    </span>
+  frontend\src\pages\admin\AdminAssets.tsx:293:  );
+  frontend\src\pages\admin\AdminAssets.tsx:294:}
+  frontend\src\pages\admin\AdminAssets.tsx:295:
+  frontend\src\pages\admin\AdminAssets.tsx:296:function PersonAvatar({ name }: { name: string }) {
+  frontend\src\pages\admin\AdminAssets.tsx:297:  return (
+  frontend\src\pages\admin\AdminAssets.tsx:298:    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#e0e7ff] text-[10px] font-bold text-[#4338ca]">
+  frontend\src\pages\admin\AdminAssets.tsx:299:      {initialsForAsset(name)}
+  frontend\src\pages\admin\AdminAssets.tsx:799:    </button>
+  frontend\src\pages\admin\AdminAssets.tsx:800:  );
+  frontend\src\pages\admin\AdminAssets.tsx:801:}
+  frontend\src\pages\admin\AdminAssets.tsx:802:
+  frontend\src\pages\admin\AdminAssets.tsx:803:/* -------------------------------------------------------------------------- */
+> frontend\src\pages\admin\AdminAssets.tsx:804:/*                        Categories, requests, quick actions                 */
+  frontend\src\pages\admin\AdminAssets.tsx:805:/* -------------------------------------------------------------------------- */
+  frontend\src\pages\admin\AdminAssets.tsx:806:
+  frontend\src\pages\admin\AdminAssets.tsx:807:const DONUT_RADIUS = 62;
+  frontend\src\pages\admin\AdminAssets.tsx:808:const DONUT_CIRCUMFERENCE = 2 * Math.PI * DONUT_RADIUS;
+  frontend\src\pages\admin\AdminAssets.tsx:809:const DONUT_STROKE_WIDTH = 22;
+  frontend\src\pages\admin\AdminAssets.tsx:810:
+  frontend\src\pages\admin\AdminAssets.tsx:811:function AssetCategoriesPanel({
+  frontend\src\pages\admin\AdminAssets.tsx:812:  categoryCounts,
+  frontend\src\pages\admin\AdminAssets.tsx:813:  total,
+  frontend\src\pages\admin\AdminAssets.tsx:814:}: {
+  frontend\src\pages\admin\AdminAssets.tsx:1308:      )}
+  frontend\src\pages\admin\AdminAssets.tsx:1309:    </div>
+  frontend\src\pages\admin\AdminAssets.tsx:1310:  );
+  frontend\src\pages\admin\AdminAssets.tsx:1311:}
+  frontend\src\pages\admin\AdminAssets.tsx:1312:
+> frontend\src\pages\admin\AdminAssets.tsx:1313:function AssetReturnRequestsPanel({
+  frontend\src\pages\admin\AdminAssets.tsx:1314:  version,
+  frontend\src\pages\admin\AdminAssets.tsx:1315:  onConfirmReturn,
+  frontend\src\pages\admin\AdminAssets.tsx:1316:}: {
+  frontend\src\pages\admin\AdminAssets.tsx:1317:  version: number;
+  frontend\src\pages\admin\AdminAssets.tsx:1318:  onConfirmReturn: (request: AssetRequest) => void;
+  frontend\src\pages\admin\AdminAssets.tsx:1319:}) {
+  frontend\src\pages\admin\AdminAssets.tsx:1320:  const [showAll, setShowAll] = useState(false);
+  frontend\src\pages\admin\AdminAssets.tsx:1321:  const limit = showAll ? ALL_ALLOCATIONS_LIMIT : 5;
+  frontend\src\pages\admin\AdminAssets.tsx:1322:
+  frontend\src\pages\admin\AdminAssets.tsx:1323:  const { data, loading, error } = useAssetQuery<Paginated<AssetRequest>>(
+> frontend\src\pages\admin\AdminAssets.tsx:1324:    () => assetService.listRequests({ request_type: "return", limit }),
+  frontend\src\pages\admin\AdminAssets.tsx:1325:    [limit, version],
+  frontend\src\pages\admin\AdminAssets.tsx:1326:  );
+  frontend\src\pages\admin\AdminAssets.tsx:1327:
+> frontend\src\pages\admin\AdminAssets.tsx:1328:  const requests = data?.items ?? [];
+  frontend\src\pages\admin\AdminAssets.tsx:1329:
+  frontend\src\pages\admin\AdminAssets.tsx:1330:  // A return request sits on Pending until the admin confirms receipt, and only
+  frontend\src\pages\admin\AdminAssets.tsx:1331:  // then does the asset actually leave the employee. Both halves have to hold
+  frontend\src\pages\admin\AdminAssets.tsx:1332:  // for the action to be offered: still pending on the request, and still held
+  frontend\src\pages\admin\AdminAssets.tsx:1333:  // by somebody on the asset (`asset_status` is resolved by the API for
+  frontend\src\pages\admin\AdminAssets.tsx:1334:  // exactly this reason).
+  frontend\src\pages\admin\AdminAssets.tsx:1335:  const canMarkReturned = (request: AssetRequest) =>
+  frontend\src\pages\admin\AdminAssets.tsx:1336:    request.status === "pending" &&
+  frontend\src\pages\admin\AdminAssets.tsx:1337:    request.asset_id !== null &&
+> frontend\src\pages\admin\AdminAssets.tsx:1338:    (request.asset_status === "in_use" || request.asset_status === "pending_return");
+  frontend\src\pages\admin\AdminAssets.tsx:1339:
+  frontend\src\pages\admin\AdminAssets.tsx:1340:  return (
+  frontend\src\pages\admin\AdminAssets.tsx:1341:    <div className={`${PANEL_CLASS} flex h-full min-w-0 flex-col`}>
+  frontend\src\pages\admin\AdminAssets.tsx:1342:      <SectionTitle
+> frontend\src\pages\admin\AdminAssets.tsx:1343:        title="Asset Return Requests"
+  frontend\src\pages\admin\AdminAssets.tsx:1344:        action={
+  frontend\src\pages\admin\AdminAssets.tsx:1345:          <ViewAllLink
+  frontend\src\pages\admin\AdminAssets.tsx:1346:            onClick={() => setShowAll((previous) => !previous)}
+  frontend\src\pages\admin\AdminAssets.tsx:1347:            label={showAll ? "Show Less ←" : "View All →"}
+  frontend\src\pages\admin\AdminAssets.tsx:1348:          />
+  frontend\src\pages\admin\AdminAssets.tsx:1349:        }
+  frontend\src\pages\admin\AdminAssets.tsx:1350:      />
+  frontend\src\pages\admin\AdminAssets.tsx:1351:
+  frontend\src\pages\admin\AdminAssets.tsx:1352:      <PanelState
+  frontend\src\pages\admin\AdminAssets.tsx:1353:        loading={loading}
+  frontend\src\pages\admin\AdminAssets.tsx:1354:        error={error}
+> frontend\src\pages\admin\AdminAssets.tsx:1355:        empty={requests.length === 0}
+> frontend\src\pages\admin\AdminAssets.tsx:1356:        emptyMessage="No return requests yet."
+  frontend\src\pages\admin\AdminAssets.tsx:1357:      >
+  frontend\src\pages\admin\AdminAssets.tsx:1358:        <div className="min-h-0 flex-1">
+  frontend\src\pages\admin\AdminAssets.tsx:1359:          <table className="w-full table-fixed text-left text-[11px]">
+  frontend\src\pages\admin\AdminAssets.tsx:1360:            <thead>
+  frontend\src\pages\admin\AdminAssets.tsx:1361:              <tr className="bg-[#f1f5fb] text-[9px] font-bold uppercase tracking-wide text-[#1e3a8a]">
+  frontend\src\pages\admin\AdminAssets.tsx:1362:                <th className="w-[22%] rounded-l-xl px-1 py-2.5 leading-tight">Request ID</th>
+  frontend\src\pages\admin\AdminAssets.tsx:1363:                <th className="w-[24%] px-1 py-2.5 leading-tight">Asset Name</th>
+  frontend\src\pages\admin\AdminAssets.tsx:1364:                <th className="w-[22%] px-1 py-2.5 leading-tight">Employee</th>
+  frontend\src\pages\admin\AdminAssets.tsx:1365:                <th className="w-[15%] px-1 py-2.5 text-right leading-tight">Status</th>
+  frontend\src\pages\admin\AdminAssets.tsx:1366:                <th className="w-[17%] rounded-r-xl px-1 py-2.5 text-right leading-tight">
+  frontend\src\pages\admin\AdminAssets.tsx:1368:                </th>
+  frontend\src\pages\admin\AdminAssets.tsx:1369:              </tr>
+  frontend\src\pages\admin\AdminAssets.tsx:1370:            </thead>
+  frontend\src\pages\admin\AdminAssets.tsx:1371:
+  frontend\src\pages\admin\AdminAssets.tsx:1372:            <tbody>
+> frontend\src\pages\admin\AdminAssets.tsx:1373:              {requests.map((request) => (
+  frontend\src\pages\admin\AdminAssets.tsx:1374:                <tr key={request.id} className="border-b border-gray-50 last:border-0">
+  frontend\src\pages\admin\AdminAssets.tsx:1375:                  <td className="truncate px-1 py-3 font-semibold text-[#2563eb]">
+  frontend\src\pages\admin\AdminAssets.tsx:1376:                    {request.request_tag}
+  frontend\src\pages\admin\AdminAssets.tsx:1377:                  </td>
+  frontend\src\pages\admin\AdminAssets.tsx:1378:                  <td className="truncate px-1 py-3 text-gray-700">{request.asset_name}</td>
+  frontend\src\pages\admin\AdminAssets.tsx:1379:                  <td className="truncate px-1 py-3 text-gray-600">{request.employee_name}</td>
+  frontend\src\pages\admin\AdminAssets.tsx:1380:                  <td className="px-1 py-3 text-right">
+> frontend\src\pages\admin\AdminAssets.tsx:1381:                    <RequestStatusBadge status={request.status} />
+  frontend\src\pages\admin\AdminAssets.tsx:1382:                  </td>
+  frontend\src\pages\admin\AdminAssets.tsx:1383:                  <td className="px-1 py-3 text-right">
+  frontend\src\pages\admin\AdminAssets.tsx:1384:                    {canMarkReturned(request) ? (
+  frontend\src\pages\admin\AdminAssets.tsx:1385:                      <button
+  frontend\src\pages\admin\AdminAssets.tsx:1386:                        type="button"
+  frontend\src\pages\admin\AdminAssets.tsx:1387:                        onClick={() => onConfirmReturn(request)}
+  frontend\src\pages\admin\AdminAssets.tsx:1388:                        className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold 
+text-emerald-600 transition hover:bg-emerald-100"
+  frontend\src\pages\admin\AdminAssets.tsx:1389:                      >
+  frontend\src\pages\admin\AdminAssets.tsx:1390:                        <Check className="h-3 w-3" />
+  frontend\src\pages\admin\AdminAssets.tsx:1391:                        Mark Returned
+  frontend\src\pages\admin\AdminAssets.tsx:1431:    () => assetService.getStats(),
+  frontend\src\pages\admin\AdminAssets.tsx:1432:    [version],
+  frontend\src\pages\admin\AdminAssets.tsx:1433:  );
+  frontend\src\pages\admin\AdminAssets.tsx:1434:
+  frontend\src\pages\admin\AdminAssets.tsx:1435:  // Every panel watches `version`, so one bump refetches stats, categories,
+> frontend\src\pages\admin\AdminAssets.tsx:1436:  // assets, allocation and requests together after a mutation.
+  frontend\src\pages\admin\AdminAssets.tsx:1437:  function refresh() {
+  frontend\src\pages\admin\AdminAssets.tsx:1438:    setVersion((previous) => previous + 1);
+  frontend\src\pages\admin\AdminAssets.tsx:1439:  }
+  frontend\src\pages\admin\AdminAssets.tsx:1440:
+  frontend\src\pages\admin\AdminAssets.tsx:1441:  async function handleSaved(message: string) {
+  frontend\src\pages\admin\AdminAssets.tsx:1442:    refresh();
+  frontend\src\pages\admin\AdminAssets.tsx:1443:    setNotice({ type: "success", text: message });
+  frontend\src\pages\admin\AdminAssets.tsx:1444:  }
+  frontend\src\pages\admin\AdminAssets.tsx:1445:
+  frontend\src\pages\admin\AdminAssets.tsx:1446:  function handleViewAllAssets() {
+  frontend\src\pages\admin\AdminAssets.tsx:1521:
+  frontend\src\pages\admin\AdminAssets.tsx:1522:  const counts = {
+  frontend\src\pages\admin\AdminAssets.tsx:1523:    total: stats?.total_assets ?? 0,
+  frontend\src\pages\admin\AdminAssets.tsx:1524:    // Pending returns are still in somebody's hands, so they count as assigned
+  frontend\src\pages\admin\AdminAssets.tsx:1525:    // here exactly as they did when this was computed client-side.
+> frontend\src\pages\admin\AdminAssets.tsx:1526:    assigned: (stats?.in_use ?? 0) + (stats?.pending_return ?? 0),
+  frontend\src\pages\admin\AdminAssets.tsx:1527:    available: stats?.available ?? 0,
+> frontend\src\pages\admin\AdminAssets.tsx:1528:    pendingReturn: stats?.pending_return ?? 0,
+  frontend\src\pages\admin\AdminAssets.tsx:1529:    categories: ASSET_CATEGORIES.length,
+  frontend\src\pages\admin\AdminAssets.tsx:1530:  };
+  frontend\src\pages\admin\AdminAssets.tsx:1531:
+  frontend\src\pages\admin\AdminAssets.tsx:1532:  const share = (value: number) =>
+  frontend\src\pages\admin\AdminAssets.tsx:1533:    counts.total ? `${((value / counts.total) * 100).toFixed(1)}% of total` : "0% of total";
+  frontend\src\pages\admin\AdminAssets.tsx:1534:
+  frontend\src\pages\admin\AdminAssets.tsx:1535:  const statCards = [
+  frontend\src\pages\admin\AdminAssets.tsx:1536:    {
+  frontend\src\pages\admin\AdminAssets.tsx:1537:      label: "Total Assets",
+  frontend\src\pages\admin\AdminAssets.tsx:1538:      value: formatCount(counts.total),
+  frontend\src\pages\admin\AdminAssets.tsx:1633:        })}
+  frontend\src\pages\admin\AdminAssets.tsx:1634:      </div>
+  frontend\src\pages\admin\AdminAssets.tsx:1635:
+  frontend\src\pages\admin\AdminAssets.tsx:1636:      {/* Two bands with different column templates: the top band keeps the wide
+  frontend\src\pages\admin\AdminAssets.tsx:1637:          layout (Overview + 340px rail), while the bottom band is a 50/50 split
+> frontend\src\pages\admin\AdminAssets.tsx:1638:          so Asset Allocation takes exactly half the page and Return Requests /
+  frontend\src\pages\admin\AdminAssets.tsx:1639:          Quick Actions share the other half. */}
+  frontend\src\pages\admin\AdminAssets.tsx:1640:      <div className="flex flex-col gap-6">
+  frontend\src\pages\admin\AdminAssets.tsx:1641:        <div className="grid grid-cols-1 items-stretch gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+  frontend\src\pages\admin\AdminAssets.tsx:1642:          <div ref={overviewRef} className="min-w-0 scroll-mt-24">
+  frontend\src\pages\admin\AdminAssets.tsx:1643:            <AssetOverview
+  frontend\src\pages\admin\AdminAssets.tsx:1644:              filters={filters}
+  frontend\src\pages\admin\AdminAssets.tsx:1645:              onFiltersChange={setFilters}
+  frontend\src\pages\admin\AdminAssets.tsx:1646:              version={version}
+  frontend\src\pages\admin\AdminAssets.tsx:1647:              showAll={showAllAssets}
+  frontend\src\pages\admin\AdminAssets.tsx:1648:              onToggleShowAll={() => setShowAllAssets((previous) => !previous)}
+  frontend\src\pages\admin\AdminAssets.tsx:1666:          <AssetAllocationPanel
+  frontend\src\pages\admin\AdminAssets.tsx:1667:            version={version}
+  frontend\src\pages\admin\AdminAssets.tsx:1668:            onViewAllocation={(target) => setModal({ kind: "allocation", target })}
+  frontend\src\pages\admin\AdminAssets.tsx:1669:          />
+  frontend\src\pages\admin\AdminAssets.tsx:1670:
+> frontend\src\pages\admin\AdminAssets.tsx:1671:          {/* Return Requests keeps its natural height, Quick Actions absorbs the
+  frontend\src\pages\admin\AdminAssets.tsx:1672:              remainder so the pair matches Asset Allocation's height. `1fr` has a
+  frontend\src\pages\admin\AdminAssets.tsx:1673:              min-content floor, so the band grows rather than clipping. */}
+  frontend\src\pages\admin\AdminAssets.tsx:1674:          <div className="grid min-w-0 items-stretch gap-6 xl:grid-rows-[auto_1fr]">
+> frontend\src\pages\admin\AdminAssets.tsx:1675:            <AssetReturnRequestsPanel
+  frontend\src\pages\admin\AdminAssets.tsx:1676:              version={version}
+  frontend\src\pages\admin\AdminAssets.tsx:1677:              onConfirmReturn={(request) => setModal({ kind: "markReturned", request })}
+  frontend\src\pages\admin\AdminAssets.tsx:1678:            />
+  frontend\src\pages\admin\AdminAssets.tsx:1679:            <QuickActionsPanel
+  frontend\src\pages\admin\AdminAssets.tsx:1680:              onAdd={() => setModal({ kind: "form", asset: null })}
+  frontend\src\pages\admin\AdminAssets.tsx:1681:              onAssign={() => setModal({ kind: "assign" })}
+  frontend\src\pages\admin\AdminAssets.tsx:1682:              onReturn={() => setModal({ kind: "return" })}
+  frontend\src\pages\admin\AdminAssets.tsx:1683:              onViewAll={handleViewAllAssets}
+  frontend\src\pages\admin\AdminAssets.tsx:1684:              onGenerateReport={handleGenerateReport}
+  frontend\src\pages\admin\AdminAssets.tsx:1685:              generatingReport={generatingReport}
+
+

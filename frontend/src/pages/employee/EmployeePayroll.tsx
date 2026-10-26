@@ -13,6 +13,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { api } from "../../services/api";
+import { employeeService } from "../../services/employeeService";
 import { useGlobalDate } from "../../context/globalDateContext";
 import { GlobalDateBadge } from "../../components/GlobalDateBadge";
 
@@ -65,6 +66,15 @@ function EmployeePayroll() {
   const [, setError] = useState("");
   const [latestPayroll, setLatestPayroll] = useState<any | null>(null);
   const [selectedPayrollId, setSelectedPayrollId] = useState("");
+  const [bankInformation, setBankInformation] = useState<{
+  bank_name?: string;
+  account_holder_name?: string;
+  account_number?: string;
+  ifsc_code?: string;
+  branch?: string;
+} | null>(null);
+
+  const [bankInformationLoading, setBankInformationLoading] = useState(true);
 
   useEffect(() => {
   async function fetchPayroll() {
@@ -113,6 +123,38 @@ function EmployeePayroll() {
   }
 
   fetchPayroll();
+}, []);
+
+  useEffect(() => {
+  let isMounted = true;
+
+  async function fetchBankInformation() {
+    try {
+      setBankInformationLoading(true);
+
+      const employeeProfile = await employeeService.getMyProfile();
+
+      if (!isMounted) return;
+
+      setBankInformation(employeeProfile.bank_information ?? null);
+    } catch (error) {
+      console.error("Failed to fetch employee bank information:", error);
+
+      if (isMounted) {
+        setBankInformation(null);
+      }
+    } finally {
+      if (isMounted) {
+        setBankInformationLoading(false);
+      }
+    }
+  }
+
+  fetchBankInformation();
+
+  return () => {
+    isMounted = false;
+  };
 }, []);
 
 // Payroll runs a whole month at a time, so the header calendar's day is
@@ -441,6 +483,7 @@ const salaryComponents: SalaryComponent[] = latestPayroll
               </div>
             </div>
 
+            
             {/* Bank Account */}
             <div className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <div>
@@ -449,8 +492,11 @@ const salaryComponents: SalaryComponent[] = latestPayroll
                     <p className="text-sm font-medium text-slate-500">
                       Bank Account
                     </p>
+
                     <p className="mt-2 text-xl font-bold text-slate-900">
-                      {latestPayroll?.bank_details?.bank_name ?? "—"}
+                      {bankInformationLoading
+                        ? "Loading..."
+                        : bankInformation?.bank_name || "Bank information not added"}
                     </p>
                   </div>
 
@@ -459,28 +505,50 @@ const salaryComponents: SalaryComponent[] = latestPayroll
                   </div>
                 </div>
 
-                <div className="mt-4 flex items-center gap-2">
-                  <CreditCard className="h-4 w-4 text-slate-400" />
+                
+              <div className="mt-4 space-y-3">
+                {/* Account Number */}
+                <div className="flex items-center gap-2">
+                  <CreditCard className="h-4 w-4 shrink-0 text-slate-400" />
+
                   <span className="text-sm font-medium text-slate-600">
-                    {latestPayroll?.bank_details?.account_last4
-                      ? `•••• ${latestPayroll.bank_details.account_last4}`
-                      : "—"}
+                    {bankInformationLoading
+                      ? "Loading account details..."
+                      : bankInformation?.account_number
+                        ? `•••• •••• ${bankInformation.account_number.slice(-4)}`
+                        : "Account number not provided"}
+                  </span>
+                </div>
+                {/* Account Holder */}
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 shrink-0 text-slate-400" />
+
+                  <span className="text-sm text-slate-600">
+                    <span className="font-medium text-slate-500">
+                      Account Holder:{" "}
+                    </span>
+                    {bankInformationLoading
+                      ? "Loading..."
+                      : bankInformation?.account_holder_name || "Not provided"}
+                  </span>
+                </div>
+
+                {/* IFSC Code */}
+                <div className="flex items-center gap-2">
+                  <Landmark className="h-4 w-4 shrink-0 text-slate-400" />
+
+                  <span className="text-sm text-slate-600">
+                    <span className="font-medium text-slate-500">
+                      IFSC Code:{" "}
+                    </span>
+                    {bankInformationLoading
+                      ? "Loading..."
+                      : bankInformation?.ifsc_code || "Not provided"}
                   </span>
                 </div>
               </div>
-
-              <div className="mt-4 border-t border-slate-100 pt-3">
-                <button
-                  type="button"
-                  className="text-sm font-semibold text-blue-600 transition hover:text-blue-700"
-                  onClick={() =>
-                    window.alert("Bank account details will be connected to the backend later.")
-                  }
-                >
-                  View Details
-                </button>
-              </div>
             </div>
+          </div>
           </section>
 
           {/* Main Payroll Area */}
