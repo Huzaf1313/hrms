@@ -216,6 +216,11 @@ export function useDashboardMetrics(
     void queryClient.invalidateQueries({
       queryKey: queryKeys.admin.attendanceSummary(currentTodayKey),
     });
+    // The trend chart covers whichever month is open, so every range is
+    // refreshed - the month is part of the key, not the prefix.
+    void queryClient.invalidateQueries({
+      queryKey: ["admin", "attendance", "trend"],
+    });
     void queryClient.invalidateQueries({
       queryKey: queryKeys.admin.leaveSummary(),
     });

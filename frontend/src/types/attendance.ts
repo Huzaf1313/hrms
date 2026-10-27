@@ -121,3 +121,25 @@ export interface AttendanceSummary {
   overtime_total_display?: string | null;
   department_presence: AttendanceDepartmentPresence[];
 }
+
+/** One day of the attendance trend chart. */
+export interface AttendanceTrendDay {
+  date: string;
+  present: number;
+  late: number;
+  absent: number;
+  on_leave: number;
+  missing_punch: number;
+  total_employees: number;
+}
+
+/**
+ * Daily counts across a date range. One request covers the whole range, so
+ * the chart never has to ask for a day at a time.
+ */
+export interface AttendanceTrendResponse {
+  start_date: string;
+  end_date: string;
+  total_employees: number;
+  days: AttendanceTrendDay[];
+}

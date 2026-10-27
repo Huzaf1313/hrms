@@ -2,7 +2,7 @@ from datetime import date
 
 from fastapi import APIRouter, Depends, Query
 
-from app.api.deps import get_current_user, require_permission
+from app.api.deps import get_current_user, require_hr_admin, require_permission
 from app.core.exceptions import AppException
 from app.core.roles import Permission
 from app.repositories.employee_repository import EmployeeRepository
@@ -12,6 +12,7 @@ from app.schemas.attendance import (
     AttendanceOptionsResponse,
     AttendanceResponse,
     AttendanceSummaryResponse,
+    AttendanceTrendResponse,
     AttendanceUpdate,
     BulkAttendanceMark,
     BulkAttendanceResponse,
@@ -113,6 +114,28 @@ async def get_my_attendance_status(
     return APIResponse(
         success=True,
         message="Attendance status retrieved successfully",
+        data=status,
+    )
+
+
+@router.post(
+    "/attendance/me/punch",
+    response_model=APIResponse[MyAttendanceStatus],
+)
+async def punch_my_attendance(
+    current_user: dict = Depends(require_hr_admin),
+):
+    """HR self-punch: marks the signed-in user's OWN attendance for today
+    with the server clock. First call of the day records the in-time, the
+    second records the out-time, later calls return 409. The employee is
+    resolved from the session's email, so no other employee can be marked
+    through this route. Declared before /attendance/{attendance_id} so
+    "me" is never matched as an attendance_id path param."""
+    status = await service.punch_self(current_user=current_user)
+
+    return APIResponse(
+        success=True,
+        message="Attendance punched successfully",
         data=status,
     )
 
@@ -224,6 +247,37 @@ async def get_attendance_summary(
         success=True,
         message="Attendance summary retrieved successfully",
         data=summary,
+    )
+
+
+@router.get(
+    "/attendance/trend",
+    response_model=APIResponse[AttendanceTrendResponse],
+)
+async def get_attendance_trend(
+    start_date: date = Query(...),
+    end_date: date = Query(...),
+    department_id: str | None = Query(default=None),
+    current_user: dict | None = Depends(
+        require_permission(Permission.ATTENDANCE_READ)
+    ),
+):
+    """Daily attendance counts across a date range.
+
+    Declared before /attendance/{attendance_id} so "trend" is never parsed as
+    an attendance id.
+    """
+    trend = await service.get_trend(
+        start_date=start_date,
+        end_date=end_date,
+        department_id=department_id,
+        current_user=current_user,
+    )
+
+    return APIResponse(
+        success=True,
+        message="Attendance trend retrieved successfully",
+        data=trend,
     )
 
 

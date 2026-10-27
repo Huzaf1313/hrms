@@ -122,7 +122,7 @@ function initialFor(value?: string): string {
   return value?.charAt(0).toUpperCase() ?? "";
 }
 
-function formatDate(value?: string): string {
+function formatDate(value?: string | null): string {
   if (!value) return "—";
 
   const date = new Date(value);
@@ -980,7 +980,7 @@ function AdminEmployeeDetailsPage({
                 <X size={18} />
               </button>
             </div>
-             (
+
               {/* BANK INFORMATION FORM */}
               <div className="mt-6 space-y-4">
                 {/* BANK NAME */}

@@ -4,7 +4,6 @@ export const PROFILE_TABS = [
   "Professional Details",
   "Contact & Address",
   "Documents",
-  "Account Settings",
 ] as const;
 
 export type ProfileTab = (typeof PROFILE_TABS)[number];

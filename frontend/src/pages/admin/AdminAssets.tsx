@@ -56,9 +56,10 @@ import {
 const PANEL_CLASS = "rounded-2xl border border-gray-100 bg-white p-6 shadow-sm";
 
 // KPI cards are narrow, so they clip instead of letting the big number
-// overflow into the neighbouring card.
+// overflow into the neighbouring card. The padding is tight because five of
+// them share one row, and a note under the value has to stay on one line.
 const KPI_CARD_CLASS =
-  "min-w-0 overflow-hidden rounded-2xl border border-gray-100 bg-white p-5 shadow-sm";
+  "min-w-0 overflow-hidden rounded-2xl border border-gray-100 bg-white p-4 shadow-sm";
 
 const FILTER_CONTROL_CLASS =
   "h-10 w-full appearance-none rounded-full border border-gray-200 bg-white px-4 pr-9 text-sm " +
@@ -1218,8 +1219,8 @@ function AssetAllocationPanel({
         empty={rows.length === 0}
         emptyMessage="No records match the current filters."
       >
-        <div className="min-h-0 flex-1">
-          <table className="h-full w-full table-fixed text-left text-[11px]">
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <table className="w-full table-fixed text-left text-[11px]">
             <thead>
               <tr className="bg-[#f1f5fb] text-[9px] font-bold uppercase tracking-wide text-[#1e3a8a]">
                 {tab === "employee" ? (
@@ -1253,25 +1254,25 @@ function AssetAllocationPanel({
                 <tr key={row.id} className="border-b border-gray-50 last:border-0">
                   {tab === "employee" ? (
                     <>
-                      <td className="truncate px-1.5 py-5 font-semibold text-[#2563eb]">
+                      <td className="truncate px-1.5 py-2.5 font-semibold text-[#2563eb]">
                         {row.id}
                       </td>
-                      <td className="truncate px-1.5 py-5 font-semibold text-gray-900">
+                      <td className="truncate px-1.5 py-2.5 font-semibold text-gray-900">
                         {row.name}
                       </td>
-                      <td className="truncate px-1.5 py-5 text-gray-600">{row.asset_count}</td>
+                      <td className="truncate px-1.5 py-2.5 text-gray-600">{row.asset_count}</td>
                     </>
                   ) : (
                     <>
-                      <td className="truncate px-2 py-5 font-semibold text-gray-900">
+                      <td className="truncate px-2 py-2.5 font-semibold text-gray-900">
                         {row.name}
                       </td>
-                      <td className="truncate px-2 py-5 text-gray-600">{row.employees}</td>
-                      <td className="truncate px-2 py-5 text-gray-600">{row.asset_count}</td>
+                      <td className="truncate px-2 py-2.5 text-gray-600">{row.employees}</td>
+                      <td className="truncate px-2 py-2.5 text-gray-600">{row.asset_count}</td>
                     </>
                   )}
 
-                  <td className="px-1.5 py-5 text-right">
+                  <td className="px-1.5 py-2.5 text-right">
                     <button
                       type="button"
                       onClick={() => onViewAllocation({ view: tab, row })}
@@ -1664,6 +1665,11 @@ export default function AdminAssets() {
     available: stats?.available ?? 0,
     pendingReturn: stats?.pending_return ?? 0,
     categories: ASSET_CATEGORIES.length,
+    // How many of those categories actually hold an asset, so the card can
+    // say something instead of leaving a blank line under the number.
+    categoriesInUse: (stats?.category_counts ?? []).filter(
+      (entry) => entry.count > 0,
+    ).length,
   };
 
   const share = (value: number) =>
@@ -1709,6 +1715,8 @@ export default function AdminAssets() {
     {
       label: "Asset Categories",
       value: String(counts.categories),
+      note: `${counts.categoriesInUse} of ${counts.categories} in use`,
+      noteClass: "text-gray-500",
       icon: FileText,
       iconBg: "bg-violet-50",
       iconColor: "text-violet-600",
@@ -1744,22 +1752,22 @@ export default function AdminAssets() {
 
           return (
             <div key={card.label} className={KPI_CARD_CLASS}>
-              <div className="flex items-start gap-3">
+              <div className="flex items-start gap-2.5">
                 <span
-                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${card.iconBg}`}
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${card.iconBg}`}
                 >
-                  <Icon className={`h-5 w-5 shrink-0 ${card.iconColor}`} />
+                  <Icon className={`h-[18px] w-[18px] shrink-0 ${card.iconColor}`} />
                 </span>
 
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[13px] font-bold text-gray-900">{card.label}</p>
-                  <p className="mt-1 truncate text-2xl font-bold leading-tight text-gray-900">
+                  <p className="truncate text-[12px] font-bold leading-tight text-gray-900">{card.label}</p>
+                  <p className="mt-1 truncate text-xl font-bold leading-tight text-gray-900">
                     {card.value}
                   </p>
                   {/* Only the cards that carry a note render one, so a card
                       without it leaves no blank line behind. */}
                   {card.note && (
-                    <p className={`mt-0.5 truncate text-xs font-semibold ${card.noteClass}`}>
+                    <p className={`mt-0.5 truncate text-[11px] font-semibold ${card.noteClass}`}>
                       {card.note}
                     </p>
                   )}

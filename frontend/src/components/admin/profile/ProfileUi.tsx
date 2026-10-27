@@ -75,7 +75,7 @@ export function ProfileTabBar({
   onChange: (tab: ProfileTab) => void;
 }) {
   return (
-    <div className="overflow-x-auto border-b border-gray-200">
+    <div className="scrollbar-hidden overflow-x-auto border-b border-gray-200">
       <div className="flex min-w-max items-center gap-6">
         {PROFILE_TABS.map((tab) => (
           <button
@@ -100,21 +100,27 @@ export function ProfileTabBar({
 /* ------------------------------------------------------------------ panels */
 
 export function ProfileSection({
+  id,
   icon,
   title,
   action,
   children,
   bodyClassName = "p-5",
+  headerClassName = "px-5 py-4",
 }: {
+  /** Lets a quick action scroll straight to this panel. */
+  id?: string;
   icon?: ReactNode;
   title: string;
   action?: ReactNode;
   children: ReactNode;
   bodyClassName?: string;
+  /** Lets a panel tighten the gap between its heading and its content. */
+  headerClassName?: string;
 }) {
   return (
-    <section className={`${PROFILE_PANEL_CLASS} flex min-w-0 flex-col`}>
-      <header className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+    <section id={id} className={`${PROFILE_PANEL_CLASS} flex min-w-0 flex-col`}>
+      <header className={`flex flex-wrap items-center justify-between gap-3 ${headerClassName}`}>
         <div className="flex items-center gap-2.5">
           {icon && (
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50">
@@ -145,7 +151,7 @@ export function InfoGrid({
     <div className={`grid gap-x-6 gap-y-5 ${columns}`}>
       {items.map((item) => (
         <div key={item.label} className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-600">
             {item.label}
           </p>
 
@@ -176,7 +182,7 @@ export function DetailCard({
 export function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-start justify-between gap-4">
-      <span className="shrink-0 text-xs text-gray-500">{label}</span>
+       <span className="shrink-0 text-xs text-gray-600">{label}</span>
 
       <span className="min-w-0 break-words text-right text-xs font-semibold text-gray-800">
         {value || "—"}

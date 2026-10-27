@@ -233,7 +233,7 @@ export default function DashboardKpiRow({
               </span>
 
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[11px] font-semibold text-gray-900">
+                <p className="truncate text-sm font-semibold text-gray-900">
                   {card.label}
                 </p>
 

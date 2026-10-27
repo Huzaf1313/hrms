@@ -158,6 +158,33 @@ class MyAttendanceStatus(BaseModel):
     working_hours: str | None = None
 
 
+class AttendanceTrendDay(BaseModel):
+    """One day of the attendance trend."""
+
+    date: date
+    present: int = 0
+    late: int = 0
+    absent: int = 0
+    on_leave: int = 0
+    missing_punch: int = 0
+    total_employees: int = 0
+
+
+class AttendanceTrendResponse(BaseModel):
+    """Daily attendance counts across a date range, for the dashboard chart.
+
+    One request covers the whole range, so the chart does not have to ask for
+    a day at a time. `days` stops at today - the days that are still to come
+    are not counted, because nobody can be absent for a day that has not
+    happened yet.
+    """
+
+    start_date: date
+    end_date: date
+    total_employees: int = 0
+    days: list[AttendanceTrendDay] = Field(default_factory=list)
+
+
 class BulkAttendanceMark(BaseModel):
     """Admin bulk marks/updates attendance records."""
 
@@ -199,4 +226,4 @@ class BulkAttendanceResponse(BaseModel):
     total: int
     success_count: int
     failure_count: int
-    results: list[BulkAttendanceItemResult]
+    results: list[BulkAttendanceItemResult]

@@ -15,6 +15,7 @@ import AdminSettings from "../pages/admin/AdminSetting";
 import AdminRecruitment from "../pages/admin/AdminRecruitment";
 import { getDashboardData, type DashboardData } from "../services/dashboardService";
 import AdminExitRequests from "../pages/admin/AdminExitRequests";
+import AdminRegularizationRequests from "../pages/admin/AdminRegularizationRequests";
 import { canAccessPage } from "../lib/access";
 import AdminSupportTickets from "../pages/admin/AdminSupportTickets";
 import AdminMyProfile from "../pages/admin/AdminMyProfile";
@@ -53,6 +54,11 @@ function DashboardLayout({
   // A manager who types an HR-only URL lands on their dashboard instead. The
   // backend would 403 anyway; this just avoids a dead page.
   const activePage = canAccessPage(page) ? page : "Dashboard";
+
+  // Standalone full-page list opened from the "View All" on the attendance
+  // page's regularization card. It is not a sidebar destination, so the
+  // sidebar keeps Attendance highlighted while this list is showing.
+  const isRegularizationPage = location.pathname === "/dashboard/regularization";
 
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [openEmployeeFormOnMount, setOpenEmployeeFormOnMount] = useState(false);
@@ -152,7 +158,7 @@ function DashboardLayout({
       <main className="min-w-0 flex-1">
         <Header
           onLogout={onLogout}
-          pageTitle={activePage}
+          pageTitle={isRegularizationPage ? "Regularization Requests" : activePage}
           collapsed={sidebarCollapsed}
           onToggleSidebar={() => setSidebarCollapsed((previous) => !previous)}
           onOpenSidebar={() => setSidebarOpen(true)}
@@ -162,8 +168,10 @@ function DashboardLayout({
 
         {/* Scoped so a crash in one admin page leaves the sidebar and header
             usable, instead of blanking the whole screen. */}
-        <ErrorBoundary label={activePage}>
-          {activePage === "Employees" ? (
+        <ErrorBoundary label={isRegularizationPage ? "Regularization Requests" : activePage}>
+          {isRegularizationPage ? (
+          <AdminRegularizationRequests />
+        ) : activePage === "Employees" ? (
           <AdminEmployees
             autoOpenCreateForm={openEmployeeFormOnMount}
             employeeSearchRequest={employeeSearchRequest}

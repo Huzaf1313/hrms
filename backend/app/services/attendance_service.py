@@ -12,6 +12,8 @@ from app.schemas.attendance import (
     AttendanceListResponse,
     AttendanceResponse,
     AttendanceSummaryResponse,
+    AttendanceTrendDay,
+    AttendanceTrendResponse,
     BulkAttendanceItemResult,
     BulkAttendanceMark,
     BulkAttendanceResponse,
@@ -390,6 +392,7 @@ class AttendanceService:
         employee: dict,
         data: dict,
         marked_by: str | None = None,
+        regularize: bool = True,
     ) -> AttendanceResponse:
         attendance_date = to_datetime(data["date"])
 
@@ -441,7 +444,12 @@ class AttendanceService:
         }
 
         if existing:
-            record["is_regularized"] = True
+            # Re-marking is a correction and gets flagged, but a self-punch
+            # closing the day is a normal completion - it keeps whatever the
+            # record already says.
+            record["is_regularized"] = (
+                True if regularize else bool(existing.get("is_regularized", False))
+            )
             attendance = await self.repository.update(
                 str(existing["_id"]),
                 record,
@@ -649,6 +657,76 @@ class AttendanceService:
             working_hours=format_total_hours(
                 record.get("working_hours", record.get("total_hours"))
             ),
+        )
+
+    async def punch_self(self, current_user: dict) -> MyAttendanceStatus:
+        """HR self-punch: marks the signed-in user's own attendance for today
+        with the server clock.
+
+        The first punch of the day records the in-time, the second closes the
+        day with the out-time, and any later punch is a 409. Identity comes
+        from the session's email - never the request body - so an account can
+        only ever punch itself, and no other employee can be marked through
+        this path."""
+        email = current_user.get("email")
+        employee = (
+            await self.employee_repository.get_by_email(email) if email else None
+        )
+
+        if not employee:
+            raise AppException("No employee record found for this account", 404)
+
+        attendance_date = business_today()
+        attendance_key = to_datetime(attendance_date)
+
+        existing = await self.repository.get_by_employee_and_date(
+            employee_id=employee["employee_id"],
+            attendance_date=attendance_key,
+        )
+        if not existing and "_id" in employee:
+            existing = await self.repository.get_by_employee_and_date(
+                employee_id=str(employee["_id"]),
+                attendance_date=attendance_key,
+            )
+
+        recorded_out = (
+            existing.get("out_time") or existing.get("check_out")
+            if existing
+            else None
+        )
+        if recorded_out:
+            raise AppException("Attendance for today is already completed", 409)
+
+        # Employee punch-in records use ISO check_in/check_out keys while the
+        # admin flow stores in_time/out_time, so read both spellings.
+        recorded_in = (
+            existing.get("in_time") or existing.get("check_in")
+            if existing
+            else None
+        )
+
+        now_iso = datetime.now(IST).isoformat()
+
+        data = {
+            "date": attendance_date,
+            "status": "present",
+            # No recorded in-time (fresh day, or an earlier status mark such
+            # as "absent") means this is the punch-in; an in-time that is
+            # already recorded means this punch closes the day.
+            "in_time": recorded_in or now_iso,
+            "out_time": now_iso if recorded_in else None,
+        }
+
+        await self._mark_single_employee(
+            employee,
+            data,
+            marked_by=str(current_user["_id"]) if current_user.get("_id") else None,
+            regularize=False,
+        )
+
+        return await self.get_my_status(
+            employee_id=employee["employee_id"],
+            attendance_date=attendance_date,
         )
 
     async def _get_matching_roster(
@@ -1078,6 +1156,94 @@ class AttendanceService:
                 overtime_total_minutes
             ),
             department_presence=department_presence,
+        )
+
+    async def get_trend(
+        self,
+        start_date: date,
+        end_date: date,
+        department_id: str | None = None,
+        current_user: dict | None = None,
+    ) -> AttendanceTrendResponse:
+        """Daily attendance counts across a date range, for the dashboard chart.
+
+        A day is counted exactly the way `get_summary` counts a single day, so
+        the chart and the KPI tiles can never disagree: the statuses come from
+        the attendance records, and an employee with no record for a day counts
+        as absent. The whole range is two aggregations, not one query per day.
+        """
+        if end_date < start_date:
+            raise AppException(
+                "End date cannot be before start date",
+                400,
+            )
+
+        employees = await self.employee_repository.get_all(
+            filters=build_filter({"department_id": department_id}),
+            skip=0,
+            limit=10000,
+            scope=self._created_by_scope(current_user),
+        )
+        total_employees = len(employees)
+
+        employee_ids = [
+            employee["employee_id"]
+            for employee in employees
+            if employee.get("employee_id")
+        ]
+        attendance_ids = employee_ids + [
+            str(employee["_id"]) for employee in employees
+        ]
+
+        filters = build_filter({"department_id": department_id})
+        filters["date"] = {
+            "$gte": to_datetime(start_date),
+            "$lte": to_datetime(end_date),
+        }
+        filters["employee_id"] = {"$in": attendance_ids}
+
+        status_rows = await self.repository.get_daily_status_counts(filters)
+        marked_counts = await self.repository.get_daily_marked_counts(filters)
+
+        counts_by_day: dict[date, dict[str, int]] = {}
+
+        for row in status_rows:
+            day = row["date"].date() if isinstance(row["date"], datetime) else row["date"]
+            bucket = counts_by_day.setdefault(day, {})
+            bucket[row["status"]] = bucket.get(row["status"], 0) + row["count"]
+
+        days: list[AttendanceTrendDay] = []
+        current = start_date
+
+        # A day that has not happened yet cannot be absent. Stopping at today
+        # keeps the current month from falling off a cliff for the days that
+        # are still to come.
+        last_date = min(end_date, business_today())
+
+        while current <= last_date:
+            counts = counts_by_day.get(current, {})
+            marked = marked_counts.get(current, 0)
+            unmarked = max(total_employees - marked, 0)
+
+            days.append(
+                AttendanceTrendDay(
+                    date=current,
+                    present=counts.get("present", 0),
+                    late=counts.get("late", 0),
+                    absent=counts.get("absent", 0) + unmarked,
+                    on_leave=counts.get("on_leave", 0),
+                    missing_punch=counts.get("missing_punch", 0),
+                    total_employees=total_employees,
+                )
+            )
+
+            current += timedelta(days=1)
+
+        return AttendanceTrendResponse(
+            start_date=start_date,
+            end_date=end_date,
+            total_employees=total_employees,
+            days=days,
         )
 
     async def get_overtime_report(

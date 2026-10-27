@@ -84,7 +84,7 @@ function toFormState(employee?: Employee): EmployeeCreate {
     address: employee.address ?? "",
     department_id: employee.department_id,
     designation: employee.designation,
-    joining_date: employee.joining_date,
+    joining_date: employee.joining_date ?? "",
     employment_type: employee.employment_type,
     work_location: employee.work_location ?? "",
     reporting_manager: employee.reporting_manager ?? "",
@@ -598,7 +598,7 @@ function AdminEmployeeForm({
           {/* EMPLOYEE ID */}
           <div>
             <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
-              Employee ID
+              Employee ID <span className="ml-1 text-red-500">*</span>
             </label>
 
             <input
@@ -616,10 +616,11 @@ function AdminEmployeeForm({
           {/* EMPLOYMENT TYPE */}
           <div>
             <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
-              Employment Type
+              Employment Type <span className="ml-1 text-red-500">*</span>
             </label>
 
             <select
+              required
               value={form.employment_type}
               onChange={(event) => {
                 updateField(
@@ -688,7 +689,7 @@ function AdminEmployeeForm({
           {/* FIRST NAME */}
           <div>
             <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
-              First Name
+              First Name <span className="ml-1 text-red-500">*</span>
             </label>
 
             <input
@@ -722,7 +723,7 @@ function AdminEmployeeForm({
           {/* LAST NAME */}
           <div>
             <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
-              Last Name
+              Last Name <span className="ml-1 text-red-500">*</span>
             </label>
 
             <input
@@ -757,7 +758,7 @@ function AdminEmployeeForm({
           <div className={!isEditMode && otpSent && !isEmailVerified ? "col-span-1 md:col-span-2" : ""}>
             <div className="mb-1.5 flex items-center justify-between">
               <label className="block text-sm font-medium text-[#17375e]">
-                Email Address
+                Email Address <span className="ml-1 text-red-500">*</span>
               </label>
 
               {!isEditMode && isEmailVerified && (
@@ -919,7 +920,7 @@ function AdminEmployeeForm({
           {/* PHONE */}
           <div>
             <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
-              Phone
+              Phone <span className="ml-1 text-red-500">*</span>
             </label>
 
             <input
@@ -1069,10 +1070,11 @@ function AdminEmployeeForm({
           {/* DATE OF BIRTH */}
           <div>
             <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
-              Date of Birth
+              Date of Birth <span className="ml-1 text-red-500">*</span>
             </label>
 
             <input
+              required={!isEditMode}
               type="date"
               value={form.date_of_birth ?? ""}
               onChange={(event) =>
@@ -1085,10 +1087,11 @@ function AdminEmployeeForm({
           {/* GENDER */}
           <div>
             <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
-              Gender
+              Gender <span className="ml-1 text-red-500">*</span>
             </label>
 
             <select
+              required={!isEditMode}
               value={form.gender ?? ""}
               onChange={(event) =>
                 updateField("gender", event.target.value)
@@ -1271,11 +1274,7 @@ function AdminEmployeeForm({
               Cancel
             </button>
 
-            {!isEditMode && !isEmailVerified && (
-              <span className="self-center text-xs font-medium text-amber-600">
-                Verify employee email to enable submission
-              </span>
-            )}
+            
 
             <button
               type="submit"
@@ -1301,6 +1300,5 @@ function AdminEmployeeForm({
 }
 
 export default AdminEmployeeForm;
-
 
 

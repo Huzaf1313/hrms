@@ -20,4 +20,7 @@ export interface LeaveRequestDraft {
   start_date: string;
   end_date: string;
   reason: string;
+  /** Supporting document picked in the form. It never leaves the browser. */
+  attachment_name?: string;
+  attachment_size?: number;
 }

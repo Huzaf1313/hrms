@@ -19,13 +19,11 @@ interface HeaderProps {
   onSelectEmployee?: (employeeId: string) => void;
 }
 
-// "Dashboard > Attendance" in the reference design. Only pages that
-// genuinely sit under a parent get a trail; the rest render flat.
+// Only pages that genuinely sit under a parent get a trail; the rest render
+// flat as just their own name. Attendance, Leave and My Profile are top-level
+// pages in the sidebar, so they carry no "Dashboard" prefix.
 const trails: Record<string, string[]> = {
-  Attendance: ["Dashboard", "Attendance"],
-  "Regularization Requests": ["Dashboard", "Attendance", "Regularization Requests"],
-  Leave: ["Dashboard", "Leave"],
-  "My Profile": ["Dashboard", "My Profile"],
+  "Regularization Requests": ["Attendance", "Regularization Requests"],
 };
 
 function readUser() {

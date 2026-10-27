@@ -20,6 +20,8 @@ export const queryKeys = {
     dashboardMetrics: () => ["admin", "dashboardMetrics"] as const,
     attendanceSummary: (date: string, deptId?: string) =>
       ["admin", "attendance", "summary", { date, deptId: deptId || "" }] as const,
+    attendanceTrend: (startDate: string, endDate: string, deptId?: string) =>
+      ["admin", "attendance", "trend", { startDate, endDate, deptId: deptId || "" }] as const,
     attendanceOptions: () => ["admin", "attendance", "options"] as const,
     attendanceList: (params: Record<string, unknown>) =>
       ["admin", "attendance", "list", params] as const,

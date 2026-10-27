@@ -8,8 +8,6 @@ import {
   Download,
   UserPlus,
   Search,
-  ArrowDown,
-  ArrowUp,
   ChevronLeft,
   ChevronRight,
   FileText,
@@ -30,6 +28,7 @@ import {
   attendanceService,
   type BulkAttendanceResponse,
   type BulkMarkParams,
+  type MyAttendanceStatus,
 } from "../../services/attendanceService";
 import { useGlobalDate } from "../../context/globalDateContext";
 import { formatShiftTime } from "../../services/shiftService";
@@ -82,7 +81,7 @@ const filterControlClass =
   "focus:border-[#2563eb] focus:outline-none focus:ring-2 focus:ring-[#2563eb]/10";
 
 const quickActions = [
-  { label: "Mark Attendance", icon: UserPlus, iconBg: "bg-blue-50", iconColor: "text-blue-600" },
+  { label: "Mark My Attendance", icon: UserPlus, iconBg: "bg-blue-50", iconColor: "text-blue-600" },
   { label: "Process Regularization", icon: ClipboardEdit, iconBg: "bg-orange-50", iconColor: "text-orange-500" },
   { label: "Generate Report", icon: FileText, iconBg: "bg-emerald-50", iconColor: "text-emerald-600" },
   { label: "Manage Shifts", icon: Users2, iconBg: "bg-violet-50", iconColor: "text-violet-600" },
@@ -101,6 +100,15 @@ type SortKey =
   | "status";
 
 type SortDirection = "asc" | "desc";
+
+type MarkForm = {
+  employee_id: string;
+  date: string;
+  status: string;
+  shift_id: string;
+  in_time: string;
+  out_time: string;
+};
 
 const columns: { key: SortKey; label: string }[] = [
   { key: "employee", label: "Employee" },
@@ -304,20 +312,19 @@ function AdminAttendance() {
   const [error, setError] = useState("");
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
-  const [showMarkModal, setShowMarkModal] = useState(false);
   const [showShiftManager, setShowShiftManager] = useState(false);
   const [detailRow, setDetailRow] = useState<AttendanceRecord | null>(null);
-  const [markForm, setMarkForm] = useState({
-    employee_id: "",
-    date: date,
-    status: "present" as AttendanceStatus,
-    shift_id: "",
-    in_time: "",
-    out_time: "",
-  });
-  const [isMarkingAttendance, setIsMarkingAttendance] = useState(false);
-  const [markError, setMarkError] = useState("");
   const [attendanceRefreshKey, setAttendanceRefreshKey] = useState(0);
+
+  // HR self-punch state. The attendance record belongs to the signed-in
+  // user only; myStatus drives the Mark In / Mark Out button state.
+  const [myStatus, setMyStatus] = useState<MyAttendanceStatus | null>(null);
+  const [isPunching, setIsPunching] = useState(false);
+
+  type PunchPopup =
+    | { kind: "success"; title: string; fields: { label: string; value: string }[] }
+    | { kind: "error"; message: string };
+  const [punchPopup, setPunchPopup] = useState<PunchPopup | null>(null);
 
   // Selection state
   const [isAllMatchingSelected, setIsAllMatchingSelected] = useState(false);
@@ -330,6 +337,42 @@ function AdminAttendance() {
   const [confirmStep, setConfirmStep] = useState(false);
   const [bulkResult, setBulkResult] = useState<BulkAttendanceResponse | null>(null);
   const [successToast, setSuccessToast] = useState("");
+  const [showMarkModal, setShowMarkModal] = useState(false);
+  const [markError, setMarkError] = useState("");
+  const [isMarkingAttendance, setIsMarkingAttendance] = useState(false);
+  const [markForm, setMarkForm] = useState<MarkForm>({
+    employee_id: "",
+    date,
+    status: "present",
+    shift_id: "",
+    in_time: "",
+    out_time: "",
+  });
+
+  useEffect(() => {
+    let isCurrent = true;
+
+    attendanceService
+      .myStatus()
+      .then((result) => {
+        if (isCurrent) setMyStatus(result);
+      })
+      .catch((err: unknown) => {
+        if (isCurrent) {
+          setPunchPopup({
+            kind: "error",
+            message:
+              err instanceof ApiError
+                ? err.message
+                : "Failed to load your attendance status.",
+          });
+        }
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, []);
 
   function clearSelection() {
     setIsAllMatchingSelected(false);
@@ -512,6 +555,47 @@ function AdminAttendance() {
   const activeFilterCount =
     [departmentId, workLocation, shiftId, status].filter(Boolean).length +
     (overtimeOnly ? 1 : 0);
+
+  // Mark In until today's record has an in-time, Mark Out once it does,
+  // and done for the day once both times exist.
+  const punchState = myStatus?.in_time
+    ? myStatus?.out_time
+      ? "complete"
+      : "out"
+    : "in";
+
+  async function handleSelfPunch() {
+    if (isPunching || punchState === "complete") return;
+
+    setIsPunching(true);
+    setPunchPopup(null);
+    try {
+      const result = await attendanceService.punchSelf();
+      setMyStatus(result);
+      setPunchPopup({
+        kind: "success",
+        title: result.out_time ? "Attendance marked out" : "Attendance marked in",
+        fields: [
+          { label: "Date", value: result.date },
+          { label: "Status", value: result.status ?? "Pending" },
+          { label: "In time", value: displayPunchTime(result.in_time) },
+          { label: "Out time", value: displayPunchTime(result.out_time) },
+          { label: "Working hours", value: result.working_hours ?? "--" },
+        ],
+      });
+      if (date === result.date) {
+        setAttendanceRefreshKey((current) => current + 1);
+      }
+    } catch (err) {
+      setPunchPopup({
+        kind: "error",
+        message:
+          err instanceof ApiError ? err.message : "Failed to mark your attendance.",
+      });
+    } finally {
+      setIsPunching(false);
+    }
+  }
 
   const overtimeTotalMinutes = summary?.overtime_total_minutes ?? 0;
   const overtimeStaffCount = summary?.overtime_employee_count ?? 0;
@@ -756,11 +840,33 @@ function AdminAttendance() {
           </button>
           <button
             type="button"
-            className="flex items-center gap-2 rounded-full bg-[#2563eb] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1d4ed8]"
-            onClick={() => openMarkModal(selectedCount > 0)}
+            className={`flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-white transition ${
+              punchState === "complete"
+                ? "cursor-default bg-emerald-600"
+                : "bg-[#2563eb] hover:bg-[#1d4ed8]"
+            } disabled:cursor-not-allowed disabled:opacity-70`}
+            onClick={handleSelfPunch}
+            disabled={isPunching || punchState === "complete"}
+            title={
+              punchState === "complete"
+                ? "Your attendance for today is complete"
+                : punchState === "out"
+                ? `Marked in at ${myStatus?.in_time}`
+                : undefined
+            }
           >
-            <UserPlus className="h-4 w-4" />
-            {selectedCount > 0 ? `Mark Attendance (${selectedCount})` : "Mark Attendance"}
+            {punchState === "complete" ? (
+              <CheckCircle2 className="h-4 w-4" />
+            ) : (
+              <UserPlus className="h-4 w-4" />
+            )}
+            {isPunching
+              ? "Marking..."
+              : punchState === "complete"
+              ? "Attendance Complete"
+              : punchState === "out"
+              ? "Mark Out"
+              : "Mark In"}
           </button>
         </div>
       </div>
@@ -1056,18 +1162,6 @@ function AdminAttendance() {
                           aria-label={`Sort by ${column.label}`}
                         >
                           {column.label}
-                          <span className="inline-flex flex-col leading-[7px]">
-                            <ArrowUp
-                              className={`h-2.5 w-2.5 ${
-                                isActive && sortDirection === "asc" ? "text-[#2563eb]" : "text-gray-300"
-                              }`}
-                            />
-                            <ArrowDown
-                              className={`h-2.5 w-2.5 ${
-                                isActive && sortDirection === "desc" ? "text-[#2563eb]" : "text-gray-300"
-                              }`}
-                            />
-                          </span>
                         </button>
                       </th>
                     );
@@ -1076,11 +1170,11 @@ function AdminAttendance() {
               </thead>
               <tbody>
                 {isLoading ? (
-                  <TableRowSkeleton rows={6} columns={10} />
+                  <TableRowSkeleton rows={6} columns={9} />
                 ) : error ? (
-                  <tr><td colSpan={10} className="py-10 text-center text-rose-600">{error}</td></tr>
+                  <tr><td colSpan={9} className="py-10 text-center text-rose-600">{error}</td></tr>
                 ) : sortedRecords.length === 0 ? (
-                  <tr><td colSpan={10} className="py-10 text-center text-gray-500">No attendance records found.</td></tr>
+                  <tr><td colSpan={9} className="py-10 text-center text-gray-500">No attendance records found.</td></tr>
                 ) : sortedRecords.map((row) => (
                   <tr key={row.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50">
                     <td className="py-4">
@@ -1353,6 +1447,7 @@ function AdminAttendance() {
                     key={action.label}
                     type="button"
                     onClick={() => {
+                      if (action.label === "Mark My Attendance") handleSelfPunch();
                       if (action.label === "Mark Attendance") openMarkModal(selectedCount > 0);
                       if (action.label === "Process Regularization")
                         document.getElementById("regularization-requests")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1814,6 +1909,46 @@ function AdminAttendance() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {punchPopup && (
+        <div
+          role={punchPopup.kind === "error" ? "alert" : "status"}
+          aria-live={punchPopup.kind === "error" ? "assertive" : "polite"}
+          className={`fixed bottom-5 left-5 z-50 w-[min(24rem,calc(100vw-2.5rem))] rounded-2xl border p-4 shadow-xl ${
+            punchPopup.kind === "error"
+              ? "border-rose-200 bg-white text-rose-700"
+              : "border-emerald-200 bg-white text-gray-800"
+          }`}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="font-semibold">
+                {punchPopup.kind === "error" ? "Attendance error" : punchPopup.title}
+              </p>
+              {punchPopup.kind === "error" ? (
+                <p className="mt-1 text-sm">{punchPopup.message}</p>
+              ) : (
+                <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                  {punchPopup.fields.map((field) => (
+                    <div key={field.label}>
+                      <dt className="text-xs text-gray-400">{field.label}</dt>
+                      <dd className="font-medium">{field.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setPunchPopup(null)}
+              className="shrink-0 rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+              aria-label="Dismiss attendance message"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
         </div>
       )}

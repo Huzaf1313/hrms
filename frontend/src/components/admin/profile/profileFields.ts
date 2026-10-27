@@ -106,7 +106,6 @@ export const PROFILE_FIELDS: Record<ProfileTab, ProfileFieldSpec[]> = {
     { name: "current_address", label: "Current Address", type: "textarea", full: true },
   ],
   Documents: [],
-  "Account Settings": [],
 };
 
 export const EMPLOYMENT_STATUS_STYLES: Record<EmploymentStatus, string> = {
@@ -120,9 +119,6 @@ export const DOCUMENT_STATUS_STYLES: Record<DocumentStatus, string> = {
   Pending: "bg-orange-50 text-orange-500",
   Rejected: "bg-rose-50 text-rose-600",
 };
-
-export const PROFILE_QUOTE =
-  "People are the greatest asset of any organization.";
 
 const MONTHS = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",

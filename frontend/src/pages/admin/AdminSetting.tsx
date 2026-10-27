@@ -12,6 +12,8 @@ import {
   X,
 } from "lucide-react";
 
+import AddHolidayModal from "../../components/AddHolidayModal";
+
 // ---- Types ------------------------------------------------------------------
 
 const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -230,6 +232,7 @@ export default function AdminSettings() {
   const [draft, setDraft] = useState<SettingsData | null>(null);
   const [editingCard, setEditingCard] = useState<CardId | null>(null);
   const [notice, setNotice] = useState("");
+  const [isHolidayModalOpen, setIsHolidayModalOpen] = useState(false);
 
   // While editing, the draft is the source of truth for every card's inputs.
   const view = draft ?? settings;
@@ -435,6 +438,7 @@ export default function AdminSettings() {
             </div>
             <button
               type="button"
+              onClick={() => setIsHolidayModalOpen(true)}
               className="text-xs font-semibold text-blue-600 hover:text-blue-700"
             >
               Manage Holidays →
@@ -515,6 +519,17 @@ export default function AdminSettings() {
             <Field label="Max File Size" value="10 MB" />
           </SettingsCard>
       </div>
+
+      {/* Mounted only while open, so the form always starts blank. */}
+      {isHolidayModalOpen && (
+        <AddHolidayModal
+          onClose={() => setIsHolidayModalOpen(false)}
+          onSaved={() => {
+            setNotice("Holiday saved");
+            window.setTimeout(() => setNotice(""), 2500);
+          }}
+        />
+      )}
     </div>
   );
 }

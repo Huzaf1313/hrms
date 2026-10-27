@@ -4,6 +4,7 @@ import type {
   AttendanceOptions,
   AttendanceSummary,
   AttendanceRecord,
+  AttendanceTrendResponse,
   EmployeeAttendanceRecord,
 } from "../types/attendance";
 
@@ -57,6 +58,16 @@ export interface BulkAttendanceResponse {
   results: BulkAttendanceItemResult[];
 }
 
+/** Self-service payload from GET /attendance/me and POST /attendance/me/punch.
+ *  status/in_time are null when nothing has been marked for the date yet. */
+export interface MyAttendanceStatus {
+  date: string;
+  status: string | null;
+  in_time: string | null;
+  out_time: string | null;
+  working_hours: string | null;
+}
+
 export const attendanceService = {
   list(params: GetAttendanceParams = {}) {
     return api.get<AttendanceListResponse>("/attendance", { ...params });
@@ -71,6 +82,22 @@ export const attendanceService = {
     return api.get<AttendanceSummary>("/attendance/summary", {
       date,
       department_id: departmentId,
+    });
+  },
+
+  /**
+   * Daily counts across a date range. One request covers the whole range,
+   * which is what the dashboard chart needs.
+   */
+  trend(params: {
+    start_date: string;
+    end_date: string;
+    department_id?: string;
+  }) {
+    return api.get<AttendanceTrendResponse>("/attendance/trend", {
+      start_date: params.start_date,
+      end_date: params.end_date,
+      department_id: params.department_id,
     });
   },
 
@@ -89,6 +116,22 @@ export const attendanceService = {
 
   bulkMark(params: BulkMarkParams) {
     return api.post<BulkAttendanceResponse>("/attendance/bulk", params);
+  },
+
+  /** The signed-in user's own attendance status. Without a date the backend
+   *  answers for today (its business timezone). */
+  myStatus(attendanceDate?: string) {
+    return api.get<MyAttendanceStatus>("/attendance/me", {
+      date: attendanceDate,
+    });
+  },
+
+  /** HR self-punch: first call of the day records the in-time with the
+   *  server clock, the second records the out-time, later ones return 409.
+   *  The record always belongs to the logged-in user - the employee is
+   *  resolved server-side from the session email. */
+  punchSelf() {
+    return api.post<MyAttendanceStatus>("/attendance/me/punch");
   },
 };
 

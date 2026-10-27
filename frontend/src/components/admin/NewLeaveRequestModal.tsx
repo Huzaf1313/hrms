@@ -1,19 +1,24 @@
 import { useEffect, useMemo, useState } from "react";
-import type { FormEvent } from "react";
+import type { ChangeEvent, FormEvent } from "react";
 import {
   CalendarDays,
   ChevronDown,
   ClipboardPlus,
+  Paperclip,
   Send,
+  Upload,
   X,
 } from "lucide-react";
 
 import { adminProfileService } from "../../services/adminProfileService";
+import { currentSessionUser } from "../../lib/session";
 import type { AdminProfile } from "../../types/adminProfile";
 import { LEAVE_TYPES, type LeaveRequestDraft, type LeaveType } from "../../types/leave";
 import { countWorkingDays, parseDateOnly } from "../../utils/workingDays";
 
 const MAX_REASON_LENGTH = 300;
+const MAX_ATTACHMENT_SIZE = 5 * 1024 * 1024;
+const ATTACHMENT_TYPES = ["image/jpeg", "image/png", "application/pdf"];
 
 const FIELD_CLASS =
   "h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 " +
@@ -50,6 +55,14 @@ interface NewLeaveRequestModalProps {
   isSubmitting?: boolean;
 }
 
+/**
+ * The leave form an admin fills in for themselves.
+ *
+ * The applicant is whoever is signed in - there is no employee picker, so a
+ * request can never be filed against somebody else's record. The identity is
+ * read from the session the login page stored, with the cached admin profile
+ * only as a fallback for a missing session.
+ */
 export default function NewLeaveRequestModal({
   onClose,
   onSubmit,
@@ -63,11 +76,21 @@ export default function NewLeaveRequestModal({
   const [fromDate, setFromDate] = useState(today);
   const [toDate, setToDate] = useState(today);
   const [reason, setReason] = useState("");
+  const [attachment, setAttachment] = useState<File | null>(null);
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
   const busy = isSubmitting || submitting;
+
+  const session = useMemo(() => currentSessionUser(), []);
+
+  const applicantName = session?.full_name?.trim() || profile?.full_name || "";
+  // Admin-only accounts carry no employee code, so the account id stands in
+  // for one rather than borrowing the seeded profile's code.
+  const applicantEmployeeId =
+    session?.employee_id?.trim() || session?.id?.trim() || profile?.employee_id || "";
+  const applicantEmail = session?.email?.trim() || profile?.email || "";
 
   useEffect(() => {
     let active = true;
@@ -96,6 +119,29 @@ export default function NewLeaveRequestModal({
     [fromDate, toDate],
   );
 
+  function handleAttachmentChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    if (!ATTACHMENT_TYPES.includes(file.type)) {
+      setError("Only JPG, PNG and PDF files can be attached.");
+      setAttachment(null);
+      return;
+    }
+
+    if (file.size > MAX_ATTACHMENT_SIZE) {
+      setError("Attachment size must be 5MB or less.");
+      setAttachment(null);
+      return;
+    }
+
+    setError("");
+    setAttachment(file);
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -103,8 +149,8 @@ export default function NewLeaveRequestModal({
 
     setError("");
 
-    if (!profile?.employee_id) {
-      setError("Your HR profile is missing an employee ID.");
+    if (!applicantEmployeeId) {
+      setError("Your profile is missing an employee ID. Please log in again.");
       return;
     }
 
@@ -140,13 +186,15 @@ export default function NewLeaveRequestModal({
 
     try {
       await onSubmit({
-        employee_id: profile.employee_id,
-        employee_name: profile.full_name,
-        department_name: profile.department,
+        employee_id: applicantEmployeeId,
+        employee_name: applicantName || applicantEmail,
+        department_name: profile?.department,
         leave_type: leaveType,
         start_date: fromDate,
         end_date: toDate,
         reason: reason.trim(),
+        attachment_name: attachment?.name,
+        attachment_size: attachment?.size,
       });
       onClose();
     } catch (cause) {
@@ -170,9 +218,9 @@ export default function NewLeaveRequestModal({
             </span>
 
             <div>
-              <h2 className="text-xl font-bold text-slate-900">New Leave Request</h2>
+              <h2 className="text-xl font-bold text-slate-900">Apply for Leave</h2>
               <p className="mt-1 text-sm text-slate-500">
-                 Apply for leave as the signed-in HR user.
+                Submit your own leave request for approval.
               </p>
             </div>
           </div>
@@ -190,13 +238,16 @@ export default function NewLeaveRequestModal({
 
         <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
           <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-5">
-            {/* Signed-in HR user */}
+            {/* The signed-in applicant */}
             <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">Leave applicant</p>
               <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                <ProfileValue label="Name" value={profile?.full_name ?? (loadingProfile ? "Loading..." : "HR user")} />
-                <ProfileValue label="Employee ID" value={profile?.employee_id ?? "—"} />
-                <ProfileValue label="Department" value={profile?.department ?? "Human Resources"} />
+                <ProfileValue
+                  label="Name"
+                  value={applicantName || (loadingProfile ? "Loading..." : "Signed-in user")}
+                />
+                <ProfileValue label="Employee ID" value={applicantEmployeeId || "—"} />
+                <ProfileValue label="Email" value={applicantEmail || "—"} />
               </div>
             </div>
 
@@ -237,6 +288,7 @@ export default function NewLeaveRequestModal({
                     id="leave-from-date"
                     type="date"
                     value={fromDate}
+                    min={today}
                     disabled={busy}
                     onChange={(event) => {
                       const nextStart = parseDateOnly(event.target.value);
@@ -323,6 +375,63 @@ export default function NewLeaveRequestModal({
                 placeholder="Enter the reason for this leave..."
                 className="w-full resize-none rounded-xl border border-slate-200 px-3 py-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50"
               />
+            </div>
+
+            {/* Attachment */}
+            <div>
+              <div className="mb-2 flex items-center gap-1">
+                <label htmlFor="leave-attachment" className="text-sm font-semibold text-slate-700">
+                  Add Attachment
+                </label>
+
+                <span className="text-xs font-normal text-slate-400">(Optional)</span>
+              </div>
+
+              <label
+                htmlFor="leave-attachment"
+                className={`flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50/50 px-4 py-6 transition ${
+                  busy ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:border-blue-400 hover:bg-blue-50/30"
+                }`}
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm">
+                  <Upload className="h-5 w-5 text-[#2563eb]" />
+                </div>
+
+                {attachment ? (
+                  <>
+                    <p className="mt-3 text-sm font-medium text-slate-700">{attachment.name}</p>
+
+                    <p className="mt-1 text-xs text-slate-400">Click to replace file</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="mt-3 text-sm font-semibold text-[#2563eb]">Upload file</p>
+
+                    <p className="mt-1 text-xs text-slate-400">JPG, PNG, PDF up to 5MB</p>
+                  </>
+                )}
+
+                <input
+                  id="leave-attachment"
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.pdf"
+                  disabled={busy}
+                  className="hidden"
+                  onChange={handleAttachmentChange}
+                />
+              </label>
+
+              {attachment && (
+                <div className="mt-2 flex items-center gap-2 text-xs text-slate-500">
+                  <Paperclip className="h-3.5 w-3.5" />
+
+                  <span>{(attachment.size / 1024 / 1024).toFixed(2)} MB</span>
+                </div>
+              )}
+
+              <p className="mt-2 text-xs text-slate-400">
+                The document stays on this device. Uploading it to storage is wired up separately.
+              </p>
             </div>
 
             {error && (

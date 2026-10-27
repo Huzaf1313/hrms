@@ -72,8 +72,14 @@ aside.app-sidebar svg.lucide {
   background-color: transparent !important;
 }
 
+/* Windows Chrome draws tiny up/down arrow buttons at both ends of every
+   scrollbar; remove them everywhere. */
+::-webkit-scrollbar-button {
+  display: none;
+}
+
 /* =========================================
-   Hidden scrollbar (webkit)
+    Hidden scrollbar (webkit)
    ========================================= */
 
 /* Sidebar nav scrolls when the menu outgrows the viewport, but a visible track
@@ -444,6 +450,55 @@ aside.app-sidebar svg.lucide {
   .auth-rise,
   .auth-aurora-1,
   .auth-aurora-2 {
+    animation: none;
+  }
+}
+
+/* =========================================
+   Thought-of-the-day banner (dark aurora)
+   ========================================= */
+
+/* Drifting glow blobs keep the navy banner alive without distracting
+   from the scrolling text. */
+@keyframes ticker-glow-drift {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+
+  50% {
+    transform: translate(6%, 14%) scale(1.14);
+  }
+}
+
+.ticker-glow-1 {
+  animation: ticker-glow-drift 14s ease-in-out infinite;
+}
+
+.ticker-glow-2 {
+  animation: ticker-glow-drift 18s ease-in-out infinite reverse;
+}
+
+/* One gloss sweep crosses the banner, then rests before repeating. */
+@keyframes ticker-shine {
+  0% {
+    transform: translateX(-160%) skewX(-18deg);
+  }
+
+  35%,
+  100% {
+    transform: translateX(320%) skewX(-18deg);
+  }
+}
+
+.ticker-shine {
+  animation: ticker-shine 9s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticker-glow-1,
+  .ticker-glow-2,
+  .ticker-shine {
     animation: none;
   }
 }
