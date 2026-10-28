@@ -196,6 +196,22 @@ function EditStructureModal({
     [earnings]
   );
 
+  const parsedMaxSalary = useMemo(() => {
+    const trimmed = maxSalary.trim();
+    if (!trimmed) return null;
+    const num = Number(trimmed);
+    return Number.isFinite(num) && num >= 0 ? num : null;
+  }, [maxSalary]);
+
+  const limitError = useMemo(() => {
+    if (parsedMaxSalary !== null && gross > parsedMaxSalary) {
+      return `The sum of all earning components (${formatCurrency(gross)}) cannot exceed the configured maximum salary limit (${formatCurrency(parsedMaxSalary)}).`;
+    }
+    return null;
+  }, [parsedMaxSalary, gross]);
+
+  const displayError = modalError || limitError;
+
   async function handleSave() {
     setModalError(null);
 
@@ -248,6 +264,13 @@ function EditStructureModal({
 
     if (earnings.some((e) => e.amount < 0)) {
       setModalError("Earning amounts cannot be negative.");
+      return;
+    }
+
+    if (parsedMax !== null && gross > parsedMax) {
+      setModalError(
+        `The sum of all earning components (${formatCurrency(gross)}) cannot exceed the configured maximum salary limit (${formatCurrency(parsedMax)}).`
+      );
       return;
     }
 
@@ -307,10 +330,10 @@ function EditStructureModal({
         </div>
 
         <div className="space-y-4 px-6 py-5">
-          {modalError && (
+          {displayError && (
             <div className="flex items-start gap-2.5 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-500" />
-              <span>{modalError}</span>
+              <span>{displayError}</span>
             </div>
           )}
 
@@ -435,9 +458,22 @@ function EditStructureModal({
             </div>
           </div>
 
-          <div className="flex items-center justify-between rounded-lg bg-slate-50 px-4 py-3">
-            <span className="text-sm font-bold text-slate-900">Total Gross Salary</span>
-            <span className="text-sm font-bold text-blue-600">{formatCurrency(gross)}</span>
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between rounded-lg bg-slate-50 px-4 py-3">
+              <span className="text-sm font-bold text-slate-900">Total Gross Salary</span>
+              <span
+                className={`text-sm font-bold ${
+                  limitError ? "text-rose-600" : "text-blue-600"
+                }`}
+              >
+                {formatCurrency(gross)}
+              </span>
+            </div>
+            {limitError && (
+              <p className="text-xs font-medium text-rose-600">
+                {limitError}
+              </p>
+            )}
           </div>
         </div>
 
@@ -453,7 +489,7 @@ function EditStructureModal({
           <button
             type="button"
             onClick={handleSave}
-            disabled={saving || !name.trim()}
+            disabled={saving || !name.trim() || Boolean(limitError)}
             className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
           >
             {saving ? (

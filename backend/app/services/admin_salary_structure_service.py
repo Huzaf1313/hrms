@@ -41,6 +41,27 @@ def validate_salary_band(
             )
 
 
+def validate_salary_limit(
+    earnings: list[dict],
+    max_salary: float | None,
+):
+    if max_salary is None:
+        return
+
+    total_earnings = sum(
+        float(earning.get("amount", 0) or 0)
+        if isinstance(earning, dict)
+        else float(getattr(earning, "amount", 0) or 0)
+        for earning in earnings
+    )
+
+    if round(total_earnings, 2) > round(max_salary, 2):
+        raise AppException(
+            "The sum of all earning components cannot exceed the maximum salary limit",
+            400,
+        )
+
+
 class AdminSalaryStructureService:
     def __init__(self):
         self.repository = AdminSalaryStructureRepository()
@@ -108,6 +129,7 @@ class AdminSalaryStructureService:
         min_sal = data.get("min_salary")
         max_sal = data.get("max_salary")
         validate_salary_band(min_sal, max_sal)
+        validate_salary_limit(earnings, max_sal)
 
         # Auto-format range if empty or blank
         range_str = (data.get("range") or "").strip()
@@ -188,6 +210,9 @@ class AdminSalaryStructureService:
             current_max = update_data.get("max_salary")
 
         validate_salary_band(current_min, current_max)
+
+        final_earnings = update_data.get("earnings", existing.get("earnings", []))
+        validate_salary_limit(final_earnings, current_max)
 
         # Update range if min/max changed and range wasn't explicitly given
         if ("min_salary" in update_data or "max_salary" in update_data) and "range" not in update_data:
