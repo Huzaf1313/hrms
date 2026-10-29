@@ -58,8 +58,8 @@ export default function MarkReturnedModal({
       <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
           <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50">
-              <PackageCheck className="h-5 w-5 text-emerald-600" />
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50">
+              <PackageCheck className="h-5 w-5 text-red-600" />
             </span>
             <div>
               <h2 className="text-xl font-bold text-slate-900">Mark as Returned</h2>
@@ -139,7 +139,7 @@ export default function MarkReturnedModal({
             type="button"
             onClick={() => void handleConfirm()}
             disabled={isSubmitting}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-red-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSubmitting ? (
               <>

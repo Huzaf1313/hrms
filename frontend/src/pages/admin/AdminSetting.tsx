@@ -1,24 +1,61 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Settings as SettingsIcon,
   Building2,
-  SlidersHorizontal,
+  Users2,
   CalendarDays,
-  Plane,
+  Layers,
   Wallet,
   FileText,
   Pencil,
+  Plus,
+  Trash2,
   Check,
   X,
 } from "lucide-react";
 
 import AddHolidayModal from "../../components/AddHolidayModal";
+import { ApiError } from "../../services/api";
+import { departmentService } from "../../services/departmentService";
+import {
+  formatDuration,
+  formatShiftTime,
+  shiftService,
+} from "../../services/shiftService";
+import type { Shift } from "../../types/shift";
+import type { Department } from "../../types/department";
 
 // ---- Types ------------------------------------------------------------------
 
 const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 type CardId = "organization" | "workingDays" | "payroll";
+
+interface ShiftForm {
+  name: string;
+  start_time: string;
+  end_time: string;
+  is_active: boolean;
+  notes: string;
+}
+
+const emptyShiftForm: ShiftForm = {
+  name: "",
+  start_time: "",
+  end_time: "",
+  is_active: true,
+  notes: "",
+};
+
+interface DepartmentForm {
+  name: string;
+  description: string;
+}
+
+const emptyDepartmentForm: DepartmentForm = {
+  name: "",
+  description: "",
+};
 
 interface SettingsData {
   organization: {
@@ -84,6 +121,26 @@ function writeSettings(data: SettingsData): boolean {
   }
 }
 
+/** Mirrors the backend's shift_duration_minutes so the admin sees the length
+ *  before saving, including the wrap past midnight for a night shift. */
+function previewShiftDurationMinutes(start: string, end: string): number | null {
+  if (!start || !end) return null;
+
+  const toMinutes = (value: string) => {
+    const [hours, minutes] = value.split(":").map(Number);
+    return hours * 60 + minutes;
+  };
+
+  const startMinutes = toMinutes(start);
+  const endMinutes = toMinutes(end);
+
+  if (Number.isNaN(startMinutes) || Number.isNaN(endMinutes)) return null;
+
+  if (startMinutes === endMinutes) return 1440;
+
+  return (endMinutes - startMinutes + 1440) % 1440;
+}
+
 // ---- Reusable card shell ------------------------------------------------------
 
 interface SettingsCardProps {
@@ -92,9 +149,10 @@ interface SettingsCardProps {
   title: string;
   children: React.ReactNode;
   action?: React.ReactNode;
+  headerAction?: React.ReactNode;
 }
 
-function SettingsCard({ icon, iconBg, title, children, action }: SettingsCardProps) {
+function SettingsCard({ icon, iconBg, title, children, action, headerAction }: SettingsCardProps) {
   return (
     <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm flex flex-col">
       <div className="flex items-center gap-2.5 mb-4">
@@ -102,6 +160,7 @@ function SettingsCard({ icon, iconBg, title, children, action }: SettingsCardPro
           {icon}
         </span>
         <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
+        {headerAction && <div className="ml-auto">{headerAction}</div>}
       </div>
 
       <div className="flex-1">{children}</div>
@@ -225,6 +284,208 @@ function InputField({
   );
 }
 
+// ---- View All popup ---------------------------------------------------------
+
+interface ViewAllModalProps {
+  icon: React.ReactNode;
+  title: string;
+  countLabel: string;
+  subtitle: string;
+  summary: string;
+  onClose: () => void;
+  children: React.ReactNode;
+}
+
+function ViewAllModal({ icon, title, countLabel, subtitle, summary, onClose, children }: ViewAllModalProps) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+      <div className="flex max-h-[85vh] w-full max-w-2xl flex-col rounded-2xl bg-white shadow-lg">
+        <div className="flex items-start justify-between border-b border-gray-100 p-6">
+          <div className="flex items-start gap-2.5">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg">{icon}</span>
+            <div>
+              <div className="flex items-center gap-2.5">
+                <h2 className="text-xl font-bold text-gray-900">{title}</h2>
+                <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-600">
+                  {countLabel}
+                </span>
+              </div>
+              <p className="mt-1 text-sm text-gray-500">{subtitle}</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full p-1.5 text-gray-400 hover:bg-gray-50 hover:text-gray-600"
+            aria-label="Close"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="flex-1 space-y-4 overflow-y-auto p-6">{children}</div>
+
+        <div className="flex items-center justify-between border-t border-gray-100 p-6">
+          <p className="text-xs font-medium text-gray-500">{summary}</p>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-xs text-gray-400">{label}</dt>
+      <dd className="font-semibold text-gray-800">{value}</dd>
+    </div>
+  );
+}
+
+interface ShiftDetailItemProps {
+  shift: Shift;
+  index: number;
+  onEdit: () => void;
+  onDelete: () => void;
+  isDeleting: boolean;
+}
+
+function ShiftDetailItem({ shift, index, onEdit, onDelete, isDeleting }: ShiftDetailItemProps) {
+  return (
+    <div
+      className={`rounded-2xl border border-l-4 border-gray-100 border-l-violet-300 p-4 shadow-sm transition hover:shadow-md ${
+        shift.is_active ? "" : "bg-gray-50 opacity-70"
+      }`}
+    >
+      <div className="flex items-center gap-2.5">
+        <span className="text-[11px] font-semibold text-gray-400">
+          {String(index).padStart(2, "0")}
+        </span>
+        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-50">
+          <Users2 className="h-4 w-4 text-violet-600" />
+        </span>
+        <span className="font-semibold text-gray-900">{shift.name}</span>
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
+          {shift.is_overnight && (
+            <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[11px] font-medium text-violet-600">
+              Ends next day
+            </span>
+          )}
+          {!shift.is_active && (
+            <span className="rounded-full bg-gray-200 px-2 py-0.5 text-[11px] font-medium text-gray-600">
+              Inactive
+            </span>
+          )}
+          <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-600">
+            {formatDuration(shift.duration_minutes)}
+          </span>
+          <div className="ml-1 flex gap-1">
+            <button
+              type="button"
+              onClick={onEdit}
+              aria-label={`Edit ${shift.name}`}
+              className="rounded-full p-1.5 text-gray-400 hover:bg-gray-50 hover:text-gray-700"
+            >
+              <Pencil className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={onDelete}
+              disabled={isDeleting}
+              aria-label={`Delete ${shift.name}`}
+              className="rounded-full p-1.5 text-gray-400 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-40"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 rounded-xl border border-gray-100 bg-gray-50 p-4">
+        <DetailRow label="Start Time" value={formatShiftTime(shift.start_time)} />
+        <DetailRow label="End Time" value={formatShiftTime(shift.end_time)} />
+        <DetailRow
+          label="Shift Length"
+          value={formatDuration(shift.duration_minutes)}
+        />
+        <DetailRow
+          label="Assigned Employees"
+          value={String(shift.assigned_employee_count)}
+        />
+      </dl>
+
+      {shift.notes && (
+        <p className="mt-2 text-xs italic text-gray-500">{shift.notes}</p>
+      )}
+    </div>
+  );
+}
+
+interface DepartmentDetailItemProps {
+  department: Department;
+  index: number;
+  onEdit: () => void;
+  onDelete: () => void;
+  isDeleting: boolean;
+}
+
+function DepartmentDetailItem({
+  department,
+  index,
+  onEdit,
+  onDelete,
+  isDeleting,
+}: DepartmentDetailItemProps) {
+  return (
+    <div className="rounded-2xl border border-l-4 border-gray-100 border-l-blue-300 p-4 shadow-sm transition hover:shadow-md">
+      <div className="flex items-center gap-2.5">
+        <span className="text-[11px] font-semibold text-gray-400">
+          {String(index).padStart(2, "0")}
+        </span>
+        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50">
+          <Layers className="h-4 w-4 text-blue-600" />
+        </span>
+        <span className="min-w-0 font-semibold text-gray-900">
+          {department.name}
+        </span>
+        <div className="ml-auto flex shrink-0 gap-1">
+          <button
+            type="button"
+            onClick={onEdit}
+            aria-label={`Edit ${department.name}`}
+            className="rounded-full p-1.5 text-gray-400 hover:bg-gray-50 hover:text-gray-700"
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={onDelete}
+            disabled={isDeleting}
+            aria-label={`Delete ${department.name}`}
+            className="rounded-full p-1.5 text-gray-400 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-40"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      <dl className="mt-3 rounded-xl border border-gray-100 bg-gray-50 p-4">
+        <DetailRow
+          label="Description"
+          value={department.description ?? "-"}
+        />
+      </dl>
+    </div>
+  );
+}
+
 // ---- Page -----------------------------------------------------------------
 
 export default function AdminSettings() {
@@ -233,12 +494,107 @@ export default function AdminSettings() {
   const [editingCard, setEditingCard] = useState<CardId | null>(null);
   const [notice, setNotice] = useState("");
   const [isHolidayModalOpen, setIsHolidayModalOpen] = useState(false);
+  const [shifts, setShifts] = useState<Shift[]>([]);
+  const [shiftsLoading, setShiftsLoading] = useState(true);
+  const [shiftError, setShiftError] = useState("");
+  const [shiftFormError, setShiftFormError] = useState("");
+  const [shiftSaving, setShiftSaving] = useState(false);
+  const [isShiftFormOpen, setIsShiftFormOpen] = useState(false);
+  const [shiftEditingId, setShiftEditingId] = useState<string | null>(null);
+  const [shiftForm, setShiftForm] = useState<ShiftForm>(emptyShiftForm);
+  const [shiftDeletingId, setShiftDeletingId] = useState<string | null>(null);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [departmentsLoading, setDepartmentsLoading] = useState(true);
+  const [departmentError, setDepartmentError] = useState("");
+  const [departmentFormError, setDepartmentFormError] = useState("");
+  const [departmentSaving, setDepartmentSaving] = useState(false);
+  const [isDepartmentFormOpen, setIsDepartmentFormOpen] = useState(false);
+  const [departmentEditingId, setDepartmentEditingId] = useState<string | null>(
+    null,
+  );
+  const [departmentForm, setDepartmentForm] = useState<DepartmentForm>(
+    emptyDepartmentForm,
+  );
+  const [departmentDeletingId, setDepartmentDeletingId] = useState<
+    string | null
+  >(null);
+  const [isShiftDetailModalOpen, setIsShiftDetailModalOpen] = useState(false);
+  const [isDepartmentDetailModalOpen, setIsDepartmentDetailModalOpen] =
+    useState(false);
 
   // While editing, the draft is the source of truth for every card's inputs.
   const view = draft ?? settings;
   const isEditingOrganization = editingCard === "organization";
   const isEditingWorkingDays = editingCard === "workingDays";
   const isEditingPayroll = editingCard === "payroll";
+
+  const shiftDurationPreview = previewShiftDurationMinutes(
+    shiftForm.start_time,
+    shiftForm.end_time,
+  );
+
+  useEffect(() => {
+    let isCurrent = true;
+
+    shiftService
+      .listAll()
+      .then((data) => {
+        if (!isCurrent) return;
+
+        setShifts(data);
+        setShiftError("");
+      })
+      .catch((err: unknown) => {
+        if (!isCurrent) return;
+
+        setShiftError(
+          err instanceof ApiError ? err.message : "Failed to load shifts.",
+        );
+      })
+      .finally(() => {
+        if (!isCurrent) return;
+
+        setShiftsLoading(false);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let isCurrent = true;
+
+    departmentService
+      .listAll()
+      .then((data) => {
+        if (!isCurrent) return;
+
+        setDepartments(data);
+        setDepartmentError("");
+      })
+      .catch((err: unknown) => {
+        if (!isCurrent) return;
+
+        setDepartmentError(
+          err instanceof ApiError ? err.message : "Failed to load departments.",
+        );
+      })
+      .finally(() => {
+        if (!isCurrent) return;
+
+        setDepartmentsLoading(false);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, []);
+
+  function showNotice(message: string) {
+    setNotice(message);
+    window.setTimeout(() => setNotice(""), 2500);
+  }
 
   function startEdit(card: CardId) {
     setDraft(settings);
@@ -260,8 +616,7 @@ export default function AdminSettings() {
     const stored = writeSettings(draft);
 
     cancelEdit();
-    setNotice(stored ? "Settings saved" : "Saved for this session only");
-    window.setTimeout(() => setNotice(""), 2500);
+    showNotice(stored ? "Settings saved" : "Saved for this session only");
   }
 
   function toggleDay(day: string) {
@@ -293,7 +648,356 @@ export default function AdminSettings() {
     setDraft({ ...draft, payroll: { ...draft.payroll, [key]: value } });
   }
 
+  async function reloadShifts() {
+    setShiftsLoading(true);
+
+    try {
+      const data = await shiftService.listAll();
+
+      setShifts(data);
+      setShiftError("");
+    } catch (err) {
+      setShiftError(
+        err instanceof ApiError ? err.message : "Failed to load shifts.",
+      );
+    } finally {
+      setShiftsLoading(false);
+    }
+  }
+
+  function updateShiftForm(key: keyof ShiftForm, value: string | boolean) {
+    setShiftForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function openShiftCreate() {
+    setShiftEditingId(null);
+    setShiftForm(emptyShiftForm);
+    setShiftFormError("");
+    setIsShiftFormOpen(true);
+  }
+
+  function openShiftEdit(shift: Shift) {
+    setShiftEditingId(shift.id);
+    setShiftForm({
+      name: shift.name,
+      start_time: shift.start_time,
+      end_time: shift.end_time,
+      is_active: shift.is_active,
+      notes: shift.notes ?? "",
+    });
+    setShiftFormError("");
+    setIsShiftFormOpen(true);
+  }
+
+  function closeShiftForm() {
+    setIsShiftFormOpen(false);
+    setShiftEditingId(null);
+    setShiftForm(emptyShiftForm);
+    setShiftFormError("");
+  }
+
+  async function saveShift() {
+    if (!shiftForm.name.trim()) {
+      setShiftFormError("Shift name is required");
+      return;
+    }
+
+    if (!shiftForm.start_time || !shiftForm.end_time) {
+      setShiftFormError("Both start and end time are required");
+      return;
+    }
+
+    setShiftSaving(true);
+    setShiftFormError("");
+
+    const payload = {
+      name: shiftForm.name.trim(),
+      start_time: shiftForm.start_time,
+      end_time: shiftForm.end_time,
+      is_active: shiftForm.is_active,
+      notes: shiftForm.notes.trim() || null,
+    };
+
+    try {
+      if (shiftEditingId) {
+        await shiftService.update(shiftEditingId, payload);
+      } else {
+        await shiftService.create(payload);
+      }
+
+      const wasEditing = Boolean(shiftEditingId);
+
+      closeShiftForm();
+      await reloadShifts();
+      showNotice(wasEditing ? "Shift updated" : "Shift saved");
+    } catch (err) {
+      setShiftFormError(
+        err instanceof ApiError ? err.message : "Failed to save shift.",
+      );
+    } finally {
+      setShiftSaving(false);
+    }
+  }
+
+  async function deleteShift(shift: Shift) {
+    setShiftError("");
+    setShiftDeletingId(shift.id);
+
+    try {
+      await shiftService.remove(shift.id);
+
+      await reloadShifts();
+      showNotice("Shift deleted");
+    } catch (err) {
+      setShiftError(
+        err instanceof ApiError
+          ? err.message
+          : "Failed to delete shift.",
+      );
+    } finally {
+      setShiftDeletingId(null);
+    }
+  }
+
+  async function reloadDepartments() {
+    setDepartmentsLoading(true);
+
+    try {
+      const data = await departmentService.listAll();
+
+      setDepartments(data);
+      setDepartmentError("");
+    } catch (err) {
+      setDepartmentError(
+        err instanceof ApiError ? err.message : "Failed to load departments.",
+      );
+    } finally {
+      setDepartmentsLoading(false);
+    }
+  }
+
+  function updateDepartmentForm(key: keyof DepartmentForm, value: string) {
+    setDepartmentForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function openDepartmentCreate() {
+    setDepartmentEditingId(null);
+    setDepartmentForm(emptyDepartmentForm);
+    setDepartmentFormError("");
+    setIsDepartmentFormOpen(true);
+  }
+
+  function openDepartmentEdit(department: Department) {
+    setDepartmentEditingId(department.id);
+    setDepartmentForm({
+      name: department.name,
+      description: department.description ?? "",
+    });
+    setDepartmentFormError("");
+    setIsDepartmentFormOpen(true);
+  }
+
+  function closeDepartmentForm() {
+    setIsDepartmentFormOpen(false);
+    setDepartmentEditingId(null);
+    setDepartmentForm(emptyDepartmentForm);
+    setDepartmentFormError("");
+  }
+
+  async function saveDepartment() {
+    if (departmentForm.name.trim().length < 2) {
+      setDepartmentFormError("Department name is required");
+      return;
+    }
+
+    setDepartmentSaving(true);
+    setDepartmentFormError("");
+
+    const payload = {
+      name: departmentForm.name.trim(),
+      description: departmentForm.description.trim() || undefined,
+    };
+
+    try {
+      if (departmentEditingId) {
+        await departmentService.update(departmentEditingId, payload);
+      } else {
+        await departmentService.create(payload);
+      }
+
+      const wasEditing = Boolean(departmentEditingId);
+
+      closeDepartmentForm();
+      await reloadDepartments();
+      showNotice(wasEditing ? "Department updated" : "Department saved");
+    } catch (err) {
+      setDepartmentFormError(
+        err instanceof ApiError ? err.message : "Failed to save department.",
+      );
+    } finally {
+      setDepartmentSaving(false);
+    }
+  }
+
+  async function deleteDepartment(department: Department) {
+    setDepartmentError("");
+    setDepartmentDeletingId(department.id);
+
+    try {
+      await departmentService.remove(department.id);
+
+      await reloadDepartments();
+      showNotice("Department deleted");
+    } catch (err) {
+      setDepartmentError(
+        err instanceof ApiError
+          ? err.message
+          : "Failed to delete department.",
+      );
+    } finally {
+      setDepartmentDeletingId(null);
+    }
+  }
+
   const canSave = view.organization.companyName.trim().length > 0;
+
+  const shiftFormView = (
+    <div className="space-y-3">
+      {shiftFormError && (
+        <div className="rounded-lg bg-rose-50 p-3 text-sm text-rose-600">
+          {shiftFormError}
+        </div>
+      )}
+
+      <InputField
+        label="Shift Name"
+        value={shiftForm.name}
+        onChange={(value) => updateShiftForm("name", value)}
+      />
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs text-slate-400 mb-1">
+            Start Time
+          </label>
+          <input
+            type="time"
+            value={shiftForm.start_time}
+            onChange={(event) =>
+              updateShiftForm("start_time", event.target.value)
+            }
+            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+          />
+        </div>
+        <div>
+          <label className="block text-xs text-slate-400 mb-1">
+            End Time
+          </label>
+          <input
+            type="time"
+            value={shiftForm.end_time}
+            onChange={(event) =>
+              updateShiftForm("end_time", event.target.value)
+            }
+            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+          />
+        </div>
+      </div>
+
+      {shiftDurationPreview !== null && (
+        <p className="text-xs text-slate-500">
+          Shift length: {formatDuration(shiftDurationPreview)}
+          {shiftDurationPreview >= 1440 ? " (a full 24 hours)" : ""}
+        </p>
+      )}
+
+      <InputField
+        label="Notes (optional)"
+        value={shiftForm.notes}
+        onChange={(value) => updateShiftForm("notes", value)}
+      />
+
+      <label className="flex items-center gap-2 text-sm text-slate-700">
+        <input
+          type="checkbox"
+          checked={shiftForm.is_active}
+          onChange={(event) =>
+            updateShiftForm("is_active", event.target.checked)
+          }
+          className="rounded border-slate-300"
+        />
+        Active
+      </label>
+
+      <div className="flex gap-3 pt-1">
+        <button
+          type="button"
+          onClick={closeShiftForm}
+          className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={saveShift}
+          disabled={shiftSaving}
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <Check className="h-3.5 w-3.5" />
+          {shiftSaving
+            ? "Saving..."
+            : shiftEditingId
+              ? "Update Shift"
+              : "Add Shift"}
+        </button>
+      </div>
+    </div>
+  );
+
+  const departmentFormView = (
+    <div className="space-y-3">
+      {departmentFormError && (
+        <div className="rounded-lg bg-rose-50 p-3 text-sm text-rose-600">
+          {departmentFormError}
+        </div>
+      )}
+
+      <InputField
+        label="Department Name"
+        value={departmentForm.name}
+        onChange={(value) => updateDepartmentForm("name", value)}
+      />
+
+      <InputField
+        label="Description (optional)"
+        value={departmentForm.description}
+        onChange={(value) => updateDepartmentForm("description", value)}
+      />
+
+      <div className="flex gap-3 pt-1">
+        <button
+          type="button"
+          onClick={closeDepartmentForm}
+          className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={saveDepartment}
+          disabled={departmentSaving}
+          className="flex items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <Check className="h-3.5 w-3.5" />
+          {departmentSaving
+            ? "Saving..."
+            : departmentEditingId
+              ? "Update Department"
+              : "Add Department"}
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-slate-50 px-6 py-6">
@@ -366,24 +1070,130 @@ export default function AdminSettings() {
             )}
           </SettingsCard>
 
-          {/* Platform Preferences */}
+          {/* Shift Management */}
           <SettingsCard
-            icon={<SlidersHorizontal className="h-4 w-4 text-purple-600" />}
-            iconBg="bg-purple-50"
-            title="Platform Preferences"
+            icon={<Users2 className="h-4 w-4 text-violet-600" />}
+            iconBg="bg-violet-50"
+            title="Shift Management"
+            headerAction={
+              !isShiftFormOpen && shifts.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => setIsShiftDetailModalOpen(true)}
+                  className="text-xs font-semibold text-blue-600 hover:text-blue-700"
+                >
+                  View All →
+                </button>
+              ) : undefined
+            }
             action={
-              <button
-                type="button"
-                className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition"
-              >
-                Save
-              </button>
+              isShiftFormOpen ? undefined : (
+                <button
+                  type="button"
+                  onClick={openShiftCreate}
+                  className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Add Shift
+                </button>
+              )
             }
           >
-            <SelectField label="Date Format" value="DD/MM/YYYY" options={["DD/MM/YYYY", "MM/DD/YYYY", "YYYY-MM-DD"]} />
-            <SelectField label="Time Format" value="12 Hour (AM/PM)" options={["12 Hour (AM/PM)", "24 Hour"]} />
-            <SelectField label="Work Week" value="Monday - Friday" options={["Monday - Friday", "Monday - Saturday", "Sunday - Thursday"]} />
-            <SelectField label="Language" value="English" options={["English", "Hindi"]} />
+            {isShiftFormOpen && !isShiftDetailModalOpen ? (
+              shiftFormView
+            ) : (
+              <div className="h-[192px] overflow-y-auto pr-1 [scrollbar-width:thin]">
+                {shiftsLoading ? (
+                  <div className="flex h-full items-center justify-center">
+                    <p className="text-sm text-slate-500">Loading shifts...</p>
+                  </div>
+                ) : shiftError ? (
+                  <div className="flex h-full items-center justify-center px-4">
+                    <div className="rounded-lg bg-rose-50 p-3 text-sm text-rose-600">
+                      {shiftError}
+                    </div>
+                  </div>
+                ) : shifts.length === 0 ? (
+                  <div className="flex h-full items-center justify-center">
+                    <p className="text-sm text-slate-500">
+                      No shifts yet. Add your first shift to start tracking
+                      overtime.
+                    </p>
+                  </div>
+                ) : (
+                  <ul className="space-y-3">
+                    {shifts.slice(0, 2).map((shift) => (
+                  <li
+                    key={shift.id}
+                    className={`rounded-xl border border-slate-100 p-3 ${
+                      shift.is_active ? "bg-white" : "bg-slate-50 opacity-70"
+                    }`}
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="text-sm font-semibold text-slate-900">
+                            {shift.name}
+                          </span>
+                          {shift.is_overnight && (
+                            <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[11px] font-medium text-violet-600">
+                              Ends next day
+                            </span>
+                          )}
+                          {!shift.is_active && (
+                            <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                              Inactive
+                            </span>
+                          )}
+                          <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-600">
+                            {formatDuration(shift.duration_minutes)}
+                          </span>
+                        </div>
+
+                        <p className="mt-0.5 text-xs text-slate-600">
+                          {formatShiftTime(shift.start_time)} -{" "}
+                          {formatShiftTime(shift.end_time)}
+                        </p>
+
+                        <p className="mt-0.5 text-[11px] text-slate-400">
+                          {shift.assigned_employee_count} employee
+                          {shift.assigned_employee_count === 1 ? "" : "s"}{" "}
+                          assigned
+                        </p>
+
+                        {shift.notes && (
+                          <p className="mt-0.5 text-[11px] text-slate-500">
+                            {shift.notes}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex shrink-0 gap-1">
+                        <button
+                          type="button"
+                          onClick={() => openShiftEdit(shift)}
+                          aria-label={`Edit ${shift.name}`}
+                          className="rounded-full p-1.5 text-slate-400 hover:bg-slate-50 hover:text-slate-700"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => deleteShift(shift)}
+                          disabled={shiftDeletingId === shift.id}
+                          aria-label={`Delete ${shift.name}`}
+                          className="rounded-full p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-40"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+                </ul>
+                )}
+              </div>
+            )}
           </SettingsCard>
 
           {/* Working Days & Holidays */}
@@ -445,23 +1255,104 @@ export default function AdminSettings() {
             </button>
           </SettingsCard>
 
-          {/* Leave Settings */}
+          {/* Department Management */}
           <SettingsCard
-            icon={<Plane className="h-4 w-4 text-purple-600" />}
-            iconBg="bg-purple-50"
-            title="Leave Settings"
+            icon={<Layers className="h-4 w-4 text-blue-600" />}
+            iconBg="bg-blue-50"
+            title="Department Management"
+            headerAction={
+              !isDepartmentFormOpen && departments.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => setIsDepartmentDetailModalOpen(true)}
+                  className="text-xs font-semibold text-blue-600 hover:text-blue-700"
+                >
+                  View All →
+                </button>
+              ) : undefined
+            }
             action={
-              <button
-                type="button"
-                className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition"
-              >
-                Save
-              </button>
+              isDepartmentFormOpen ? undefined : (
+                <button
+                  type="button"
+                  onClick={openDepartmentCreate}
+                  className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Add Department
+                </button>
+              )
             }
           >
-            <SelectField label="Leave Year" value="Calendar Year (Jan - Dec)" options={["Calendar Year (Jan - Dec)", "Fiscal Year (Apr - Mar)"]} />
-            <InputField label="Carry Forward Days" value="5" hint="Max 10 days" />
-            <InputField label="Default Leave Days" value="10" hint="Per year" />
+            {isDepartmentFormOpen && !isDepartmentDetailModalOpen ? (
+              departmentFormView
+            ) : (
+              <div className="h-[192px] overflow-y-auto pr-1 [scrollbar-width:thin]">
+                {departmentsLoading ? (
+                  <div className="flex h-full items-center justify-center">
+                    <p className="text-sm text-slate-500">
+                      Loading departments...
+                    </p>
+                  </div>
+                ) : departmentError ? (
+                  <div className="flex h-full items-center justify-center px-4">
+                    <div className="rounded-lg bg-rose-50 p-3 text-sm text-rose-600">
+                      {departmentError}
+                    </div>
+                  </div>
+                ) : departments.length === 0 ? (
+                  <div className="flex h-full items-center justify-center">
+                    <p className="text-sm text-slate-500">
+                      No departments yet. Add your first department to organize
+                      employees.
+                    </p>
+                  </div>
+                ) : (
+                  <ul className="space-y-3">
+                    {departments.slice(0, 2).map((department) => (
+                  <li
+                    key={department.id}
+                    className="rounded-xl border border-slate-100 p-3"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <span className="text-sm font-semibold text-slate-900">
+                          {department.name}
+                        </span>
+
+                        {department.description && (
+                          <p className="mt-0.5 text-[11px] text-slate-500">
+                            {department.description}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex shrink-0 gap-1">
+                        <button
+                          type="button"
+                          onClick={() => openDepartmentEdit(department)}
+                          aria-label={`Edit ${department.name}`}
+                          className="rounded-full p-1.5 text-slate-400 hover:bg-slate-50 hover:text-slate-700"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => deleteDepartment(department)}
+                          disabled={departmentDeletingId === department.id}
+                          aria-label={`Delete ${department.name}`}
+                          className="rounded-full p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-40"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+                </ul>
+                )}
+              </div>
+            )}
           </SettingsCard>
 
           {/* Payroll Settings */}
@@ -524,11 +1415,69 @@ export default function AdminSettings() {
       {isHolidayModalOpen && (
         <AddHolidayModal
           onClose={() => setIsHolidayModalOpen(false)}
-          onSaved={() => {
-            setNotice("Holiday saved");
-            window.setTimeout(() => setNotice(""), 2500);
-          }}
+          onSaved={() => showNotice("Holiday saved")}
         />
+      )}
+
+      {isShiftDetailModalOpen && (
+        <ViewAllModal
+          icon={<Users2 className="h-4 w-4 text-violet-600" />}
+          title="All Shifts"
+          countLabel={`${shifts.length}`}
+          subtitle={`${shifts.length} shift${shifts.length === 1 ? "" : "s"} configured`}
+          summary={`Showing all ${shifts.length} shift${shifts.length === 1 ? "" : "s"}`}
+          onClose={() => setIsShiftDetailModalOpen(false)}
+        >
+          {isShiftFormOpen ? (
+            shiftFormView
+          ) : shifts.length === 0 ? (
+            <div className="flex min-h-[160px] items-center justify-center text-sm text-gray-500">
+              No shifts yet. Add your first shift to start tracking overtime.
+            </div>
+          ) : (
+            shifts.map((shift, index) => (
+              <ShiftDetailItem
+                key={shift.id}
+                shift={shift}
+                index={index + 1}
+                onEdit={() => openShiftEdit(shift)}
+                onDelete={() => deleteShift(shift)}
+                isDeleting={shiftDeletingId === shift.id}
+              />
+            ))
+          )}
+        </ViewAllModal>
+      )}
+
+      {isDepartmentDetailModalOpen && (
+        <ViewAllModal
+          icon={<Layers className="h-4 w-4 text-blue-600" />}
+          title="All Departments"
+          countLabel={`${departments.length}`}
+          subtitle={`${departments.length} department${departments.length === 1 ? "" : "s"}`}
+          summary={`Showing all ${departments.length} department${departments.length === 1 ? "" : "s"}`}
+          onClose={() => setIsDepartmentDetailModalOpen(false)}
+        >
+          {isDepartmentFormOpen ? (
+            departmentFormView
+          ) : departments.length === 0 ? (
+            <div className="flex min-h-[160px] items-center justify-center text-sm text-gray-500">
+              No departments yet. Add your first department to organize
+              employees.
+            </div>
+          ) : (
+            departments.map((department, index) => (
+              <DepartmentDetailItem
+                key={department.id}
+                department={department}
+                index={index + 1}
+                onEdit={() => openDepartmentEdit(department)}
+                onDelete={() => deleteDepartment(department)}
+                isDeleting={departmentDeletingId === department.id}
+              />
+            ))
+          )}
+        </ViewAllModal>
       )}
     </div>
   );

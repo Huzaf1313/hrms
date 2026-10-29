@@ -36,6 +36,16 @@ class LeaveResponse(BaseModel):
     admin_note: str | None = None
 
 
+class LeaveBalanceEntry(BaseModel):
+    leave_type: str = Field(min_length=1)
+    used: int = Field(ge=0)
+    total: int = Field(ge=0)
+
+
+class LeaveBalanceUpdate(BaseModel):
+    balances: list[LeaveBalanceEntry] = Field(min_length=1)
+
+
 class LeaveSummaryResponse(BaseModel):
     total_leave_requests: int
     pending_requests: int

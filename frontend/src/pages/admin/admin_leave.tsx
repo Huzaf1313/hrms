@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { TableRowSkeleton } from "../../components/ui";
 import {
+  AlertCircle,
   CalendarDays,
   Clock,
   CheckCircle2,
@@ -66,9 +67,6 @@ const leaveBalances = [
     iconColor: "text-violet-600",
   },
 ];
-
-/** localStorage key holding edits to the balance summary's day totals. */
-const LEAVE_BALANCES_KEY = "adminLeaveBalances";
 
 const leaveTypeColors: Record<string, string> = {
   "Casual Leave": "bg-emerald-50 text-emerald-600",
@@ -558,7 +556,10 @@ function AdminLeave() {
   const [selectedRequest, setSelectedRequest] = useState<LeaveRequest | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [chartRequests, setChartRequests] = useState<LeaveRequest[]>([]);
-  const [successMessage, setSuccessMessage] = useState("");
+  const [notice, setNotice] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
 
   // Leave the admin files for themselves. The admin portal has no create
   // endpoint of its own yet, so these are kept in the browser.
@@ -567,50 +568,38 @@ function AdminLeave() {
   );
   const [onlyMine, setOnlyMine] = useState(false);
 
-  // Editable leave-balance quotas (days per leave type). Saved back to the
-  // browser so an admin's tweaks survive a reload until a real backend for
-  // balance editing exists.
-  const [leaveBalancesState, setLeaveBalancesState] = useState(() => {
-    try {
-      const saved = localStorage.getItem(LEAVE_BALANCES_KEY);
-
-      if (saved) {
-        const parsed = JSON.parse(saved) as { label: string; used: number; total: number }[];
-
-        return leaveBalances.map((balance) => ({
-          ...balance,
-          ...(parsed.find((savedRow) => savedRow.label === balance.label) ?? {}),
-        }));
-      }
-    } catch {
-      /* Corrupt or unavailable storage falls back to the defaults. */
-    }
-
-    return leaveBalances;
-  });
+  // Editable leave-balance quotas (days per leave type). The numbers live in
+  // the database and are synced below, so edits survive reloads across every
+  // admin session.
+  const [leaveBalancesState, setLeaveBalancesState] = useState(leaveBalances);
   const [isBalanceEditOpen, setIsBalanceEditOpen] = useState(false);
   /** Per-type working copy of the numbers shown in the edit modal. */
   const [balanceDraft, setBalanceDraft] = useState<
-    Record<string, { used: number; total: number }>
+    Record<string, { used: string; total: string }>
   >({});
+  const [isBalanceSaving, setIsBalanceSaving] = useState(false);
 
   function openBalanceEdit() {
     setBalanceDraft(
       Object.fromEntries(
         leaveBalancesState.map((balance) => [
           balance.label,
-          { used: balance.used, total: balance.total },
+          { used: String(balance.used), total: String(balance.total) },
         ]),
       ),
     );
     setIsBalanceEditOpen(true);
   }
 
-  function saveBalanceEdit() {
+  async function saveBalanceEdit() {
+    if (isBalanceSaving) return;
+
+    setIsBalanceSaving(true);
+
     const next = leaveBalancesState.map((balance) => {
       const draft = balanceDraft[balance.label] ?? {
-        used: balance.used,
-        total: balance.total,
+        used: String(balance.used),
+        total: String(balance.total),
       };
 
       return {
@@ -620,21 +609,33 @@ function AdminLeave() {
       };
     });
 
-    try {
-      localStorage.setItem(
-        LEAVE_BALANCES_KEY,
-        JSON.stringify(next.map((balance) => ({
-          label: balance.label,
-          used: balance.used,
-          total: balance.total,
-        }))),
-      );
-    } catch {
-      /* Persistence is best-effort; the in-memory edit still applies. */
-    }
+    const payload = next.map((balance) => ({
+      leave_type: balance.label,
+      used: balance.used,
+      total: balance.total,
+    }));
 
-    setLeaveBalancesState(next);
-    setIsBalanceEditOpen(false);
+    try {
+      const savedBalances = await leaveService.updateBalances(payload);
+
+      setLeaveBalancesState(
+        next.map((balance) => {
+          const saved = savedBalances.find(
+            (item) => item.leave_type === balance.label,
+          );
+
+          return saved
+            ? { ...balance, used: saved.used, total: saved.total }
+            : balance;
+        }),
+      );
+      setIsBalanceEditOpen(false);
+      setNotice({ type: "success", text: "Leave balances saved." });
+    } catch {
+      setNotice({ type: "error", text: "Unable to save leave balances. Please try again." });
+    } finally {
+      setIsBalanceSaving(false);
+    }
   }
 
   useEffect(() => {
@@ -648,6 +649,30 @@ function AdminLeave() {
       })
       .catch(() => {
         if (!cancelled) setChartRequests([]);
+      });
+
+    // Balance quotas come from the database, so numbers edited yesterday
+    // still show today. The static defaults above only cover the first
+    // paint until this response lands.
+    leaveService
+      .balances()
+      .then((savedBalances) => {
+        if (cancelled) return;
+
+        setLeaveBalancesState((current) =>
+          current.map((balance) => {
+            const saved = savedBalances.find(
+              (item) => item.leave_type === balance.label,
+            );
+
+            return saved
+              ? { ...balance, used: saved.used, total: saved.total }
+              : balance;
+          }),
+        );
+      })
+      .catch(() => {
+        /* The static defaults stay on screen if the request fails. */
       });
 
     return () => {
@@ -763,7 +788,7 @@ function AdminLeave() {
             }
           : current,
       );
-      setSuccessMessage(`Your leave request was marked as ${nextStatus}.`);
+      setNotice({ type: "success", text: `Your leave request was marked as ${nextStatus}.` });
       return;
     }
 
@@ -805,7 +830,7 @@ function AdminLeave() {
         : current,
     );
     setPage(1);
-    setSuccessMessage("Your leave request was submitted and is pending approval.");
+    setNotice({ type: "success", text: "Your leave request was submitted and is pending approval." });
   }
 
   return (
@@ -820,17 +845,32 @@ function AdminLeave() {
         </div>
       </div>
 
-      {successMessage && (
-        <div className="mb-6 flex items-center justify-between rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-          <span>{successMessage}</span>
-          <button
-            type="button"
-            onClick={() => setSuccessMessage("")}
-            className="font-semibold text-emerald-700 hover:text-emerald-900"
-            aria-label="Dismiss success message"
-          >
-            Dismiss
-          </button>
+      {notice && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-xl">
+            <span
+              className={`mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full ${
+                notice.type === "success" ? "bg-emerald-50" : "bg-rose-50"
+              }`}
+            >
+              {notice.type === "success" ? (
+                <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+              ) : (
+                <AlertCircle className="h-6 w-6 text-rose-600" />
+              )}
+            </span>
+            <h3 className="text-lg font-bold text-gray-900">
+              {notice.type === "success" ? "Success" : "Something went wrong"}
+            </h3>
+            <p className="mt-2 text-sm text-gray-500">{notice.text}</p>
+            <button
+              type="button"
+              onClick={() => setNotice(null)}
+              className="mt-5 rounded-lg bg-[#2563eb] px-6 py-2 text-sm font-semibold text-white hover:bg-[#1d4ed8]"
+            >
+              OK
+            </button>
+          </div>
         </div>
       )}
 
@@ -1099,7 +1139,7 @@ function AdminLeave() {
 
         <div className="min-w-0 overflow-y-auto rounded-2xl border border-gray-100 bg-white p-4 shadow-sm lg:h-[400px]">
           <div className="mb-2 flex items-center justify-between gap-3">
-          <h3 className="font-bold text-gray-900">Upcoming Leave (Next 7 Days)</h3>
+          <h3 className="font-bold text-gray-900">Upcoming Leave </h3>
             <button className="text-xs font-semibold text-[#2563eb] hover:underline">
               View All
             </button>
@@ -1381,13 +1421,13 @@ function AdminLeave() {
                       <input
                         type="number"
                         min={0}
-                        value={balanceDraft[balance.label]?.used ?? balance.used}
+                        value={balanceDraft[balance.label]?.used ?? ""}
                         onChange={(event) =>
                           setBalanceDraft((current) => ({
                             ...current,
                             [balance.label]: {
-                              total: current[balance.label]?.total ?? balance.total,
-                              used: Number(event.target.value),
+                              total: current[balance.label]?.total ?? "",
+                              used: event.target.value,
                             },
                           }))
                         }
@@ -1403,13 +1443,13 @@ function AdminLeave() {
                       <input
                         type="number"
                         min={0}
-                        value={balanceDraft[balance.label]?.total ?? balance.total}
+                        value={balanceDraft[balance.label]?.total ?? ""}
                         onChange={(event) =>
                           setBalanceDraft((current) => ({
                             ...current,
                             [balance.label]: {
-                              used: current[balance.label]?.used ?? balance.used,
-                              total: Number(event.target.value),
+                              used: current[balance.label]?.used ?? "",
+                              total: event.target.value,
                             },
                           }))
                         }
@@ -1432,10 +1472,13 @@ function AdminLeave() {
 
               <button
                 type="button"
-                onClick={saveBalanceEdit}
-                className="rounded-lg bg-[#2563eb] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1d4ed8]"
+                onClick={() => {
+                  void saveBalanceEdit();
+                }}
+                disabled={isBalanceSaving}
+                className="rounded-lg bg-[#2563eb] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1d4ed8] disabled:opacity-60"
               >
-                Save Changes
+                {isBalanceSaving ? "Saving…" : "Save Changes"}
               </button>
             </div>
           </div>

@@ -11,6 +11,7 @@ from app.core.cache import (
 )
 from app.core.roles import Permission, UserRole
 from app.schemas.admin_leave import (
+    LeaveBalanceUpdate,
     LeaveCreate,
     LeaveStatusUpdate,
 )
@@ -124,6 +125,40 @@ async def get_leaves(
     }
 
 
+@router.get("/balances")
+async def get_leave_balances(
+    current_user: dict | None = Depends(
+        require_permission(Permission.LEAVE_READ)
+    ),
+):
+    return {
+        "success": True,
+        "message": "Leave balances fetched successfully",
+        "data": await service.get_balances(),
+    }
+
+
+@router.put("/balances")
+async def update_leave_balances(
+    payload: LeaveBalanceUpdate,
+    current_user: dict | None = Depends(
+        require_permission(Permission.LEAVE_UPDATE)
+    ),
+):
+    data = await service.update_balances(
+        [
+            entry.model_dump()
+            for entry in payload.balances
+        ]
+    )
+
+    return {
+        "success": True,
+        "message": "Leave balances updated successfully",
+        "data": data,
+    }
+
+
 @router.get("/{leave_id}")
 async def get_leave(
     leave_id: str,
@@ -222,4 +257,4 @@ async def delete_leave(
         "success": True,
         "message": "Leave request deleted successfully",
         "data": None,
-    }
+    }

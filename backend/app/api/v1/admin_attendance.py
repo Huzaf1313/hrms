@@ -133,6 +133,30 @@ async def get_my_attendance_status(
     )
 
 
+@router.post(
+    "/attendance/me/punch",
+    response_model=APIResponse[MyAttendanceStatus],
+)
+async def punch_my_attendance(
+    current_user: dict = Depends(require_hr_admin),
+):
+    """HR self-punch: marks the signed-in user's OWN attendance for today
+    with the server clock. First call of the day records the in-time, the
+    second records the out-time, later calls return 409. The employee is
+    resolved from the session's email - bootstrap HR accounts get their
+    employee identity minted here on first punch (see employee_identity) -
+    so no other employee can be marked through this route. Declared before
+    /attendance/{attendance_id} so "me" is never matched as an
+    attendance_id path param."""
+    status = await service.punch_self(current_user=current_user)
+
+    return APIResponse(
+        success=True,
+        message="Attendance punched successfully",
+        data=status,
+    )
+
+
 @router.get(
     "/attendance",
     response_model=APIResponse[AttendanceListResponse],

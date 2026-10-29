@@ -21,6 +21,7 @@ from app.schemas.employee import (
     EmployeeUpdate,
 )
 from app.services.employee_service import EmployeeService
+from app.services.employee_identity import ensure_employee_profile
 from app.services.otp_service import OTPService
 from app.utils.pagination import PaginationParams
 from app.core.exceptions import AppException
@@ -229,11 +230,13 @@ async def get_employees(
 async def get_my_employee_profile(
     current_user: dict = Depends(get_current_user),
 ):
-    if not current_user.get("employee_id"):
-        raise AppException(
-            "Employee profile not found",
-            404,
-        )
+    # Older accounts were created before employee identities were minted at
+    # login. Provision the identity here so the employee portal can recover
+    # without requiring a manual database migration.
+    current_user = await ensure_employee_profile(
+        service.user_repository.collection,
+        current_user,
+    )
 
     user_id = str(current_user["_id"])
     cache_key = f"employees:me:{user_id}"

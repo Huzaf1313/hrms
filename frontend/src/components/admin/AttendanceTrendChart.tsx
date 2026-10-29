@@ -223,7 +223,7 @@ export default function AttendanceTrendChart() {
       ) : (
         <>
           <div className="flex gap-2">
-            <div className="flex w-7 shrink-0 flex-col justify-between pb-1 text-right text-[9px] text-gray-300">
+            <div className="flex w-7 shrink-0 flex-col justify-between pb-1 text-right text-[10px] font-medium text-gray-600">
               {[...ticks].reverse().map((tick) => (
                 <span key={tick}>{tick}</span>
               ))}
@@ -248,7 +248,7 @@ export default function AttendanceTrendChart() {
                       x2={CHART_WIDTH}
                       y1={y}
                       y2={y}
-                      stroke="#f1f5f9"
+                      stroke="#cbd5e1"
                       strokeWidth={1}
                       vectorEffect="non-scaling-stroke"
                     />
@@ -301,7 +301,7 @@ export default function AttendanceTrendChart() {
               </svg>
 
               {/* Labels sit on their own data point; even spacing would drift. */}
-              <div className="relative mt-1 h-3 px-3 text-[9px] text-gray-300">
+              <div className="relative mt-1 h-3 px-3 text-[10px] font-medium text-gray-600">
                 {series
                   .map((point, index) => ({ point, index }))
                   .filter(({ point }) => point.day % 5 === 0 || point.day === 1)
@@ -322,10 +322,6 @@ export default function AttendanceTrendChart() {
               </div>
             </div>
           </div>
-
-          <p className="mt-2 text-[10px] text-gray-400">
-            Peak {peak} · {data?.total_employees ?? 0} employees
-          </p>
         </>
       )}
     </DashboardCard>
