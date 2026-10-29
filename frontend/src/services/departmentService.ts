@@ -43,4 +43,12 @@ export const departmentService = {
   create(data: DepartmentCreate) {
     return api.post<Department>("/departments", data);
   },
+
+  update(departmentId: string, data: DepartmentCreate) {
+    return api.put<Department>(`/departments/${departmentId}`, data);
+  },
+
+  remove(departmentId: string) {
+    return api.delete<null>(`/departments/${departmentId}`);
+  },
 };

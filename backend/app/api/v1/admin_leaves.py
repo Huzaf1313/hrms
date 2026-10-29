@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Query
 from app.api.deps import require_permission
 from app.core.roles import Permission
 from app.schemas.admin_leave import (
+    LeaveBalanceUpdate,
     LeaveCreate,
     LeaveStatusUpdate,
 )
@@ -71,6 +72,40 @@ async def get_leaves(
     return {
         "success": True,
         "message": "Leave requests fetched successfully",
+        "data": data,
+    }
+
+
+@router.get("/balances")
+async def get_leave_balances(
+    current_user: dict | None = Depends(
+        require_permission(Permission.LEAVE_READ)
+    ),
+):
+    return {
+        "success": True,
+        "message": "Leave balances fetched successfully",
+        "data": await service.get_balances(),
+    }
+
+
+@router.put("/balances")
+async def update_leave_balances(
+    payload: LeaveBalanceUpdate,
+    current_user: dict | None = Depends(
+        require_permission(Permission.LEAVE_UPDATE)
+    ),
+):
+    data = await service.update_balances(
+        [
+            entry.model_dump()
+            for entry in payload.balances
+        ]
+    )
+
+    return {
+        "success": True,
+        "message": "Leave balances updated successfully",
         "data": data,
     }
 

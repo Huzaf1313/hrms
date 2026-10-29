@@ -13,6 +13,7 @@ import {
   SlidersHorizontal,
   Upload,
   UserRound,
+  X,
 } from "lucide-react";
 
 import ProfileEditForm from "../../components/admin/profile/ProfileEditForm";
@@ -34,6 +35,7 @@ import {
 } from "../../components/admin/profile/profileFields";
 import { adminProfileService } from "../../services/adminProfileService";
 import { authService } from "../../services/authService";
+import { shiftService } from "../../services/shiftService";
 import type {
   AdminProfile,
   NotificationPreferences,
@@ -113,6 +115,8 @@ export default function AdminMyProfile() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [updateConfirmation, setUpdateConfirmation] = useState(false);
+  const [shiftOptions, setShiftOptions] = useState<string[]>([]);
 
   const [activeTab, setActiveTab] = useState<ProfileTab>("Overview");
   const [isEditing, setIsEditing] = useState(false);
@@ -129,7 +133,8 @@ export default function AdminMyProfile() {
       adminProfileService.getProfile(),
       adminProfileService.listDocuments(),
       adminProfileService.getNotificationPreferences(),
-    ]).then(([profileResult, documentsResult, notificationsResult]) => {
+      shiftService.list(),
+    ]).then(([profileResult, documentsResult, notificationsResult, shiftsResult]) => {
       if (cancelled) return;
 
       let hasError = false;
@@ -150,6 +155,10 @@ export default function AdminMyProfile() {
         setNotifications(notificationsResult.value);
       } else {
         hasError = true;
+      }
+
+      if (shiftsResult.status === "fulfilled") {
+        setShiftOptions(shiftsResult.value.map((shift) => shift.name));
       }
 
       setError(hasError ? "Some profile details could not be loaded." : "");
@@ -180,7 +189,7 @@ export default function AdminMyProfile() {
       setProfile(saved);
       setIsEditing(false);
       setPendingAvatar(null);
-      setNotice("Profile updated successfully.");
+      setUpdateConfirmation(true);
     } finally {
       setIsSaving(false);
     }
@@ -286,6 +295,7 @@ export default function AdminMyProfile() {
             profile={profile}
             avatarUrl={pendingAvatar}
             isSaving={isSaving}
+            shiftOptions={shiftOptions}
             onCancel={cancelEditing}
             onSave={handleSave}
           />
@@ -339,6 +349,7 @@ export default function AdminMyProfile() {
             profile={profile}
             avatarUrl={pendingAvatar}
             isSaving={isSaving}
+            shiftOptions={shiftOptions}
             onCancel={cancelEditing}
             onSave={handleSave}
           />
@@ -389,6 +400,7 @@ export default function AdminMyProfile() {
             profile={profile}
             avatarUrl={pendingAvatar}
             isSaving={isSaving}
+            shiftOptions={shiftOptions}
             onCancel={cancelEditing}
             onSave={handleSave}
           />
@@ -593,6 +605,7 @@ export default function AdminMyProfile() {
                   profile={current}
                   avatarUrl={pendingAvatar}
                   isSaving={isSaving}
+                  shiftOptions={shiftOptions}
                   onCancel={cancelEditing}
                   onSave={handleSave}
                 />
@@ -657,6 +670,40 @@ export default function AdminMyProfile() {
           >
             Dismiss
           </button>
+        </div>
+      )}
+
+      {updateConfirmation && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4"
+          role="presentation"
+          onMouseDown={() => setUpdateConfirmation(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="profile-update-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+              <CheckCircle2 className="h-7 w-7" />
+            </div>
+            <h2 id="profile-update-title" className="mt-4 text-lg font-bold text-slate-900">
+              Profile updated
+            </h2>
+            <p className="mt-2 text-sm text-slate-500">
+              Your selected shift and profile changes were saved to the database.
+            </p>
+            <button
+              type="button"
+              onClick={() => setUpdateConfirmation(false)}
+              className="mt-5 inline-flex items-center gap-2 rounded-lg bg-[#2563eb] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1d4ed8]"
+            >
+              Continue
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       )}
 

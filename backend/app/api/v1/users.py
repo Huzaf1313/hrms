@@ -4,8 +4,14 @@ from pydantic import BaseModel, EmailStr
 from app.api.deps import get_current_user, require_hr_admin, require_permission
 from app.core.roles import Permission, UserRole
 from app.schemas.common import APIResponse
-from app.schemas.user import ManagerCreate, UserResponse
+from app.schemas.user import (
+    AdminProfileResponse,
+    AdminProfileUpdate,
+    ManagerCreate,
+    UserResponse,
+)
 from app.services.user_service import UserService, resolve_full_name
+from app.services.employee_identity import ensure_employee_profile
 
 
 router = APIRouter(
@@ -49,6 +55,11 @@ async def list_manager_accounts(
 async def get_my_profile(
     current_user: dict = Depends(get_current_user),
 ):
+    current_user = await ensure_employee_profile(
+        user_service.repository.collection,
+        current_user,
+    )
+
     return UserResponse(
         id=str(current_user["_id"]),
         employee_id=current_user.get("employee_id"),
@@ -60,6 +71,50 @@ async def get_my_profile(
         created_at=current_user["created_at"],
         updated_at=current_user["updated_at"],
     )
+
+
+@router.get(
+    "/me/profile",
+    response_model=AdminProfileResponse,
+)
+async def get_my_admin_profile(
+    current_user: dict = Depends(
+        require_permission(Permission.SELF_PROFILE_READ)
+    ),
+):
+    """The admin My Profile page's read model. Shaped like the page's
+    AdminProfile type so the service swap stays one-to-one."""
+    current_user = await ensure_employee_profile(
+        user_service.repository.collection,
+        current_user,
+    )
+    profile = await user_service.get_my_profile(current_user)
+
+    return AdminProfileResponse(**profile)
+
+
+@router.patch(
+    "/me/profile",
+    response_model=AdminProfileResponse,
+)
+async def update_my_admin_profile(
+    data: AdminProfileUpdate,
+    current_user: dict = Depends(
+        require_permission(Permission.SELF_PROFILE_UPDATE)
+    ),
+):
+    """Self-service edits only - identity fields are ignored by the
+    allow-list in the service, no matter what the body carries."""
+    current_user = await ensure_employee_profile(
+        user_service.repository.collection,
+        current_user,
+    )
+    profile = await user_service.update_my_profile(
+        current_user,
+        data.model_dump(exclude_unset=True),
+    )
+
+    return AdminProfileResponse(**profile)
 
 
 @router.post(

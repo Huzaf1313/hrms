@@ -128,9 +128,11 @@ async def punch_my_attendance(
     """HR self-punch: marks the signed-in user's OWN attendance for today
     with the server clock. First call of the day records the in-time, the
     second records the out-time, later calls return 409. The employee is
-    resolved from the session's email, so no other employee can be marked
-    through this route. Declared before /attendance/{attendance_id} so
-    "me" is never matched as an attendance_id path param."""
+    resolved from the session's email - bootstrap HR accounts get their
+    employee identity minted here on first punch (see employee_identity) -
+    so no other employee can be marked through this route. Declared before
+    /attendance/{attendance_id} so "me" is never matched as an
+    attendance_id path param."""
     status = await service.punch_self(current_user=current_user)
 
     return APIResponse(
