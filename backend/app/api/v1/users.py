@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel, EmailStr
 
@@ -11,16 +12,22 @@ from app.schemas.user import (
     UserResponse,
 )
 from app.services.user_service import UserService, resolve_full_name
+from app.core.cache import (
+    get_cache,
+    set_cache,
+    invalidate_managers_cache,
+)
 from app.services.employee_identity import ensure_employee_profile
 
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/users",
     tags=["Users"],
 )
 
-
 user_service = UserService()
+MANAGERS_CACHE_TTL = 600
 
 
 class ManagerAccount(BaseModel):
@@ -39,7 +46,26 @@ async def list_manager_accounts(
         require_permission(Permission.USERS_READ)
     ),
 ):
+    cache_key = "users:managers:list"
+
+    cached_data = await get_cache(cache_key)
+    if cached_data is not None:
+        try:
+            cached_models = [ManagerAccount(**item) for item in cached_data]
+            return APIResponse(
+                success=True,
+                message="Reporting managers retrieved successfully",
+                data=cached_models,
+            )
+        except Exception:
+            pass
+
     managers = await user_service.list_manager_accounts()
+    await set_cache(
+        cache_key,
+        [m.model_dump() if hasattr(m, "model_dump") else m for m in managers],
+        ttl=MANAGERS_CACHE_TTL,
+    )
 
     return APIResponse(
         success=True,
@@ -133,6 +159,11 @@ async def create_manager_account(
         email=user_data.email,
         password=user_data.password,
     )
+
+    try:
+        await invalidate_managers_cache()
+    except Exception as exc:
+        logger.error("Failed to invalidate manager cache after create: %s", exc)
 
     return UserResponse(
         id=str(user["_id"]),

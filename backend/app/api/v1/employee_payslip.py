@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Depends
 
 from app.api.deps import get_current_user
+from app.core.cache import get_cache, set_cache
 from app.core.exceptions import AppException
 from app.repositories.employee_repository import EmployeeRepository
 from app.services.employee_payslip_service import EmployeePayslipService
 
+EMPLOYEE_PAYSLIP_TTL = 300
 
 router = APIRouter(
     prefix="/employee-payslip",
@@ -43,10 +45,21 @@ async def get_payslip(
     employee = await get_employee_from_user(current_user)
     employee_id = employee["employee_id"]
 
+    cache_key = f"payroll:emp:{employee_id}:payslip:{payroll_id}"
+    cached = await get_cache(cache_key)
+    if cached is not None:
+        return {
+            "success": True,
+            "message": "Payslip details retrieved successfully",
+            "data": cached,
+        }
+
     payslip_data = await service.get_payslip_data(
         payroll_id=payroll_id,
         employee_id=employee_id,
     )
+
+    await set_cache(cache_key, payslip_data, ttl=EMPLOYEE_PAYSLIP_TTL)
 
     return {
         "success": True,

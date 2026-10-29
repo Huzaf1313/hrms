@@ -1,3 +1,4 @@
+import logging
 from datetime import date
 
 from fastapi import APIRouter, Depends, Query
@@ -16,13 +17,20 @@ from app.schemas.shift import (
 )
 from app.services.attendance_service import AttendanceService
 from app.services.shift_service import ShiftService
+from app.core.cache import (
+    get_cache,
+    set_cache,
+    invalidate_shifts_cache,
+)
 
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
 service = ShiftService()
 employee_repository = EmployeeRepository()
 attendance_service = AttendanceService()
+SHIFTS_CACHE_TTL = 600
 
 
 # Active shifts only. Available to employees so they can see the list, but the
@@ -34,7 +42,26 @@ attendance_service = AttendanceService()
 async def get_shifts(
     current_user: dict = Depends(require_permission(Permission.SHIFT_READ)),
 ):
+    cache_key = "shifts:list:active"
+
+    cached_data = await get_cache(cache_key)
+    if cached_data is not None:
+        try:
+            cached_models = [ShiftResponse(**item) for item in cached_data]
+            return APIResponse(
+                success=True,
+                message="Shifts retrieved successfully",
+                data=cached_models,
+            )
+        except Exception:
+            pass
+
     shifts = await service.get_all_shifts(include_inactive=False)
+    await set_cache(
+        cache_key,
+        [s.model_dump() for s in shifts],
+        ttl=SHIFTS_CACHE_TTL,
+    )
 
     return APIResponse(
         success=True,
@@ -56,7 +83,32 @@ async def get_my_shift(
     if not employee:
         raise AppException("No employee record found for this account", 404)
 
-    shift = await service.get_employee_shift(employee["employee_id"])
+    employee_id = employee["employee_id"]
+    cache_key = f"shifts:me:{employee_id}"
+
+    cached_data = await get_cache(cache_key)
+    if cached_data is not None:
+        try:
+            if cached_data == {}:
+                return APIResponse(
+                    success=True,
+                    message="Shift retrieved successfully",
+                    data=None,
+                )
+            cached_model = ShiftResponse(**cached_data)
+            return APIResponse(
+                success=True,
+                message="Shift retrieved successfully",
+                data=cached_model,
+            )
+        except Exception:
+            pass
+
+    shift = await service.get_employee_shift(employee_id)
+    if shift is not None:
+        await set_cache(cache_key, shift.model_dump(), ttl=SHIFTS_CACHE_TTL)
+    else:
+        await set_cache(cache_key, {}, ttl=SHIFTS_CACHE_TTL)
 
     return APIResponse(
         success=True,
@@ -75,7 +127,26 @@ async def get_all_shifts(
         require_permission(Permission.SHIFT_UPDATE)
     ),
 ):
+    cache_key = f"shifts:list:admin:{include_inactive}"
+
+    cached_data = await get_cache(cache_key)
+    if cached_data is not None:
+        try:
+            cached_models = [ShiftResponse(**item) for item in cached_data]
+            return APIResponse(
+                success=True,
+                message="Shifts retrieved successfully",
+                data=cached_models,
+            )
+        except Exception:
+            pass
+
     shifts = await service.get_all_shifts(include_inactive=include_inactive)
+    await set_cache(
+        cache_key,
+        [s.model_dump() for s in shifts],
+        ttl=SHIFTS_CACHE_TTL,
+    )
 
     return APIResponse(
         success=True,
@@ -93,6 +164,11 @@ async def create_shift(
     current_user: dict = Depends(require_permission(Permission.SHIFT_CREATE)),
 ):
     shift = await service.create_shift(data.model_dump())
+
+    try:
+        await invalidate_shifts_cache()
+    except Exception as exc:
+        logger.error("Failed to invalidate shift cache after create: %s", exc)
 
     return APIResponse(
         success=True,
@@ -112,6 +188,11 @@ async def update_shift(
 ):
     shift = await service.update_shift(shift_id, data.model_dump())
 
+    try:
+        await invalidate_shifts_cache()
+    except Exception as exc:
+        logger.error("Failed to invalidate shift cache after update: %s", exc)
+
     return APIResponse(
         success=True,
         message="Shift updated successfully",
@@ -128,6 +209,11 @@ async def delete_shift(
     current_user: dict = Depends(require_permission(Permission.SHIFT_DELETE)),
 ):
     await service.delete_shift(shift_id)
+
+    try:
+        await invalidate_shifts_cache()
+    except Exception as exc:
+        logger.error("Failed to invalidate shift cache after delete: %s", exc)
 
     return APIResponse(
         success=True,
@@ -151,6 +237,11 @@ async def assign_employee_shift(
     await service.assign_to_employee(employee_id, data.shift_id)
 
     shift = await service.get_employee_shift(employee_id)
+
+    try:
+        await invalidate_shifts_cache(employee_id=employee_id)
+    except Exception as exc:
+        logger.error("Failed to invalidate shift cache after assign: %s", exc)
 
     return APIResponse(
         success=True,

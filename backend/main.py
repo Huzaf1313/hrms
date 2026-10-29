@@ -42,6 +42,7 @@ from app.api.v1.employee_announcement import (
 
 from app.core.config import settings
 from app.core.exceptions import AppException
+from app.core.cache import init_redis, close_redis
 from app.db.database import connect_to_database, close_database_connection
 from app.api.v1.employee_leave import (
     router as employee_leave_router,
@@ -105,6 +106,7 @@ from app.services.user_service import UserService
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await connect_to_database()
+    await init_redis()
 
     os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 
@@ -170,6 +172,7 @@ async def lifespan(app: FastAPI):
 
     yield
 
+    await close_redis()
     await close_database_connection()
 
 

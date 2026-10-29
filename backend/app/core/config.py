@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     BOOTSTRAP_HR_PASSWORD: str = ""
     BOOTSTRAP_HR_NAME: str = "HR Admin"
 
+    # Redis Cache Configuration
+    REDIS_URL: str = "redis://localhost:6379/0"
+    REDIS_ENABLED: bool = False
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

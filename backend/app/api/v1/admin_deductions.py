@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, Depends
 
 from app.api.deps import require_permission
@@ -11,11 +12,19 @@ from app.schemas.admin_deduction import (
     DeductionCalculationResponse,
 )
 from app.services.admin_deduction_service import AdminDeductionService
+from app.core.cache import (
+    get_cache,
+    set_cache,
+    invalidate_deductions_cache,
+    invalidate_salary_structures_cache,
+)
 
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
 service = AdminDeductionService()
+DEDUCTION_CONFIG_CACHE_TTL = 300
 
 
 @router.post(
@@ -31,6 +40,11 @@ async def create_deduction(
     deduction = await service.create_deduction(
         data.model_dump()
     )
+
+    try:
+        await invalidate_deductions_cache()
+    except Exception as exc:
+        logger.error("Failed to invalidate deductions cache after create: %s", exc)
 
     return APIResponse(
         success=True,
@@ -48,7 +62,27 @@ async def get_deductions(
         require_permission(Permission.PAYROLL_MANAGE)
     ),
 ):
+    user_role = getattr(current_user.get("role"), "value", current_user.get("role"))
+    cache_key = f"deductions:list:{user_role}"
+
+    cached_data = await get_cache(cache_key)
+    if cached_data is not None:
+        try:
+            cached_models = [AdminDeductionResponse(**item) for item in cached_data]
+            return APIResponse(
+                success=True,
+                message="Deductions and contributions retrieved successfully",
+                data=cached_models,
+            )
+        except Exception:
+            pass
+
     deductions = await service.get_all_deductions()
+    await set_cache(
+        cache_key,
+        [d.model_dump() for d in deductions],
+        ttl=DEDUCTION_CONFIG_CACHE_TTL,
+    )
 
     return APIResponse(
         success=True,
@@ -67,7 +101,27 @@ async def get_deduction(
         require_permission(Permission.PAYROLL_MANAGE)
     ),
 ):
+    user_role = getattr(current_user.get("role"), "value", current_user.get("role"))
+    cache_key = f"deductions:detail:{user_role}:{deduction_id}"
+
+    cached_data = await get_cache(cache_key)
+    if cached_data is not None:
+        try:
+            cached_model = AdminDeductionResponse(**cached_data)
+            return APIResponse(
+                success=True,
+                message="Deduction or contribution retrieved successfully",
+                data=cached_model,
+            )
+        except Exception:
+            pass
+
     deduction = await service.get_deduction(deduction_id)
+    await set_cache(
+        cache_key,
+        deduction.model_dump(),
+        ttl=DEDUCTION_CONFIG_CACHE_TTL,
+    )
 
     return APIResponse(
         success=True,
@@ -92,6 +146,11 @@ async def update_deduction(
         data.model_dump(),
     )
 
+    try:
+        await invalidate_deductions_cache(deduction_id)
+    except Exception as exc:
+        logger.error("Failed to invalidate deductions cache after update: %s", exc)
+
     return APIResponse(
         success=True,
         message="Deduction or contribution updated successfully",
@@ -111,6 +170,11 @@ async def delete_deduction(
 ):
     await service.delete_deduction(deduction_id)
 
+    try:
+        await invalidate_deductions_cache(deduction_id)
+    except Exception as exc:
+        logger.error("Failed to invalidate deductions cache after delete: %s", exc)
+
     return APIResponse(
         success=True,
         message="Deduction or contribution deleted successfully",
@@ -129,6 +193,12 @@ async def apply_deduction_to_salary_structures(
     ),
 ):
     updated_count = await service.apply_to_all_salary_structures(deduction_id)
+
+    try:
+        await invalidate_deductions_cache(deduction_id)
+        await invalidate_salary_structures_cache()
+    except Exception as exc:
+        logger.error("Failed to invalidate cache after applying deduction: %s", exc)
 
     return APIResponse(
         success=True,

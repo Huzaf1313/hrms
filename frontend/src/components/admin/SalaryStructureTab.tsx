@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
+  AlertTriangle,
   CheckCircle2,
   Loader2,
   Pencil,
@@ -196,6 +197,22 @@ function EditStructureModal({
     [earnings]
   );
 
+  const parsedMaxSalary = useMemo(() => {
+    const trimmed = maxSalary.trim();
+    if (!trimmed) return null;
+    const num = Number(trimmed);
+    return Number.isFinite(num) && num >= 0 ? num : null;
+  }, [maxSalary]);
+
+  const limitError = useMemo(() => {
+    if (parsedMaxSalary !== null && gross > parsedMaxSalary) {
+      return `The sum of all earning components (${formatCurrency(gross)}) cannot exceed the configured maximum salary limit (${formatCurrency(parsedMaxSalary)}).`;
+    }
+    return null;
+  }, [parsedMaxSalary, gross]);
+
+  const displayError = modalError || limitError;
+
   async function handleSave() {
     setModalError(null);
 
@@ -251,6 +268,13 @@ function EditStructureModal({
       return;
     }
 
+    if (parsedMax !== null && gross > parsedMax) {
+      setModalError(
+        `The sum of all earning components (${formatCurrency(gross)}) cannot exceed the configured maximum salary limit (${formatCurrency(parsedMax)}).`
+      );
+      return;
+    }
+
     // Auto-derive range if left blank
     let computedRange = range.trim();
     if (!computedRange) {
@@ -290,7 +314,12 @@ function EditStructureModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6 backdrop-blur-xs">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6 backdrop-blur-xs"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !saving) onClose();
+      }}
+    >
       <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
           <h2 className="text-lg font-bold text-slate-900">
@@ -307,10 +336,10 @@ function EditStructureModal({
         </div>
 
         <div className="space-y-4 px-6 py-5">
-          {modalError && (
+          {displayError && (
             <div className="flex items-start gap-2.5 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-500" />
-              <span>{modalError}</span>
+              <span>{displayError}</span>
             </div>
           )}
 
@@ -435,9 +464,22 @@ function EditStructureModal({
             </div>
           </div>
 
-          <div className="flex items-center justify-between rounded-lg bg-slate-50 px-4 py-3">
-            <span className="text-sm font-bold text-slate-900">Total Gross Salary</span>
-            <span className="text-sm font-bold text-blue-600">{formatCurrency(gross)}</span>
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between rounded-lg bg-slate-50 px-4 py-3">
+              <span className="text-sm font-bold text-slate-900">Total Gross Salary</span>
+              <span
+                className={`text-sm font-bold ${
+                  limitError ? "text-rose-600" : "text-blue-600"
+                }`}
+              >
+                {formatCurrency(gross)}
+              </span>
+            </div>
+            {limitError && (
+              <p className="text-xs font-medium text-rose-600">
+                {limitError}
+              </p>
+            )}
           </div>
         </div>
 
@@ -453,7 +495,7 @@ function EditStructureModal({
           <button
             type="button"
             onClick={handleSave}
-            disabled={saving || !name.trim()}
+            disabled={saving || !name.trim() || Boolean(limitError)}
             className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
           >
             {saving ? (
@@ -484,6 +526,8 @@ function SalaryStructureTab() {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [deleteModalError, setDeleteModalError] = useState<string | null>(null);
+  const [showCreateSuccessModal, setShowCreateSuccessModal] = useState(false);
+  const [createdStructureName, setCreatedStructureName] = useState<string | null>(null);
 
   useEffect(() => {
     if (structuresData) {
@@ -521,7 +565,8 @@ function SalaryStructureTab() {
     let saved: SalaryStructure;
     if (isCreating || updated.id.startsWith("custom-")) {
       saved = await salaryStructureService.create(payload);
-      setSuccessMessage(`Salary structure '${saved.name}' created successfully.`);
+      setCreatedStructureName(saved.name);
+      setShowCreateSuccessModal(true);
     } else {
       saved = await salaryStructureService.update(updated.id, payload);
       setSuccessMessage(`Salary structure '${saved.name}' updated successfully.`);
@@ -572,13 +617,13 @@ function SalaryStructureTab() {
       setIsDeleting(true);
       setDeleteModalError(null);
       await salaryStructureService.delete(deletingStructure.id);
-      setSuccessMessage(`Salary structure '${deletingStructure.name}' deleted successfully.`);
       void queryClient.invalidateQueries({
         queryKey: queryKeys.reference.salaryStructures(),
       });
       void queryClient.invalidateQueries({
         queryKey: queryKeys.admin.payrollAnalytics(),
       });
+      void refetch();
       setStructures((current) =>
         current.filter((s) => s.id !== deletingStructure.id)
       );
@@ -681,17 +726,89 @@ function SalaryStructureTab() {
         />
       )}
 
+      {showCreateSuccessModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6 backdrop-blur-xs"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setShowCreateSuccessModal(false);
+              setCreatedStructureName(null);
+            }
+          }}
+        >
+          <div className="relative w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-2xl">
+            <button
+              type="button"
+              onClick={() => {
+                setShowCreateSuccessModal(false);
+                setCreatedStructureName(null);
+              }}
+              className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100"
+              aria-label="Close"
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 ring-8 ring-emerald-50/50">
+              <CheckCircle2 className="h-8 w-8 text-emerald-600" />
+            </div>
+
+            <h3 className="text-lg font-bold text-slate-900">
+              Salary Structure Created Successfully
+            </h3>
+
+            {createdStructureName && (
+              <p className="mt-2 text-xs text-slate-500">
+                <span className="font-semibold text-slate-700">"{createdStructureName}"</span> has been added to your salary structures.
+              </p>
+            )}
+
+            <div className="mt-6">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCreateSuccessModal(false);
+                  setCreatedStructureName(null);
+                }}
+                className="w-full rounded-xl bg-blue-600 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {deletingStructure && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6 backdrop-blur-xs">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6 backdrop-blur-xs"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !isDeleting) {
+              setDeletingStructure(null);
+              setDeleteModalError(null);
+            }
+          }}
+        >
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
-            <h2 className="text-lg font-bold text-slate-900">Delete Structure?</h2>
-            <p className="mt-2 text-sm text-slate-600">
-              Are you sure you want to permanently delete{" "}
-              <strong className="text-slate-900">"{deletingStructure.name}"</strong>? This action cannot be undone.
-            </p>
+            <div className="flex items-start gap-3.5">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-amber-50 text-amber-600 ring-4 ring-amber-50/50">
+                <AlertTriangle className="h-5 w-5 text-amber-600" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-base font-bold text-slate-900">
+                  Delete Salary Structure
+                </h3>
+                <p className="mt-1 text-xs leading-relaxed text-slate-600">
+                  Are you sure you want to delete this salary structure?
+                </p>
+                <p className="mt-1 text-xs font-semibold text-slate-800">
+                  "{deletingStructure.name}"
+                </p>
+              </div>
+            </div>
 
             {deleteModalError && (
-              <div className="mt-3 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">
+              <div className="mt-4 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-500" />
                 <span>{deleteModalError}</span>
               </div>
@@ -705,7 +822,7 @@ function SalaryStructureTab() {
                   setDeleteModalError(null);
                 }}
                 disabled={isDeleting}
-                className="flex-1 rounded-lg border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
               >
                 Cancel
               </button>
@@ -713,7 +830,7 @@ function SalaryStructureTab() {
                 type="button"
                 onClick={handleConfirmDelete}
                 disabled={isDeleting}
-                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-rose-600 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:opacity-60"
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-rose-600 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-700 disabled:opacity-60"
               >
                 {isDeleting ? (
                   <>
