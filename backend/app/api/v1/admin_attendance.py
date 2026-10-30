@@ -2,7 +2,11 @@ from datetime import date
 
 from fastapi import APIRouter, Depends, Query
 
-from app.api.deps import get_current_user, require_permission
+from app.api.deps import (
+    get_current_user,
+    require_hr_admin,
+    require_permission,
+)
 from app.core.exceptions import AppException
 from app.core.roles import Permission, UserRole
 from app.core.cache import (

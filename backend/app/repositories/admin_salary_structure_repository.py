@@ -60,6 +60,50 @@ class AdminSalaryStructureRepository:
 
         return result.deleted_count > 0
 
+    async def apply_deduction_to_structures(self, deduction: dict, structure_ids: list[str]) -> int:
+        object_ids = [ObjectId(sid) for sid in structure_ids if ObjectId.is_valid(sid)]
+        if not object_ids:
+            return 0
+
+        applied = {
+            "id": str(deduction["_id"]),
+            "name": deduction.get("name", ""),
+            "type": deduction.get("type", "deduction"),
+            "calculation_method": deduction.get(
+                "calculation_method",
+                "percentage_of_basic",
+            ),
+            "percentage": deduction.get("percentage"),
+            "fixed_amount": deduction.get("fixed_amount"),
+        }
+
+        updated_count = 0
+        for oid in object_ids:
+            structure = await self.collection.find_one({"_id": oid})
+            if not structure:
+                continue
+
+            existing_deductions = structure.get("deductions") or []
+            found = False
+            new_deductions = []
+            for d in existing_deductions:
+                if isinstance(d, dict) and str(d.get("id")) == applied["id"]:
+                    new_deductions.append(applied)
+                    found = True
+                else:
+                    new_deductions.append(d)
+
+            if not found:
+                new_deductions.append(applied)
+
+            await self.collection.update_one(
+                {"_id": oid},
+                {"$set": {"deductions": new_deductions}},
+            )
+            updated_count += 1
+
+        return updated_count
+
     async def apply_deduction_to_all(self, deduction: dict):
         applied = {
             "id": str(deduction["_id"]),
