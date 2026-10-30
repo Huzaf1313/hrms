@@ -14,6 +14,7 @@ from app.core.cache import (
     get_cache,
     set_cache,
     invalidate_salary_structures_cache,
+    invalidate_payroll_analytics_cache,
 )
 
 logger = logging.getLogger(__name__)
@@ -36,6 +37,7 @@ async def create_salary_structure(
 
     try:
         await invalidate_salary_structures_cache()
+        await invalidate_payroll_analytics_cache()
     except Exception as exc:
         logger.error("Failed to invalidate salary structures cache after create: %s", exc)
 
@@ -135,6 +137,7 @@ async def update_salary_structure(
 
     try:
         await invalidate_salary_structures_cache(structure_id)
+        await invalidate_payroll_analytics_cache()
     except Exception as exc:
         logger.error("Failed to invalidate salary structures cache after update: %s", exc)
 
@@ -157,6 +160,7 @@ async def delete_salary_structure(
 
     try:
         await invalidate_salary_structures_cache(structure_id)
+        await invalidate_payroll_analytics_cache()
     except Exception as exc:
         logger.error("Failed to invalidate salary structures cache after delete: %s", exc)
 

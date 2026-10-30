@@ -17,6 +17,7 @@ export interface PayrollSummaryMetrics {
   total_employees: number;
   processed_payroll: number;
   pending_payroll: number;
+  pending_employees?: number;
   total_payroll_amount: number;
   latest_month: string;
   period_gross: number;

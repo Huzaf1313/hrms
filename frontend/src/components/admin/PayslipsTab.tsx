@@ -380,10 +380,21 @@ function GeneratePayslipModal({ onClose, onGenerated, employees }: GenerateModal
   );
 }
 
-export default function PayslipsTab() {
+interface PayslipsTabProps {
+  initialStatusFilter?: string;
+}
+
+export default function PayslipsTab({ initialStatusFilter = "" }: PayslipsTabProps) {
   const [monthValue, setMonthValue] = useState<string>("");
   const [search, setSearch] = useState<string>("");
-  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>(initialStatusFilter);
+
+  useEffect(() => {
+    if (initialStatusFilter !== undefined) {
+      setStatusFilter(initialStatusFilter);
+      setPage(1);
+    }
+  }, [initialStatusFilter]);
   const [selectedPayslip, setSelectedPayslip] = useState<AdminPayslipItem | null>(null);
   const [payslips, setPayslips] = useState<AdminPayslipItem[]>([]);
   const [page, setPage] = useState<number>(1);

@@ -260,6 +260,8 @@ class AdminPayslipService:
             st = status.strip()
             if st.lower() in {"paid", "credited"}:
                 query["payment.status"] = {"$in": ["Paid", "Credited"]}
+            elif st.lower() == "pending":
+                query["payment.status"] = {"$nin": ["Paid", "Credited"]}
             else:
                 query["payment.status"] = {"$regex": f"^{re.escape(st)}$", "$options": "i"}
 
@@ -659,7 +661,7 @@ class AdminPayslipService:
         # Calculate pending count from actual payslip records using payment status.
         # Treat 'Pending', 'Processing', and other explicitly unpaid statuses as pending;
         # Exclude 'Paid' and 'Credited' records.
-        pending_payroll = 0
+        pending_employee_ids = set()
         for r in deduplicated_payslips.values():
             st = (
                 r.get("payment", {}).get("status")
@@ -667,37 +669,66 @@ class AdminPayslipService:
                 or "Processing"
             ).strip().lower()
             if st not in {"paid", "credited"}:
-                pending_payroll += 1
+                eid = r.get("employee_id")
+                if eid:
+                    pending_employee_ids.add(eid)
+
+        pending_employees = len(pending_employee_ids)
+        pending_payroll = pending_employees
 
         thirty_days_ago = now - timedelta(days=30)
-        all_emps = await self.employee_repository.collection.find(
-            {"employee_id": {"$exists": True}}
-        ).to_list(length=1000)
+        emp_filter: dict = {
+            "employee_id": {"$exists": True},
+            "status": {"$nin": ["inactive", "terminated", "Inactive", "Terminated"]},
+        }
+        if current_user:
+            scope = visibility_scope(current_user)
+            if scope:
+                emp_filter.update(scope)
+
+        all_emps = await self.employee_repository.collection.find(emp_filter).to_list(length=2000)
+
+        # Retrieve valid salary structures from database to check actual assignment relationship
+        struct_docs = await self.salary_structure_repository.collection.find({}, {"name": 1}).to_list(length=1000)
+        valid_struct_names = {str(s["name"]).strip().lower() for s in struct_docs if s.get("name")}
+        valid_struct_ids = {str(s["_id"]) for s in struct_docs if "_id" in s}
+        valid_structures = valid_struct_names | valid_struct_ids
 
         new_joiners = 0
         unassigned_structures = 0
         for emp in all_emps:
-            if emp.get("status") in {"Inactive", "Terminated"}:
-                continue
-
+            # Check authoritative joining date
             j_date = emp.get("joining_date") or emp.get("created_at")
             if isinstance(j_date, datetime):
-                if j_date.tzinfo is None:
-                    j_date = j_date.replace(tzinfo=timezone.utc)
-                if j_date >= thirty_days_ago:
+                dt_val = j_date if j_date.tzinfo else j_date.replace(tzinfo=timezone.utc)
+                if dt_val >= thirty_days_ago:
                     new_joiners += 1
             elif isinstance(j_date, date):
-                dt_join = datetime.combine(j_date, time.min, timezone.utc)
-                if dt_join >= thirty_days_ago:
+                dt_val = datetime.combine(j_date, time.min, timezone.utc)
+                if dt_val >= thirty_days_ago:
                     new_joiners += 1
+            elif isinstance(j_date, str) and j_date.strip():
+                try:
+                    parsed_dt = datetime.fromisoformat(j_date.strip()[:10]).replace(tzinfo=timezone.utc)
+                    if parsed_dt >= thirty_days_ago:
+                        new_joiners += 1
+                except ValueError:
+                    pass
 
-            if not emp.get("salary_structure") or str(emp.get("salary_structure")).strip() == "":
+            # Check actual salary structure assignment relationship
+            raw_struct = emp.get("salary_structure")
+            if not raw_struct or str(raw_struct).strip() == "":
                 unassigned_structures += 1
+            else:
+                s_str = str(raw_struct).strip()
+                if s_str.lower() not in valid_structures and s_str not in valid_structures:
+                    unassigned_structures += 1
 
         summary = {
             "total_employees": total_employees,
             "processed_payroll": processed_count,
             "pending_payroll": pending_payroll,
+            "pending_employees": pending_employees,
             "new_joiners": new_joiners,
             "unassigned_salary_structures": unassigned_structures,
             "total_payroll_amount": total_payroll_amount,
