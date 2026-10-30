@@ -84,6 +84,20 @@ class UserRepository:
 
         return await self.get_by_id(user_id)
 
+    async def increment_failed_login_attempts(self, user_id: str):
+        if not ObjectId.is_valid(user_id):
+            return None
+
+        await self.collection.update_one(
+            {
+                "_id": ObjectId(user_id),
+                "is_locked": {"$ne": True},
+            },
+            {"$inc": {"failed_login_attempts": 1}},
+        )
+
+        return await self.get_by_id(user_id)
+
     async def delete(self, user_id: str):
         if not ObjectId.is_valid(user_id):
             return False

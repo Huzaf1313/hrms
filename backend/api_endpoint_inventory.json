@@ -1,0 +1,1046 @@
+[
+  {
+    "method": "GET",
+    "path": "/api/v1/admin-payslip",
+    "classification": "Authenticated",
+    "operation": "Get All Admin Payslips"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin-payslip",
+    "classification": "Authenticated",
+    "operation": "Create Payslip"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin-payslip/analytics",
+    "classification": "Authenticated",
+    "operation": "Get Payroll Analytics"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin-payslip/{payslip_id}",
+    "classification": "Authenticated",
+    "operation": "Get Admin Payslip By ID"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin-payslip/{payslip_id}/download",
+    "classification": "Public",
+    "operation": "Download Admin Payslip (Disabled)"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/admin-payslip/{payslip_id}/status",
+    "classification": "Authenticated",
+    "operation": "Update Payslip Status"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/deductions",
+    "classification": "Authenticated",
+    "operation": "Get Deductions"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/deductions",
+    "classification": "Authenticated",
+    "operation": "Create Deduction"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/deductions/calculate",
+    "classification": "Authenticated",
+    "operation": "Calculate Deductions"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/admin/deductions/{deduction_id}",
+    "classification": "Authenticated",
+    "operation": "Delete Deduction"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/deductions/{deduction_id}",
+    "classification": "Authenticated",
+    "operation": "Get Deduction"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/admin/deductions/{deduction_id}",
+    "classification": "Authenticated",
+    "operation": "Update Deduction"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/deductions/{deduction_id}/apply",
+    "classification": "Authenticated",
+    "operation": "Apply Deduction To Salary Structures"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/employees/{employee_id}/shift",
+    "classification": "Authenticated",
+    "operation": "Get Employee Shift"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/admin/employees/{employee_id}/shift",
+    "classification": "Authenticated",
+    "operation": "Assign Employee Shift"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/exit-requests",
+    "classification": "Authenticated",
+    "operation": "List Exit Requests"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/exit-requests",
+    "classification": "Authenticated",
+    "operation": "Create Exit Request"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/exit-requests/summary",
+    "classification": "Authenticated",
+    "operation": "Exit Request Summary"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/admin/exit-requests/{request_id}",
+    "classification": "Authenticated",
+    "operation": "Delete Exit Request"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/exit-requests/{request_id}",
+    "classification": "Authenticated",
+    "operation": "Get Exit Request"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/exit-requests/{request_id}/attachments/{attachment_id}/download",
+    "classification": "Authenticated",
+    "operation": "Download Attachment"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/exit-requests/{request_id}/documents/{document_key}/download",
+    "classification": "Authenticated",
+    "operation": "Download Exit Document"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/admin/exit-requests/{request_id}/handover-tasks",
+    "classification": "Authenticated",
+    "operation": "Update Exit Request Handover Tasks"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/admin/exit-requests/{request_id}/status",
+    "classification": "Authenticated",
+    "operation": "Update Exit Request Status"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/holidays",
+    "classification": "Authenticated",
+    "operation": "Create Holiday"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/admin/holidays/{holiday_id}",
+    "classification": "Authenticated",
+    "operation": "Delete Holiday"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/admin/holidays/{holiday_id}",
+    "classification": "Authenticated",
+    "operation": "Update Holiday"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/leaves",
+    "classification": "Authenticated",
+    "operation": "Get Leaves"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/leaves",
+    "classification": "Authenticated",
+    "operation": "Create Leave"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/leaves/summary",
+    "classification": "Authenticated",
+    "operation": "Get Leave Summary"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/admin/leaves/{leave_id}",
+    "classification": "Authenticated",
+    "operation": "Delete Leave"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/leaves/{leave_id}",
+    "classification": "Authenticated",
+    "operation": "Get Leave"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/admin/leaves/{leave_id}/status",
+    "classification": "Authenticated",
+    "operation": "Update Leave Status"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/notifications",
+    "classification": "Authenticated",
+    "operation": "Get Admin Notifications"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/admin/notifications/read-all",
+    "classification": "Authenticated",
+    "operation": "Mark All Admin Notifications As Read"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/notifications/unread-count",
+    "classification": "Authenticated",
+    "operation": "Get Admin Unread Count"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/admin/notifications/{notification_id}/read",
+    "classification": "Authenticated",
+    "operation": "Mark Admin Notification As Read"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/overtime",
+    "classification": "Authenticated",
+    "operation": "Get Overtime Report"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/salary-structures",
+    "classification": "Authenticated",
+    "operation": "Get Salary Structures"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/salary-structures",
+    "classification": "Authenticated",
+    "operation": "Create Salary Structure"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/admin/salary-structures/{structure_id}",
+    "classification": "Authenticated",
+    "operation": "Delete Salary Structure"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/salary-structures/{structure_id}",
+    "classification": "Authenticated",
+    "operation": "Get Salary Structure"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/admin/salary-structures/{structure_id}",
+    "classification": "Authenticated",
+    "operation": "Update Salary Structure"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/shifts",
+    "classification": "Authenticated",
+    "operation": "Get All Shifts"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/shifts",
+    "classification": "Authenticated",
+    "operation": "Create Shift"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/admin/shifts/{shift_id}",
+    "classification": "Authenticated",
+    "operation": "Delete Shift"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/admin/shifts/{shift_id}",
+    "classification": "Authenticated",
+    "operation": "Update Shift"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/support-tickets",
+    "classification": "Authenticated",
+    "operation": "Get Support Tickets"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/support-tickets/summary",
+    "classification": "Authenticated",
+    "operation": "Get Support Ticket Summary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/admin/support-tickets/{ticket_id}",
+    "classification": "Authenticated",
+    "operation": "Get Support Ticket"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/admin/support-tickets/{ticket_id}",
+    "classification": "Authenticated",
+    "operation": "Respond To Support Ticket"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/announcements",
+    "classification": "Authenticated",
+    "operation": "Get Announcements"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/announcements",
+    "classification": "Authenticated",
+    "operation": "Create Announcement"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/announcements/{announcement_id}",
+    "classification": "Authenticated",
+    "operation": "Delete Announcement"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/announcements/{announcement_id}",
+    "classification": "Authenticated",
+    "operation": "Get Announcement"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/announcements/{announcement_id}",
+    "classification": "Authenticated",
+    "operation": "Update Announcement"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/assets",
+    "classification": "Authenticated",
+    "operation": "Get Assets"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/assets",
+    "classification": "Authenticated",
+    "operation": "Create Asset"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/assets/allocation",
+    "classification": "Authenticated",
+    "operation": "Get Asset Allocation"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/assets/recent-allocations",
+    "classification": "Authenticated",
+    "operation": "Get Recent Allocations"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/assets/requests",
+    "classification": "Authenticated",
+    "operation": "Get Asset Requests"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/assets/requests",
+    "classification": "Authenticated",
+    "operation": "Create Asset Request"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/assets/requests/{request_id}/complete-return",
+    "classification": "Authenticated",
+    "operation": "Complete Asset Return"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/assets/requests/{request_id}/review",
+    "classification": "Authenticated",
+    "operation": "Review Asset Request"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/assets/stats",
+    "classification": "Authenticated",
+    "operation": "Get Asset Stats"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/assets/{asset_id}",
+    "classification": "Authenticated",
+    "operation": "Delete Asset"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/assets/{asset_id}",
+    "classification": "Authenticated",
+    "operation": "Get Asset"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/assets/{asset_id}",
+    "classification": "Authenticated",
+    "operation": "Update Asset"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/assets/{asset_id}/assign",
+    "classification": "Authenticated",
+    "operation": "Assign Asset"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/assets/{asset_id}/return",
+    "classification": "Authenticated",
+    "operation": "Return Asset"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/attendance",
+    "classification": "Authenticated",
+    "operation": "Get Attendance List"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/attendance",
+    "classification": "Authenticated",
+    "operation": "Mark Attendance"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/attendance/bulk",
+    "classification": "Authenticated",
+    "operation": "Bulk Mark Attendance"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/attendance/me",
+    "classification": "Authenticated",
+    "operation": "Get My Attendance Status"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/attendance/me/punch",
+    "classification": "Authenticated",
+    "operation": "Punch My Attendance"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/attendance/options",
+    "classification": "Authenticated",
+    "operation": "Get Attendance Options"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/attendance/summary",
+    "classification": "Authenticated",
+    "operation": "Get Attendance Summary"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/attendance/trend",
+    "classification": "Authenticated",
+    "operation": "Get Attendance Trend"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/attendance/{attendance_id}",
+    "classification": "Authenticated",
+    "operation": "Get Attendance"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/attendance/{attendance_id}",
+    "classification": "Authenticated",
+    "operation": "Update Attendance"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/attendance/{attendance_id}/approve",
+    "classification": "Authenticated",
+    "operation": "Approve Regularization"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/auth/change-password",
+    "classification": "Authenticated",
+    "operation": "Change Password"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/auth/forgot-password",
+    "classification": "Public",
+    "operation": "Forgot Password"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/auth/forgot-password/reset-password",
+    "classification": "Public",
+    "operation": "Reset Password"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/auth/forgot-password/verify-otp",
+    "classification": "Public",
+    "operation": "Verify Password Reset Otp"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/auth/login",
+    "classification": "Public",
+    "operation": "Login"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/auth/logout",
+    "classification": "Public",
+    "operation": "Logout"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/auth/refresh",
+    "classification": "Public",
+    "operation": "Refresh Token"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/dashboard",
+    "classification": "Authenticated",
+    "operation": "Get Dashboard"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/departments",
+    "classification": "Authenticated",
+    "operation": "Get Departments"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/departments",
+    "classification": "Authenticated",
+    "operation": "Create Department"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/departments/{department_id}",
+    "classification": "Authenticated",
+    "operation": "Delete Department"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/departments/{department_id}",
+    "classification": "Authenticated",
+    "operation": "Get Department"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/departments/{department_id}",
+    "classification": "Authenticated",
+    "operation": "Update Department"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/employee-announcements",
+    "classification": "Authenticated",
+    "operation": "Get Employee Announcements"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/employee-announcements/{announcement_id}",
+    "classification": "Authenticated",
+    "operation": "Get Employee Announcement"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/employee-attendance",
+    "classification": "Authenticated",
+    "operation": "Get Attendance By Date"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/employee-attendance",
+    "classification": "Authenticated",
+    "operation": "Create Attendance"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/employee-attendance/employees/{employee_id}",
+    "classification": "Authenticated",
+    "operation": "Get Employee Attendance"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/employee-attendance/range",
+    "classification": "Authenticated",
+    "operation": "Get Attendance By Date Range"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/employee-attendance/regularization",
+    "classification": "Authenticated",
+    "operation": "Get Regularization Requests"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/employee-attendance/regularization",
+    "classification": "Authenticated",
+    "operation": "Create Regularization Request"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/employee-attendance/regularization/{regularization_id}",
+    "classification": "Authenticated",
+    "operation": "Get Regularization Request"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/employee-attendance/regularization/{regularization_id}/review",
+    "classification": "Authenticated",
+    "operation": "Review Regularization Request"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/employee-attendance/{attendance_id}",
+    "classification": "Authenticated",
+    "operation": "Delete Attendance"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/employee-attendance/{attendance_id}",
+    "classification": "Authenticated",
+    "operation": "Get Attendance"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/employee-attendance/{attendance_id}",
+    "classification": "Authenticated",
+    "operation": "Update Attendance"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/employee-documents",
+    "classification": "Authenticated",
+    "operation": "Get My Documents"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/employee-documents",
+    "classification": "Authenticated",
+    "operation": "Upload My Document"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/employee-documents/{document_id}",
+    "classification": "Authenticated",
+    "operation": "Get My Document"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/employee-documents/{document_id}/download",
+    "classification": "Authenticated",
+    "operation": "Download Employee Document"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/employee-exit-requests",
+    "classification": "Authenticated",
+    "operation": "List My Exit Requests"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/employee-exit-requests",
+    "classification": "Authenticated",
+    "operation": "Submit Resignation"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/employee-exit-requests/{request_id}",
+    "classification": "Authenticated",
+    "operation": "Get My Exit Request"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/employee-exit-requests/{request_id}/attachments/{attachment_id}/download",
+    "classification": "Authenticated",
+    "operation": "Download My Attachment"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/employee-exit-requests/{request_id}/cancel",
+    "classification": "Authenticated",
+    "operation": "Cancel My Exit Request"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/employee-exit-requests/{request_id}/documents/{document_key}",
+    "classification": "Authenticated",
+    "operation": "Upload Exit Document"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/employee-exit-requests/{request_id}/documents/{document_key}/download",
+    "classification": "Authenticated",
+    "operation": "Download My Document"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/employee-leave",
+    "classification": "Authenticated",
+    "operation": "Create Leave Request"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/employee-leave/employees/{employee_id}",
+    "classification": "Authenticated",
+    "operation": "Get Employee Leave Requests"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/employee-leave/employees/{employee_id}/balance",
+    "classification": "Authenticated",
+    "operation": "Get Leave Balance"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/employee-leave/employees/{employee_id}/pending-count",
+    "classification": "Authenticated",
+    "operation": "Get Pending Leave Count"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/employee-leave/employees/{employee_id}/upcoming",
+    "classification": "Authenticated",
+    "operation": "Get Upcoming Leaves"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/employee-leave/{leave_id}",
+    "classification": "Authenticated",
+    "operation": "Get Leave Request"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/employee-leave/{leave_id}/cancel",
+    "classification": "Authenticated",
+    "operation": "Cancel Leave Request"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/employee-payroll/employees/{employee_id}",
+    "classification": "Authenticated",
+    "operation": "Get Employee Payroll"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/employee-payroll/employees/{employee_id}/latest",
+    "classification": "Authenticated",
+    "operation": "Get Latest Payroll"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/employee-payroll/employees/{employee_id}/month/{month}",
+    "classification": "Authenticated",
+    "operation": "Get Payroll By Month"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/employee-payroll/{payroll_id}",
+    "classification": "Authenticated",
+    "operation": "Get Payroll"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/employee-payslip/{payroll_id}",
+    "classification": "Authenticated",
+    "operation": "Get Payslip"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/employee-payslip/{payroll_id}/download",
+    "classification": "Public",
+    "operation": "Download Payslip"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/employee-support-tickets",
+    "classification": "Authenticated",
+    "operation": "Get My Support Tickets"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/employee-support-tickets",
+    "classification": "Authenticated",
+    "operation": "Create Employee Support Ticket"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/employee-support-tickets/{ticket_id}",
+    "classification": "Authenticated",
+    "operation": "Get My Support Ticket"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/employees",
+    "classification": "Authenticated",
+    "operation": "Get Employees"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/employees",
+    "classification": "Authenticated",
+    "operation": "Create Employee"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/employees/me",
+    "classification": "Authenticated",
+    "operation": "Get My Employee Profile"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/employees/request-email-otp",
+    "classification": "Authenticated",
+    "operation": "Request Employee Email Otp"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/employees/verify-email-otp",
+    "classification": "Authenticated",
+    "operation": "Verify Employee Email Otp"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/employees/{employee_id}",
+    "classification": "Authenticated",
+    "operation": "Delete Employee"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/employees/{employee_id}",
+    "classification": "Authenticated",
+    "operation": "Get Employee"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/employees/{employee_id}",
+    "classification": "Authenticated",
+    "operation": "Update Employee"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/employees/{employee_id}/attendance",
+    "classification": "Authenticated",
+    "operation": "Get Employee Attendance"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/employees/{employee_id}/attendance/regularization",
+    "classification": "Authenticated",
+    "operation": "Get Employee Regularization Requests"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/employees/{employee_id}/deactivate",
+    "classification": "Authenticated",
+    "operation": "Deactivate Employee"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/health",
+    "classification": "Public",
+    "operation": "Health Check"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/holidays",
+    "classification": "Authenticated",
+    "operation": "Get Holidays"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/notifications",
+    "classification": "Authenticated",
+    "operation": "Get Notifications"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/notifications/read-all",
+    "classification": "Authenticated",
+    "operation": "Mark All Notifications As Read"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/notifications/unread-count",
+    "classification": "Authenticated",
+    "operation": "Get Unread Count"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/notifications/{notification_id}/read",
+    "classification": "Authenticated",
+    "operation": "Mark Notification As Read"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/recruitment/candidates",
+    "classification": "Authenticated",
+    "operation": "Get Candidates"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/recruitment/candidates",
+    "classification": "Authenticated",
+    "operation": "Create Candidate"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/recruitment/candidates/{candidate_id}",
+    "classification": "Authenticated",
+    "operation": "Delete Candidate"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/recruitment/candidates/{candidate_id}",
+    "classification": "Authenticated",
+    "operation": "Get Candidate"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/recruitment/candidates/{candidate_id}",
+    "classification": "Authenticated",
+    "operation": "Update Candidate"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/recruitment/candidates/{candidate_id}/interview",
+    "classification": "Authenticated",
+    "operation": "Schedule Candidate Interview"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/recruitment/candidates/{candidate_id}/resume",
+    "classification": "Authenticated",
+    "operation": "Download Resume"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/recruitment/candidates/{candidate_id}/resume",
+    "classification": "Authenticated",
+    "operation": "Upload Resume"
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/v1/recruitment/candidates/{candidate_id}/stage",
+    "classification": "Authenticated",
+    "operation": "Change Candidate Stage"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/recruitment/interviews/upcoming",
+    "classification": "Authenticated",
+    "operation": "Get Upcoming Interviews"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/recruitment/jobs",
+    "classification": "Authenticated",
+    "operation": "Get Jobs"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/recruitment/jobs",
+    "classification": "Authenticated",
+    "operation": "Create Job"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/recruitment/jobs/{job_id}",
+    "classification": "Authenticated",
+    "operation": "Delete Job"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/recruitment/jobs/{job_id}",
+    "classification": "Authenticated",
+    "operation": "Get Job"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/recruitment/jobs/{job_id}",
+    "classification": "Authenticated",
+    "operation": "Update Job"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/recruitment/pipeline",
+    "classification": "Authenticated",
+    "operation": "Get Pipeline"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/recruitment/stats",
+    "classification": "Authenticated",
+    "operation": "Get Recruitment Stats"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/shifts",
+    "classification": "Authenticated",
+    "operation": "Get Shifts"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/shifts/me",
+    "classification": "Authenticated",
+    "operation": "Get My Shift"
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/users",
+    "classification": "Authenticated",
+    "operation": "Create Manager Account"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/users/managers",
+    "classification": "Authenticated",
+    "operation": "List Manager Accounts"
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/users/me",
+    "classification": "Authenticated",
+    "operation": "Get My Profile"
+  },
+  {
+    "method": "GET",
+    "path": "/health",
+    "classification": "Public",
+    "operation": "Health Check"
+  }
+]

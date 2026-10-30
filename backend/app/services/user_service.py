@@ -220,7 +220,23 @@ class UserService:
             user["password_hash"],
         )
 
+        
         if not password_valid:
+            updated_user = (
+                await self.repository.increment_failed_login_attempts(
+                    str(user["_id"])
+                )
+            )
+
+            if (
+                updated_user
+                and updated_user.get("failed_login_attempts", 0) >= 5
+            ):
+                await self.repository.update(
+                    str(user["_id"]),
+                    {"is_locked": True},
+                )
+
             raise AppException(
                 "Invalid email or password",
                 401,
@@ -229,18 +245,26 @@ class UserService:
         user_id = str(user["_id"])
         role = user["role"]
 
-        access_token = create_access_token(
-            subject=user_id,
-            role=role,
-        )
+                # Reset failed-login count after successful authentication.
+        if user.get("failed_login_attempts", 0) > 0:
+            await self.repository.update(
+                user_id,
+                {"failed_login_attempts": 0},
+            )
 
         refresh_token = create_refresh_token(
             subject=user_id,
         )
 
-        await self.session_service.create_session(
+        session = await self.session_service.create_session(
             user_id=user_id,
             refresh_token=refresh_token,
+        )
+
+        access_token = create_access_token(
+            subject=user_id,
+            role=role,
+            session_id=str(session["_id"]),
         )
 
         return {
@@ -248,7 +272,7 @@ class UserService:
             "refresh_token": refresh_token,
             "token_type": "bearer",
         }
-    
+
     async def refresh_access_token(
         self,
         refresh_token: str,
@@ -310,10 +334,11 @@ class UserService:
                 "Account is inactive",
                 403,
             )
-
+        
         access_token = create_access_token(
             subject=str(user["_id"]),
             role=user["role"],
+            session_id=str(session["_id"]),
         )
 
         await self.session_service.update_last_used(
