@@ -93,6 +93,7 @@ async def get_payroll_analytics(
     analytics = await service.get_payroll_analytics(
         year=year,
         months=months,
+        current_user=current_user,
     )
     analytics_model = PayrollAnalyticsResponse(**analytics)
 

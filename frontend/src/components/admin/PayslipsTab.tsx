@@ -67,6 +67,12 @@ function PayslipDetailModal({ payslip, onClose, onStatusUpdated }: PayslipDetail
       void queryClient.invalidateQueries({
         queryKey: queryKeys.admin.payrollAnalytics(),
       });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.admin.dashboard(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["admin", "payslips"],
+      });
       onStatusUpdated();
       onClose();
     } catch (err: any) {

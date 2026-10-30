@@ -30,7 +30,9 @@ export const queryKeys = {
     recruitmentInterviews: (limit: number) =>
       ["admin", "recruitment", "interviews", limit] as const,
     payrollAnalytics: (params?: { year?: number; months?: number }) =>
-      ["admin", "payroll", "analytics", params ?? {}] as const,
+      params && Object.keys(params).length > 0
+        ? (["admin", "payroll", "analytics", params] as const)
+        : (["admin", "payroll", "analytics"] as const),
     employees: (filters?: Record<string, unknown>) =>
       ["admin", "employees", filters ?? {}] as const,
   },
