@@ -13,6 +13,7 @@ from app.core.exceptions import AppException
 from app.core.cache import (
     get_cache,
     set_cache,
+    invalidate_dashboard_cache,
     invalidate_payroll_analytics_cache,
     invalidate_payslips_cache,
     invalidate_employee_payroll_cache,
@@ -47,6 +48,7 @@ async def create_payslip(
 
     try:
         await invalidate_payroll_analytics_cache()
+        await invalidate_dashboard_cache()
         await invalidate_payslips_cache()
         await invalidate_employee_payroll_cache(payload.employee_id)
     except Exception as exc:
@@ -167,6 +169,7 @@ async def update_payslip_status(
 
     try:
         await invalidate_payroll_analytics_cache()
+        await invalidate_dashboard_cache()
         await invalidate_payslips_cache(payslip_id)
         emp_id = updated.get("employee_id") if isinstance(updated, dict) else None
         await invalidate_employee_payroll_cache(emp_id)

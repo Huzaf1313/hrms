@@ -39,8 +39,8 @@ function PayslipDetailModal({ payslip, onClose, onStatusUpdated }: PayslipDetail
   const deductionsList: SalaryBreakdownItem[] = payslip.deductions?.items && payslip.deductions.items.length > 0
     ? payslip.deductions.items
     : Object.entries(payslip.deductions || {})
-        .filter(([k, v]) => k !== "total" && k !== "items" && typeof v === "number" && v > 0)
-        .map(([k, v]) => ({ label: k.replace(/_/g, " ").toUpperCase(), amount: Number(v) }));
+      .filter(([k, v]) => k !== "total" && k !== "items" && typeof v === "number" && v > 0)
+      .map(([k, v]) => ({ label: k.replace(/_/g, " ").toUpperCase(), amount: Number(v) }));
 
   const maxRows = Math.max(earningsList.length, deductionsList.length, 1);
   const rows = [];
@@ -83,9 +83,8 @@ function PayslipDetailModal({ payslip, onClose, onStatusUpdated }: PayslipDetail
           <div className="flex items-center gap-3">
             <h3 className="text-base font-bold text-slate-900">Payslip Details</h3>
             <span
-              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                statusBadgeStyles[status] || "bg-slate-100 text-slate-700"
-              }`}
+              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${statusBadgeStyles[status] || "bg-slate-100 text-slate-700"
+                }`}
             >
               {status}
             </span>
@@ -525,7 +524,7 @@ export default function PayslipsTab() {
             onChange={(e) => handleStatusChange(e.target.value)}
             className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-700 focus:border-blue-500 focus:outline-none"
           >
-            <option value="">All Statuses</option>
+            <option value="">All</option>
             <option value="Paid">Paid / Credited</option>
             <option value="Processing">Processing</option>
             <option value="Pending">Pending</option>
@@ -598,9 +597,8 @@ export default function PayslipsTab() {
                       </td>
                       <td className="px-5 py-3.5">
                         <span
-                          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
-                            statusBadgeStyles[status] || "bg-slate-100 text-slate-700"
-                          }`}
+                          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${statusBadgeStyles[status] || "bg-slate-100 text-slate-700"
+                            }`}
                         >
                           {status}
                         </span>
