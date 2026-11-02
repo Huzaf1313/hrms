@@ -1,3 +1,4 @@
+import re
 from bson import ObjectId
 
 from app.db.database import database
@@ -19,14 +20,19 @@ class AdminSalaryStructureRepository:
         )
 
     async def get_by_name(self, name: str):
+        if not name or not name.strip():
+            return None
+
+        trimmed = name.strip()
         return await self.collection.find_one(
-            {"name": name}
+            {"name": {"$regex": f"^{re.escape(trimmed)}$", "$options": "i"}}
         )
 
     async def get_all(self, filters: dict, skip: int, limit: int):
         cursor = (
             self.collection
             .find(filters)
+            .sort("name", 1)
             .skip(skip)
             .limit(limit)
         )
@@ -54,6 +60,50 @@ class AdminSalaryStructureRepository:
 
         return result.deleted_count > 0
 
+    async def apply_deduction_to_structures(self, deduction: dict, structure_ids: list[str]) -> int:
+        object_ids = [ObjectId(sid) for sid in structure_ids if ObjectId.is_valid(sid)]
+        if not object_ids:
+            return 0
+
+        applied = {
+            "id": str(deduction["_id"]),
+            "name": deduction.get("name", ""),
+            "type": deduction.get("type", "deduction"),
+            "calculation_method": deduction.get(
+                "calculation_method",
+                "percentage_of_basic",
+            ),
+            "percentage": deduction.get("percentage"),
+            "fixed_amount": deduction.get("fixed_amount"),
+        }
+
+        updated_count = 0
+        for oid in object_ids:
+            structure = await self.collection.find_one({"_id": oid})
+            if not structure:
+                continue
+
+            existing_deductions = structure.get("deductions") or []
+            found = False
+            new_deductions = []
+            for d in existing_deductions:
+                if isinstance(d, dict) and str(d.get("id")) == applied["id"]:
+                    new_deductions.append(applied)
+                    found = True
+                else:
+                    new_deductions.append(d)
+
+            if not found:
+                new_deductions.append(applied)
+
+            await self.collection.update_one(
+                {"_id": oid},
+                {"$set": {"deductions": new_deductions}},
+            )
+            updated_count += 1
+
+        return updated_count
+
     async def apply_deduction_to_all(self, deduction: dict):
         applied = {
             "id": str(deduction["_id"]),
@@ -67,9 +117,17 @@ class AdminSalaryStructureRepository:
             "fixed_amount": deduction.get("fixed_amount"),
         }
 
+        # First, update if this deduction id already exists on structures
+        await self.collection.update_many(
+            {"deductions.id": applied["id"]},
+            {"$set": {"deductions.$": applied}},
+        )
+
+        # Second, add to any structure where it hasn't been added yet
         result = await self.collection.update_many(
             {"deductions.id": {"$ne": applied["id"]}},
             {"$push": {"deductions": applied}},
         )
 
         return result.modified_count
+

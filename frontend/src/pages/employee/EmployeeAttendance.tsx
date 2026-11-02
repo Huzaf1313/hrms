@@ -2,7 +2,17 @@ import { useEffect, useMemo, useState } from "react";
 
 import { api, ApiError } from "../../services/api";
 import { formatShiftTime, shiftService } from "../../services/shiftService";
+import { holidayService } from "../../services/holidayService";
+import { employeeAttendance } from "../../services/attendanceService";
+import { useGlobalDate } from "../../context/globalDateContext";
+import type { EmployeeAttendanceRecord } from "../../types/attendance";
 import type { Shift } from "../../types/shift";
+import {
+  HOLIDAY_STYLE,
+  formatHolidayDate,
+  type Holiday,
+} from "../../types/holiday";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import EmployeeAttendanceRegularizationModal from "./EmployeeAttendanceRegularizationModal";
 
@@ -21,39 +31,10 @@ interface User {
   work_location: string | null;
   }
 
-interface AttendanceRecord {
-  id: string;
-  employee_id: string;
-  date: string;
-  /**
-   * The read endpoint (/employees/{id}/attendance) returns display-formatted
-   * times, while an immediate punch in/out response returns raw ISO values
-   * under check_in / check_out. Both shapes land here, so resolve via the
-   * helpers below rather than assuming one.
-   */
-  in_time?: string | null;
-  out_time?: string | null;
-  check_in: string | null;
-  check_out: string | null;
-  status: string;
-  total_hours: number | null;
-  remarks: string | null;
-  shift_id?: string | null;
-  shift?: string | null;
-  shift_start?: string | null;
-  shift_end?: string | null;
-  shift_duration_minutes?: number | null;
-  worked_minutes?: number | null;
-  overtime_minutes?: number;
-  overtime_display?: string | null;
-  late_minutes?: number;
-  late_display?: string | null;
-  is_overtime?: boolean;
-  is_late?: boolean;
-  is_overnight?: boolean;
-  created_at: string | null;
-  updated_at: string | null;
-}
+/** This page talks to /employee-attendance/*, whose record shape differs from
+ *  the admin one, so the shared employee type is aliased to keep the name used
+ *  throughout the rest of the file. */
+type AttendanceRecord = EmployeeAttendanceRecord;
 
 function resolveCheckIn(
   record: AttendanceRecord | null | undefined,
@@ -167,6 +148,16 @@ interface LeaveListResponse {
   items: BackendLeaveRequest[];
 }
 
+/** "YYYY-MM-DD" from local parts, so it matches the backend's date strings
+ *  without a timezone shifting the day. */
+const getLocalDateKey = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+};
+
 function EmployeeAttendance() {
   const user = useMemo<User | null>(() => {
     const storedUser = localStorage.getItem("user");
@@ -197,8 +188,68 @@ function EmployeeAttendance() {
   const [showAllHistory, setShowAllHistory] = useState(false);
   const [regularizationRequests, setRegularizationRequests] = useState<RegularizationRequest[]>([]);
   const [myShift, setMyShift] = useState<Shift | null>(null);
+  const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [showAllRequests, setShowAllRequests] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+
+  // The day picked in the header calendar. It does not narrow this page down to
+  // one day the way it narrows the admin report, because this grid is a month of
+  // history rather than a filtered list: the day is highlighted in place and
+  // pulls the visible month along with it.
+  const { date: globalDateKey } = useGlobalDate();
+
+  const globalDate = useMemo(
+    () => new Date(`${globalDateKey}T00:00:00`),
+    [globalDateKey],
+  );
+
+  // Paging by hand is navigation, not filtering, so it must not be treated as
+  // one: the arrows move this page's month only and leave the shared date
+  // alone. A date arriving from the header clears that override.
+  //
+  // The month is derived rather than stored so it cannot fall out of step, and
+  // it has to be memoised: writing a freshly built Date back into state on
+  // every render never compares equal, which loops forever.
+  const [monthOverride, setMonthOverride] = useState<Date | null>(null);
+  const [syncedToDate, setSyncedToDate] = useState(globalDateKey);
+
+  if (syncedToDate !== globalDateKey) {
+    setSyncedToDate(globalDateKey);
+    setMonthOverride(null);
+  }
+
+  /** The month the attendance calendar is showing. Everything in the calendar
+   *  section follows this; today's punch card and history stay pinned to today. */
+  const viewMonth = useMemo(
+    () =>
+      monthOverride ??
+      new Date(globalDate.getFullYear(), globalDate.getMonth(), 1),
+    [monthOverride, globalDate],
+  );
+
+  /** Punches scoped to viewMonth, fetched separately so the history list above
+   *  can keep its own unfiltered window. */
+  const [monthRecords, setMonthRecords] = useState<AttendanceRecord[]>([]);
+
+  /** Which range monthRecords actually holds. Loading is derived from whether
+   *  this still matches the range on screen, so it cannot fall out of step with
+   *  the request the way a separate loading flag would. */
+  const [loadedRange, setLoadedRange] = useState<{
+    start: string;
+    end: string;
+  } | null>(null);
+
+  const viewYear = viewMonth.getFullYear();
+  const viewMonthIndex = viewMonth.getMonth();
+
+  /** "YYYY-MM-DD" for the first and last day of the month being viewed. */
+  const viewRange = useMemo(
+    () => ({
+      start: getLocalDateKey(new Date(viewYear, viewMonthIndex, 1)),
+      end: getLocalDateKey(new Date(viewYear, viewMonthIndex + 1, 0)),
+    }),
+    [viewYear, viewMonthIndex],
+  );
 
 useEffect(() => {
   shiftService
@@ -206,6 +257,59 @@ useEffect(() => {
     .then(setMyShift)
     .catch(() => setMyShift(null));
 }, []);
+
+  // Refetched whenever the viewed month changes. Kept separate from the main
+  // load so the calendar can page without reloading leave and regularization.
+  useEffect(() => {
+    if (!user?.employee_id) return;
+
+    let isCurrent = true;
+
+    employeeAttendance
+      .month(user.employee_id, viewRange.start, viewRange.end)
+      .then((records) => {
+        if (!isCurrent) return;
+
+        setMonthRecords(records);
+        setLoadedRange({ start: viewRange.start, end: viewRange.end });
+      })
+      .catch(() => {
+        // A failed month load must not wipe the calendar outright, but the
+        // range still counts as resolved so the arrows stop spinning.
+        if (!isCurrent) return;
+
+        setMonthRecords([]);
+        setLoadedRange({ start: viewRange.start, end: viewRange.end });
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [user?.employee_id, viewRange.start, viewRange.end]);
+
+  /** True while viewing the month today falls in. Used to decide whether a
+   *  punch belongs in the calendar, not to gate navigation. */
+  const isViewingCurrentMonth =
+    viewYear === new Date().getFullYear() &&
+    viewMonthIndex === new Date().getMonth();
+
+  // Treated as not-loading when there is no employee to fetch for, otherwise a
+  // missing employee_id would leave loadedRange null forever and strand both
+  // arrows in a permanently disabled state.
+  const isMonthLoading =
+    Boolean(user?.employee_id) &&
+    (loadedRange?.start !== viewRange.start ||
+      loadedRange?.end !== viewRange.end);
+
+  function shiftMonth(amount: number) {
+    setMonthOverride(
+      new Date(
+        viewMonth.getFullYear(),
+        viewMonth.getMonth() + amount,
+        1,
+      ),
+    );
+  }
   
 useEffect(() => {
   async function loadAttendance() {
@@ -227,7 +331,7 @@ if (!user.employee_id) {
 
 setEmployeeId(user.employee_id);
 
-const [records, leaveList, requests] = await Promise.all([
+const [records, leaveList, requests, holidayList] = await Promise.all([
   api.get<AttendanceRecord[]>(
     `/employee-attendance/employees/${user.employee_id}`,
     {
@@ -251,6 +355,10 @@ const [records, leaveList, requests] = await Promise.all([
       limit: 100,
     },
   ),
+
+  // Holidays are org-wide, so the whole set is small enough to fetch once.
+  // A failure here must not fail the attendance load, hence its own fallback.
+  holidayService.list().catch(() => [] as Holiday[]),
 ]);
 
 // console.log("ATTENDANCE RECORDS:", records);
@@ -265,6 +373,7 @@ const [records, leaveList, requests] = await Promise.all([
 
 setAttendanceRecords(records);
 setRegularizationRequests(requests);
+setHolidays(holidayList);
 
 setLeaveRequests(
   leaveList.items.map((leave) => ({
@@ -313,14 +422,6 @@ useEffect(() => {
   };
 }, []);
 
-const getLocalDateKey = (date: Date) => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-};
-
 const getISTDateParts = (date: Date) => {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "Asia/Kolkata",
@@ -345,9 +446,6 @@ const getISTDateParts = (date: Date) => {
 };
 
 const currentTimeIST = getISTDateParts(currentTime);
-const currentMonthKey = `${currentTimeIST.year}-${String(
-  currentTimeIST.month,
-).padStart(2, "0")}`;
 
 const todayDateKey = `${currentTimeIST.year}-${String(
   currentTimeIST.month,
@@ -355,13 +453,15 @@ const todayDateKey = `${currentTimeIST.year}-${String(
   currentTimeIST.day,
 ).padStart(2, "0")}`;
 
-  const currentMonth = new Date();
-
-  const currentMonthRecords = attendanceRecords.filter(
-  (record) => record.date.startsWith(currentMonthKey),
-);
-
 const today = currentTime;
+
+const monthEndOfViewMonth = new Date(viewYear, viewMonthIndex + 1, 0);
+monthEndOfViewMonth.setHours(0, 0, 0, 0);
+
+// The calendar and every stat below it read the viewed month's records, which
+// the month effect fetches on demand. `attendanceRecords` stays as the unpaged
+// recent window used by the history list and today's punch card.
+const currentMonthRecords = monthRecords;
 
 const approvedLeaveDates = new Set<string>();
 
@@ -381,9 +481,11 @@ leaveRequests
     endDate.setHours(0, 0, 0, 0);
 
     while (current <= endDate) {
+      // Scoped to the month on screen, so approved leave still resolves when
+      // the employee pages back to an earlier month.
       if (
-        current.getMonth() === currentMonth.getMonth() &&
-        current.getFullYear() === currentMonth.getFullYear()
+        current.getMonth() === viewMonthIndex &&
+        current.getFullYear() === viewYear
       ) {
         approvedLeaveDates.add(
           `${current.getFullYear()}-${String(
@@ -397,6 +499,23 @@ leaveRequests
       current.setDate(current.getDate() + 1);
     }
   });
+
+// Holidays are keyed by the same "YYYY-MM-DD" the calendar cells build above,
+// so both sides compare as plain strings. A date can hold more than one
+// holiday, so each entry is a list.
+const holidaysByDate = new Map<string, Holiday[]>();
+
+holidays.forEach((holiday) => {
+  const existing = holidaysByDate.get(holiday.date);
+
+  if (existing) {
+    existing.push(holiday);
+  } else {
+    holidaysByDate.set(holiday.date, [holiday]);
+  }
+});
+
+const holidayDates = new Set(holidaysByDate.keys());
 
 const presentDays = currentMonthRecords.filter(
   (record) => {
@@ -466,11 +585,7 @@ const attendanceDates = new Set(
 
 let absentDays = 0;
 
-const monthStart = new Date(
-  currentMonth.getFullYear(),
-  currentMonth.getMonth(),
-  1,
-);
+const monthStart = new Date(viewYear, viewMonthIndex, 1);
 
 const currentDay = new Date(monthStart);
 currentDay.setHours(0, 0, 0, 0);
@@ -478,7 +593,12 @@ currentDay.setHours(0, 0, 0, 0);
 const todayOnly = new Date(today);
 todayOnly.setHours(0, 0, 0, 0);
 
-while (currentDay <= todayOnly) {
+// Days only count as absent once they have happened. Stops at today for the
+// current month, and at the last day of the month for any earlier one.
+const lastCountableDay =
+  todayOnly < monthEndOfViewMonth ? todayOnly : monthEndOfViewMonth;
+
+while (currentDay <= lastCountableDay) {
   const dayOfWeek = currentDay.getDay();
 
   const isWeekday =
@@ -487,10 +607,12 @@ while (currentDay <= todayOnly) {
 
   const dateKey = getLocalDateKey(currentDay);
 
+  // A holiday is a non-working day, so it never counts against the employee.
   if (
     isWeekday &&
     !attendanceDates.has(dateKey) &&
-    !approvedLeaveDates.has(dateKey)
+    !approvedLeaveDates.has(dateKey) &&
+    !holidayDates.has(dateKey)
   ) {
     absentDays += 1;
   }
@@ -536,10 +658,10 @@ if (
       (record) => record.date === todayDateKey,
     );
 
-    const calendarYear = today.getFullYear();
-    const calendarMonth = today.getMonth();
+    const calendarYear = viewYear;
+    const calendarMonth = viewMonthIndex;
 
-    const monthName = today.toLocaleDateString("en-IN", {
+    const monthName = viewMonth.toLocaleDateString("en-IN", {
       month: "long",
       year: "numeric",
     });
@@ -568,7 +690,7 @@ if (
     );
 
     function getAttendanceForDay(day: number) {
-      return attendanceRecords.find((record) => {
+      return monthRecords.find((record) => {
         const recordDate = new Date(record.date);
 
         return (
@@ -641,6 +763,15 @@ if (
             attendance,
             ...records,
             ]);
+
+            // A punch always lands on today, so the calendar only needs it when
+            // today is inside the month on screen.
+            if (isViewingCurrentMonth) {
+            setMonthRecords((records) => [
+            attendance,
+            ...records,
+            ]);
+            }
         } catch (err) {
             if (err instanceof ApiError) {
             setActionError(err.message);
@@ -699,6 +830,16 @@ if (
                     : record,
                 ),
                 );
+
+                if (isViewingCurrentMonth) {
+                setMonthRecords((records) =>
+                records.map((record) =>
+                    record.id === attendance.id
+                    ? attendance
+                    : record,
+                ),
+                );
+                }
             } catch (err) {
                 if (err instanceof ApiError) {
                 setActionError(err.message);
@@ -750,7 +891,7 @@ if (
           <section className="mt-6">
 
             {isLoading && (
-              <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-sm">
+              <div className="rounded-2xl border border-gray-100 bg-white p-8 text-center shadow-sm">
                 <p className="text-sm text-gray-500">
                   Loading attendance...
                 </p>
@@ -770,10 +911,10 @@ if (
             )}
 
             {!isLoading && !error && (
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
 
                 {/* Present */}
-              <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+              <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
                 <p className="text-sm font-medium text-gray-500">
                   Present Days
                 </p>
@@ -815,7 +956,7 @@ if (
 
 
                 {/* Absent */}
-                <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
 
                   <p className="text-sm font-medium text-gray-500">
                     Absent Days
@@ -827,7 +968,7 @@ if (
                 </div>
 
                 {/* Late */}
-                <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
 
                   <p className="text-sm font-medium text-gray-500">
                     Late Days
@@ -839,7 +980,7 @@ if (
                 </div>
 
                 {/* Overtime */}
-                <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
 
                   <p className="text-sm font-medium text-gray-500">
                     Overtime
@@ -859,7 +1000,7 @@ if (
                 </div>
 
                 {/* Leave */}
-                <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
 
                   <p className="text-sm font-medium text-gray-500">
                     On Leave
@@ -871,7 +1012,7 @@ if (
                 </div>
 
                 {/* Working Hours */}
-                <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
 
                   <p className="text-sm font-medium text-gray-500">
                     Working Hours
@@ -898,7 +1039,7 @@ if (
         <section className="mt-6 grid gap-6 lg:grid-cols-2">
 
         {/* Today's Attendance */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
 
             <div className="flex items-start justify-between">
 
@@ -1076,7 +1217,7 @@ if (
         </div>
 
         {/* Leave Balance */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
 
             <div className="flex items-start justify-between">
 
@@ -1181,7 +1322,7 @@ if (
         <section className="mt-6 grid grid-cols-1 gap-8 lg:grid-cols-2">
 
           {/* Punch In/Out History */}
-          <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
 
             <div className="flex items-start justify-between">
 
@@ -1314,7 +1455,7 @@ if (
 
 
           {/* Regularization Requests */}
-          <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
 
             <div className="flex items-start justify-between gap-4">
 
@@ -1589,6 +1730,34 @@ if (
               <h3 className="text-base font-semibold text-[#17213a]">
                 {monthName}
               </h3>
+
+              <div className="flex items-center gap-1">
+                {isMonthLoading && (
+                  <span className="mr-1 text-xs text-gray-400">
+                    Loading...
+                  </span>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => shiftMonth(-1)}
+                  disabled={isMonthLoading}
+                  className="rounded-lg p-1.5 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 disabled:cursor-not-allowed disabled:text-gray-300 disabled:hover:bg-transparent"
+                  aria-label="Previous month"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => shiftMonth(1)}
+                  disabled={isMonthLoading}
+                  className="rounded-lg p-1.5 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 disabled:cursor-not-allowed disabled:text-gray-300 disabled:hover:bg-transparent"
+                  aria-label="Next month"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
             </div>
 
             {/* Calendar */}
@@ -1627,7 +1796,7 @@ if (
                       return (
                         <div
                           key={`empty-${index}`}
-                          className="h-16 border-b border-r border-gray-100"
+                          className="h-20 border-b border-r border-gray-100"
                         />
                       );
                     }
@@ -1643,6 +1812,11 @@ if (
                       calendarMonth + 1,
                     ).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 
+                    // The day chosen in the header, when it falls in the month
+                    // on screen. Ringed rather than filled, so it never hides
+                    // the day's attendance colour underneath.
+                    const isGlobalDate = dateKey === globalDateKey;
+
                     const calendarDate = new Date(
                       calendarYear,
                       calendarMonth,
@@ -1656,6 +1830,15 @@ if (
 
                     const isOnLeave =
                       approvedLeaveDates.has(dateKey);
+
+                    const dayHolidays =
+                      holidaysByDate.get(dateKey) ?? [];
+
+                    // A day that has not happened yet has no attendance to
+                    // judge. Without this it falls through to "no record" and
+                    // paints red, which reads as absent when it is really just
+                    // in the future.
+                    const isFuture = calendarDate > todayOnly;
 
                     const status =
                       attendance?.status?.toLowerCase();
@@ -1676,9 +1859,18 @@ if (
 
                     let statusClass = "text-gray-700";
 
+                    // Weekly off is checked first on purpose: a holiday that
+                    // lands on a Saturday or Sunday stays grey, since the day is
+                    // already a non-working day either way.
                     if (isWeeklyOff) {
                       statusClass =
                         "bg-gray-200 text-gray-600";
+                    } else if (dayHolidays.length > 0) {
+                      // Ahead of the holiday, since one can be published before
+                      // it arrives.
+                      statusClass = HOLIDAY_STYLE;
+                    } else if (isFuture) {
+                      statusClass = "text-gray-400";
                     } else if (isOnLeave) {
                       statusClass =
                         "bg-purple-100 text-purple-700";
@@ -1696,14 +1888,33 @@ if (
                         "bg-red-100 text-red-700";
                     }
 
+                    // Named only on working days, to match the grey weekend
+                    // cells above.
+                    const showHolidayName =
+                      !isWeeklyOff && dayHolidays.length > 0;
+
+                    const holidayTitle = showHolidayName
+                      ? dayHolidays
+                          .map(
+                            (holiday) =>
+                              `${holiday.name}: ${holiday.description ?? formatHolidayDate(holiday.date)}`,
+                          )
+                          .join(" | ")
+                      : undefined;
+
                     return (
                       <div
                         key={day}
-                        className="flex h-16 items-center justify-center border-b border-r border-gray-100"
+                        className="flex h-20 flex-col items-center justify-center gap-1 border-b border-r border-gray-100 px-1"
+                        title={holidayTitle}
                       >
 
                         <div
-                          className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold ${
+                          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
+                            isGlobalDate
+                              ? "ring-2 ring-[#2563eb] ring-offset-2"
+                              : ""
+                          } ${
                             isToday
                               ? "bg-[#2563eb] text-white"
                               : statusClass
@@ -1711,6 +1922,20 @@ if (
                         >
                           {day}
                         </div>
+
+                        {showHolidayName && (
+                          <span className="flex w-full items-center justify-center gap-0.5">
+                            <span className="truncate text-[10px] font-medium text-teal-700">
+                              {dayHolidays[0].name}
+                            </span>
+
+                            {dayHolidays.length > 1 && (
+                              <span className="shrink-0 text-[10px] font-semibold text-teal-500">
+                                +{dayHolidays.length - 1}
+                              </span>
+                            )}
+                          </span>
+                        )}
 
                       </div>
                     );
@@ -1757,6 +1982,13 @@ if (
                 <span className="h-3 w-3 rounded-full bg-gray-300" />
                 <span className="text-xs text-gray-500">
                   Weekly Off
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="h-3 w-3 rounded-full bg-teal-500" />
+                <span className="text-xs text-gray-500">
+                  Holiday
                 </span>
               </div>
             </div>

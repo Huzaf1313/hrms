@@ -1,5 +1,6 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
+import { AlertCircle, Check, Loader2, Mail, ShieldCheck } from "lucide-react";
 
 import type { Department } from "../../types/department";
 import type { Employee, EmployeeCreate } from "../../types/employee";
@@ -11,6 +12,8 @@ import {
   type SalaryStructure,
 } from "../../services/admin_salary_structure_service";
 import type { ManagerAccount } from "../../services/userService";
+import { employeeService } from "../../services/employeeService";
+import { ApiError } from "../../services/api";
 
 interface AdminEmployeeFormProps {
   departments: Department[];
@@ -35,6 +38,19 @@ type IdentityField = "first_name" | "last_name" | "phone";
 
 const NAME_DIGIT_PATTERN = /[0-9]/;
 const PHONE_PATTERN = /^[0-9]{10}$/;
+
+const COUNTRY_CODES = [
+  { code: "+91", label: "India", flag: "🇮🇳" },
+  { code: "+1", label: "USA", flag: "🇺🇸" },
+  { code: "+44", label: "UK", flag: "🇬🇧" },
+  { code: "+971", label: "UAE", flag: "🇦🇪" },
+  { code: "+61", label: "Australia", flag: "🇦🇺" },
+  { code: "+49", label: "Germany", flag: "🇩🇪" },
+  { code: "+33", label: "France", flag: "🇫🇷" },
+  { code: "+81", label: "Japan", flag: "🇯🇵" },
+  { code: "+65", label: "Singapore", flag: "🇸🇬" },
+  { code: "+86", label: "China", flag: "🇨🇳" },
+];
 
 function sanitizeName(value: string): string {
   return value.replace(/[0-9]/g, "");
@@ -62,6 +78,7 @@ function toFormState(employee?: Employee): EmployeeCreate {
       employment_type: "full_time",
       work_location: "",
       reporting_manager: "",
+      manager_id: "",
       salary_structure: "",
       salary: "",
       shift_id: "",
@@ -84,6 +101,7 @@ function toFormState(employee?: Employee): EmployeeCreate {
     employment_type: employee.employment_type,
     work_location: employee.work_location ?? "",
     reporting_manager: employee.reporting_manager ?? "",
+    manager_id: employee.manager_id ?? "",
     salary_structure: employee.salary_structure ?? "",
     salary: employee.salary ?? "",
     shift_id: employee.shift_id ?? "",
@@ -105,6 +123,8 @@ function AdminEmployeeForm({
     toFormState(initialEmployee),
   );
 
+  const [countryCode, setCountryCode] = useState("+91");
+
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
   const [showPassword, setShowPassword] = useState(false);
@@ -113,6 +133,25 @@ function AdminEmployeeForm({
   const [identityErrors, setIdentityErrors] = useState<
     Partial<Record<IdentityField, string>>
   >({});
+
+  // OTP Verification state (for Add Employee mode)
+  const [verifiedEmail, setVerifiedEmail] = useState<string | null>(null);
+  const [verificationToken, setVerificationToken] = useState<string | null>(null);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpValue, setOtpValue] = useState("");
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [otpError, setOtpError] = useState<string | null>(null);
+  const [otpSuccess, setOtpSuccess] = useState<string | null>(null);
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
+
+  useEffect(() => {
+    if (cooldownSeconds <= 0) return;
+    const interval = setInterval(() => {
+      setCooldownSeconds((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [cooldownSeconds]);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -125,9 +164,92 @@ function AdminEmployeeForm({
     setPhotoPreview(null);
     setSalaryError(null);
     setIdentityErrors({});
+    setVerifiedEmail(null);
+    setVerificationToken(null);
+    setOtpSent(false);
+    setOtpValue("");
+    setOtpError(null);
+    setOtpSuccess(null);
+    setCooldownSeconds(0);
   }
 
   const isEditMode = Boolean(initialEmployee);
+
+  const isEmailVerified =
+    isEditMode ||
+    (Boolean(verificationToken) &&
+      Boolean(verifiedEmail) &&
+      form.email.trim().toLowerCase() === verifiedEmail?.toLowerCase());
+
+  function handleEmailChange(value: string) {
+    updateField("email", value);
+    // Invalidate verification if email address is edited after verification
+    if (verifiedEmail && value.trim().toLowerCase() !== verifiedEmail.toLowerCase()) {
+      setVerifiedEmail(null);
+      setVerificationToken(null);
+      setOtpSuccess(null);
+      setOtpError(null);
+      setOtpSent(false);
+      setOtpValue("");
+    }
+  }
+
+  async function handleSendOtp() {
+    const emailToVerify = form.email.trim().toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailToVerify || !emailRegex.test(emailToVerify)) {
+      setOtpError("Please enter a valid email address before requesting an OTP.");
+      return;
+    }
+
+    setIsSendingOtp(true);
+    setOtpError(null);
+    setOtpSuccess(null);
+
+    try {
+      const response = await employeeService.requestEmailOtp(emailToVerify);
+      setOtpSent(true);
+      setCooldownSeconds(response.cooldown_seconds || 60);
+      setOtpSuccess(`Verification code sent to ${emailToVerify}.`);
+    } catch (err) {
+      const message =
+        err instanceof ApiError
+          ? err.message
+          : "Failed to send verification code. Please check your network or try again.";
+      setOtpError(message);
+    } finally {
+      setIsSendingOtp(false);
+    }
+  }
+
+  async function handleVerifyOtp() {
+    const trimmedOtp = otpValue.trim();
+    if (!trimmedOtp || trimmedOtp.length !== 6 || !/^\d{6}$/.test(trimmedOtp)) {
+      setOtpError("Please enter the complete 6-digit verification code.");
+      return;
+    }
+
+    setIsVerifyingOtp(true);
+    setOtpError(null);
+    setOtpSuccess(null);
+
+    try {
+      const emailToVerify = form.email.trim().toLowerCase();
+      const response = await employeeService.verifyEmailOtp(emailToVerify, trimmedOtp);
+      setVerifiedEmail(response.email.toLowerCase());
+      setVerificationToken(response.verification_token);
+      setOtpSuccess("Email address successfully verified!");
+      setOtpError(null);
+    } catch (err) {
+      const message =
+        err instanceof ApiError
+          ? err.message
+          : "Invalid or expired OTP. Please try again.";
+      setOtpError(message);
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  }
 
   const selectedStructure = salaryStructures.find(
     (structure) => structure.name === form.salary_structure,
@@ -159,6 +281,27 @@ function AdminEmployeeForm({
 
   const unmatchedManager =
     currentManager !== "" && !managerIsListed ? currentManager : null;
+
+  function handleManagerChange(value: string) {
+    // Manager ids are what scope a manager's team. reporting_manager is kept
+    // in step as the display name the details page reads.
+    if (!value) {
+      updateField("reporting_manager", "");
+      updateField("manager_id", "");
+      return;
+    }
+
+    const manager = managers.find((entry) => entry.id === value);
+
+    if (!manager) {
+      updateField("reporting_manager", value);
+      updateField("manager_id", "");
+      return;
+    }
+
+    updateField("reporting_manager", manager.full_name);
+    updateField("manager_id", manager.id);
+  }
 
   function validateSalary(): boolean {
     if (!form.salary_structure) {
@@ -350,6 +493,11 @@ function AdminEmployeeForm({
       return;
     }
 
+    if (!isEditMode && !isEmailVerified) {
+      setOtpError("Email verification is required before adding an employee.");
+      return;
+    }
+
     const payload: EmployeeCreate = {
       ...form,
       password: !isEditMode && password ? password : undefined,
@@ -359,6 +507,7 @@ function AdminEmployeeForm({
       work_location: form.work_location || undefined,
       reporting_manager: form.reporting_manager || undefined,
       shift_id: form.shift_id || undefined,
+      email_verification_token: verificationToken ?? undefined,
     };
 
     if (isEditMode && !form.password) {
@@ -464,7 +613,7 @@ function AdminEmployeeForm({
           {/* EMPLOYEE ID */}
           <div>
             <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
-              Employee ID
+              Employee ID <span className="ml-1 text-red-500">*</span>
             </label>
 
             <input
@@ -482,10 +631,11 @@ function AdminEmployeeForm({
           {/* EMPLOYMENT TYPE */}
           <div>
             <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
-              Employment Type
+              Employment Type <span className="ml-1 text-red-500">*</span>
             </label>
 
             <select
+              required
               value={form.employment_type}
               onChange={(event) => {
                 updateField(
@@ -532,13 +682,7 @@ function AdminEmployeeForm({
 
               {availableShifts.length === 0 ? (
                 <p className="mt-1.5 text-xs font-medium text-amber-600">
-                  No shifts exist yet. Run{" "}
-                  <code className="rounded bg-amber-50 px-1">
-                    python seed_shifts.py
-                  </code>{" "}
-                  in the backend folder, or add one from Attendance &rarr;
-                  Manage Shifts. Overtime cannot be calculated until a shift
-                  exists.
+                  No shift added yet!
                 </p>
               ) : (
                 <p className="mt-1.5 text-xs text-gray-500">
@@ -554,7 +698,7 @@ function AdminEmployeeForm({
           {/* FIRST NAME */}
           <div>
             <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
-              First Name
+              First Name <span className="ml-1 text-red-500">*</span>
             </label>
 
             <input
@@ -588,7 +732,7 @@ function AdminEmployeeForm({
           {/* LAST NAME */}
           <div>
             <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
-              Last Name
+              Last Name <span className="ml-1 text-red-500">*</span>
             </label>
 
             <input
@@ -620,47 +764,207 @@ function AdminEmployeeForm({
           </div>
 
           {/* EMAIL */}
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
-              Email
-            </label>
+          <div className={!isEditMode && otpSent && !isEmailVerified ? "col-span-1 md:col-span-2" : ""}>
+            <div className="mb-1.5 flex items-center justify-between">
+              <label className="block text-sm font-medium text-[#17375e]">
+                Email Address <span className="ml-1 text-red-500">*</span>
+              </label>
 
-            <input
-              required
-              type="email"
-              value={form.email}
-              onChange={(event) =>
-                updateField("email", event.target.value)
-              }
-              placeholder="employee@company.com"
-              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
-            />
+              {!isEditMode && isEmailVerified && (
+                <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+                  <Check className="h-3.5 w-3.5" />
+                  Email Verified
+                </span>
+              )}
+            </div>
+
+            {isEditMode ? (
+              <input
+                required
+                type="email"
+                value={form.email}
+                onChange={(event) => updateField("email", event.target.value)}
+                placeholder="employee@company.com"
+                className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
+              />
+            ) : (
+              <div className="space-y-2.5">
+                <div className="relative flex items-center">
+                  <input
+                    required
+                    type="email"
+                    value={form.email}
+                    onChange={(event) => handleEmailChange(event.target.value)}
+                    placeholder="employee@company.com"
+                    className={`w-full rounded-xl border px-4 py-3 pr-32 text-sm outline-none transition focus:ring-2 ${
+                      isEmailVerified
+                        ? "border-emerald-300 bg-emerald-50/20 text-gray-900 focus:border-emerald-500 focus:ring-emerald-500/10"
+                        : "border-gray-200 focus:border-[#2563eb] focus:ring-[#2563eb]/10"
+                    }`}
+                  />
+
+                  <button
+                    type="button"
+                    onClick={handleSendOtp}
+                    disabled={
+                      isSendingOtp ||
+                      isVerifyingOtp ||
+                      cooldownSeconds > 0 ||
+                      isEmailVerified
+                    }
+                    className="absolute right-2 rounded-lg bg-[#2563eb] px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
+                  >
+                    {isSendingOtp ? (
+                      <span className="flex items-center gap-1">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        Sending…
+                      </span>
+                    ) : isEmailVerified ? (
+                      "Verified"
+                    ) : cooldownSeconds > 0 ? (
+                      `Resend in ${cooldownSeconds}s`
+                    ) : otpSent ? (
+                      "Resend OTP"
+                    ) : (
+                      "Send OTP"
+                    )}
+                  </button>
+                </div>
+
+                {/* OTP Verification Box */}
+                {otpSent && !isEmailVerified && (
+                  <div className="rounded-2xl border border-blue-100 bg-[#f8faff] p-3.5 transition-all">
+                    <div className="mb-2 flex items-center justify-between">
+                      <span className="flex items-center gap-1.5 text-xs font-semibold text-gray-700">
+                        <Mail className="h-3.5 w-3.5 text-[#2563eb]" />
+                        Enter 6-digit OTP sent to {form.email}
+                      </span>
+                      {cooldownSeconds > 0 && (
+                        <span className="text-xs text-gray-500">
+                          Resend available in {cooldownSeconds}s
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={6}
+                        value={otpValue}
+                        onChange={(e) => {
+                          setOtpValue(
+                            e.target.value.replace(/\D/g, "").slice(0, 6),
+                          );
+                          setOtpError(null);
+                        }}
+                        placeholder="Enter 6-digit OTP"
+                        className="flex-1 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-sm font-mono tracking-widest outline-none focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
+                      />
+
+                      <button
+                        type="button"
+                        onClick={handleVerifyOtp}
+                        disabled={
+                          isVerifyingOtp ||
+                          isSendingOtp ||
+                          otpValue.trim().length !== 6
+                        }
+                        className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {isVerifyingOtp ? (
+                          <>
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            Verifying…
+                          </>
+                        ) : (
+                          <>
+                            <ShieldCheck className="h-3.5 w-3.5" />
+                            Verify OTP
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    {otpError && (
+                      <p className="mt-2 flex items-center gap-1 text-xs font-medium text-red-600">
+                        <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                        {otpError}
+                      </p>
+                    )}
+
+                    {otpSuccess && (
+                      <p className="mt-2 flex items-center gap-1 text-xs font-medium text-emerald-600">
+                        <Check className="h-3.5 w-3.5 shrink-0" />
+                        {otpSuccess}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Pre-OTP error or guidance */}
+                {!otpSent && otpError && (
+                  <p className="flex items-center gap-1 text-xs font-medium text-red-600">
+                    <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                    {otpError}
+                  </p>
+                )}
+
+                {isEmailVerified && (
+                  <p className="flex items-center gap-1 text-xs font-medium text-emerald-600">
+                    <Check className="h-3.5 w-3.5" />
+                    Email verified. Ready to add employee.
+                  </p>
+                )}
+
+                {!otpSent && !isEmailVerified && !otpError && (
+                  <p className="text-xs text-gray-500">
+                    Click <strong>Send OTP</strong> to verify this employee's email address.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* PHONE */}
           <div>
             <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
-              Phone
+              Phone <span className="ml-1 text-red-500">*</span>
             </label>
 
-            <input
-              required
-              type="tel"
-              inputMode="numeric"
-              maxLength={10}
-              value={form.phone}
-              onChange={(event) => handlePhoneChange(event.target.value)}
-              onBlur={() =>
-                setIdentityError("phone", validateIdentityField("phone"))
-              }
-              placeholder="10-digit phone number"
-              aria-invalid={Boolean(identityErrors.phone)}
-              className={`w-full rounded-xl border px-4 py-3 text-sm outline-none transition focus:ring-2 ${
-                identityErrors.phone
-                  ? "border-red-400 focus:border-red-400 focus:ring-red-400/10"
-                  : "border-gray-200 focus:border-[#2563eb] focus:ring-[#2563eb]/10"
-              }`}
-            />
+            <div className="flex gap-2">
+              <select
+                value={countryCode}
+                onChange={(event) => setCountryCode(event.target.value)}
+                title={COUNTRY_CODES.find((c) => c.code === countryCode)?.label}
+                className="w-[150px] shrink-0 rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm text-[#17375e] outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
+              >
+                {COUNTRY_CODES.map((country) => (
+                  <option key={country.code} value={country.code}>
+                    {country.flag} {country.code} ({country.label})
+                  </option>
+                ))}
+              </select>
+
+              <input
+                required
+                type="tel"
+                inputMode="numeric"
+                maxLength={10}
+                value={form.phone}
+                onChange={(event) => handlePhoneChange(event.target.value)}
+                onBlur={() =>
+                  setIdentityError("phone", validateIdentityField("phone"))
+                }
+                placeholder="10-digit phone number"
+                aria-invalid={Boolean(identityErrors.phone)}
+                className={`min-w-0 flex-1 rounded-xl border px-4 py-3 text-sm outline-none transition focus:ring-2 ${
+                  identityErrors.phone
+                    ? "border-red-400 focus:border-red-400 focus:ring-red-400/10"
+                    : "border-gray-200 focus:border-[#2563eb] focus:ring-[#2563eb]/10"
+                }`}
+              />
+            </div>
 
             {identityErrors.phone ? (
               <p className="mt-1.5 text-xs font-medium text-red-600">
@@ -668,7 +972,8 @@ function AdminEmployeeForm({
               </p>
             ) : (
               <p className="mt-1.5 text-xs text-gray-400">
-                Exactly 10 digits
+                Exactly 10 digits, shown with{" "}
+                {COUNTRY_CODES.find((c) => c.code === countryCode)?.code} prefix
               </p>
             )}
           </div>
@@ -751,6 +1056,12 @@ function AdminEmployeeForm({
                 </option>
               ))}
             </select>
+
+            {departments.length === 0 ? (
+              <p className="mt-1.5 text-xs font-medium text-amber-600">
+                No department added yet!
+              </p>
+            ) : null}
           </div>
 
           {/* DESIGNATION */}
@@ -790,10 +1101,11 @@ function AdminEmployeeForm({
           {/* DATE OF BIRTH */}
           <div>
             <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
-              Date of Birth
+              Date of Birth <span className="ml-1 text-red-500">*</span>
             </label>
 
             <input
+              required={!isEditMode}
               type="date"
               value={form.date_of_birth ?? ""}
               onChange={(event) =>
@@ -806,10 +1118,11 @@ function AdminEmployeeForm({
           {/* GENDER */}
           <div>
             <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
-              Gender
+              Gender <span className="ml-1 text-red-500">*</span>
             </label>
 
             <select
+              required={!isEditMode}
               value={form.gender ?? ""}
               onChange={(event) =>
                 updateField("gender", event.target.value)
@@ -846,10 +1159,8 @@ function AdminEmployeeForm({
             </label>
 
             <select
-              value={form.reporting_manager ?? ""}
-              onChange={(event) =>
-                updateField("reporting_manager", event.target.value)
-              }
+              value={form.manager_id || unmatchedManager || ""}
+              onChange={(event) => handleManagerChange(event.target.value)}
               className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
             >
               <option value="">Select reporting manager</option>
@@ -861,7 +1172,7 @@ function AdminEmployeeForm({
               )}
 
               {managers.map((manager) => (
-                <option key={manager.id} value={manager.full_name}>
+                <option key={manager.id} value={manager.id}>
                   {manager.full_name}
                 </option>
               ))}
@@ -994,9 +1305,16 @@ function AdminEmployeeForm({
               Cancel
             </button>
 
+            
+
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || (!isEditMode && !isEmailVerified)}
+              title={
+                !isEditMode && !isEmailVerified
+                  ? "Verify employee email to enable"
+                  : undefined
+              }
               className="rounded-full bg-[#2563eb] px-7 py-3 text-sm font-semibold text-white transition hover:bg-[#385b45] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isSubmitting

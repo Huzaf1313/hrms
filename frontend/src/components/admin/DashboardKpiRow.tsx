@@ -13,7 +13,6 @@ import {
 import {
   dashboardPlaceholders,
   formatIndianAmount,
-  payrollSummary,
 } from "./dashboardData";
 import type { DashboardMetrics } from "./useDashboardMetrics";
 import { useAnimationFrame, useCountUp } from "./useDashboardAnimation";
@@ -23,7 +22,12 @@ interface DashboardKpiRowProps {
   metrics: DashboardMetrics;
   onOpenLeave: () => void;
   onOpenPayroll: () => void;
+  /** Managers have no payroll or hiring permission, so those cards are hidden. */
+  showHrWidgets?: boolean;
 }
+
+/** Cards that depend on a permission only HR holds. */
+const HR_ONLY_CARD_IDS = new Set(["kpi-openings", "kpi-payroll"]);
 
 interface KpiCard {
   id: string;
@@ -81,6 +85,7 @@ export default function DashboardKpiRow({
   metrics,
   onOpenLeave,
   onOpenPayroll,
+  showHrWidgets = true,
 }: DashboardKpiRowProps) {
   const placeholders = dashboardPlaceholders;
 
@@ -150,7 +155,7 @@ export default function DashboardKpiRow({
     {
       id: "kpi-openings",
       label: "Open Positions",
-      value: placeholders.openPositions,
+      value: metrics.activeJobPositions ?? placeholders.openPositions,
       icon: Briefcase,
       iconClass: "text-[#ea580c]",
       chipClass: "bg-[#fff7ed]",
@@ -184,11 +189,14 @@ export default function DashboardKpiRow({
     {
       id: "kpi-payroll",
       label: "Payroll This Month",
-      value: payrollSummary.payrollThisMonth,
+      value: metrics.payrollThisMonth ?? 0,
       icon: IndianRupee,
       iconClass: "text-[#ca8a04]",
       chipClass: "bg-[#fefce8]",
-      renderValue: (value) => `₹ ${formatIndianAmount(Math.round(value))}`,
+      renderValue: (value) =>
+        metrics.isPayrollLoading
+          ? "..."
+          : `₹ ${formatIndianAmount(Math.round(value))}`,
       detail: (
         <button
           type="button"
@@ -202,9 +210,13 @@ export default function DashboardKpiRow({
     },
   ];
 
+  const visibleCards = showHrWidgets
+    ? cards
+    : cards.filter((card) => !HR_ONLY_CARD_IDS.has(card.id));
+
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
-      {cards.map((card) => {
+      {visibleCards.map((card) => {
         const Icon = card.icon;
 
         return (
@@ -223,7 +235,7 @@ export default function DashboardKpiRow({
               </span>
 
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[11px] font-semibold text-gray-900">
+                <p className="truncate text-sm font-semibold text-gray-900">
                   {card.label}
                 </p>
 

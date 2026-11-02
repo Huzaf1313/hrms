@@ -1,11 +1,5 @@
 import { apiRaw, clearSession, setAccessToken, setRefreshToken } from "./api";
 
-export interface RegisterPayload {
-  full_name: string;
-  email: string;
-  password: string;
-}
-
 export interface LoginPayload {
   email: string;
   password: string;
@@ -28,11 +22,13 @@ export interface UserResponse {
   updated_at: string;
 }
 
-export const authService = {
-  register(data: RegisterPayload) {
-    return apiRaw.post<UserResponse>("/auth/register", data);
-  },
+export interface ChangePasswordPayload {
+  current_password: string;
+  new_password: string;
+  confirm_password: string;
+}
 
+export const authService = {
   async login(data: LoginPayload) {
     const tokens = await apiRaw.post<TokenResponse>("/auth/login", data);
 
@@ -49,4 +45,9 @@ export const authService = {
       clearSession();
     }
   },
+  
+  async changePassword(data: ChangePasswordPayload) {
+    return apiRaw.post("/auth/change-password", data);
+  },
+
 };

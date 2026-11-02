@@ -13,6 +13,9 @@ motor==3.7.1
 pymongo==4.17.0
 dnspython==2.8.0
 
+# Caching (Redis with async client)
+redis==8.1.0
+
 # Authentication and password hashing
 PyJWT==2.10.1
 pwdlib[argon2]==0.2.1
@@ -24,8 +27,6 @@ python-multipart==0.0.32
 # Transactional email templates
 Jinja2==3.1.2
 
-# Payslip PDF generation
-reportlab==5.0.1
 
 # Transitive dependencies, pinned for reproducible installs
 annotated-doc==0.0.5

@@ -49,6 +49,12 @@ class Permission(str, Enum):
     SHIFT_UPDATE = "shift.update"
     SHIFT_DELETE = "shift.delete"
 
+    # Holidays
+    HOLIDAY_READ = "holiday.read"
+    HOLIDAY_CREATE = "holiday.create"
+    HOLIDAY_UPDATE = "holiday.update"
+    HOLIDAY_DELETE = "holiday.delete"
+
     # Leave
     LEAVE_READ = "leave.read"
     LEAVE_CREATE = "leave.create"
@@ -62,6 +68,8 @@ class Permission(str, Enum):
     PAYROLL_MANAGE = "payroll.manage"
     PAYROLL_PROCESS = "payroll.process"
     PAYROLL_REPORTS = "payroll.reports"
+
+    SALARY_STRUCTURE_READ = "salary_structure.read"
 
     # Documents
     DOCUMENTS_READ = "documents.read"
@@ -116,6 +124,10 @@ class Permission(str, Enum):
     ANNOUNCEMENT_READ = "announcement.read"
     ANNOUNCEMENT_MANAGE = "announcement.manage"
 
+    # Exit / offboarding requests
+    EXIT_REQUESTS_READ = "exit_requests.read"
+    EXIT_REQUESTS_MANAGE = "exit_requests.manage"
+
     # Own profile
     SELF_PROFILE_READ = "self_profile.read"
     SELF_PROFILE_UPDATE = "self_profile.update"
@@ -124,8 +136,35 @@ class Permission(str, Enum):
     PAYSLIPS_READ = "payslips.read"
 
 
-# Full admin access - HR and Manager both act as admins.
+# HR sees and does everything.
 ADMIN_PERMISSIONS = set(Permission)
+
+# Managers run a team day to day. Hiring, payroll and payslips stay with HR:
+# they are organisation-wide, carry compensation data, and are not
+# team-scoped - a manager has no business seeing another team's pay.
+HR_ONLY_PERMISSIONS = {
+    # Recruitment
+    Permission.RECRUITMENT_READ,
+    Permission.RECRUITMENT_CREATE,
+    Permission.RECRUITMENT_UPDATE,
+    Permission.RECRUITMENT_DELETE,
+
+    # Payroll
+    Permission.PAYROLL_READ,
+    Permission.PAYROLL_CREATE,
+    Permission.PAYROLL_UPDATE,
+    Permission.PAYROLL_MANAGE,
+    Permission.PAYROLL_PROCESS,
+    Permission.PAYROLL_REPORTS,
+
+    # Payslips
+    Permission.PAYSLIPS_READ,
+}
+
+# Deliberately NOT in HR_ONLY_PERMISSIONS: salary structures are a config
+# lookup (like departments and shifts) that the employee form reads to render
+# a salary band. Only the writes - PAYROLL_MANAGE - stay with HR.
+MANAGER_PERMISSIONS = ADMIN_PERMISSIONS - HR_ONLY_PERMISSIONS
 
 EMPLOYEE_PERMISSIONS = {
     # Attendance
@@ -134,6 +173,9 @@ EMPLOYEE_PERMISSIONS = {
 
     # Shifts (own shift only - routes scope this down to the caller)
     Permission.SHIFT_READ,
+
+    # Holidays (read-only - the employee attendance calendar marks them)
+    Permission.HOLIDAY_READ,
 
     # Leave
     Permission.LEAVE_READ,
@@ -166,7 +208,7 @@ EMPLOYEE_PERMISSIONS = {
 
 ROLE_PERMISSIONS: dict[UserRole, set[Permission]] = {
     UserRole.HR_ADMIN: ADMIN_PERMISSIONS,
-    UserRole.MANAGER: ADMIN_PERMISSIONS,
+    UserRole.MANAGER: MANAGER_PERMISSIONS,
     UserRole.EMPLOYEE: EMPLOYEE_PERMISSIONS,
 }
 

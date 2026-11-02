@@ -13,6 +13,10 @@ import {
 import EmployeeLeaveModal from "./EmployeeLeaveModal";
 import EmployeeLeaveDetailsModal from "./EmployeeLeaveDetailsModal";
 import { ApiError, api } from "../../services/api";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "../../lib/queryKeys";
+import { useGlobalDate } from "../../context/globalDateContext";
+import { GlobalDateBadge } from "../../components/GlobalDateBadge";
 
 type LeaveStatus = "Pending" | "Approved" | "Rejected" | "Cancelled";
 
@@ -251,6 +255,11 @@ function EmployeeLeave() {
   const [activeFilter, setActiveFilter] = useState<StatusFilter>("All");
   const [currentPage, setCurrentPage] = useState(1);
 
+  // The header calendar's day. Only sent once a day other than today has been
+  // picked: leave is a list spanning time, so filtering it to a single day by
+  // default would hide every request that does not happen to cover today.
+  const { date: globalDate, isDefault: isGlobalDateDefault } = useGlobalDate();
+
   const [isApplyLeaveOpen, setIsApplyLeaveOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] =
     useState<LeaveRequest | null>(null);
@@ -265,6 +274,7 @@ function EmployeeLeave() {
   const [error, setError] = useState("");
   const [actionError, setActionError] = useState("");
 
+  const queryClient = useQueryClient();
   const [employeeId, setEmployeeId] = useState<string | null>(null);
 
   const getEmployeeId = useCallback(() => {
@@ -315,6 +325,7 @@ function EmployeeLeave() {
             {
               page: 1,
               limit: 100,
+              date: isGlobalDateDefault ? undefined : globalDate,
             },
           ),
 
@@ -377,7 +388,7 @@ function EmployeeLeave() {
         setLoading(false);
       }
     },
-    [getEmployeeId],
+    [getEmployeeId, globalDate, isGlobalDateDefault],
   );
 
   useEffect(() => {
@@ -475,6 +486,19 @@ function EmployeeLeave() {
 
       setIsApplyLeaveOpen(false);
 
+      const targetEmployeeId = employeeId ?? getEmployeeId();
+      if (targetEmployeeId) {
+        void queryClient.invalidateQueries({
+          queryKey: queryKeys.employee.leaves(targetEmployeeId),
+        });
+        void queryClient.invalidateQueries({
+          queryKey: queryKeys.employee.leaveBalances(targetEmployeeId),
+        });
+      }
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.admin.leaveSummary(),
+      });
+
       await fetchLeaveData(false);
     } catch (err) {
       if (err instanceof ApiError) {
@@ -510,6 +534,16 @@ function EmployeeLeave() {
       );
 
       setSelectedRequest(null);
+
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.employee.leaves(employeeId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.employee.leaveBalances(employeeId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.admin.leaveSummary(),
+      });
 
       await fetchLeaveData(false);
     } catch (err) {
@@ -586,7 +620,7 @@ function EmployeeLeave() {
 
           {/* Loading */}
           {loading ? (
-            <div className="flex min-h-[400px] items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="flex min-h-[400px] items-center justify-center rounded-2xl border border-gray-100 bg-white shadow-sm">
               <div className="text-center">
                 <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-[#2563eb]" />
                 <p className="mt-4 text-sm font-medium text-slate-500">
@@ -601,7 +635,7 @@ function EmployeeLeave() {
                 {leaveBalances.map((balance) => (
                   <div
                     key={balance.type}
-                    className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+                    className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"
                   >
                     <div className="flex items-start justify-between">
                       <div>
@@ -626,7 +660,7 @@ function EmployeeLeave() {
                 ))}
 
                 {/* Pending Requests */}
-                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="text-sm font-medium text-slate-500">
@@ -652,8 +686,8 @@ function EmployeeLeave() {
               {/* Main Content */}
               <div className="mt-7 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
                 {/* Leave Requests */}
-                <section className="min-w-0 rounded-2xl border border-slate-200 bg-white shadow-sm">
-                  <div className="border-b border-slate-200 px-6 pt-6">
+                <section className="min-w-0 rounded-2xl border border-gray-100 bg-white shadow-sm">
+                  <div className="border-b border-gray-100 px-6 pt-6">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <h2 className="text-lg font-bold text-slate-900">
@@ -664,6 +698,8 @@ function EmployeeLeave() {
                           View and track your leave applications.
                         </p>
                       </div>
+
+                      <GlobalDateBadge prefix="Covering" />
                     </div>
 
                     {/* Status Filters */}
@@ -878,8 +914,8 @@ function EmployeeLeave() {
                 </section>
 
                 {/* Upcoming Leaves */}
-                <aside className="h-fit rounded-2xl border border-slate-200 bg-white shadow-sm">
-                  <div className="flex items-center justify-between border-b border-slate-200 px-5 py-5">
+                <aside className="h-fit rounded-2xl border border-gray-100 bg-white shadow-sm">
+                  <div className="flex items-center justify-between border-b border-gray-100 px-5 py-5">
                     <div>
                       <h2 className="text-lg font-bold text-slate-900">
                         Upcoming Leaves

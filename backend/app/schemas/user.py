@@ -1,5 +1,5 @@
 import re
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
@@ -45,8 +45,6 @@ class UserCreate(BaseModel):
 
     reference: str = Field(default="", max_length=100)
 
-    role: UserRole
-
     @field_validator("full_name")
     @classmethod
     def validate_full_name(cls, value: str) -> str:
@@ -77,6 +75,11 @@ class UserCreate(BaseModel):
         return validate_password_strength(value)
 
 
+class ManagerCreate(UserCreate):
+    """Manager account request. The role is fixed server-side so a client
+    cannot ask for anything else."""
+
+
 class UserResponse(BaseModel):
     id: str
     employee_id: str | None = None
@@ -102,13 +105,6 @@ class TokenResponse(BaseModel):
 
 class RefreshTokenRequest(BaseModel):
     refresh_token: str = Field(min_length=1)
-
-class VerifyOTPRequest(BaseModel):
-    email: EmailStr
-    otp: str = Field(
-        min_length=6,
-        max_length=6,
-    )
 
 class VerifyPasswordResetOTPRequest(BaseModel):
     email: EmailStr
@@ -140,3 +136,105 @@ class ResetPasswordRequest(BaseModel):
     @classmethod
     def validate_confirm_password(cls, value: str) -> str:
         return value
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(
+        min_length=1,
+        max_length=128,
+    )
+    new_password: str = Field(
+        min_length=8,
+        max_length=128,
+    )
+    confirm_password: str = Field(
+        min_length=8,
+        max_length=128,
+    )
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_new_password(cls, value: str) -> str:
+        return validate_password_strength(value)
+
+    @field_validator("confirm_password")
+    @classmethod
+    def validate_confirm_password(cls, value: str) -> str:
+        return value
+
+
+class AdminProfileResponse(BaseModel):
+    """Everything the admin My Profile page renders, served from the user
+    document plus name lookups. Fields the account has never had stay null so
+    the frontend can render blanks instead of fake data."""
+
+    id: str
+
+    # Identity (system-owned, read-only in the UI)
+    employee_id: str | None = None
+    full_name: str
+    role: str
+    avatar_url: str | None = None
+
+    # Employment
+    designation: str | None = None
+    department: str | None = None
+    department_head: str | None = None
+    reporting_manager: str | None = None
+    work_location: str | None = None
+    employment_type: str | None = None
+    shift: str | None = None
+    date_of_joining: date | None = None
+    employment_status: str | None = None
+
+    # Contact
+    email: EmailStr
+    phone: str | None = None
+    office_email: str | None = None
+    work_phone: str | None = None
+
+    # Personal
+    date_of_birth: date | None = None
+    gender: str | None = None
+    marital_status: str | None = None
+    nationality: str | None = None
+    blood_group: str | None = None
+
+    # Address
+    permanent_address: str | None = None
+    current_address: str | None = None
+
+    # Emergency contact
+    emergency_name: str | None = None
+    emergency_relationship: str | None = None
+    emergency_phone: str | None = None
+    emergency_email: str | None = None
+
+    updated_at: datetime | None = None
+
+
+class AdminProfileUpdate(BaseModel):
+    """Self-service profile edits. Identity fields (full_name, email, role,
+    employee_id, joining date, employment status) are deliberately absent -
+    those are system-owned and change through their own flows. Dates and
+    emails stay plain strings so a cleared field ("") round-trips instead of
+    failing validation; the service parses what it accepts."""
+
+    phone: str | None = Field(default=None, max_length=20)
+    date_of_birth: str | None = None
+    gender: str | None = Field(default=None, max_length=20)
+    marital_status: str | None = Field(default=None, max_length=20)
+    nationality: str | None = Field(default=None, max_length=40)
+    blood_group: str | None = Field(default=None, max_length=5)
+    permanent_address: str | None = Field(default=None, max_length=300)
+    current_address: str | None = Field(default=None, max_length=300)
+    emergency_name: str | None = Field(default=None, max_length=80)
+    emergency_relationship: str | None = Field(default=None, max_length=40)
+    emergency_phone: str | None = Field(default=None, max_length=20)
+    emergency_email: str | None = Field(default=None, max_length=120)
+    avatar_url: str | None = Field(default=None, max_length=2_000_000)
+    designation: str | None = Field(default=None, max_length=80)
+    department: str | None = Field(default=None, max_length=80)
+    shift: str | None = Field(default=None, max_length=80)
+    work_location: str | None = Field(default=None, max_length=80)
+    employment_type: str | None = Field(default=None, max_length=40)

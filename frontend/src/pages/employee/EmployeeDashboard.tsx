@@ -1,8 +1,19 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Hand, Check } from "lucide-react";
 
-import { api } from "../../services/api";
+import {
+  useEmployeeAttendance,
+  useEmployeeLeaves,
+  useEmployeeLeaveBalances,
+  useEmployeeAnnouncements,
+} from "../../hooks/useEmployeeData";
+import type {
+  Announcement,
+  AttendanceRecord,
+  LeaveBalance,
+  LeaveRequest,
+} from "../../hooks/useEmployeeData";
 
 interface User {
   id: string;
@@ -14,60 +25,6 @@ interface User {
   is_locked: boolean;
   created_at: string;
   updated_at: string;
-}
-
-interface AttendanceRecord {
-  date: string;
-  check_in: string | null;
-  check_out: string | null;
-  in_time?: string | null;
-  out_time?: string | null;
-  status?: string | null;
-}
-
-interface LeaveRequest {
-  id: string;
-  leave_type: string;
-  start_date: string;
-  end_date: string;
-  total_days: number;
-  status: string;
-  reason?: string | null;
-  requested_at?: string | null;
-}
-
-interface LeaveListResponse {
-  items: LeaveRequest[];
-  total: number;
-  page: number;
-  page_size: number;
-  total_pages: number;
-}
-
-interface LeaveBalance {
-  leave_type: string;
-  available: number;
-  allocated: number;
-  used: number;
-}
-
-interface Announcement {
-  id?: string;
-  title: string;
-  description: string;
-  category?: string;
-  priority?: string;
-  status?: string;
-  published_at?: string | null;
-  is_important?: boolean;
-}
-
-interface AnnouncementResponse {
-  announcements: Announcement[];
-  total: number;
-  page: number;
-  page_size: number;
-  total_pages: number;
 }
 
 function normalizeAttendance(
@@ -306,140 +263,55 @@ function EmployeeDashboard() {
 
   const currentDate = new Date();
 
-  const [todayAttendance, setTodayAttendance] =
-    useState<AttendanceRecord | null>(null);
+  const { data: rawAttendanceRecords } = useEmployeeAttendance(
+    user?.employee_id,
+  );
+  const {
+    data: leaveListResponse,
+    isLoading: loadingLeave,
+    isError: hasLeaveError,
+  } = useEmployeeLeaves(user?.employee_id);
+  const { data: balanceListResponse } = useEmployeeLeaveBalances(
+    user?.employee_id,
+  );
+  const {
+    data: announcementResponse,
+    isLoading: loadingAnnouncements,
+    isError: hasAnnouncementError,
+  } = useEmployeeAnnouncements(1, 3);
 
-  const [attendanceRecords, setAttendanceRecords] = useState<
-    AttendanceRecord[]
-  >([]);
+  const attendanceRecords = useMemo(() => {
+    return (rawAttendanceRecords || []).map(normalizeAttendance);
+  }, [rawAttendanceRecords]);
 
-  const [leaveRequests, setLeaveRequests] = useState<
-    LeaveRequest[]
-  >([]);
+  const todayAttendance = useMemo(() => {
+    const todayKey = getDateKey(new Date());
+    return (
+      attendanceRecords.find(
+        (item: AttendanceRecord) => getDateKey(item.date) === todayKey,
+      ) ??
+      null
+    );
+  }, [attendanceRecords]);
 
-  const [leaveBalances, setLeaveBalances] = useState<
-    LeaveBalance[]
-  >([]);
-
-  const [announcements, setAnnouncements] = useState<
-    Announcement[]
-  >([]);
-
-  const [loadingLeave, setLoadingLeave] = useState(true);
-  const [loadingAnnouncements, setLoadingAnnouncements] =
-    useState(true);
-
-  const [leaveError, setLeaveError] = useState("");
-  const [announcementError, setAnnouncementError] =
-    useState("");
-
-  /* =========================================================
-     ATTENDANCE
-  ========================================================= */
-
-  useEffect(() => {
-    if (!user?.employee_id) {
-      return;
-    }
-
-    api
-      .get<AttendanceRecord[]>(
-        `/employee-attendance/employees/${user.employee_id}`,
-        {
-          page: 1,
-          limit: 100,
-        },
-      )
-      .then((records) => {
-        const normalizedRecords = records.map(
-          normalizeAttendance,
-        );
-
-        setAttendanceRecords(normalizedRecords);
-
-        const todayKey = getDateKey(new Date());
-
-        const today = normalizedRecords.find(
-          (item) => getDateKey(item.date) === todayKey,
-        );
-
-        setTodayAttendance(today ?? null);
-      })
-      .catch(() => {
-        setAttendanceRecords([]);
-        setTodayAttendance(null);
-      });
-  }, [user?.employee_id]);
-
-  /* =========================================================
-     LEAVE
-  ========================================================= */
-
-  useEffect(() => {
-    if (!user?.employee_id) {
-      setLoadingLeave(false);
-      return;
-    }
-
-    const employeeId = user.employee_id;
-
-    setLoadingLeave(true);
-    setLeaveError("");
-
-    Promise.all([
-      api.get<LeaveListResponse>(
-        `/employee-leave/employees/${employeeId}`,
-        {
-          page: 1,
-          limit: 100,
-        },
-      ),
-      api.get<LeaveBalance[]>(
-        `/employee-leave/employees/${employeeId}/balance`,
-      ),
-    ])
-      .then(([leaveResponse, balanceResponse]) => {
-        setLeaveRequests(leaveResponse.items || []);
-        setLeaveBalances(balanceResponse || []);
-      })
-      .catch(() => {
-        setLeaveRequests([]);
-        setLeaveBalances([]);
-        setLeaveError("Unable to load leave information.");
-      })
-      .finally(() => {
-        setLoadingLeave(false);
-      });
-  }, [user?.employee_id]);
-
-  /* =========================================================
-     ANNOUNCEMENTS
-  ========================================================= */
-
-  useEffect(() => {
-    setLoadingAnnouncements(true);
-    setAnnouncementError("");
-
-    api
-      .get<AnnouncementResponse>("/employee-announcements", {
-        page: 1,
-        page_size: 3,
-      })
-      .then((response) => {
-        setAnnouncements(
-          (response.announcements || []).slice(0, 3),
-        );
-      })
-      .catch(() => {
-        setAnnouncements([]);
-        setAnnouncementError(
-          "Unable to load announcements.",
-        );
-      })
-      .finally(() => {
-        setLoadingAnnouncements(false);
-      });
-  }, []);
+  const leaveRequests = useMemo(
+    () => leaveListResponse?.items || [],
+    [leaveListResponse],
+  );
+  const leaveBalances = useMemo(
+    () => balanceListResponse || [],
+    [balanceListResponse],
+  );
+  const announcements = useMemo(
+    () => (announcementResponse?.announcements || []).slice(0, 3),
+    [announcementResponse],
+  );
+  const leaveError = hasLeaveError
+    ? "Unable to load leave information."
+    : "";
+  const announcementError = hasAnnouncementError
+    ? "Unable to load announcements."
+    : "";
 
   /* =========================================================
      TIME FORMATTER
@@ -478,7 +350,7 @@ function EmployeeDashboard() {
 
   const getBalanceForType = (type: string) => {
     const balance = leaveBalances.find(
-      (item) =>
+      (item: LeaveBalance) =>
         item.leave_type.trim().toLowerCase() ===
         type.trim().toLowerCase(),
     );
@@ -488,7 +360,7 @@ function EmployeeDashboard() {
 
   const totalLeaveBalance = useMemo(() => {
     return leaveBalances.reduce(
-      (total, balance) =>
+      (total: number, balance: LeaveBalance) =>
         total + Number(balance.available || 0),
       0,
     );
@@ -520,7 +392,7 @@ const attendanceChart = useMemo(() => {
     const dateKey = getDateKey(date);
 
     const record = attendanceRecords.find(
-      (item) => item.date === dateKey
+      (item: AttendanceRecord) => item.date === dateKey
     );
 
     let present = 0;
@@ -585,12 +457,12 @@ const attendanceChart = useMemo(() => {
           KPI CARDS
       ===================================================== */}
 
-      <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+      <section className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
         {/* ===================================================
             TODAY'S ATTENDANCE
         =================================================== */}
 
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
@@ -640,7 +512,7 @@ const attendanceChart = useMemo(() => {
             LEAVE BALANCE
         =================================================== */}
 
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
@@ -712,7 +584,7 @@ const attendanceChart = useMemo(() => {
             PAYSLIP
         =================================================== */}
 
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
@@ -747,12 +619,12 @@ const attendanceChart = useMemo(() => {
           ATTENDANCE + ANNOUNCEMENTS
       ===================================================== */}
 
-      <section className="mt-6 grid gap-6 xl:grid-cols-3">
+      <section className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-3">
         {/* ===================================================
             ATTENDANCE OVERVIEW
         =================================================== */}
 
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm xl:col-span-2">
+        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm xl:col-span-2">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-bold text-[#17213a]">
@@ -896,54 +768,18 @@ const attendanceChart = useMemo(() => {
             RECENT ANNOUNCEMENTS
         =================================================== */}
 
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
           <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-bold text-[#17213a]">
-                Recent Announcements
-              </h2>
-
-              <div className="mt-5 space-y-4">
-                {announcements.length === 0 ? (
-                  <p className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-6 text-center text-xs text-gray-500">
-                    No announcements available.
-                  </p>
-                ) : (
-                  announcements.map((announcement) => (
-                    <div
-                      key={announcement.id}
-                      className="rounded-xl border border-gray-100 bg-gray-50 p-4"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <h3 className="text-sm font-semibold text-gray-800">
-                          {announcement.title}
-                        </h3>
-
-                        <span className="shrink-0 text-xs text-gray-400">
-                          {new Date(
-                            `${announcement.published_at}T00:00:00`,
-                          ).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "2-digit",
-                          })}
-                        </span>
-                      </div>
-
-                      <p className="mt-2 text-xs leading-5 text-gray-500">
-                        {announcement.description}
-                      </p>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
+            <h2 className="text-lg font-bold text-[#17213a]">
+              Recent Announcements
+            </h2>
 
             <button
               type="button"
               onClick={() =>
                 navigate("/employee/announcements")
               }
-              className="text-sm font-semibold text-[#2563eb]"
+              className="text-sm font-semibold text-[#2563eb] hover:underline"
             >
               View All
             </button>
@@ -963,7 +799,7 @@ const attendanceChart = useMemo(() => {
                 No announcements available.
               </div>
             ) : (
-              announcements.map((announcement) => (
+              announcements.map((announcement: Announcement) => (
                 <div
                   key={
                     announcement.id ??
@@ -998,7 +834,7 @@ const attendanceChart = useMemo(() => {
       ===================================================== */}
 
       <section className="mt-6">
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
           <div>
             <h2 className="text-lg font-bold text-[#17213a]">
               My Leave Requests
@@ -1047,7 +883,7 @@ const attendanceChart = useMemo(() => {
                 <tbody>
                   {leaveRequests
                     .slice(0, 5)
-                    .map((request) => {
+                    .map((request: LeaveRequest) => {
                       const status =
                         getDisplayLeaveStatus(
                           request.status,

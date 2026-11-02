@@ -23,6 +23,8 @@ interface TickerItem {
 
 interface MarqueeProps {
   items: TickerItem[];
+  /** Thought-only mode: quoted prose on a dark glass pill. */
+  isThought?: boolean;
 }
 
 interface MarqueeLayout {
@@ -44,7 +46,7 @@ interface MarqueeLayout {
  * at once. That case gets a full-viewport gap appended instead, so each copy
  * leaves the screen before the next one arrives.
  */
-function Marquee({ items }: MarqueeProps) {
+function Marquee({ items, isThought = false }: MarqueeProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const itemsRef = useRef<HTMLDivElement>(null);
   const [layout, setLayout] = useState<MarqueeLayout>({
@@ -129,22 +131,54 @@ function Marquee({ items }: MarqueeProps) {
               {items.map((item) => (
                 <div
                   key={item.key}
-                  className="flex shrink-0 items-center gap-2 whitespace-nowrap px-6 py-1.5"
+                  className="flex shrink-0 items-center gap-2.5 whitespace-nowrap px-6 py-1.5"
                 >
-                  <span className="text-xl leading-none">{item.icon}</span>
+                  <span
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-base ring-2 ${
+                      isThought
+                        ? "bg-gradient-to-br from-amber-300 to-orange-500 text-white shadow-md shadow-orange-500/40 ring-amber-200/40"
+                        : "bg-white/15 shadow-inner ring-white/25"
+                    }`}
+                  >
+                    {item.icon}
+                  </span>
 
                   {item.label && (
                     <>
-                      <span className="text-sm font-semibold text-[#17375e]">
+                      <span className="text-sm font-semibold text-white">
                         {item.label}
                       </span>
 
-                      <span className="text-[#bfdbfe]">|</span>
+                      <span className="text-white/30">|</span>
                     </>
                   )}
 
-                  <span className="rounded-full border border-[#dbeafe] bg-white/90 px-3 py-1 text-sm text-gray-600 shadow-sm">
+                  <span
+                    className={`rounded-full border border-white/20 bg-white/10 px-4 py-1 text-sm shadow-lg shadow-black/20 backdrop-blur ${
+                      isThought
+                        ? "italic text-white"
+                        : "font-medium text-white/90"
+                    }`}
+                  >
+                    {isThought && (
+                      <span
+                        aria-hidden="true"
+                        className="mr-1.5 font-serif text-base leading-none text-amber-300"
+                      >
+                        &ldquo;
+                      </span>
+                    )}
+
                     {item.message}
+
+                    {isThought && (
+                      <span
+                        aria-hidden="true"
+                        className="ml-1 font-serif text-base leading-none text-amber-300"
+                      >
+                        &rdquo;
+                      </span>
+                    )}
                   </span>
                 </div>
               ))}
@@ -165,9 +199,9 @@ function Marquee({ items }: MarqueeProps) {
       </div>
 
       {/* Fades, matched to the banner gradient */}
-      <div className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-[#eff6ff] to-transparent" />
+      <div className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-[#26377c] to-transparent" />
 
-      <div className="pointer-events-none absolute inset-y-0 right-0 w-14 bg-gradient-to-l from-[#eef2ff] to-transparent" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-14 bg-gradient-to-l from-[#4331a5] to-transparent" />
     </div>
   );
 }
@@ -193,29 +227,52 @@ function CelebrationTicker({ celebrations = [] }: CelebrationTickerProps) {
     : [
         {
           key: "thought-of-the-day",
-          icon: "\u{1F4AD}",
+          icon: "\u{1F4A1}",
           message: getThoughtForDate(),
         },
       ];
 
   return (
     <section
-      className="overflow-hidden rounded-2xl border border-[#dbeafe] bg-gradient-to-r from-[#eff6ff] via-white to-[#eef2ff] shadow-sm"
+      className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-r from-[#0d1b3d] via-[#1e3a8a] to-[#4331a5] shadow-xl shadow-blue-900/25"
       aria-label="Employee celebrations"
     >
-      <div className="flex h-[76px] items-center">
+      {/* Drifting aurora glows */}
+      <div
+        aria-hidden="true"
+        className="ticker-glow-1 pointer-events-none absolute -top-20 left-[15%] h-40 w-40 rounded-full bg-sky-400/30 blur-3xl"
+      />
+
+      <div
+        aria-hidden="true"
+        className="ticker-glow-2 pointer-events-none absolute -bottom-24 right-[20%] h-44 w-44 rounded-full bg-fuchsia-400/25 blur-3xl"
+      />
+
+      {/* Gloss sweep */}
+      <div
+        aria-hidden="true"
+        className="ticker-shine pointer-events-none absolute inset-y-0 left-0 z-20 w-28 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+      />
+
+      <div className="relative flex h-[76px] items-center">
         {/* Fixed label block */}
-        <div className="relative z-10 flex h-full min-w-[220px] items-center gap-3 border-r border-[#dbeafe] bg-gradient-to-r from-[#eff6ff] to-[#eff6ff] px-6">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-xl shadow-sm">
-            {hasCelebrations ? "\u{1F389}" : "\u{1F4AD}"}
+        <div className="relative z-10 flex h-full min-w-[220px] items-center gap-3 border-r border-white/15 bg-white/5 py-4 pl-5 pr-6 backdrop-blur">
+          <span
+            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-xl ring-2 ring-white/25 ${
+              hasCelebrations
+                ? "bg-gradient-to-br from-rose-400 to-pink-500 shadow-lg shadow-rose-500/40"
+                : "bg-gradient-to-br from-amber-300 to-orange-500 shadow-lg shadow-orange-500/40"
+            }`}
+          >
+            {hasCelebrations ? "\u{1F389}" : "\u{1F4A1}"}
           </span>
 
           <div className="min-w-0">
-            <h3 className="truncate text-sm font-semibold text-[#17375e]">
+            <h3 className="truncate text-sm font-bold tracking-wide text-white">
               {hasCelebrations ? "Celebrations" : "Thought of the Day"}
             </h3>
 
-            <p className="mt-0.5 truncate text-xs text-gray-500">
+            <p className="mt-0.5 truncate text-xs text-blue-200/80">
               {hasCelebrations
                 ? "Birthdays & Anniversaries"
                 : "Something to take to work"}
@@ -223,7 +280,7 @@ function CelebrationTicker({ celebrations = [] }: CelebrationTickerProps) {
           </div>
         </div>
 
-        <Marquee items={items} />
+        <Marquee items={items} isThought={!hasCelebrations} />
       </div>
     </section>
   );

@@ -1,6 +1,28 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Manrope:wght@500;700&family=Space+Grotesk:wght@400;500&display=swap");
 @import "tailwindcss";
 
+@theme {
+  --color-brand-50:  #eff6ff;
+  --color-brand-100: #dbeafe;
+  --color-brand-500: #3b82f6;
+  --color-brand-600: #2563eb;
+  --color-brand-700: #1d4ed8;
+  --color-brand-900: #1e3a8a;
+
+  --color-ink-300:   #8993a7;
+  --color-ink-400:   #68758e;
+  --color-ink-600:   #52607a;
+  --color-ink-800:   #17213a;
+  --color-ink-900:   #14213d;
+
+  --color-panel-800: #131c31;
+  --color-panel-900: #0b1220;
+
+  --color-line:      #d6dbe6;
+  --color-surface:        #ffffff;
+  --color-surface-muted:  #f8faff;
+}
+
 body {
   font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
     sans-serif;
@@ -19,8 +41,23 @@ svg.lucide {
   color: #111827 !important;
 }
 
+/* Opt-in accents for pages whose design calls for coloured icons. Needs the
+   `svg.lucide` prefix to outrank the site-wide rule above. */
+svg.lucide.icon-accent {
+  color: #2563eb !important;
+}
+
+svg.lucide.icon-on-primary {
+  color: #ffffff !important;
+}
+
 aside.app-sidebar svg.lucide {
   color: #fff !important;
+}
+
+/* Auth dark brand panel Lucide icon color override so icons don't render black */
+.auth-brand-panel svg.lucide {
+  color: currentColor !important;
 }
 
 :is(div, span):is(
@@ -35,8 +72,14 @@ aside.app-sidebar svg.lucide {
   background-color: transparent !important;
 }
 
+/* Windows Chrome draws tiny up/down arrow buttons at both ends of every
+   scrollbar; remove them everywhere. */
+::-webkit-scrollbar-button {
+  display: none;
+}
+
 /* =========================================
-   Hidden scrollbar (webkit)
+    Hidden scrollbar (webkit)
    ========================================= */
 
 /* Sidebar nav scrolls when the menu outgrows the viewport, but a visible track
@@ -356,4 +399,115 @@ aside.app-sidebar svg.lucide {
   .payslip-section-title {
     font-size: 16px;
   }
+}
+
+/* =========================================
+   Auth entrance and aurora animations
+   ========================================= */
+
+@keyframes auth-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.auth-rise {
+  animation: auth-rise 400ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes auth-aurora-drift-1 {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(6%, 10%) scale(1.06);
+  }
+}
+
+@keyframes auth-aurora-drift-2 {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(-8%, -6%) scale(1.1);
+  }
+}
+
+.auth-aurora-1 {
+  animation: auth-aurora-drift-1 18s ease-in-out infinite;
+}
+
+.auth-aurora-2 {
+  animation: auth-aurora-drift-2 22s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-rise,
+  .auth-aurora-1,
+  .auth-aurora-2 {
+    animation: none;
+  }
+}
+
+/* =========================================
+   Thought-of-the-day banner (dark aurora)
+   ========================================= */
+
+/* Drifting glow blobs keep the navy banner alive without distracting
+   from the scrolling text. */
+@keyframes ticker-glow-drift {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+
+  50% {
+    transform: translate(6%, 14%) scale(1.14);
+  }
+}
+
+.ticker-glow-1 {
+  animation: ticker-glow-drift 14s ease-in-out infinite;
+}
+
+.ticker-glow-2 {
+  animation: ticker-glow-drift 18s ease-in-out infinite reverse;
+}
+
+/* One gloss sweep crosses the banner, then rests before repeating. */
+@keyframes ticker-shine {
+  0% {
+    transform: translateX(-160%) skewX(-18deg);
+  }
+
+  35%,
+  100% {
+    transform: translateX(320%) skewX(-18deg);
+  }
+}
+
+.ticker-shine {
+  animation: ticker-shine 9s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticker-glow-1,
+  .ticker-glow-2,
+  .ticker-shine {
+    animation: none;
+  }
+}
+/* Hide the sidebar scrollbar while preserving scrolling */
+.sidebar-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer and Edge Legacy */
+}
+
+.sidebar-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, and Edge */
 }

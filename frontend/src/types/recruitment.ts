@@ -80,6 +80,8 @@ export interface Candidate {
   resume_uploaded_at: string | null;
   applied_at: string;
   stage_updated_at: string;
+  /** ISO instant of the booked interview, or null when none is booked. */
+  interview_scheduled_at: string | null;
   // Set only by the change-stage call: the job was closed because all its openings are filled.
   job_auto_closed?: boolean;
 }
@@ -116,6 +118,15 @@ export interface PipelineColumn {
 export interface DepartmentCount {
   department: string;
   count: number;
+}
+
+/** One booked interview, as the dashboard's Upcoming Interviews card reads it. */
+export interface UpcomingInterview {
+  id: string;
+  full_name: string;
+  job_title: string;
+  /** ISO instant; the browser renders it in local time. */
+  interview_scheduled_at: string;
 }
 
 export interface RecruitmentStats {

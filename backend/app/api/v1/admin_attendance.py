@@ -2,9 +2,25 @@ from datetime import date
 
 from fastapi import APIRouter, Depends, Query
 
-from app.api.deps import get_current_user, require_permission
+from app.api.deps import (
+    get_current_user,
+    require_hr_admin,
+    require_permission,
+)
 from app.core.exceptions import AppException
-from app.core.roles import Permission
+from app.core.roles import Permission, UserRole
+from app.core.cache import (
+    get_cache,
+    set_cache,
+    invalidate_attendance_cache,
+    invalidate_attendance_options_cache,
+)
+
+ATTENDANCE_OPTIONS_CACHE_TTL = 1800
+ATTENDANCE_HISTORICAL_CACHE_TTL = 300
+ATTENDANCE_TODAY_CACHE_TTL = 30
+ATTENDANCE_RECORD_CACHE_TTL = 300
+
 from app.repositories.employee_repository import EmployeeRepository
 from app.schemas.attendance import (
     AttendanceListResponse,
@@ -13,6 +29,8 @@ from app.schemas.attendance import (
     AttendanceResponse,
     AttendanceSummaryResponse,
     AttendanceUpdate,
+    BulkAttendanceMark,
+    BulkAttendanceResponse,
     MyAttendanceStatus,
 )
 from app.schemas.common import APIResponse
@@ -41,14 +59,52 @@ async def mark_attendance(
 
     attendance = await service.mark_attendance(
         data.model_dump(),
-        marked_by=marked_by,
+        marked_by=str(current_user["_id"]) if current_user else None,
+        current_user=current_user,
     )
+
+    await invalidate_attendance_cache()
 
     return APIResponse(
         success=True,
         message="Attendance marked successfully",
         data=attendance,
     )
+
+
+@router.post(
+    "/attendance/bulk",
+    response_model=APIResponse[BulkAttendanceResponse],
+)
+async def bulk_mark_attendance(
+    data: BulkAttendanceMark,
+    current_user: dict | None = Depends(
+        require_permission(Permission.ATTENDANCE_CREATE)
+    ),
+):
+    """Bulk marks/updates attendance for selected employees or all matching
+    filtered employees across pages. Applies the caller's employee-visibility
+    scope and returns per-employee results."""
+    marked_by = str(current_user["_id"]) if current_user and "_id" in current_user else None
+
+    result = await service.bulk_mark_attendance(
+        data=data,
+        marked_by=marked_by,
+        current_user=current_user,
+    )
+
+    await invalidate_attendance_cache()
+
+    message = f"Marked attendance for {result.success_count} employee(s)"
+    if result.failure_count > 0:
+        message += f" ({result.failure_count} failed)"
+
+    return APIResponse(
+        success=True,
+        message=message,
+        data=result,
+    )
+
 
 
 @router.get(
@@ -81,6 +137,30 @@ async def get_my_attendance_status(
     )
 
 
+@router.post(
+    "/attendance/me/punch",
+    response_model=APIResponse[MyAttendanceStatus],
+)
+async def punch_my_attendance(
+    current_user: dict = Depends(require_hr_admin),
+):
+    """HR self-punch: marks the signed-in user's OWN attendance for today
+    with the server clock. First call of the day records the in-time, the
+    second records the out-time, later calls return 409. The employee is
+    resolved from the session's email - bootstrap HR accounts get their
+    employee identity minted here on first punch (see employee_identity) -
+    so no other employee can be marked through this route. Declared before
+    /attendance/{attendance_id} so "me" is never matched as an
+    attendance_id path param."""
+    status = await service.punch_self(current_user=current_user)
+
+    return APIResponse(
+        success=True,
+        message="Attendance punched successfully",
+        data=status,
+    )
+
+
 @router.get(
     "/attendance",
     response_model=APIResponse[AttendanceListResponse],
@@ -99,18 +179,56 @@ async def get_attendance_list(
         require_permission(Permission.ATTENDANCE_READ)
     ),
 ):
-    pagination = PaginationParams(page=page, limit=limit)
+    page_val = page if isinstance(page, int) else 1
+    limit_val = limit if isinstance(limit, int) else 10
+    search_val = search if isinstance(search, str) else None
+    search_str = search_val.strip().lower() if search_val else "none"
+    dept_val = department_id if isinstance(department_id, str) else None
+    status_val = status if isinstance(status, str) else None
+    shift_val = shift_id if isinstance(shift_id, str) else None
+    ot_val = overtime if isinstance(overtime, bool) else False
+    loc_val = work_location if isinstance(work_location, str) else None
+    date_val = attendance_date if isinstance(attendance_date, date) else None
+
+    today = business_today()
+    is_historical = date_val is not None and date_val < today
+    ttl = ATTENDANCE_HISTORICAL_CACHE_TTL if is_historical else ATTENDANCE_TODAY_CACHE_TTL
+
+    role = getattr(current_user.get("role"), "value", current_user.get("role")) if current_user else None
+    scope = f"mgr_{current_user.get('_id')}" if role == UserRole.MANAGER.value else "hr"
+
+    date_str = str(date_val) if date_val else "today"
+    cache_key = (
+        f"attendance:list:{scope}:{date_str}:{dept_val or 'all'}:{status_val or 'all'}:"
+        f"{shift_val or 'all'}:{loc_val or 'all'}:{ot_val}:{search_str}:{page_val}:{limit_val}"
+    )
+
+    cached = await get_cache(cache_key)
+    if cached is not None:
+        try:
+            return APIResponse(
+                success=True,
+                message="Attendance records retrieved successfully",
+                data=AttendanceListResponse(**cached),
+            )
+        except Exception:
+            pass
+
+    pagination = PaginationParams(page=page_val, limit=limit_val)
 
     result = await service.get_attendance_list(
-        attendance_date=attendance_date,
-        department_id=department_id,
-        status=status,
-        search=search,
+        attendance_date=date_val,
+        department_id=dept_val,
+        status=status_val,
+        search=search_val,
         pagination=pagination,
-        shift_id=shift_id,
-        overtime_only=overtime,
-        work_location=work_location,
+        shift_id=shift_val,
+        overtime_only=ot_val,
+        work_location=loc_val,
+        current_user=current_user,
     )
+
+    await set_cache(cache_key, result.model_dump(), ttl=ttl)
 
     return APIResponse(
         success=True,
@@ -132,9 +250,12 @@ async def get_employee_attendance(
         require_permission(Permission.ATTENDANCE_READ)
     ),
 ):
+    page_val = page if isinstance(page, int) else 1
+    limit_val = limit if isinstance(limit, int) else 100
     result = await service.get_employee_attendance(
         employee_id=employee_id,
-        pagination=PaginationParams(page=page, limit=limit),
+        pagination=PaginationParams(page=page_val, limit=limit_val),
+        current_user=current_user,
     )
 
     return APIResponse(
@@ -155,12 +276,42 @@ async def get_attendance_options(
 ):
     """Values for the filter dropdowns. Declared before
     /attendance/{attendance_id} so "options" is never parsed as an id."""
-    work_locations = await service.get_work_locations()
+    role = getattr(current_user.get("role"), "value", current_user.get("role"))
+    if role == UserRole.MANAGER.value:
+        user_id = str(current_user.get("_id", ""))
+        scope = f"mgr_{user_id}"
+    else:
+        scope = "hr"
+
+    cache_key = f"attendance:options:{scope}"
+
+    cached_data = await get_cache(cache_key)
+    if cached_data is not None:
+        try:
+            cached_model = AttendanceOptionsResponse(**cached_data)
+            return APIResponse(
+                success=True,
+                message="Attendance filter options retrieved successfully",
+                data=cached_model,
+            )
+        except Exception:
+            pass
+
+    work_locations = await service.get_work_locations(
+        current_user=current_user,
+    )
+    response_data = AttendanceOptionsResponse(work_locations=work_locations)
+
+    await set_cache(
+        cache_key,
+        response_data.model_dump(),
+        ttl=ATTENDANCE_OPTIONS_CACHE_TTL,
+    )
 
     return APIResponse(
         success=True,
         message="Attendance filter options retrieved successfully",
-        data=AttendanceOptionsResponse(work_locations=work_locations),
+        data=response_data,
     )
 
 
@@ -175,10 +326,30 @@ async def get_attendance_summary(
         require_permission(Permission.ATTENDANCE_READ)
     ),
 ):
+    dept_val = department_id if isinstance(department_id, str) else None
+    today = business_today()
+    is_historical = attendance_date < today
+    ttl = ATTENDANCE_HISTORICAL_CACHE_TTL if is_historical else ATTENDANCE_TODAY_CACHE_TTL
+    dept_str = dept_val or "all"
+    cache_key = f"attendance:summary:{attendance_date}:{dept_str}"
+
+    cached = await get_cache(cache_key)
+    if cached is not None:
+        try:
+            return APIResponse(
+                success=True,
+                message="Attendance summary retrieved successfully",
+                data=AttendanceSummaryResponse(**cached),
+            )
+        except Exception:
+            pass
+
     summary = await service.get_summary(
         attendance_date=attendance_date,
-        department_id=department_id,
+        department_id=dept_val,
     )
+
+    await set_cache(cache_key, summary.model_dump(), ttl=ttl)
 
     return APIResponse(
         success=True,
@@ -197,7 +368,24 @@ async def get_attendance(
         require_permission(Permission.ATTENDANCE_READ)
     ),
 ):
-    attendance = await service.get_attendance(attendance_id)
+    cache_key = f"attendance:record:{attendance_id}"
+    cached = await get_cache(cache_key)
+    if cached is not None:
+        try:
+            return APIResponse(
+                success=True,
+                message="Attendance record retrieved successfully",
+                data=AttendanceResponse(**cached),
+            )
+        except Exception:
+            pass
+
+    attendance = await service.get_attendance(
+        attendance_id,
+        current_user=current_user,
+    )
+
+    await set_cache(cache_key, attendance.model_dump(), ttl=ATTENDANCE_RECORD_CACHE_TTL)
 
     return APIResponse(
         success=True,
@@ -222,6 +410,8 @@ async def update_attendance(
         update_data=data.model_dump(),
     )
 
+    await invalidate_attendance_cache(attendance_id)
+
     return APIResponse(
         success=True,
         message="Attendance record updated successfully",
@@ -242,10 +432,14 @@ async def approve_regularization(
     attendance = await service.update_attendance(
         attendance_id=attendance_id,
         update_data={},
+        current_user=current_user,
     )
+
+    await invalidate_attendance_cache(attendance_id)
 
     return APIResponse(
         success=True,
         message="Attendance record approved successfully",
         data=attendance,
     )
+

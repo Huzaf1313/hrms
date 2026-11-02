@@ -2,16 +2,17 @@ from pydantic import BaseModel, Field
 
 
 class Earning(BaseModel):
-    label: str
+    label: str = Field(min_length=1)
     amount: float = Field(ge=0)
 
 
 class AdminSalaryStructureCreate(BaseModel):
     name: str = Field(min_length=1)
-    range: str = Field(min_length=1)
+    range: str | None = None
     min_salary: float | None = Field(default=None, ge=0)
     max_salary: float | None = Field(default=None, ge=0)
     earnings: list[Earning] = Field(min_length=1)
+
 
 
 class AdminSalaryStructureUpdate(BaseModel):

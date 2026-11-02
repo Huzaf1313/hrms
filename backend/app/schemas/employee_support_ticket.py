@@ -46,6 +46,19 @@ class SupportTicketResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
+    # Admin-side extras. Null on a ticket that has not been answered yet.
+    resolution_note: str | None = None
+    handled_by: str | None = None
+    handled_at: datetime | None = None
+
+
+class SupportTicketUpdate(BaseModel):
+    """Admin response to a ticket. Status is always required so a ticket cannot
+    be left in a half-answered state."""
+
+    status: SupportTicketStatus
+    resolution_note: str | None = Field(default=None, max_length=2000)
+
 
 class SupportTicketsResponse(BaseModel):
     tickets: list[SupportTicketResponse]

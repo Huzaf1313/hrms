@@ -23,11 +23,25 @@ class Settings(BaseSettings):
     UPLOAD_DIR: str = "uploads"
     PRIVATE_UPLOAD_DIR: str = "private_uploads"
 
+    # First HR account, created on startup if no user with this email exists.
+    # This is the only way an admin account comes into existence without HR
+    # already existing - every other account is created by an existing one.
+    # Leave empty to skip bootstrapping entirely.
+    BOOTSTRAP_HR_EMAIL: str = ""
+    BOOTSTRAP_HR_PASSWORD: str = ""
+    BOOTSTRAP_HR_NAME: str = "HR Admin"
+
+    # Redis Cache Configuration
+    REDIS_URL: str = "redis://localhost:6379/0"
+    REDIS_ENABLED: bool = False
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore",
     )
+
+    FRONTEND_URL: str = "http://localhost:5173"
 
     @property
     def cors_origins_list(self) -> list[str]:
@@ -36,6 +50,11 @@ class Settings(BaseSettings):
             for origin in self.CORS_ORIGINS.split(",")
             if origin.strip()
         ]
+
+    @property
+    def login_url(self) -> str:
+        base = self.FRONTEND_URL or (self.cors_origins_list[0] if self.cors_origins_list else "http://localhost:5173")
+        return f"{base.rstrip('/')}/login"
 
 
 try:

@@ -8,8 +8,6 @@ import {
   Download,
   UserPlus,
   Search,
-  ArrowDown,
-  ArrowUp,
   ChevronLeft,
   ChevronRight,
   FileText,
@@ -494,18 +492,6 @@ function Attendance() {
                           aria-label={`Sort by ${column.label}`}
                         >
                           {column.label}
-                          <span className="inline-flex flex-col leading-[7px]">
-                            <ArrowUp
-                              className={`h-2.5 w-2.5 ${
-                                isActive && sortDirection === "asc" ? "text-[#456b54]" : "text-gray-300"
-                              }`}
-                            />
-                            <ArrowDown
-                              className={`h-2.5 w-2.5 ${
-                                isActive && sortDirection === "desc" ? "text-[#456b54]" : "text-gray-300"
-                              }`}
-                            />
-                          </span>
                         </button>
                       </th>
                     );

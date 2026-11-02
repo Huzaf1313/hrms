@@ -1,9 +1,16 @@
+import logging
 from datetime import date, datetime
 
 from fastapi import APIRouter, Depends, Query
 
 from app.api.deps import require_permission
+from app.core.cache import (
+    get_cache,
+    invalidate_assets_cache,
+    set_cache,
+)
 from app.core.roles import Permission
+from app.core.scope import visibility_scope
 from app.schemas.asset import (
     AllocationRow,
     AssetAssign,
@@ -30,8 +37,23 @@ router = APIRouter(
     tags=["Assets"],
 )
 
+logger = logging.getLogger(__name__)
+
+ASSET_STATS_CACHE_TTL = 180
+ASSET_ALLOC_CACHE_TTL = 180
+ASSET_LIST_CACHE_TTL = 180
+ASSET_RECENT_CACHE_TTL = 180
+ASSET_DETAIL_CACHE_TTL = 300
+
 asset_service = AssetService()
 request_service = AssetRequestService()
+
+
+def _asset_scope(current_user: dict | None) -> str:
+    scope_dict = visibility_scope(current_user)
+    if scope_dict and "manager_id" in scope_dict:
+        return f"mgr_{scope_dict['manager_id']}"
+    return "all"
 
 
 def _as_date(value) -> date | None:
@@ -110,7 +132,18 @@ def serialize_request(request: dict) -> AssetRequestResponse:
 async def get_asset_stats(
     current_user: dict = Depends(require_permission(Permission.ASSETS_READ)),
 ):
-    stats = await asset_service.get_stats()
+    scope = _asset_scope(current_user)
+    cache_key = f"assets:stats:{scope}"
+    cached = await get_cache(cache_key)
+    if cached is not None:
+        return APIResponse(
+            success=True,
+            message="Asset stats retrieved successfully",
+            data=AssetStats(**cached),
+        )
+
+    stats = await asset_service.get_stats(current_user)
+    await set_cache(cache_key, stats, ttl=ASSET_STATS_CACHE_TTL)
 
     return APIResponse(
         success=True,
@@ -131,11 +164,43 @@ async def get_asset_allocation(
     limit: int = Query(default=5, ge=1, le=100),
     current_user: dict = Depends(require_permission(Permission.ASSETS_READ)),
 ):
+    page_val = page if isinstance(page, int) else 1
+    limit_val = limit if isinstance(limit, int) else 5
+    view_val = view if isinstance(view, str) else "employee"
+    cat_val = category.value if hasattr(category, "value") else (category if isinstance(category, str) else None)
+    cat_key = cat_val or "all"
+    search_val = search if isinstance(search, str) else None
+    search_key = search_val.strip().lower() if search_val else "none"
+
+    scope = _asset_scope(current_user)
+    cache_key = f"assets:alloc:{scope}:{view_val}:{cat_key}:{search_key}:{page_val}:{limit_val}"
+
+    cached = await get_cache(cache_key)
+    if cached is not None:
+        return APIResponse(
+            success=True,
+            message="Asset allocation retrieved successfully",
+            data=Paginated(
+                items=[AllocationRow(**row) for row in cached.get("items", [])],
+                total=cached.get("total", 0),
+                page=cached.get("page", page_val),
+                limit=cached.get("limit", limit_val),
+            ),
+        )
+
     rows, total = await asset_service.get_allocation(
-        view=view,
-        search=search,
-        category=category.value if category else None,
-        pagination=PaginationParams(page=page, limit=limit),
+        view=view_val,
+        search=search_val,
+        category=cat_val,
+        pagination=PaginationParams(page=page_val, limit=limit_val),
+        current_user=current_user,
+    )
+
+    serialized_rows = [row if isinstance(row, dict) else row.model_dump(mode="json") for row in rows]
+    await set_cache(
+        cache_key,
+        {"items": serialized_rows, "total": total, "page": page_val, "limit": limit_val},
+        ttl=ASSET_ALLOC_CACHE_TTL,
     )
 
     return APIResponse(
@@ -144,8 +209,8 @@ async def get_asset_allocation(
         data=Paginated(
             items=[AllocationRow(**row) for row in rows],
             total=total,
-            page=page,
-            limit=limit,
+            page=page_val,
+            limit=limit_val,
         ),
     )
 
@@ -162,11 +227,18 @@ async def get_asset_requests(
     limit: int = Query(default=10, ge=1, le=100),
     current_user: dict = Depends(require_permission(Permission.ASSETS_READ)),
 ):
+    page_val = page if isinstance(page, int) else 1
+    limit_val = limit if isinstance(limit, int) else 10
+    req_type_val = request_type.value if hasattr(request_type, "value") else (request_type if isinstance(request_type, str) else None)
+    status_val = status.value if hasattr(status, "value") else (status if isinstance(status, str) else None)
+    search_val = search if isinstance(search, str) else None
+
     requests, total = await request_service.get_requests(
-        request_type=request_type.value if request_type else None,
-        status=status.value if status else None,
-        search=search,
-        pagination=PaginationParams(page=page, limit=limit),
+        request_type=req_type_val,
+        status=status_val,
+        search=search_val,
+        pagination=PaginationParams(page=page_val, limit=limit_val),
+        current_user=current_user,
     )
 
     return APIResponse(
@@ -175,8 +247,8 @@ async def get_asset_requests(
         data=Paginated(
             items=[serialize_request(request) for request in requests],
             total=total,
-            page=page,
-            limit=limit,
+            page=page_val,
+            limit=limit_val,
         ),
     )
 
@@ -189,7 +261,7 @@ async def create_asset_request(
     data: AssetRequestCreate,
     current_user: dict = Depends(require_permission(Permission.ASSETS_CREATE)),
 ):
-    request = await request_service.create_request(data.model_dump())
+    request = await request_service.create_request(data.model_dump(), current_user)
 
     return APIResponse(
         success=True,
@@ -212,11 +284,69 @@ async def review_asset_request(
         data.status,
         data.admin_note,
         str(current_user["_id"]),
+        current_user,
     )
+
+    await invalidate_assets_cache()
 
     return APIResponse(
         success=True,
         message=f"Asset request {data.status.value} successfully",
+        data=serialize_request(request),
+    )
+
+
+@router.get(
+    "/recent-allocations",
+    response_model=APIResponse[list[AssetResponse]],
+)
+async def get_recent_allocations(
+    limit: int = Query(default=5, ge=1, le=100),
+    current_user: dict = Depends(require_permission(Permission.ASSETS_READ)),
+):
+    limit_val = limit if isinstance(limit, int) else 5
+    cache_key = f"assets:recent:{limit_val}"
+    cached = await get_cache(cache_key)
+    if cached is not None:
+        return APIResponse(
+            success=True,
+            message="Recent allocations retrieved successfully",
+            data=[AssetResponse(**item) for item in cached],
+        )
+
+    assets = await asset_service.get_recent_allocations(limit_val)
+    serialized_assets = [serialize_asset(asset) for asset in assets]
+    await set_cache(
+        cache_key,
+        [a.model_dump(mode="json") for a in serialized_assets],
+        ttl=ASSET_RECENT_CACHE_TTL,
+    )
+
+    return APIResponse(
+        success=True,
+        message="Recent allocations retrieved successfully",
+        data=serialized_assets,
+    )
+
+
+@router.post(
+    "/requests/{request_id}/complete-return",
+    response_model=APIResponse[AssetRequestResponse],
+)
+async def complete_asset_return(
+    request_id: str,
+    current_user: dict = Depends(require_permission(Permission.ASSETS_UPDATE)),
+):
+    request = await request_service.complete_return(
+        request_id,
+        str(current_user["_id"]),
+    )
+
+    await invalidate_assets_cache()
+
+    return APIResponse(
+        success=True,
+        message="Asset return confirmed successfully",
         data=serialize_request(request),
     )
 
@@ -234,25 +364,71 @@ async def get_assets(
     status: AssetStatus | None = Query(default=None),
     category: AssetCategory | None = Query(default=None),
     search: str | None = Query(default=None),
+    employee_id: str | None = Query(default=None),
+    department_id: str | None = Query(default=None),
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=7, ge=1, le=100),
     current_user: dict = Depends(require_permission(Permission.ASSETS_READ)),
 ):
+    page_val = page if isinstance(page, int) else 1
+    limit_val = limit if isinstance(limit, int) else 7
+    status_val = status.value if hasattr(status, "value") else (status if isinstance(status, str) else None)
+    cat_val = category.value if hasattr(category, "value") else (category if isinstance(category, str) else None)
+    emp_val = employee_id if isinstance(employee_id, str) else None
+    dept_val = department_id if isinstance(department_id, str) else None
+    search_val = search if isinstance(search, str) else None
+
+    scope = _asset_scope(current_user)
+    status_key = status_val or "all"
+    cat_key = cat_val or "all"
+    emp_key = emp_val or "all"
+    dept_key = dept_val or "all"
+    search_key = search_val.strip().lower() if search_val else "none"
+    cache_key = f"assets:list:{scope}:{status_key}:{cat_key}:{emp_key}:{dept_key}:{search_key}:{page_val}:{limit_val}"
+
+    cached = await get_cache(cache_key)
+    if cached is not None:
+        return APIResponse(
+            success=True,
+            message="Assets retrieved successfully",
+            data=Paginated(
+                items=[AssetResponse(**item) for item in cached.get("items", [])],
+                total=cached.get("total", 0),
+                page=cached.get("page", page_val),
+                limit=cached.get("limit", limit_val),
+            ),
+        )
+
     assets, total = await asset_service.get_assets(
-        status=status.value if status else None,
-        category=category.value if category else None,
-        search=search,
-        pagination=PaginationParams(page=page, limit=limit),
+        status=status_val,
+        category=cat_val,
+        search=search_val,
+        employee_id=emp_val,
+        department_id=dept_val,
+        pagination=PaginationParams(page=page_val, limit=limit_val),
+        current_user=current_user,
+    )
+
+    serialized_items = [serialize_asset(asset) for asset in assets]
+    await set_cache(
+        cache_key,
+        {
+            "items": [item.model_dump(mode="json") for item in serialized_items],
+            "total": total,
+            "page": page_val,
+            "limit": limit_val,
+        },
+        ttl=ASSET_LIST_CACHE_TTL,
     )
 
     return APIResponse(
         success=True,
         message="Assets retrieved successfully",
         data=Paginated(
-            items=[serialize_asset(asset) for asset in assets],
+            items=serialized_items,
             total=total,
-            page=page,
-            limit=limit,
+            page=page_val,
+            limit=limit_val,
         ),
     )
 
@@ -268,7 +444,10 @@ async def create_asset(
     asset = await asset_service.create_asset(
         data.model_dump(),
         created_by=str(current_user["_id"]),
+        current_user=current_user,
     )
+
+    await invalidate_assets_cache()
 
     return APIResponse(
         success=True,
@@ -285,12 +464,24 @@ async def get_asset(
     asset_id: str,
     current_user: dict = Depends(require_permission(Permission.ASSETS_READ)),
 ):
-    asset = await asset_service.get_asset(asset_id)
+    scope = _asset_scope(current_user)
+    cache_key = f"assets:detail:{scope}:{asset_id}"
+    cached = await get_cache(cache_key)
+    if cached is not None:
+        return APIResponse(
+            success=True,
+            message="Asset retrieved successfully",
+            data=AssetResponse(**cached),
+        )
+
+    asset = await asset_service.get_asset(asset_id, current_user)
+    serialized = serialize_asset(asset)
+    await set_cache(cache_key, serialized.model_dump(mode="json"), ttl=ASSET_DETAIL_CACHE_TTL)
 
     return APIResponse(
         success=True,
         message="Asset retrieved successfully",
-        data=serialize_asset(asset),
+        data=serialized,
     )
 
 
@@ -306,7 +497,10 @@ async def update_asset(
     asset = await asset_service.update_asset(
         asset_id,
         data.model_dump(exclude_none=True, mode="json"),
+        current_user,
     )
+
+    await invalidate_assets_cache(asset_id)
 
     return APIResponse(
         success=True,
@@ -323,7 +517,9 @@ async def delete_asset(
     asset_id: str,
     current_user: dict = Depends(require_permission(Permission.ASSETS_DELETE)),
 ):
-    await asset_service.delete_asset(asset_id)
+    await asset_service.delete_asset(asset_id, current_user)
+
+    await invalidate_assets_cache(asset_id)
 
     return APIResponse(
         success=True,
@@ -345,7 +541,10 @@ async def assign_asset(
         asset_id,
         data.employee_id,
         data.issue_date,
+        current_user,
     )
+
+    await invalidate_assets_cache(asset_id)
 
     return APIResponse(
         success=True,
@@ -362,10 +561,12 @@ async def return_asset(
     asset_id: str,
     current_user: dict = Depends(require_permission(Permission.ASSETS_UPDATE)),
 ):
-    asset = await asset_service.return_asset(asset_id)
+    asset = await asset_service.return_asset(asset_id, current_user)
+
+    await invalidate_assets_cache(asset_id)
 
     return APIResponse(
         success=True,
         message="Asset returned successfully",
         data=serialize_asset(asset),
-    )
+    )

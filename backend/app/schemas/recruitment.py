@@ -119,6 +119,12 @@ class CandidateStageUpdate(BaseModel):
     stage: CandidateStage
 
 
+class InterviewScheduleUpdate(BaseModel):
+    # Null clears an existing booking, which is how a cancelled interview is
+    # taken off the dashboard without deleting the candidate.
+    interview_scheduled_at: datetime | None = None
+
+
 class CandidateResponse(BaseModel):
     id: str
     full_name: str
@@ -134,6 +140,9 @@ class CandidateResponse(BaseModel):
     resume_uploaded_at: datetime | None = None
     applied_at: datetime
     stage_updated_at: datetime
+    # Set once HR books the interview. Candidates moved off the interview stage
+    # keep it, so the dashboard can still show a completed interview.
+    interview_scheduled_at: datetime | None = None
     # Only set by the change-stage endpoint: True when this change filled the
     # last opening and the job position was closed automatically.
     job_auto_closed: bool = False
@@ -168,3 +177,12 @@ class RecruitmentStats(BaseModel):
     hired_candidates: int
     stage_counts: dict[str, int]
     applications_by_department: list[DepartmentCount]
+
+
+class UpcomingInterview(BaseModel):
+    """One booked interview, as the dashboard's Upcoming Interviews card reads it."""
+
+    id: str
+    full_name: str
+    job_title: str
+    interview_scheduled_at: datetime

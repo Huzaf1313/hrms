@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends
-from fastapi.responses import StreamingResponse
 
 from app.api.deps import get_current_user
+from app.core.cache import get_cache, set_cache
 from app.core.exceptions import AppException
 from app.repositories.employee_repository import EmployeeRepository
 from app.services.employee_payslip_service import EmployeePayslipService
 
+EMPLOYEE_PAYSLIP_TTL = 300
 
 router = APIRouter(
     prefix="/employee-payslip",
@@ -36,62 +37,42 @@ async def get_employee_from_user(current_user: dict):
     return employee
 
 
-@router.get("/{payroll_id}/download")
-async def download_payslip(
+@router.get("/{payroll_id}")
+async def get_payslip(
     payroll_id: str,
     current_user: dict = Depends(get_current_user),
 ):
     employee = await get_employee_from_user(current_user)
     employee_id = employee["employee_id"]
 
-    # Validate the payroll belongs to the logged-in employee
+    cache_key = f"payroll:emp:{employee_id}:payslip:{payroll_id}"
+    cached = await get_cache(cache_key)
+    if cached is not None:
+        return {
+            "success": True,
+            "message": "Payslip details retrieved successfully",
+            "data": cached,
+        }
+
     payslip_data = await service.get_payslip_data(
         payroll_id=payroll_id,
         employee_id=employee_id,
     )
 
-    # Generate the PDF
-    pdf_buffer = await service.generate_payslip_pdf(
-        payroll_id=payroll_id,
-        employee_id=employee_id,
-    )
+    await set_cache(cache_key, payslip_data, ttl=EMPLOYEE_PAYSLIP_TTL)
 
-    payroll = payslip_data["payroll"]
+    return {
+        "success": True,
+        "message": "Payslip details retrieved successfully",
+        "data": payslip_data,
+    }
 
-    # Build filename from the logged-in employee's actual name
-    employee_name = " ".join(
-        filter(
-            None,
-            [
-                employee.get("first_name"),
-                employee.get("last_name"),
-            ],
-        )
-    ).strip()
 
-    if not employee_name:
-        employee_name = employee_id
-
-    # Convert employee name to a filename-safe format
-    employee_name = "_".join(employee_name.split())
-
-    # Use the month stored in the actual payroll record
-    payroll_month = str(
-        payroll.get("month") or "Payslip"
-    ).strip()
-
-    payroll_month = "_".join(payroll_month.split())
-
-    filename = (
-        f"{employee_name}_Payslip_{payroll_month}.pdf"
-    )
-
-    return StreamingResponse(
-        pdf_buffer,
-        media_type="application/pdf",
-        headers={
-            "Content-Disposition": (
-                f'attachment; filename="{filename}"'
-            )
-        },
+@router.get("/{payroll_id}/download")
+async def download_payslip(
+    payroll_id: str,
+):
+    raise AppException(
+        "Payslip PDF download has been disabled",
+        410,
     )

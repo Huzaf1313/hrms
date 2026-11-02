@@ -1,3 +1,4 @@
+import re
 from datetime import datetime, timezone
 
 from app.core.exceptions import AppException
@@ -10,8 +11,11 @@ from app.core.roles import UserRole
 from app.core.security import hash_password, verify_password
 from app.repositories.user_repository import UserRepository
 from app.repositories.otp_repository import OTPRepository
+from app.repositories.department_repository import DepartmentRepository
+from app.repositories.shift_repository import ShiftRepository
+from app.services.employee_identity import ensure_employee_profile
 from app.services.session_service import SessionService
-from app.services.email_service import EmailService
+from datetime import date as date_type
 
 
 def resolve_full_name(user: dict) -> str:
@@ -34,76 +38,42 @@ class UserService:
     def __init__(self):
         self.repository = UserRepository()
         self.session_service = SessionService()
-        self.email_service = EmailService()
 
-    async def create_verified_user(
-        self,
-        registration_data: dict,
-    ):
-        email = registration_data["email"].lower().strip()
+    async def bootstrap_hr_admin(self, email: str, password: str, full_name: str):
+        """Create the one HR account the whole hierarchy hangs off.
 
-        existing_user = await self.repository.get_by_email(email)
+        Idempotent: if the email already exists this is a no-op, so it is safe
+        to call on every startup.
+        """
+        email = email.lower().strip()
 
-        if existing_user:
-            raise AppException(
-                "User with this email already exists",
-                409,
-            )
-
-        allowed_registration_roles = {
-            UserRole.HR_ADMIN,
-            UserRole.MANAGER,
-        }
-
-        role = UserRole(registration_data["role"])
-
-        if role not in allowed_registration_roles:
-            raise AppException(
-                "This role cannot be selected during public registration",
-                403,
-            )
+        if await self.repository.get_by_email(email):
+            return None
 
         now = datetime.utcnow()
 
-        user_data = {
-            "full_name": registration_data["full_name"].strip(),
-            "email": email,
-            "phone_number": registration_data["phone_number"].strip(),
-            "password_hash": registration_data["password_hash"],
-            "company_name": registration_data.get(
-                "company_name",
-                "",
-            ).strip(),
-            "company_address": registration_data.get(
-                "company_address",
-                "",
-            ).strip(),
-            "reference": registration_data.get(
-                "reference",
-                "",
-            ).strip(),
-            "role": role.value,
-            "is_active": True,
-            "is_locked": False,
-            "failed_login_attempts": 0,
-            "created_at": now,
-            "updated_at": now,
-        }
-
-        user = await self.repository.create(user_data)
-
-        self.email_service.send_html_email(
-            to_email=email,
-            subject=f"Welcome to {user_data['company_name']}",
-            template_name="emails/welcome_email.html",
-            template_data={
-                "employee_name": user_data["full_name"],
-                "company_name": "AarMarks Media Pvt Ltd.",
-                "hr_team": "HR Team",
-            },
+        user = await self.repository.create(
+            {
+                "full_name": full_name.strip(),
+                "email": email,
+                "phone_number": "",
+                "password_hash": hash_password(password),
+                "company_name": "",
+                "company_address": "",
+                "reference": "",
+                "role": UserRole.HR_ADMIN.value,
+                "is_active": True,
+                "is_locked": False,
+                "failed_login_attempts": 0,
+                "created_at": now,
+                "updated_at": now,
+            }
         )
 
-        user.pop("password_hash", None)
+        # The HR account is also a working employee: mint its employee code
+        # at creation so self-attendance and every employee list see it from
+        # day one instead of failing with "No employee record found".
+        user = await ensure_employee_profile(self.repository.collection, user)
 
         return user
 
@@ -121,61 +91,40 @@ class UserService:
             for user in users
         ]
 
-    async def register_user(
+    async def create_manager_account(
         self,
         full_name: str,
         email: str,
-        phone_number: str,
         password: str,
-        role: UserRole,
-        company_name: str = "",
-        company_address: str = "",
-        reference: str = "",
     ):
+        """Called by HR only - see api/v1/users.create_manager_account."""
         email = email.lower().strip()
 
-        existing_user = await self.repository.get_by_email(email)
-
-        if existing_user:
+        if await self.repository.get_by_email(email):
             raise AppException(
                 "User with this email already exists",
                 409,
             )
 
-        # Employees are created by admins (with shared credentials) - public
-        # signup is for admin-level accounts only.
-        allowed_registration_roles = {
-            UserRole.HR_ADMIN,
-            UserRole.MANAGER,
-        }
-
-        if role not in allowed_registration_roles:
-            raise AppException(
-                "This role cannot be selected during public registration",
-                403,
-            )
-
         now = datetime.utcnow()
 
-        user_data = {
-            "full_name": full_name.strip(),
-            "email": email,
-            "phone_number": phone_number.strip(),
-            "password_hash": hash_password(password),
-            "company_name": company_name.strip(),
-            "company_address": company_address.strip(),
-            "reference": reference.strip(),
-            "role": role.value,
-            "is_active": True,
-            "is_locked": False,
-            "failed_login_attempts": 0,
-            "created_at": now,
-            "updated_at": now,
-        }
-
-        user = await self.repository.create(user_data)
-
-        return user
+        return await self.repository.create(
+            {
+                "full_name": full_name.strip(),
+                "email": email,
+                "phone_number": "",
+                "password_hash": hash_password(password),
+                "company_name": "",
+                "company_address": "",
+                "reference": "",
+                "role": UserRole.MANAGER.value,
+                "is_active": True,
+                "is_locked": False,
+                "failed_login_attempts": 0,
+                "created_at": now,
+                "updated_at": now,
+            }
+        )
 
     async def reset_password(
         self,
@@ -404,3 +353,222 @@ class UserService:
         return {
             "message": "Logout successful"
         }
+  
+    async def change_password(
+        self,
+        user_id: str,
+        current_password: str,
+        new_password: str,
+        confirm_password: str,
+    ):
+        if new_password != confirm_password:
+            raise AppException(
+                "New password and confirmation do not match",
+                400,
+            )
+
+        user = await self.repository.get_by_id(user_id)
+
+        if not user:
+            raise AppException(
+                "User not found",
+                404,
+            )
+
+        if not verify_password(
+            current_password,
+            user["password_hash"],
+        ):
+            raise AppException(
+                "Current password is incorrect",
+                400,
+            )
+
+        if verify_password(new_password, user["password_hash"]):
+            raise AppException(
+                "New password must be different from the current password",
+                400,
+            )
+
+        await self.repository.update(
+            str(user["_id"]),
+            {
+                "password_hash": hash_password(new_password),
+                "updated_at": datetime.now(timezone.utc),
+            },
+        )
+
+        return {
+            "message": "Password changed successfully",
+        }
+
+    # ------------------------------------------------------------------ #
+    # Own profile (admin portal "My Profile" page)                       #
+    # ------------------------------------------------------------------ #
+
+    EMPLOYMENT_STATUS_LABELS = {
+        "active": "Active",
+        "on_leave": "On Leave",
+        "inactive": "Inactive",
+    }
+
+    async def get_my_profile(self, user: dict) -> dict:
+        """Merge the login document with the employee fields it carries (or
+        had minted). Names (department, shift, manager) are resolved for
+        display; unknown personal fields stay null instead of faked."""
+        department = None
+        department_head = None
+
+        if user.get("department_id"):
+            record = await DepartmentRepository().get_by_id(
+                str(user["department_id"])
+            )
+
+            if record:
+                department = record.get("name")
+                department_head = (
+                    record.get("head") or record.get("department_head")
+                )
+
+        shift = user.get("shift")
+
+        if not shift and user.get("shift_id"):
+            record = await ShiftRepository().get_by_id(str(user["shift_id"]))
+
+            if record:
+                shift = record.get("name")
+
+        reporting_manager = user.get("reporting_manager")
+
+        if not reporting_manager and user.get("manager_id"):
+            manager = await self.repository.get_by_id(str(user["manager_id"]))
+
+            if manager:
+                reporting_manager = resolve_full_name(manager)
+
+        phone = user.get("phone") or user.get("phone_number") or None
+        address = user.get("address")
+        emergency = user.get("emergency_contact") or {}
+        status = (user.get("status") or "active").lower()
+
+        return {
+            "id": str(user["_id"]),
+            "employee_id": user.get("employee_id"),
+            "full_name": resolve_full_name(user),
+            "role": user.get("role"),
+            "avatar_url": user.get("avatar_url"),
+            "designation": user.get("designation"),
+            "department": user.get("department") or department,
+            "department_head": department_head,
+            "reporting_manager": reporting_manager,
+            "work_location": user.get("work_location"),
+            "employment_type": user.get("employment_type"),
+            "shift": shift,
+            "date_of_joining": user.get("joining_date"),
+            "employment_status": self.EMPLOYMENT_STATUS_LABELS.get(
+                status, "Active"
+            ),
+            "email": user["email"],
+            "phone": phone,
+            "office_email": user["email"],
+            "work_phone": phone,
+            "date_of_birth": user.get("date_of_birth"),
+            "gender": user.get("gender"),
+            "marital_status": user.get("marital_status"),
+            "nationality": user.get("nationality"),
+            "blood_group": user.get("blood_group"),
+            "permanent_address": user.get("permanent_address") or address,
+            "current_address": user.get("current_address") or address,
+            "emergency_name": user.get("emergency_name") or emergency.get("name"),
+            "emergency_relationship": user.get("emergency_relationship") or emergency.get("relationship"),
+            "emergency_phone": user.get("emergency_phone") or emergency.get("phone"),
+            "emergency_email": user.get("emergency_email") or emergency.get("email"),
+            "updated_at": user.get("updated_at"),
+        }
+
+    async def update_my_profile(self, user: dict, data: dict) -> dict:
+        """Apply self-service edits to the user document. Only the allow-list
+        below is writable - identity fields stay system-owned. Department and
+        shift arrive as display names: when the name matches an existing
+        record the id is linked, otherwise the name is stored as-is so a
+        save never fails just because the picklist differs from master data."""
+        updates: dict = {}
+
+        simple_fields = (
+            "phone",
+            "gender",
+            "marital_status",
+            "nationality",
+            "blood_group",
+            "permanent_address",
+            "current_address",
+            "emergency_name",
+            "emergency_relationship",
+            "emergency_phone",
+            "emergency_email",
+            "designation",
+            "work_location",
+            "employment_type",
+            "avatar_url",
+        )
+
+        for field in simple_fields:
+            if field in data:
+                value = data[field]
+
+                updates[field] = value.strip() if isinstance(value, str) else value
+
+        if "date_of_birth" in data:
+            updates["date_of_birth"] = self._parse_optional_date(
+                data["date_of_birth"], "date of birth"
+            )
+
+        for field in ("department", "shift"):
+            if field not in data:
+                continue
+
+            name = (data[field] or "").strip()
+
+            if not name:
+                updates[field] = None
+                continue
+
+            repository = (
+                DepartmentRepository() if field == "department" else ShiftRepository()
+            )
+
+            record = await repository.collection.find_one(
+                {
+                    "name": {
+                        "$regex": "^" + re.escape(name) + "$",
+                        "$options": "i",
+                    }
+                }
+            )
+
+            if record:
+                updates["{}_id".format(field)] = str(record["_id"])
+                updates[field] = record.get("name")
+            else:
+                updates[field] = name
+
+        if updates:
+            updates["updated_at"] = datetime.now(timezone.utc)
+
+            await self.repository.update(str(user["_id"]), updates)
+
+        fresh = await self.repository.get_by_id(str(user["_id"]))
+
+        return await self.get_my_profile(fresh or user)
+
+    @staticmethod
+    def _parse_optional_date(value: str | None, label: str) -> datetime | None:
+        if value is None or str(value).strip() == "":
+            return None
+
+        try:
+            parsed = date_type.fromisoformat(str(value).strip())
+        except ValueError:
+            raise AppException("Enter a valid date for the {}".format(label), 400)
+
+        return datetime(parsed.year, parsed.month, parsed.day)

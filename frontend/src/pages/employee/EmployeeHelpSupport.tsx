@@ -339,7 +339,7 @@ function EmployeeHelpSupport() {
             </p>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <button
               type="button"
               onClick={() =>
@@ -347,7 +347,7 @@ function EmployeeHelpSupport() {
                   .getElementById("faq-section")
                   ?.scrollIntoView({ behavior: "smooth" })
               }
-              className="group rounded-2xl border border-gray-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md"
+              className="group rounded-2xl border border-gray-100 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md"
             >
               <div className="flex items-start justify-between">
                 <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-[#2563eb]">
@@ -368,7 +368,7 @@ function EmployeeHelpSupport() {
               onClick={() => {
                 setIsTicketFormOpen((prev) => !prev);
               }}
-              className="group rounded-2xl border border-gray-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md"
+              className="group rounded-2xl border border-gray-100 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md"
             >
               <div className="flex items-start justify-between">
                 <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-[#2563eb]">
@@ -386,7 +386,7 @@ function EmployeeHelpSupport() {
 
             <a
               href="mailto:hr@yourcompany.com"
-              className="group rounded-2xl border border-gray-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md"
+              className="group rounded-2xl border border-gray-100 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md"
             >
               <div className="flex items-start justify-between">
                 <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-[#2563eb]">
@@ -404,7 +404,7 @@ function EmployeeHelpSupport() {
 
             <a
               href="tel:+919876543210"
-              className="group rounded-2xl border border-gray-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md"
+              className="group rounded-2xl border border-gray-100 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md"
             >
               <div className="flex items-start justify-between">
                 <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-[#2563eb]">
@@ -428,7 +428,7 @@ function EmployeeHelpSupport() {
           {isTicketFormOpen && (
           <section
             id="support-tickets"
-            className="scroll-mt-6 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6"
+            className="scroll-mt-6 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm sm:p-6"
           >
           <div className="mb-6 flex items-start justify-between gap-3">
             <div className="flex items-start gap-3">
@@ -606,7 +606,7 @@ function EmployeeHelpSupport() {
           )}
 
           {/* My Support Tickets */}
-          <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+          <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm sm:p-6">
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
@@ -752,7 +752,7 @@ function EmployeeHelpSupport() {
           {/* FAQ */}
           <section
             id="faq-section"
-            className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
+            className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"
           >
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
@@ -820,7 +820,7 @@ function EmployeeHelpSupport() {
           </section>
 
           {/* Contact HR */}
-          <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+          <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
             <div className="flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-[#2563eb]">
                 <UserRound className="h-5 w-5" />

@@ -1,6 +1,16 @@
+from datetime import date, datetime
+
 from bson import ObjectId
 
 from app.db.database import database
+
+
+def _as_date(value) -> date:
+    """Mongo stores a datetime; the trend is keyed by calendar day."""
+    if isinstance(value, datetime):
+        return value.date()
+
+    return value
 
 
 class AttendanceRepository:
@@ -103,3 +113,61 @@ class AttendanceRepository:
         ]
 
         return await self.collection.aggregate(pipeline).to_list(length=None)
+
+    async def get_daily_status_counts(self, filters: dict):
+        """Counts per day and status.
+
+        Returns [{"date": datetime, "status": "present", "count": 12}, ...].
+        """
+        pipeline = [
+            {"$match": filters},
+            {
+                "$group": {
+                    "_id": {
+                        "date": "$date",
+                        "status": {"$toLower": "$status"},
+                    },
+                    "count": {"$sum": 1},
+                }
+            },
+            {
+                "$project": {
+                    "date": "$_id.date",
+                    "status": "$_id.status",
+                    "count": 1,
+                }
+            },
+        ]
+
+        return await self.collection.aggregate(pipeline).to_list(length=None)
+
+    async def get_daily_marked_counts(self, filters: dict):
+        """How many employees have a record on each day.
+
+        Returns {date: count}. An employee with no record for a day counts as
+        absent, so the caller needs this to match the single-day summary.
+        """
+        pipeline = [
+            {"$match": filters},
+            {
+                "$group": {
+                    "_id": {
+                        "date": "$date",
+                        "employee_id": "$employee_id",
+                    },
+                }
+            },
+            {
+                "$group": {
+                    "_id": "$_id.date",
+                    "count": {"$sum": 1},
+                }
+            },
+        ]
+
+        results = await self.collection.aggregate(pipeline).to_list(length=None)
+
+        return {
+            _as_date(item["_id"]): item["count"]
+            for item in results
+        }

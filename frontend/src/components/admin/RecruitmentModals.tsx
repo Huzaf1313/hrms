@@ -42,11 +42,21 @@ function ModalShell({
   );
 }
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
+function Field({
+  label,
+  required = false,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  children: ReactNode;
+}) {
   return (
     <label className="block">
       <span className="mb-1 block text-sm font-medium text-slate-700">
         {label}
+
+        {required && <span className="ml-0.5 text-red-500">*</span>}
       </span>
       {children}
     </label>
@@ -112,7 +122,7 @@ export function JobModal({ job, departments, onClose, onSaved }: JobModalProps) 
       onClose={onClose}
     >
       <div className="space-y-4">
-        <Field label="Job title">
+        <Field label="Job title" required>
           <input
             className={inputClass}
             value={title}

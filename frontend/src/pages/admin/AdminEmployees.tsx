@@ -1,9 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Check } from "lucide-react";
 
 import AdminEmployeeDetailsPage from "../../components/admin/AdminEmployeeDetailsPage";
 import AdminEmployeeForm from "../../components/admin/AdminEmployeeForm";
 import AdminEmployeeTable from "../../components/admin/AdminEmployeeTable";
+import { TableSkeleton } from "../../components/ui";
 import { ApiError } from "../../services/api";
 import {
   salaryStructureService,
@@ -56,7 +58,7 @@ function CredentialsModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-      <div className="w-full max-w-md rounded-3xl bg-white p-8 shadow-xl">
+      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl sm:p-8">
         <div className="mb-1 flex items-center gap-2">
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
             <Check aria-hidden="true" className="h-4 w-4" />
@@ -114,11 +116,30 @@ function CredentialsModal({
   );
 }
 
-interface AdminEmployeesProps {
-  autoOpenCreateForm?: boolean;
+interface EmployeeSearchRequest {
+  query: string;
+  requestId: number;
 }
 
-function AdminEmployees({ autoOpenCreateForm = false }: AdminEmployeesProps) {
+interface EmployeeSelectionRequest {
+  employeeId: string;
+  requestId: number;
+}
+
+interface AdminEmployeesProps {
+  autoOpenCreateForm?: boolean;
+  employeeSearchRequest?: EmployeeSearchRequest;
+  employeeSelectionRequest?: EmployeeSelectionRequest;
+}
+
+function AdminEmployees({
+  autoOpenCreateForm = false,
+  employeeSearchRequest,
+  employeeSelectionRequest,
+}: AdminEmployeesProps) {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const specialFilter = searchParams.get("filter") || "";
+
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [salaryStructures, setSalaryStructures] = useState<SalaryStructure[]>(
@@ -144,6 +165,7 @@ function AdminEmployees({ autoOpenCreateForm = false }: AdminEmployeesProps) {
   } | null>(null);
 
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const lastHandledSearchRequest = useRef<number | null>(null);
 
   async function loadEmployees() {
     setIsLoading(true);
@@ -154,13 +176,61 @@ function AdminEmployees({ autoOpenCreateForm = false }: AdminEmployeesProps) {
         search: search || undefined,
         department_id: departmentFilter || undefined,
         status: statusFilter || undefined,
+        filter: specialFilter || undefined,
         page,
         limit: PAGE_SIZE,
       });
+
       setEmployees(data);
+
+      const request = employeeSearchRequest;
+      const query = request?.query.trim().toLowerCase();
+
+      const shouldHandleRequest =
+        request &&
+        query &&
+        search.trim().toLowerCase() === query &&
+        lastHandledSearchRequest.current !== request.requestId;
+
+      if (shouldHandleRequest && request) {
+        lastHandledSearchRequest.current = request.requestId;
+
+        const normalize = (value: string) =>
+          value.trim().toLowerCase().replace(/\s+/g, " ");
+
+        const normalizedQuery = normalize(request.query);
+
+        const getFullName = (employee: Employee) =>
+          normalize(`${employee.first_name} ${employee.last_name}`);
+
+        // Prefer an exact full-name match.
+        let matchedEmployee = data.find(
+          (employee) => getFullName(employee) === normalizedQuery,
+        );
+
+        // Otherwise, match all search terms against the employee's full name.
+        if (!matchedEmployee) {
+          const searchTerms = normalizedQuery.split(" ");
+
+          matchedEmployee = data.find((employee) => {
+            const fullName = getFullName(employee);
+
+            return searchTerms.every((term) => fullName.includes(term));
+          });
+        }
+
+        if (matchedEmployee) {
+          setViewingEmployee(matchedEmployee);
+        } else {
+          setError(
+            `No employee found matching "${request.query}". Try searching with their full name.`,
+          );
+        }
+      }
     } catch (err) {
       const message =
         err instanceof ApiError ? err.message : "Failed to load employees.";
+
       setError(message);
     } finally {
       setIsLoading(false);
@@ -181,7 +251,14 @@ function AdminEmployees({ autoOpenCreateForm = false }: AdminEmployeesProps) {
       isCancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, departmentFilter, statusFilter, page]);
+  }, [
+        search,
+        departmentFilter,
+        statusFilter,
+        specialFilter,
+        page,
+        employeeSearchRequest?.requestId,
+      ]);
 
   useEffect(() => {
     departmentService
@@ -211,6 +288,70 @@ function AdminEmployees({ autoOpenCreateForm = false }: AdminEmployeesProps) {
       .catch(() => setShifts([]));
   }, []);
 
+  // Both requests arrive as new prop objects from the layout. Resetting state
+  // during render (rather than in an effect) keeps the list and the spinner in
+  // step with the request in the same commit, with no cascading render.
+  const [appliedSearchRequest, setAppliedSearchRequest] =
+    useState(employeeSearchRequest);
+
+  if (employeeSearchRequest !== appliedSearchRequest) {
+    setAppliedSearchRequest(employeeSearchRequest);
+
+    if (employeeSearchRequest) {
+      setViewingEmployee(undefined);
+      setSearch(employeeSearchRequest.query);
+      setDepartmentFilter("");
+      setStatusFilter("");
+      setPage(1);
+    }
+  }
+
+  const [appliedSelectionRequest, setAppliedSelectionRequest] =
+    useState(employeeSelectionRequest);
+
+  if (employeeSelectionRequest !== appliedSelectionRequest) {
+    setAppliedSelectionRequest(employeeSelectionRequest);
+
+    if (employeeSelectionRequest) {
+      setViewingEmployee(undefined);
+      setError(null);
+      setIsLoading(true);
+    }
+  }
+
+  useEffect(() => {
+    if (!employeeSelectionRequest) return;
+
+    let cancelled = false;
+
+    employeeService
+      .get(employeeSelectionRequest.employeeId)
+      .then((employee) => {
+        if (!cancelled) {
+          setViewingEmployee(employee);
+        }
+      })
+      .catch((err) => {
+        if (cancelled) return;
+
+        const message =
+          err instanceof ApiError
+            ? err.message
+            : "Failed to load the selected employee.";
+
+        setError(message);
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [employeeSelectionRequest]);
+
   function openCreateForm() {
     setEditingEmployee(undefined);
     setFormError(null);
@@ -228,6 +369,11 @@ function AdminEmployees({ autoOpenCreateForm = false }: AdminEmployeesProps) {
     setSearch("");
     setDepartmentFilter("");
     setStatusFilter("");
+    if (specialFilter) {
+      const next = new URLSearchParams(searchParams);
+      next.delete("filter");
+      setSearchParams(next);
+    }
   }
 
   function closeForm() {
@@ -379,7 +525,7 @@ function AdminEmployees({ autoOpenCreateForm = false }: AdminEmployeesProps) {
         </button>
       </div>
 
-      <div className="rounded-3xl bg-white p-8 shadow-sm">
+      <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm sm:p-8">
         <div className="mb-6 flex flex-wrap items-center gap-3">
           <input
             type="text"
@@ -388,7 +534,7 @@ function AdminEmployees({ autoOpenCreateForm = false }: AdminEmployeesProps) {
               setPage(1);
               setSearch(event.target.value);
             }}
-            placeholder="Search employees…"
+            placeholder="Search employees..."
             className="min-w-[220px] flex-1 rounded-full border border-gray-200 px-4 py-2.5 text-sm focus:border-[#2563eb] focus:outline-none"
           />
 
@@ -427,13 +573,35 @@ function AdminEmployees({ autoOpenCreateForm = false }: AdminEmployeesProps) {
             onClick={clearFilters}
             className="rounded-full border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
           >
-            ⇅ Clear Filters
+            Clear Filters
           </button>
         </div>
 
+        {specialFilter && (
+          <div className="mb-4 flex items-center justify-between rounded-xl bg-blue-50 px-4 py-2.5 text-xs font-semibold text-blue-700">
+            <span className="flex items-center gap-1.5">
+              <span>Filtered by:</span>
+              <span className="font-bold underline">
+                {specialFilter === "new_joiners"
+                  ? "New Joiners (Last 30 Days)"
+                  : specialFilter === "missing_salary_structure"
+                  ? "Employees Missing Salary Structure"
+                  : specialFilter}
+              </span>
+            </span>
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="rounded px-2 py-1 text-[11px] font-bold text-blue-600 hover:bg-blue-100 hover:underline"
+            >
+              Clear Filter ✕
+            </button>
+          </div>
+        )}
+
         {isLoading && (
-          <div className="py-10 text-center text-gray-500">
-            Loading employees…
+          <div className="py-2">
+            <TableSkeleton rows={6} columns={6} />
           </div>
         )}
 
@@ -505,7 +673,7 @@ function AdminEmployees({ autoOpenCreateForm = false }: AdminEmployeesProps) {
 
       {pendingDeleteId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
-          <div className="w-full max-w-sm rounded-3xl bg-white p-8 shadow-lg">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-lg sm:p-8">
             <h3 className="text-lg font-semibold text-gray-800">Delete employee?</h3>
             <p className="mt-2 text-sm text-gray-500">
               This action cannot be undone.
@@ -536,5 +704,3 @@ function AdminEmployees({ autoOpenCreateForm = false }: AdminEmployeesProps) {
 }
 
 export default AdminEmployees;
-
-

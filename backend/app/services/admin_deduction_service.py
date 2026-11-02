@@ -1,3 +1,5 @@
+from bson import ObjectId
+
 from app.core.exceptions import AppException
 from app.repositories.admin_deduction_repository import (
     AdminDeductionRepository,
@@ -98,6 +100,51 @@ class AdminDeductionService:
             )
 
         return True
+
+    async def apply_to_salary_structures(
+        self,
+        deduction_id: str,
+        structure_ids: list[str],
+    ) -> int:
+        if not structure_ids:
+            raise AppException("At least one salary structure must be selected", 400)
+
+        if not ObjectId.is_valid(deduction_id):
+            raise AppException("Deduction or contribution not found", 404)
+
+        deduction = await self.repository.get_by_id(deduction_id)
+        if not deduction:
+            raise AppException("Deduction or contribution not found", 404)
+
+        if not deduction.get("name"):
+            raise AppException("Invalid deduction component", 400)
+
+        if deduction.get("is_active") is False:
+            raise AppException("Cannot apply an inactive deduction or contribution", 400)
+
+        unique_structure_ids = list(dict.fromkeys(structure_ids))
+
+        valid_oids = []
+        for sid in unique_structure_ids:
+            if not ObjectId.is_valid(sid):
+                raise AppException(f"Invalid salary structure ID: {sid}", 400)
+            valid_oids.append(ObjectId(sid))
+
+        existing_structures = await self.salary_structure_repository.collection.find(
+            {"_id": {"$in": valid_oids}}
+        ).to_list(length=len(valid_oids))
+
+        existing_ids = {str(s["_id"]) for s in existing_structures}
+        missing_ids = [sid for sid in unique_structure_ids if sid not in existing_ids]
+        if missing_ids:
+            raise AppException(
+                f"Salary structures not found: {', '.join(missing_ids)}",
+                404,
+            )
+
+        return await self.salary_structure_repository.apply_deduction_to_structures(
+            deduction, unique_structure_ids
+        )
 
     async def apply_to_all_salary_structures(self, deduction_id: str):
         deduction = await self.repository.get_by_id(deduction_id)
