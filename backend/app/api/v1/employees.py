@@ -6,6 +6,7 @@ from app.api.deps import get_current_user, require_permission
 from app.core.cache import (
     get_cache,
     invalidate_employees_cache,
+    invalidate_payroll_analytics_cache,
     set_cache,
 )
 from app.core.roles import Permission, has_permission
@@ -146,6 +147,10 @@ async def create_employee(
     )
 
     await invalidate_employees_cache()
+    try:
+        await invalidate_payroll_analytics_cache()
+    except Exception:
+        pass
 
     response = serialize_employee(employee, welcome_email_sent=welcome_email_sent)
     response.credentials = EmployeeCredentials(
@@ -174,6 +179,7 @@ async def get_employees(
     search: str | None = Query(default=None),
     department_id: str | None = Query(default=None),
     status: str | None = Query(default=None),
+    filter: str | None = Query(default=None),
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=10, ge=1, le=100),
     current_user: dict = Depends(require_permission(Permission.EMPLOYEES_READ)),
@@ -183,11 +189,12 @@ async def get_employees(
     search_val = search if isinstance(search, str) else None
     dept_val = department_id if isinstance(department_id, str) else None
     status_val = status if isinstance(status, str) else None
+    filter_val = filter if isinstance(filter, str) else None
 
     role = getattr(current_user.get("role"), "value", current_user.get("role"))
     scope = f"mgr_{current_user.get('_id')}" if role == "manager" else "hr"
     search_str = search_val.strip().lower() if search_val else "none"
-    cache_key = f"employees:list:{scope}:{dept_val or 'all'}:{status_val or 'all'}:{search_str}:{page_val}:{limit_val}"
+    cache_key = f"employees:list:{scope}:{dept_val or 'all'}:{status_val or 'all'}:{filter_val or 'all'}:{search_str}:{page_val}:{limit_val}"
 
     cached = await get_cache(cache_key)
     if cached is not None:
@@ -208,6 +215,7 @@ async def get_employees(
         status=status_val,
         pagination=pagination,
         current_user=current_user,
+        special_filter=filter_val,
     )
 
     serialized = [serialize_employee(employee) for employee in employees]
@@ -361,6 +369,10 @@ async def update_employee(
     )
 
     await invalidate_employees_cache(employee_id=employee_id, user_id=str(current_user_id))
+    try:
+        await invalidate_payroll_analytics_cache()
+    except Exception:
+        pass
 
     return APIResponse(
         success=True,
@@ -385,6 +397,10 @@ async def deactivate_employee(
     )
 
     await invalidate_employees_cache(employee_id=employee_id)
+    try:
+        await invalidate_payroll_analytics_cache()
+    except Exception:
+        pass
 
     return APIResponse(
         success=True,
@@ -406,6 +422,10 @@ async def delete_employee(
     )
 
     await invalidate_employees_cache(employee_id=employee_id)
+    try:
+        await invalidate_payroll_analytics_cache()
+    except Exception:
+        pass
 
     return APIResponse(
         success=True,

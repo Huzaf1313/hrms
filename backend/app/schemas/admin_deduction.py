@@ -52,6 +52,14 @@ class AdminDeductionResponse(BaseModel):
     is_active: bool
 
 
+class ApplyDeductionRequest(BaseModel):
+    salary_structure_ids: list[str] = Field(default_factory=list)
+    structure_ids: list[str] | None = None
+
+    def get_structure_ids(self) -> list[str]:
+        return self.salary_structure_ids or self.structure_ids or []
+
+
 class DeductionCalculationRequest(BaseModel):
     basic_salary: float = Field(ge=0)
     annual_income: float = Field(ge=0)

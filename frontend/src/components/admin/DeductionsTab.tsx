@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Calculator, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Calculator, CheckCircle2, Pencil, Plus, Trash2, X } from "lucide-react";
+import ApplyDeductionModal from "./ApplyDeductionModal";
 
 import {
   adminDeductionService,
@@ -577,10 +578,10 @@ export default function DeductionsTab() {
   const [error, setError] =
     useState<string | null>(null);
 
-  const [applyMessage, setApplyMessage] =
-    useState<string | null>(null);
+  const [applyingComponent, setApplyingComponent] =
+    useState<DeductionComponent | null>(null);
 
-  const [applyingId, setApplyingId] =
+  const [successToast, setSuccessToast] =
     useState<string | null>(null);
 
   const [previewBasic, setPreviewBasic] =
@@ -759,32 +760,21 @@ export default function DeductionsTab() {
     }
   }
 
-  async function handleApply(component: DeductionComponent) {
-    try {
-      setApplyingId(component.id);
-      setError(null);
-      setApplyMessage(null);
+  function handleApplySuccess(componentName: string, updatedCount: number) {
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.reference.deductions(),
+    });
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.reference.salaryStructures(),
+    });
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.admin.payrollAnalytics(),
+    });
 
-      const response = await adminDeductionService.apply(component.id);
-      void queryClient.invalidateQueries({
-        queryKey: queryKeys.reference.deductions(),
-      });
-      void queryClient.invalidateQueries({
-        queryKey: queryKeys.reference.salaryStructures(),
-      });
-      void queryClient.invalidateQueries({
-        queryKey: queryKeys.admin.payrollAnalytics(),
-      });
-
-      setApplyMessage(
-        `${component.name} applied to ${response.updated_structures} salary structure${response.updated_structures === 1 ? "" : "s"}.`,
-      );
-    } catch (err) {
-      console.error(err);
-      setError("Unable to apply this deduction or contribution.");
-    } finally {
-      setApplyingId(null);
-    }
+    setSuccessToast(
+      `${componentName} applied to ${updatedCount} salary structure${updatedCount === 1 ? "" : "s"}.`,
+    );
+    void loadComponents();
   }
 
   /* =======================================================
@@ -820,9 +810,20 @@ export default function DeductionsTab() {
         </div>
       )}
 
-      {applyMessage && (
-        <div className="mb-4 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
-          {applyMessage}
+      {successToast && (
+        <div className="mb-4 flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800 shadow-xs">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+            <span>{successToast}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSuccessToast(null)}
+            className="rounded-lg p-1 text-emerald-700 transition hover:bg-emerald-100"
+            aria-label="Dismiss notification"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
       )}
 
@@ -944,12 +945,11 @@ export default function DeductionsTab() {
                         <div className="flex justify-end gap-2">
                           <button
                             type="button"
-                            onClick={() => handleApply(component)}
-                            disabled={applyingId === component.id}
-                            className="rounded-lg border border-blue-200 px-3 py-2 text-xs font-semibold text-blue-600 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60"
-                            title="Apply to every salary structure"
+                            onClick={() => setApplyingComponent(component)}
+                            className="rounded-lg border border-blue-200 px-3 py-2 text-xs font-semibold text-blue-600 transition hover:bg-blue-50 cursor-pointer"
+                            title="Apply to selected salary structures"
                           >
-                            {applyingId === component.id ? "Applying..." : "Apply"}
+                            Apply
                           </button>
 
                           <button
@@ -1155,6 +1155,17 @@ export default function DeductionsTab() {
             setEditingComponent(null);
             setIsCreating(false);
           }}
+        />
+      )}
+
+      {/* Apply Deduction to Salary Structures Modal */}
+      {applyingComponent && (
+        <ApplyDeductionModal
+          component={applyingComponent}
+          onClose={() => setApplyingComponent(null)}
+          onSuccess={(count) =>
+            handleApplySuccess(applyingComponent.name, count)
+          }
         />
       )}
     </div>

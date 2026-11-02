@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Check } from "lucide-react";
 
 import AdminEmployeeDetailsPage from "../../components/admin/AdminEmployeeDetailsPage";
@@ -136,6 +137,9 @@ function AdminEmployees({
   employeeSearchRequest,
   employeeSelectionRequest,
 }: AdminEmployeesProps) {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const specialFilter = searchParams.get("filter") || "";
+
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [salaryStructures, setSalaryStructures] = useState<SalaryStructure[]>(
@@ -172,6 +176,7 @@ function AdminEmployees({
         search: search || undefined,
         department_id: departmentFilter || undefined,
         status: statusFilter || undefined,
+        filter: specialFilter || undefined,
         page,
         limit: PAGE_SIZE,
       });
@@ -250,6 +255,7 @@ function AdminEmployees({
         search,
         departmentFilter,
         statusFilter,
+        specialFilter,
         page,
         employeeSearchRequest?.requestId,
       ]);
@@ -363,6 +369,11 @@ function AdminEmployees({
     setSearch("");
     setDepartmentFilter("");
     setStatusFilter("");
+    if (specialFilter) {
+      const next = new URLSearchParams(searchParams);
+      next.delete("filter");
+      setSearchParams(next);
+    }
   }
 
   function closeForm() {
@@ -565,6 +576,28 @@ function AdminEmployees({
             Clear Filters
           </button>
         </div>
+
+        {specialFilter && (
+          <div className="mb-4 flex items-center justify-between rounded-xl bg-blue-50 px-4 py-2.5 text-xs font-semibold text-blue-700">
+            <span className="flex items-center gap-1.5">
+              <span>Filtered by:</span>
+              <span className="font-bold underline">
+                {specialFilter === "new_joiners"
+                  ? "New Joiners (Last 30 Days)"
+                  : specialFilter === "missing_salary_structure"
+                  ? "Employees Missing Salary Structure"
+                  : specialFilter}
+              </span>
+            </span>
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="rounded px-2 py-1 text-[11px] font-bold text-blue-600 hover:bg-blue-100 hover:underline"
+            >
+              Clear Filter ✕
+            </button>
+          </div>
+        )}
 
         {isLoading && (
           <div className="py-2">

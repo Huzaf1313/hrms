@@ -279,6 +279,20 @@ async def invalidate_payroll_analytics_cache() -> int:
         return 0
 
 
+async def invalidate_dashboard_cache() -> int:
+    """Invalidate all cached dashboard data across all roles and users."""
+    try:
+        deleted = await delete_cache_by_prefix("dashboard:")
+        logger.info("Invalidated %d dashboard cache entries.", deleted)
+        return deleted
+    except Exception as exc:
+        logger.error(
+            "Failed to invalidate dashboard cache: %s. Relying on TTL expiration.",
+            exc,
+        )
+        return 0
+
+
 async def invalidate_salary_structures_cache(structure_id: str | None = None) -> int:
     """Invalidate salary structures cache (all list and detail variants)."""
     try:
