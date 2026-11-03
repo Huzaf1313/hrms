@@ -1,5 +1,8 @@
+import { api } from "./api";
+
 import type {
   AdminProfile,
+  EmploymentStatus,
   NotificationPreferences,
   ProfileActivity,
   ProfileDocument,
@@ -8,55 +11,105 @@ import type {
 } from "../types/adminProfile";
 
 /**
- * Frontend-only data source for the admin profile page.
+ * Data source for the admin profile page.
  *
- * Everything here is served from `localStorage` so the page is fully usable
- * before the profile endpoints exist. Each method already returns a promise
- * and already has the right shape, so swapping a body for `api.get` / `api.patch`
- * is the only change needed once the backend lands. TODO: replace the storage
- * reads with GET /users/me, GET /admin/profile/session, GET /admin/profile/activities,
- * GET /admin/profile/documents and PATCH /admin/profile.
+ * Profile read/write hits the backend (`GET`/`PATCH /users/me/profile`). The
+ * remaining panels (session info, activities, documents, notification
+ * preferences, support contact) are still served from placeholder seeds
+ * until their endpoints exist - each one swaps for an api call without
+ * touching the page. TODO: replace those storage reads/seeds with
+ * GET /admin/profile/session, GET /admin/profile/activities,
+ * GET /admin/profile/documents and a notification-preferences endpoint.
  */
 
-const PROFILE_KEY = "hrms_admin_profile";
 const NOTIFICATIONS_KEY = "hrms_admin_profile_notifications";
 
-/** Placeholder record shaped like the design, used until one is saved. */
-const SEED_PROFILE: AdminProfile = {
-  full_name: "Priya Sharma",
-  employee_id: "HR001",
-  avatar_url: null,
+/** Raw backend record: anything the account never had comes back null. */
+interface BackendProfile {
+  id?: string;
+  employee_id?: string | null;
+  full_name?: string;
+  role?: string | null;
+  avatar_url?: string | null;
 
-  designation: "HR Manager",
-  role: "HR Admin",
-  department: "Human Resources",
-  department_head: "Amit Verma (CEO)",
-  reporting_manager: "CEO",
-  work_location: "Bengaluru",
-  employment_type: "Full Time",
-  shift: "General Shift (9 AM - 6 PM)",
-  date_of_joining: "2023-01-15",
-  employment_status: "Active",
+  designation?: string | null;
+  department?: string | null;
+  department_head?: string | null;
+  reporting_manager?: string | null;
+  work_location?: string | null;
+  employment_type?: string | null;
+  shift?: string | null;
+  date_of_joining?: string | null;
+  employment_status?: string | null;
 
-  email: "priya.sharma@trimarkity.com",
-  phone: "+91 98765 43210",
-  office_email: "priya.sharma@trimarkity.com",
-  work_phone: "+91 98765 43210",
+  email?: string;
+  phone?: string | null;
+  office_email?: string | null;
+  work_phone?: string | null;
 
-  date_of_birth: "1990-02-10",
-  gender: "Female",
-  marital_status: "Married",
-  nationality: "Indian",
-  blood_group: "B+",
+  date_of_birth?: string | null;
+  gender?: string | null;
+  marital_status?: string | null;
+  nationality?: string | null;
+  blood_group?: string | null;
 
-  permanent_address: "#123, 2nd Floor, MG Road, Bengaluru, Karnataka - 560001",
-  current_address: "#123, 2nd Floor, MG Road, Bengaluru, Karnataka - 560001",
+  permanent_address?: string | null;
+  current_address?: string | null;
 
-  emergency_name: "Rohit Sharma",
-  emergency_relationship: "Husband",
-  emergency_phone: "+91 98765 43210",
-  emergency_email: "rohit.sharma@email.com",
-};
+  emergency_name?: string | null;
+  emergency_relationship?: string | null;
+  emergency_phone?: string | null;
+  emergency_email?: string | null;
+}
+
+const EMPLOYMENT_STATUSES: EmploymentStatus[] = [
+  "Active",
+  "On Leave",
+  "Inactive",
+];
+
+/** Map the sparse backend record onto the page's filled-string shape. */
+function normalizeProfile(raw: BackendProfile): AdminProfile {
+  const status = (raw.employment_status ?? "") as EmploymentStatus;
+
+  return {
+    full_name: raw.full_name ?? "",
+    employee_id: raw.employee_id ?? "",
+    avatar_url: raw.avatar_url ?? null,
+
+    designation: raw.designation ?? "",
+    role: raw.role ?? "",
+    department: raw.department ?? "",
+    department_head: raw.department_head ?? "",
+    reporting_manager: raw.reporting_manager ?? "",
+    work_location: raw.work_location ?? "",
+    employment_type: raw.employment_type ?? "",
+    shift: raw.shift ?? "",
+    date_of_joining: raw.date_of_joining ?? "",
+    employment_status: EMPLOYMENT_STATUSES.includes(status)
+      ? status
+      : "Active",
+
+    email: raw.email ?? "",
+    phone: raw.phone ?? "",
+    office_email: raw.office_email || raw.email || "",
+    work_phone: raw.work_phone || raw.phone || "",
+
+    date_of_birth: raw.date_of_birth ?? "",
+    gender: raw.gender ?? "",
+    marital_status: raw.marital_status ?? "",
+    nationality: raw.nationality ?? "",
+    blood_group: raw.blood_group ?? "",
+
+    permanent_address: raw.permanent_address ?? "",
+    current_address: raw.current_address ?? "",
+
+    emergency_name: raw.emergency_name ?? "",
+    emergency_relationship: raw.emergency_relationship ?? "",
+    emergency_phone: raw.emergency_phone ?? "",
+    emergency_email: raw.emergency_email ?? "",
+  };
+}
 
 const SEED_SESSION: SessionInfo = {
   login_status: "Active",
@@ -130,34 +183,15 @@ function writeJson(key: string, value: unknown) {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
-/**
- * The signed-in admin's own identity, as cached at login. Whatever it knows
- * wins over the seed so the page greets the real user.
- */
-function readSessionUser(): { full_name?: string; email?: string; role?: string } | null {
-  return readJson<{ full_name?: string; email?: string; role?: string }>("user");
-}
-
-function baseProfile(): AdminProfile {
-  const user = readSessionUser();
-
-  return {
-    ...SEED_PROFILE,
-    full_name: user?.full_name || SEED_PROFILE.full_name,
-    email: user?.email || SEED_PROFILE.email,
-    role: user?.role || SEED_PROFILE.role,
-  };
-}
-
 export const adminProfileService = {
   async getProfile(): Promise<AdminProfile> {
-    return readJson<AdminProfile>(PROFILE_KEY) ?? baseProfile();
+    return normalizeProfile(await api.get<BackendProfile>("/users/me/profile"));
   },
 
   async saveProfile(profile: AdminProfile): Promise<AdminProfile> {
-    writeJson(PROFILE_KEY, profile);
-
-    return profile;
+    return normalizeProfile(
+      await api.patch<BackendProfile>("/users/me/profile", profile),
+    );
   },
 
   async getSession(): Promise<SessionInfo> {

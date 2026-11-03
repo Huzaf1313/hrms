@@ -50,6 +50,7 @@ class PayrollSummaryMetrics(BaseModel):
     total_employees: int = 0
     processed_payroll: int = 0
     pending_payroll: int = 0
+    pending_employees: int = 0
     total_payroll_amount: float = 0.0
     latest_month: str = ""
     period_gross: float = 0.0

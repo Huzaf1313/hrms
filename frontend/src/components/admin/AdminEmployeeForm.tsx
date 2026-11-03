@@ -39,6 +39,19 @@ type IdentityField = "first_name" | "last_name" | "phone";
 const NAME_DIGIT_PATTERN = /[0-9]/;
 const PHONE_PATTERN = /^[0-9]{10}$/;
 
+const COUNTRY_CODES = [
+  { code: "+91", label: "India", flag: "🇮🇳" },
+  { code: "+1", label: "USA", flag: "🇺🇸" },
+  { code: "+44", label: "UK", flag: "🇬🇧" },
+  { code: "+971", label: "UAE", flag: "🇦🇪" },
+  { code: "+61", label: "Australia", flag: "🇦🇺" },
+  { code: "+49", label: "Germany", flag: "🇩🇪" },
+  { code: "+33", label: "France", flag: "🇫🇷" },
+  { code: "+81", label: "Japan", flag: "🇯🇵" },
+  { code: "+65", label: "Singapore", flag: "🇸🇬" },
+  { code: "+86", label: "China", flag: "🇨🇳" },
+];
+
 function sanitizeName(value: string): string {
   return value.replace(/[0-9]/g, "");
 }
@@ -109,6 +122,8 @@ function AdminEmployeeForm({
   const [form, setForm] = useState<EmployeeCreate>(() =>
     toFormState(initialEmployee),
   );
+
+  const [countryCode, setCountryCode] = useState("+91");
 
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
@@ -667,13 +682,7 @@ function AdminEmployeeForm({
 
               {availableShifts.length === 0 ? (
                 <p className="mt-1.5 text-xs font-medium text-amber-600">
-                  No shifts exist yet. Run{" "}
-                  <code className="rounded bg-amber-50 px-1">
-                    python seed_shifts.py
-                  </code>{" "}
-                  in the backend folder, or add one from Attendance &rarr;
-                  Manage Shifts. Overtime cannot be calculated until a shift
-                  exists.
+                  No shift added yet!
                 </p>
               ) : (
                 <p className="mt-1.5 text-xs text-gray-500">
@@ -923,24 +932,39 @@ function AdminEmployeeForm({
               Phone <span className="ml-1 text-red-500">*</span>
             </label>
 
-            <input
-              required
-              type="tel"
-              inputMode="numeric"
-              maxLength={10}
-              value={form.phone}
-              onChange={(event) => handlePhoneChange(event.target.value)}
-              onBlur={() =>
-                setIdentityError("phone", validateIdentityField("phone"))
-              }
-              placeholder="10-digit phone number"
-              aria-invalid={Boolean(identityErrors.phone)}
-              className={`w-full rounded-xl border px-4 py-3 text-sm outline-none transition focus:ring-2 ${
-                identityErrors.phone
-                  ? "border-red-400 focus:border-red-400 focus:ring-red-400/10"
-                  : "border-gray-200 focus:border-[#2563eb] focus:ring-[#2563eb]/10"
-              }`}
-            />
+            <div className="flex gap-2">
+              <select
+                value={countryCode}
+                onChange={(event) => setCountryCode(event.target.value)}
+                title={COUNTRY_CODES.find((c) => c.code === countryCode)?.label}
+                className="w-[150px] shrink-0 rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm text-[#17375e] outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
+              >
+                {COUNTRY_CODES.map((country) => (
+                  <option key={country.code} value={country.code}>
+                    {country.flag} {country.code} ({country.label})
+                  </option>
+                ))}
+              </select>
+
+              <input
+                required
+                type="tel"
+                inputMode="numeric"
+                maxLength={10}
+                value={form.phone}
+                onChange={(event) => handlePhoneChange(event.target.value)}
+                onBlur={() =>
+                  setIdentityError("phone", validateIdentityField("phone"))
+                }
+                placeholder="10-digit phone number"
+                aria-invalid={Boolean(identityErrors.phone)}
+                className={`min-w-0 flex-1 rounded-xl border px-4 py-3 text-sm outline-none transition focus:ring-2 ${
+                  identityErrors.phone
+                    ? "border-red-400 focus:border-red-400 focus:ring-red-400/10"
+                    : "border-gray-200 focus:border-[#2563eb] focus:ring-[#2563eb]/10"
+                }`}
+              />
+            </div>
 
             {identityErrors.phone ? (
               <p className="mt-1.5 text-xs font-medium text-red-600">
@@ -948,7 +972,8 @@ function AdminEmployeeForm({
               </p>
             ) : (
               <p className="mt-1.5 text-xs text-gray-400">
-                Exactly 10 digits
+                Exactly 10 digits, shown with{" "}
+                {COUNTRY_CODES.find((c) => c.code === countryCode)?.code} prefix
               </p>
             )}
           </div>
@@ -1031,6 +1056,12 @@ function AdminEmployeeForm({
                 </option>
               ))}
             </select>
+
+            {departments.length === 0 ? (
+              <p className="mt-1.5 text-xs font-medium text-amber-600">
+                No department added yet!
+              </p>
+            ) : null}
           </div>
 
           {/* DESIGNATION */}

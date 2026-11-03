@@ -6,6 +6,7 @@ import { departmentService } from "../../services/departmentService";
 import { employeeService } from "../../services/employeeService";
 import { leaveService } from "../../services/admin_leave_service";
 import { recruitmentService } from "../../services/recruitmentService";
+import { getDashboardData } from "../../services/dashboardService";
 import type {
   CandidateStage,
   UpcomingInterview,
@@ -31,6 +32,11 @@ export interface DashboardMetrics {
   activeJobPositions: number | null;
   /** Booked interviews still ahead of now, soonest first. */
   upcomingInterviews: UpcomingInterview[] | null;
+  payrollThisMonth: number | null;
+  payrollChangePercent: number | null;
+  totalExpensesThisMonth: number | null;
+  expenseChangePercent: number | null;
+  isPayrollLoading: boolean;
 }
 
 export interface DashboardMetricsState {
@@ -53,6 +59,11 @@ const EMPTY_METRICS: DashboardMetrics = {
   recruitmentStageCounts: null,
   activeJobPositions: null,
   upcomingInterviews: null,
+  payrollThisMonth: null,
+  payrollChangePercent: null,
+  totalExpensesThisMonth: null,
+  expenseChangePercent: null,
+  isPayrollLoading: false,
 };
 
 /** Local calendar date, so the summary matches the server's IST day. */
@@ -121,6 +132,12 @@ export function useDashboardMetrics(
     staleTime: 3 * 60 * 1000,
   });
 
+  const dashboardQuery = useQuery({
+    queryKey: queryKeys.admin.dashboard(),
+    queryFn: () => getDashboardData(),
+    staleTime: 60 * 1000,
+  });
+
   const metrics = useMemo<DashboardMetrics>(() => {
     const next: DashboardMetrics = { ...EMPTY_METRICS };
 
@@ -153,6 +170,20 @@ export function useDashboardMetrics(
     if (upcomingInterviewsQuery.data) {
       next.upcomingInterviews = upcomingInterviewsQuery.data;
     }
+
+    const payrollSummary = dashboardQuery.data?.payroll_summary;
+    if (payrollSummary) {
+      next.payrollThisMonth = payrollSummary.payroll_this_month;
+      next.payrollChangePercent = payrollSummary.payroll_change_percent;
+      next.totalExpensesThisMonth = payrollSummary.total_expenses;
+      next.expenseChangePercent = payrollSummary.expense_change_percent;
+    } else if (dashboardQuery.isSuccess) {
+      next.payrollThisMonth = 0;
+      next.payrollChangePercent = 0;
+      next.totalExpensesThisMonth = 0;
+      next.expenseChangePercent = 0;
+    }
+    next.isPayrollLoading = dashboardQuery.isLoading;
 
     // Department headcount: the attendance summary already reports total
     // employees per department, so one call covers the donut.
@@ -208,11 +239,17 @@ export function useDashboardMetrics(
     leaveQuery.data,
     recruitmentStatsQuery.data,
     upcomingInterviewsQuery.data,
+    dashboardQuery.data,
+    dashboardQuery.isLoading,
+    dashboardQuery.isSuccess,
     employeesQuery.data,
     departmentsQuery.data,
   ]);
 
   const refresh = useCallback(() => {
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.admin.dashboard(),
+    });
     void queryClient.invalidateQueries({
       queryKey: queryKeys.admin.attendanceSummary(currentTodayKey),
     });

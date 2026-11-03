@@ -8,12 +8,27 @@ from app.core.scope import scope_matches, visibility_scope
 from app.core.working_days import count_working_days
 from app.repositories.department_repository import DepartmentRepository
 from app.repositories.employee_repository import EmployeeRepository
+from app.repositories.leave_balance_repository import LeaveBalanceRepository
 from app.repositories.leave_repository import LeaveRepository
 from app.services.employee_notification_service import (
     EmployeeNotificationService,
 )
 
 IST = timezone(timedelta(hours=5, minutes=30))
+
+LEAVE_BALANCE_TYPES = [
+    "Casual Leave",
+    "Sick Leave",
+    "Earned Leave",
+    "Comp Off",
+]
+
+LEAVE_BALANCE_DEFAULTS = {
+    "Casual Leave": {"used": 240, "total": 320},
+    "Sick Leave": {"used": 96, "total": 120},
+    "Earned Leave": {"used": 156, "total": 240},
+    "Comp Off": {"used": 32, "total": 48},
+}
 
 
 class AdminLeaveService:
@@ -22,7 +37,53 @@ class AdminLeaveService:
         self.repository = LeaveRepository()
         self.employee_repository = EmployeeRepository()
         self.department_repository = DepartmentRepository()
+        self.balance_repository = LeaveBalanceRepository()
         self.notification_service = EmployeeNotificationService()
+
+    async def get_balances(self):
+        docs = await self.balance_repository.get_all()
+        by_type = {
+            doc["leave_type"]: doc
+            for doc in docs
+            if doc.get("leave_type")
+        }
+
+        balances = []
+
+        for leave_type in LEAVE_BALANCE_TYPES:
+            defaults = LEAVE_BALANCE_DEFAULTS[leave_type]
+            doc = by_type.get(leave_type, {})
+
+            balances.append(
+                {
+                    "leave_type": leave_type,
+                    "used": int(doc.get("used", defaults["used"])),
+                    "total": int(doc.get("total", defaults["total"])),
+                }
+            )
+
+        return balances
+
+    async def update_balances(self, entries: list[dict]):
+        for entry in entries:
+            leave_type = entry.get("leave_type")
+
+            if leave_type not in LEAVE_BALANCE_DEFAULTS:
+                raise AppException(
+                    f"Unknown leave type: {leave_type}",
+                    400,
+                )
+
+        for entry in entries:
+            await self.balance_repository.upsert(
+                entry["leave_type"],
+                {
+                    "used": int(entry["used"]),
+                    "total": int(entry["total"]),
+                },
+            )
+
+        return await self.get_balances()
 
     
     @staticmethod

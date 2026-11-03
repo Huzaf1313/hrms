@@ -38,6 +38,10 @@ class Settings(BaseSettings):
     R2_BUCKET_NAME: str = ""
     R2_ENDPOINT_URL: str = ""
 
+    # Redis Cache Configuration
+    REDIS_URL: str = "redis://localhost:6379/0"
+    REDIS_ENABLED: bool = False
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

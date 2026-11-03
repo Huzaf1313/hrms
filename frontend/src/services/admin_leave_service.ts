@@ -40,6 +40,12 @@ export interface LeaveSummary {
   upcoming_leaves: number;
 }
 
+export interface LeaveBalance {
+  leave_type: string;
+  used: number;
+  total: number;
+}
+
 export const leaveService = {
   list(params: {
     page?: number;
@@ -55,6 +61,14 @@ export const leaveService = {
 
   summary() {
     return api.get<LeaveSummary>("/admin/leaves/summary");
+  },
+
+  balances() {
+    return api.get<LeaveBalance[]>("/admin/leaves/balances");
+  },
+
+  updateBalances(balances: LeaveBalance[]) {
+    return api.put<LeaveBalance[]>("/admin/leaves/balances", { balances });
   },
 
   updateStatus(id: string, status: Exclude<LeaveStatus, "pending" | "cancelled">) {

@@ -26,6 +26,9 @@ export function useCreatePayslip() {
         queryKey: queryKeys.admin.payrollAnalytics(),
       });
       void queryClient.invalidateQueries({
+        queryKey: queryKeys.admin.dashboard(),
+      });
+      void queryClient.invalidateQueries({
         queryKey: ["admin", "payslips"],
       });
     },
@@ -41,6 +44,9 @@ export function useUpdatePayslipStatus() {
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: queryKeys.admin.payrollAnalytics(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.admin.dashboard(),
       });
       void queryClient.invalidateQueries({
         queryKey: ["admin", "payslips"],

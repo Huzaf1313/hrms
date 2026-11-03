@@ -2,25 +2,34 @@ from datetime import date
 
 from fastapi import APIRouter, Depends, Query
 
-from app.api.deps import get_current_user
-from app.api.deps import require_permission
+from app.api.deps import get_current_user, require_permission
+from app.core.cache import (
+    get_cache,
+    invalidate_attendance_cache,
+    invalidate_attendance_regularization_cache,
+    set_cache,
+)
+from app.core.exceptions import AppException
 from app.core.roles import Permission
+from app.repositories.employee_repository import EmployeeRepository
 from app.schemas.common import APIResponse
 from app.schemas.employee_attendance_regularization import (
     AttendanceRegularizationCreate,
-    AttendanceRegularizationReview,
     AttendanceRegularizationResponse,
+    AttendanceRegularizationReview,
 )
 from app.services.employee_attendance_regularization_service import (
     EmployeeAttendanceRegularizationService,
 )
-from app.core.exceptions import AppException
-from app.repositories.employee_repository import EmployeeRepository
+
+REGULARIZATION_LIST_CACHE_TTL = 60
+REGULARIZATION_DETAIL_CACHE_TTL = 120
 
 router = APIRouter()
 
 service = EmployeeAttendanceRegularizationService()
 employee_repository = EmployeeRepository()
+
 
 async def serialize_regularization(
     regularization: dict,
@@ -119,11 +128,14 @@ async def create_regularization_request(
         reason=data.reason,
     )
 
+    await invalidate_attendance_regularization_cache()
+
     return APIResponse(
         success=True,
         message="Regularization request submitted successfully",
         data=await serialize_regularization(regularization),
     )
+
 
 @router.get(
     "/employees/{employee_id}/attendance/regularization",
@@ -139,22 +151,47 @@ async def get_employee_regularization_requests(
         require_permission(Permission.ATTENDANCE_READ)
     ),
 ):
-    skip = (page - 1) * limit
+    page_val = page if isinstance(page, int) else 1
+    limit_val = limit if isinstance(limit, int) else 100
+    cache_key = f"attendance:regularization:emp:{employee_id}:{page_val}:{limit_val}"
+    cached = await get_cache(cache_key)
+    if cached is not None:
+        try:
+            return APIResponse(
+                success=True,
+                message="Regularization requests retrieved successfully",
+                data=[
+                    AttendanceRegularizationResponse(**item)
+                    for item in cached
+                ],
+            )
+        except Exception:
+            pass
+
+    skip = (page_val - 1) * limit_val
 
     requests = await service.get_employee_requests(
         employee_id=employee_id,
         skip=skip,
-        limit=limit,
+        limit=limit_val,
+    )
+
+    serialized = [
+        await serialize_regularization(request)
+        for request in requests
+    ]
+    await set_cache(
+        cache_key,
+        [item.model_dump(mode="json") for item in serialized],
+        ttl=REGULARIZATION_LIST_CACHE_TTL,
     )
 
     return APIResponse(
         success=True,
         message="Regularization requests retrieved successfully",
-        data=[
-            await serialize_regularization(request)
-            for request in requests
-        ],
+        data=serialized,
     )
+
 
 @router.get(
     "/employee-attendance/regularization/{regularization_id}",
@@ -168,14 +205,29 @@ async def get_regularization_request(
         require_permission(Permission.ATTENDANCE_READ)
     ),
 ):
+    cache_key = f"attendance:regularization:detail:{regularization_id}"
+    cached = await get_cache(cache_key)
+    if cached is not None:
+        try:
+            return APIResponse(
+                success=True,
+                message="Regularization request retrieved successfully",
+                data=AttendanceRegularizationResponse(**cached),
+            )
+        except Exception:
+            pass
+
     regularization = await service.get_request(
         regularization_id
     )
 
+    serialized = await serialize_regularization(regularization)
+    await set_cache(cache_key, serialized.model_dump(mode="json"), ttl=REGULARIZATION_DETAIL_CACHE_TTL)
+
     return APIResponse(
         success=True,
         message="Regularization request retrieved successfully",
-        data=await serialize_regularization(regularization),
+        data=serialized,
     )
 
 
@@ -189,19 +241,39 @@ async def get_regularization_requests(
     limit: int = Query(default=100, ge=1, le=100),
     current_user: dict = Depends(require_permission(Permission.ATTENDANCE_APPROVE)),
 ):
+    page_val = page if isinstance(page, int) else 1
+    limit_val = limit if isinstance(limit, int) else 100
+    status_val = status if isinstance(status, str) else None
+    status_key = status_val or "all"
+    cache_key = f"attendance:regularization:list:{status_key}:{page_val}:{limit_val}"
+    cached = await get_cache(cache_key)
+    if cached is not None:
+        try:
+            return APIResponse(
+                success=True,
+                message="Regularization requests retrieved successfully",
+                data=[AttendanceRegularizationResponse(**item) for item in cached],
+            )
+        except Exception:
+            pass
+
     requests = await service.get_all_requests(
-        status=status,
-        skip=(page - 1) * limit,
-        limit=limit,
+        status=status_val,
+        skip=(page_val - 1) * limit_val,
+        limit=limit_val,
+    )
+
+    serialized = [await serialize_regularization(request) for request in requests]
+    await set_cache(
+        cache_key,
+        [item.model_dump(mode="json") for item in serialized],
+        ttl=REGULARIZATION_LIST_CACHE_TTL,
     )
 
     return APIResponse(
         success=True,
         message="Regularization requests retrieved successfully",
-        data=[
-            await serialize_regularization(request)
-            for request in requests
-        ],
+        data=serialized,
     )
 
 
@@ -220,6 +292,9 @@ async def review_regularization_request(
         reviewed_by=str(current_user["_id"]),
         comment=data.comment,
     )
+
+    await invalidate_attendance_regularization_cache()
+    await invalidate_attendance_cache()
 
     return APIResponse(
         success=True,

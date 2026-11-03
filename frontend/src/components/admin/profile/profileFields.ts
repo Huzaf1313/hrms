@@ -45,21 +45,14 @@ const GENDERS = ["Female", "Male", "Non-binary", "Prefer not to say"] as const;
 const MARITAL_STATUSES = ["Single", "Married", "Divorced", "Widowed"] as const;
 const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"] as const;
 const EMPLOYMENT_TYPES = ["Full Time", "Part Time", "Contract", "Intern"] as const;
-const SHIFTS = [
-  "General Shift (9 AM - 6 PM)",
-  "Morning Shift (7 AM - 3 PM)",
-  "Night Shift (9 PM - 6 AM)",
-  "Flexible",
-] as const;
-
 export const PROFILE_FIELDS: Record<ProfileTab, ProfileFieldSpec[]> = {
   Overview: [
-    { name: "full_name", label: "Full Name", type: "text" },
+    { name: "full_name", label: "Full Name", type: "text", readOnly: true, hint: "Managed by your administrator." },
     { name: "employee_id", label: "Employee ID", type: "text", readOnly: true },
     { name: "designation", label: "Designation", type: "text" },
     { name: "department", label: "Department", type: "text" },
     { name: "work_location", label: "Work Location", type: "text" },
-    { name: "shift", label: "Shift", type: "select", options: SHIFTS },
+    { name: "shift", label: "Shift", type: "select" },
     {
       name: "date_of_joining",
       label: "Date of Joining",
@@ -69,7 +62,7 @@ export const PROFILE_FIELDS: Record<ProfileTab, ProfileFieldSpec[]> = {
     },
   ],
   "Personal Details": [
-    { name: "full_name", label: "Full Name", type: "text" },
+    { name: "full_name", label: "Full Name", type: "text", readOnly: true, hint: "Managed by your administrator." },
     { name: "date_of_birth", label: "Date of Birth", type: "date" },
     { name: "gender", label: "Gender", type: "select", options: GENDERS },
     { name: "marital_status", label: "Marital Status", type: "select", options: MARITAL_STATUSES },
@@ -84,11 +77,11 @@ export const PROFILE_FIELDS: Record<ProfileTab, ProfileFieldSpec[]> = {
     { name: "designation", label: "Designation", type: "text" },
     { name: "role", label: "Role", type: "text", readOnly: true, hint: "Set by your administrator." },
     { name: "department", label: "Department", type: "text" },
-    { name: "department_head", label: "Department Head", type: "text" },
-    { name: "reporting_manager", label: "Reporting Manager", type: "text" },
+    { name: "department_head", label: "Department Head", type: "text", readOnly: true, hint: "Set from department records." },
+    { name: "reporting_manager", label: "Reporting Manager", type: "text", readOnly: true, hint: "Set by your administrator." },
     { name: "work_location", label: "Work Location", type: "text" },
     { name: "employment_type", label: "Employment Type", type: "select", options: EMPLOYMENT_TYPES },
-    { name: "shift", label: "Shift", type: "select", options: SHIFTS },
+    { name: "shift", label: "Shift", type: "select" },
     {
       name: "date_of_joining",
       label: "Date of Joining",
@@ -98,10 +91,10 @@ export const PROFILE_FIELDS: Record<ProfileTab, ProfileFieldSpec[]> = {
     },
   ],
   "Contact & Address": [
-    { name: "email", label: "Email", type: "email" },
+    { name: "email", label: "Email", type: "email", readOnly: true, hint: "Managed by your administrator." },
     { name: "phone", label: "Phone", type: "tel" },
-    { name: "office_email", label: "Office Email", type: "email" },
-    { name: "work_phone", label: "Work Phone", type: "tel" },
+    { name: "office_email", label: "Office Email", type: "email", readOnly: true, hint: "Uses your account email." },
+    { name: "work_phone", label: "Work Phone", type: "tel", readOnly: true, hint: "Uses your account phone." },
     { name: "permanent_address", label: "Permanent Address", type: "textarea", full: true },
     { name: "current_address", label: "Current Address", type: "textarea", full: true },
   ],

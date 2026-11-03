@@ -3,18 +3,44 @@ import { Wallet } from "lucide-react";
 
 import DashboardCard from "./DashboardCard";
 
-import { formatIndianAmount, payrollSummary } from "./dashboardData";
+import { formatIndianAmount } from "./dashboardData";
 import { useCountUp } from "./useDashboardAnimation";
 
 interface PayrollExpenseSummaryCardProps {
   onOpenPayroll: () => void;
+  payrollThisMonth?: number | null;
+  totalExpenses?: number | null;
+  payrollChangePercent?: number | null;
+  expenseChangePercent?: number | null;
+  isLoading?: boolean;
+}
+
+function formatChange(percent: number | null | undefined) {
+  if (percent === null || percent === undefined) {
+    return { text: "No data from last month", color: "text-gray-400" };
+  }
+  if (percent > 0) {
+    return { text: `↗ +${percent}% from last month`, color: "text-[#16a34a]" };
+  }
+  if (percent < 0) {
+    return { text: `↘ ${percent}% from last month`, color: "text-[#dc2626]" };
+  }
+  return { text: "No change from last month", color: "text-gray-500" };
 }
 
 export default function PayrollExpenseSummaryCard({
   onOpenPayroll,
+  payrollThisMonth,
+  totalExpenses,
+  payrollChangePercent,
+  expenseChangePercent,
+  isLoading = false,
 }: PayrollExpenseSummaryCardProps) {
-  const payroll = useCountUp(payrollSummary.payrollThisMonth, 1500);
-  const expenses = useCountUp(payrollSummary.totalExpenses, 1500);
+  const payroll = useCountUp(payrollThisMonth ?? 0, 1500);
+  const expenses = useCountUp(totalExpenses ?? 0, 1500);
+
+  const payrollChange = formatChange(payrollChangePercent);
+  const expenseChange = formatChange(expenseChangePercent);
 
   return (
     <DashboardCard
@@ -35,10 +61,10 @@ export default function PayrollExpenseSummaryCard({
           <div className="min-w-0 flex-1">
             <p className="text-[11px] text-gray-500">Payroll This Month</p>
             <p className="text-[15px] font-bold text-gray-900">
-              ₹ {formatIndianAmount(Math.round(payroll))}
+              {isLoading ? "..." : `₹ ${formatIndianAmount(Math.round(payroll))}`}
             </p>
-            <p className="text-[10px] font-medium text-[#16a34a]">
-              ↗ {payrollSummary.payrollChangePercent}% from last month
+            <p className={`text-[10px] font-medium ${payrollChange.color}`}>
+              {payrollChange.text}
             </p>
           </div>
         </button>
@@ -56,10 +82,10 @@ export default function PayrollExpenseSummaryCard({
               Total Expenses (This Month)
             </p>
             <p className="text-[15px] font-bold text-gray-900">
-              ₹ {formatIndianAmount(Math.round(expenses))}
+              {isLoading ? "..." : `₹ ${formatIndianAmount(Math.round(expenses))}`}
             </p>
-            <p className="text-[10px] font-medium text-[#16a34a]">
-              ↗ {payrollSummary.expenseChangePercent}% from last month
+            <p className={`text-[10px] font-medium ${expenseChange.color}`}>
+              {expenseChange.text}
             </p>
           </div>
         </div>

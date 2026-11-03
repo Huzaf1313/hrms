@@ -34,6 +34,7 @@ interface ProfileEditFormProps {
   /** Unsaved photo picked in the hero, if any. */
   avatarUrl: string | null;
   isSaving: boolean;
+  shiftOptions: readonly string[];
   onCancel: () => void;
   onSave: (profile: AdminProfile, avatarUrl: string | null) => Promise<void>;
 }
@@ -71,6 +72,7 @@ export default function ProfileEditForm({
   profile,
   avatarUrl,
   isSaving,
+  shiftOptions,
   onCancel,
   onSave,
 }: ProfileEditFormProps) {
@@ -78,7 +80,22 @@ export default function ProfileEditForm({
   const [errors, setErrors] = useState<Partial<Record<keyof AdminProfile, string>>>({});
   const [error, setError] = useState("");
 
-  const fields = useMemo(() => PROFILE_FIELDS[tab], [tab]);
+  const fields = useMemo(
+    () =>
+      PROFILE_FIELDS[tab].map((field) =>
+        field.name === "shift"
+          ? {
+              ...field,
+              options: shiftOptions.length > 0
+                ? shiftOptions
+                : profile.shift
+                  ? [profile.shift]
+                  : [],
+            }
+          : field,
+      ),
+    [profile.shift, shiftOptions, tab],
+  );
 
   function update(name: keyof AdminProfile, value: string) {
     setDraft((current) => ({ ...current, [name]: value }));

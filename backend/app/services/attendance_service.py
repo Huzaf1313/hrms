@@ -30,6 +30,7 @@ from app.services.attendance_calculation import (
     resolve_record_metrics,
     shift_duration_minutes,
 )
+from app.services.employee_identity import ensure_employee_profile
 from app.utils.filtering import build_filter
 from app.utils.pagination import PaginationParams
 
@@ -674,7 +675,12 @@ class AttendanceService:
         )
 
         if not employee:
-            raise AppException("No employee record found for this account", 404)
+            # Bootstrap HR accounts carry no employee_id until one is minted
+            # (see employee_identity). Self-heal on first punch so an existing
+            # account marks its attendance directly instead of 404ing.
+            employee = await ensure_employee_profile(
+                self.employee_repository.collection, current_user
+            )
 
         attendance_date = business_today()
         attendance_key = to_datetime(attendance_date)

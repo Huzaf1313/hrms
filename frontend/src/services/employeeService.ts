@@ -12,6 +12,7 @@ export interface GetEmployeesParams {
   search?: string;
   department_id?: string;
   status?: string;
+  filter?: string;
   page?: number;
   limit?: number;
 }
