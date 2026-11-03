@@ -511,3 +511,58 @@ aside.app-sidebar svg.lucide {
 .sidebar-scrollbar::-webkit-scrollbar {
   display: none; /* Chrome, Safari, and Edge */
 }
+
+
+/* Employee announcement ticker */
+@keyframes employee-announcement-scroll {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(calc(-1 * var(--marquee-distance)));
+  }
+}
+
+.employee-announcement-marquee {
+  animation: employee-announcement-scroll var(--marquee-duration) linear infinite;
+  will-change: transform;
+}
+
+.employee-announcement-marquee:hover {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .employee-announcement-marquee {
+    animation: none;
+  }
+}
+
+
+@keyframes employee-leave-scroll {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.employee-leave-marquee {
+  animation-name: employee-leave-scroll;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform;
+}
+
+.employee-leave-marquee:hover {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .employee-leave-marquee {
+    animation: none;
+  }
+}

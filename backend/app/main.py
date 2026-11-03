@@ -99,6 +99,7 @@ from app.repositories.activity_repository import ActivityRepository
 from app.repositories.user_repository import UserRepository
 from app.services.employee_identity import backfill_minted_profiles
 from app.services.user_service import UserService
+from app.api.v1.employee_profile_photo import router as employee_profile_photo_router
 
 
 @asynccontextmanager
@@ -339,7 +340,12 @@ app.include_router(
 )
 
 app.include_router(
-    employee_announcement_router,
+    employee_profile_photo_router, 
+    prefix="/api/v1"
+)
+
+app.include_router(
+    employee_profile_photo_router,
     prefix="/api/v1",
 )
 

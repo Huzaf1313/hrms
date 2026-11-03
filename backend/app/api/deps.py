@@ -5,10 +5,13 @@ from app.core.exceptions import AppException
 from app.core.jwt import decode_token
 from app.core.roles import Permission, UserRole, has_permission
 from app.repositories.user_repository import UserRepository
+from app.repositories.session_repository import SessionRepository
 
 security = HTTPBearer()
 
 user_repository = UserRepository()
+session_repository = SessionRepository()
+
 
 
 async def get_current_user(
@@ -38,6 +41,30 @@ async def get_current_user(
             401,
         )
 
+    # Verify that the access token belongs to an active session.
+    session_id = payload.get("session_id")
+
+    if not session_id:
+        raise AppException(
+            "Invalid access token",
+            401,
+        )
+
+    session = await session_repository.get_by_id(session_id)
+
+    if not session or not session.get("is_active", False):
+        raise AppException(
+            "Session has been revoked or is invalid",
+            401,
+        )
+
+    # Ensure the session belongs to the user in the access token.
+    if str(session.get("user_id")) != user_id:
+        raise AppException(
+            "Invalid access token session",
+            401,
+        )
+
     user = await user_repository.get_by_id(user_id)
 
     if not user:
@@ -59,6 +86,7 @@ async def get_current_user(
         )
 
     return user
+
 
 def require_permission(permission: Permission):
     async def permission_checker(

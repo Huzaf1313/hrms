@@ -100,6 +100,14 @@ function formatNotificationTime(createdAt: string) {
 }
 
 function getNotificationTarget(notification: EmployeeNotification) {
+  // Normalize support-ticket notifications to the actual Help & Support route.
+  if (
+    notification.type.toLowerCase().includes("support_ticket") ||
+    notification.target === "/employee/help-support"
+  ) {
+    return "/employee/help";
+  }
+
   if (notification.target) {
     return notification.target;
   }
@@ -198,9 +206,16 @@ function EmployeeNotificationDropdown({
         );
 
         updateUnreadCount(Math.max(0, unreadCount - 1));
-      }
+      }      
+      console.log("Clicked notification:", {
+        type: notification.type,
+        target: notification.target,
+        title: notification.title,
+      });
 
       const target = getNotificationTarget(notification);
+
+      console.log("Resolved notification target:", target);
 
       if (target) {
         onClose?.();

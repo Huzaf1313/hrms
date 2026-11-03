@@ -114,7 +114,7 @@ class AssetUpdate(BaseModel):
 
 
 class AssetAssign(BaseModel):
-    employee_id: str = Field(min_length=2, max_length=32)
+    employee_id: str | None = None
     issue_date: date | None = None
 
 
@@ -191,7 +191,7 @@ class AssetStats(BaseModel):
 class AssetRequestCreate(BaseModel):
     request_type: AssetRequestType
     asset_id: str
-    employee_id: str = Field(min_length=2, max_length=32)
+    employee_id: str | None = None
     detail: str | None = Field(default=None, max_length=200)
     reason: str | None = Field(default=None, max_length=1000)
 

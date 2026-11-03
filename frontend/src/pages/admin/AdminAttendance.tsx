@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Users,
   UserCheck,
@@ -18,6 +18,7 @@ import {
   MoreVertical,
   SlidersHorizontal,
   X,
+  CheckSquare,
   AlertCircle,
   CheckCircle2,
 } from "lucide-react";
@@ -25,9 +26,12 @@ import { CardSkeleton, TableRowSkeleton } from "../../components/ui";
 import { ApiError } from "../../services/api";
 import {
   attendanceService,
+  type BulkAttendanceResponse,
+  type BulkMarkParams,
   type MyAttendanceStatus,
 } from "../../services/attendanceService";
 import { useGlobalDate } from "../../context/globalDateContext";
+import { formatShiftTime } from "../../services/shiftService";
 import { useQuery } from "@tanstack/react-query";
 import { useDepartments } from "../../hooks/useDepartments";
 import { useShifts } from "../../hooks/useShifts";
@@ -96,6 +100,15 @@ type SortKey =
   | "status";
 
 type SortDirection = "asc" | "desc";
+
+type MarkForm = {
+  employee_id: string;
+  date: string;
+  status: string;
+  shift_id: string;
+  in_time: string;
+  out_time: string;
+};
 
 const columns: { key: SortKey; label: string }[] = [
   { key: "employee", label: "Employee" },
@@ -313,6 +326,153 @@ function AdminAttendance() {
     | { kind: "error"; message: string };
   const [punchPopup, setPunchPopup] = useState<PunchPopup | null>(null);
 
+  // Selection state
+  const [isAllMatchingSelected, setIsAllMatchingSelected] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [excludedIds, setExcludedIds] = useState<Set<string>>(new Set());
+  const headerCheckboxRef = useRef<HTMLInputElement>(null);
+
+  // Bulk mark state
+  const [isBulkModal, setIsBulkModal] = useState(false);
+  const [confirmStep, setConfirmStep] = useState(false);
+  const [bulkResult, setBulkResult] = useState<BulkAttendanceResponse | null>(null);
+  const [successToast, setSuccessToast] = useState("");
+  const [showMarkModal, setShowMarkModal] = useState(false);
+  const [markError, setMarkError] = useState("");
+  const [isMarkingAttendance, setIsMarkingAttendance] = useState(false);
+  const [markForm, setMarkForm] = useState<MarkForm>({
+    employee_id: "",
+    date,
+    status: "present",
+    shift_id: "",
+    in_time: "",
+    out_time: "",
+  });
+
+  useEffect(() => {
+    let isCurrent = true;
+
+    attendanceService
+      .myStatus()
+      .then((result) => {
+        if (isCurrent) setMyStatus(result);
+      })
+      .catch((err: unknown) => {
+        if (isCurrent) {
+          setPunchPopup({
+            kind: "error",
+            message:
+              err instanceof ApiError
+                ? err.message
+                : "Failed to load your attendance status.",
+          });
+        }
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, []);
+
+  function clearSelection() {
+    setIsAllMatchingSelected(false);
+    setSelectedIds(new Set());
+    setExcludedIds(new Set());
+  }
+
+  const selectedCount = useMemo(() => {
+    if (isAllMatchingSelected) {
+      return Math.max(0, total - excludedIds.size);
+    }
+    return selectedIds.size;
+  }, [isAllMatchingSelected, total, excludedIds.size, selectedIds.size]);
+
+  const isRowSelected = (row: AttendanceRecord) => {
+    const id = row.employee.id;
+    if (isAllMatchingSelected) {
+      return !excludedIds.has(id);
+    }
+    return selectedIds.has(id);
+  };
+
+  const toggleRowSelection = (row: AttendanceRecord) => {
+    const id = row.employee.id;
+    if (isAllMatchingSelected) {
+      setExcludedIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(id)) {
+          next.delete(id);
+        } else {
+          next.add(id);
+        }
+        if (next.size >= total && total > 0) {
+          setIsAllMatchingSelected(false);
+          return new Set();
+        }
+        return next;
+      });
+    } else {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(id)) {
+          next.delete(id);
+        } else {
+          next.add(id);
+        }
+        if (next.size >= total && total > 0) {
+          setIsAllMatchingSelected(true);
+          return new Set();
+        }
+        return next;
+      });
+    }
+  };
+
+  const isHeaderChecked = useMemo(() => {
+    if (total === 0) return false;
+    if (isAllMatchingSelected && excludedIds.size === 0) return true;
+    if (selectedCount === total && total > 0) return true;
+    if (records.length > 0 && records.every((r) => isRowSelected(r))) return true;
+    return false;
+  }, [total, isAllMatchingSelected, excludedIds.size, selectedCount, records, isRowSelected]);
+
+  const isHeaderIndeterminate = useMemo(() => {
+    if (total === 0) return false;
+    return selectedCount > 0 && selectedCount < total;
+  }, [selectedCount, total]);
+
+  useEffect(() => {
+    if (headerCheckboxRef.current) {
+      headerCheckboxRef.current.indeterminate = isHeaderIndeterminate;
+    }
+  }, [isHeaderIndeterminate]);
+
+  const toggleSelectAll = () => {
+    if (isAllMatchingSelected || selectedCount > 0) {
+      clearSelection();
+    } else {
+      setIsAllMatchingSelected(true);
+      setExcludedIds(new Set());
+      setSelectedIds(new Set());
+    }
+  };
+
+  function openMarkModal(bulk: boolean) {
+    setIsBulkModal(bulk);
+    setConfirmStep(false);
+    setMarkError("");
+    setBulkResult(null);
+    setMarkForm({
+      employee_id: !bulk && records.length > 0 ? records[0].employee.id : "",
+      date,
+      status: "present",
+      shift_id: "",
+      in_time: "",
+      out_time: "",
+    });
+    setShowMarkModal(true);
+  }
+
   useEffect(() => {
     let isCurrent = true;
 
@@ -404,10 +564,44 @@ function AdminAttendance() {
       : "out"
     : "in";
 
+  async function handleSelfPunch() {
+    if (isPunching || punchState === "complete") return;
+
+    setIsPunching(true);
+    setPunchPopup(null);
+    try {
+      const result = await attendanceService.punchSelf();
+      setMyStatus(result);
+      setPunchPopup({
+        kind: "success",
+        title: result.out_time ? "Attendance marked out" : "Attendance marked in",
+        fields: [
+          { label: "Date", value: result.date },
+          { label: "Status", value: result.status ?? "Pending" },
+          { label: "In time", value: displayPunchTime(result.in_time) },
+          { label: "Out time", value: displayPunchTime(result.out_time) },
+          { label: "Working hours", value: result.working_hours ?? "--" },
+        ],
+      });
+      if (date === result.date) {
+        setAttendanceRefreshKey((current) => current + 1);
+      }
+    } catch (err) {
+      setPunchPopup({
+        kind: "error",
+        message:
+          err instanceof ApiError ? err.message : "Failed to mark your attendance.",
+      });
+    } finally {
+      setIsPunching(false);
+    }
+  }
+
   const overtimeTotalMinutes = summary?.overtime_total_minutes ?? 0;
   const overtimeStaffCount = summary?.overtime_employee_count ?? 0;
 
   function resetFilters() {
+    clearSelection();
     setPage(1);
     setDepartmentId("");
     setWorkLocation("");
@@ -418,76 +612,94 @@ function AdminAttendance() {
     setActiveTab(0);
   }
 
-  // The punch always applies to today (server business date), so this is
-  // fetched without the page's date filter and re-read whenever the list
-  // refreshes.
-  useEffect(() => {
-    let isCurrent = true;
+  async function handleMarkAttendance() {
+    if (isBulkModal) {
+      if (selectedCount === 0) {
+        setMarkError("Please select at least one employee.");
+        return;
+      }
+      if (!confirmStep) {
+        setConfirmStep(true);
+        return;
+      }
 
-    async function loadMyStatus() {
+      setIsMarkingAttendance(true);
+      setMarkError("");
+
       try {
-        const status = await attendanceService.myStatus();
+        const payload: BulkMarkParams = {
+          date: markForm.date,
+          status: markForm.status,
+          shift_id: markForm.shift_id || null,
+          in_time: markForm.in_time || undefined,
+          out_time: markForm.out_time || undefined,
+          select_all_matching: isAllMatchingSelected,
+          excluded_employee_ids: isAllMatchingSelected ? Array.from(excludedIds) : [],
+          employee_ids: isAllMatchingSelected ? [] : Array.from(selectedIds),
+          filter_date: date,
+          department_id: departmentId || undefined,
+          filter_status: status || undefined,
+          search: search || undefined,
+          filter_shift_id: shiftId || undefined,
+          overtime_only: overtimeOnly,
+          work_location: workLocation || undefined,
+        };
 
-        if (isCurrent) setMyStatus(status);
-      } catch {
-        // No employee record, network issue, etc. - the punch button falls
-        // back to "Mark In" and the error surfaces on click.
-        if (isCurrent) setMyStatus(null);
+        const result = await attendanceService.bulkMark(payload);
+        setBulkResult(result);
+
+        if (result.failure_count === 0) {
+          setShowMarkModal(false);
+          setConfirmStep(false);
+          clearSelection();
+          setSuccessToast(`Successfully marked attendance for ${result.success_count} employee(s).`);
+          setAttendanceRefreshKey((c) => c + 1);
+        }
+      } catch (err) {
+        setMarkError(err instanceof ApiError ? err.message : "Failed to mark bulk attendance");
+      } finally {
+        setIsMarkingAttendance(false);
       }
-    }
-
-    loadMyStatus();
-
-    return () => {
-      isCurrent = false;
-    };
-  }, [attendanceRefreshKey]);
-
-  async function handleSelfPunch() {
-    if (isPunching) return;
-
-    setIsPunching(true);
-
-    try {
-      const result = await attendanceService.punchSelf();
-
-      setMyStatus(result);
-      setAttendanceRefreshKey((c) => c + 1);
-
-      // An out-time on the fresh record means this call closed the day.
-      if (result.out_time) {
-        setPunchPopup({
-          kind: "success",
-          title: "Attendance Marked Out",
-          fields: [
-            { label: "Date", value: formatSelectedDate(result.date) },
-            { label: "Status", value: "Present" },
-            { label: "In time", value: result.in_time ?? "--" },
-            { label: "Out time", value: result.out_time },
-            { label: "Working hours", value: result.working_hours ?? "--" },
-          ],
-        });
-      } else {
-        setPunchPopup({
-          kind: "success",
-          title: "Attendance Marked In",
-          fields: [
-            { label: "Date", value: formatSelectedDate(result.date) },
-            { label: "Status", value: "Present" },
-            { label: "In time", value: result.in_time ?? "--" },
-          ],
-        });
+    } else {
+      if (!markForm.employee_id) {
+        setMarkError("Please select an employee");
+        return;
       }
-    } catch (err) {
-      setPunchPopup({
-        kind: "error",
-        message:
-          err instanceof ApiError
-            ? err.message
-            : "Failed to mark your attendance.",
-      });
-    } finally {
-      setIsPunching(false);
+      if (!markForm.status) {
+        setMarkError("Please select a status");
+        return;
+      }
+
+      setIsMarkingAttendance(true);
+      setMarkError("");
+
+      try {
+        await attendanceService.mark({
+          employee_id: markForm.employee_id,
+          date: markForm.date,
+          status: markForm.status,
+          shift_id: markForm.shift_id || null,
+          in_time: markForm.in_time || undefined,
+          out_time: markForm.out_time || undefined,
+        });
+
+        setShowMarkModal(false);
+        setConfirmStep(false);
+        setMarkForm({
+          employee_id: "",
+          date,
+          status: "present",
+          shift_id: "",
+          in_time: "",
+          out_time: "",
+        });
+        setSuccessToast("Attendance marked successfully.");
+        setAttendanceRefreshKey((c) => c + 1);
+      } catch (err) {
+        setMarkError(err instanceof ApiError ? err.message : "Failed to mark attendance");
+      } finally {
+        setIsMarkingAttendance(false);
+      }
     }
   }
 
@@ -729,7 +941,7 @@ function AdminAttendance() {
           <label className="mb-1.5 block text-xs font-medium text-gray-500">Department</label>
           <select
             value={departmentId}
-            onChange={(event) => { setDepartmentId(event.target.value); setPage(1); }}
+            onChange={(event) => { setDepartmentId(event.target.value); setPage(1); clearSelection(); }}
             className={filterControlClass}
           >
             <option value="">All Departments</option>
@@ -743,7 +955,7 @@ function AdminAttendance() {
           <label className="mb-1.5 block text-xs font-medium text-gray-500">Location</label>
           <select
             value={workLocation}
-            onChange={(event) => { setWorkLocation(event.target.value); setPage(1); }}
+            onChange={(event) => { setWorkLocation(event.target.value); setPage(1); clearSelection(); }}
             className={filterControlClass}
           >
             <option value="">All Locations</option>
@@ -757,7 +969,7 @@ function AdminAttendance() {
           <label className="mb-1.5 block text-xs font-medium text-gray-500">Shift</label>
           <select
             value={shiftId}
-            onChange={(event) => { setShiftId(event.target.value); setPage(1); }}
+            onChange={(event) => { setShiftId(event.target.value); setPage(1); clearSelection(); }}
             className={filterControlClass}
           >
             <option value="">All Shifts</option>
@@ -774,7 +986,7 @@ function AdminAttendance() {
           <label className="mb-1.5 block text-xs font-medium text-gray-500">Status</label>
           <select
             value={status}
-            onChange={(event) => { setStatus(event.target.value); setPage(1); setActiveTab(0); }}
+            onChange={(event) => { setStatus(event.target.value); setPage(1); setActiveTab(0); clearSelection(); }}
             className={filterControlClass}
           >
             <option value="">All Status</option>
@@ -789,7 +1001,7 @@ function AdminAttendance() {
           <label className="mb-1.5 block text-xs font-medium text-gray-500">Overtime</label>
           <select
             value={overtimeOnly ? "ot" : ""}
-            onChange={(event) => { setOvertimeOnly(event.target.value === "ot"); setPage(1); setActiveTab(0); }}
+            onChange={(event) => { setOvertimeOnly(event.target.value === "ot"); setPage(1); setActiveTab(0); clearSelection(); }}
             className={filterControlClass}
           >
             <option value="">All Records</option>
@@ -846,7 +1058,7 @@ function AdminAttendance() {
         {tabs.map((tab, index) => (
           <button
             key={tab.label}
-            onClick={() => { setPage(1); setActiveTab(index); setStatus(tab.status ?? ""); }}
+            onClick={() => { setPage(1); setActiveTab(index); setStatus(tab.status ?? ""); clearSelection(); }}
             className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition ${
               activeTab === index
                 ? "bg-[#2563eb] text-white"
@@ -869,7 +1081,7 @@ function AdminAttendance() {
               <input
                 type="text"
                 value={search}
-                onChange={(event) => { setSearch(event.target.value); setPage(1); }}
+                onChange={(event) => { setSearch(event.target.value); setPage(1); clearSelection(); }}
                 placeholder="Search by name, employee ID..."
                 className="w-72 rounded-full border border-gray-200 py-2.5 pl-10 pr-4 text-sm focus:border-[#2563eb] focus:outline-none"
               />
@@ -886,10 +1098,57 @@ function AdminAttendance() {
             </div>
           </div>
 
+          {/* Selection Banner */}
+          {selectedCount > 0 && (
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-200 bg-blue-50/70 px-4 py-2.5 text-sm">
+              <div className="flex items-center gap-2 font-medium text-blue-900">
+                <CheckSquare className="h-4 w-4 text-[#2563eb]" />
+                <span>
+                  <strong>{selectedCount}</strong> employee{selectedCount === 1 ? "" : "s"} selected
+                  {isAllMatchingSelected ? (
+                    <span className="font-normal text-blue-700">
+                      {" "}(all matching current filters{excludedIds.size > 0 ? `, ${excludedIds.size} excluded` : ""})
+                    </span>
+                  ) : (
+                    <span className="font-normal text-blue-700"> (selected across pages)</span>
+                  )}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={clearSelection}
+                  className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition"
+                >
+                  Clear selection
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openMarkModal(true)}
+                  className="flex items-center gap-1.5 rounded-lg bg-[#2563eb] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[#1d4ed8] transition"
+                >
+                  <UserPlus className="h-3.5 w-3.5" />
+                  Mark Attendance ({selectedCount})
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[1080px] text-left text-sm">
               <thead>
                 <tr className="border-b border-gray-100 text-xs font-bold uppercase tracking-wide text-gray-600">
+                  <th className="w-8 pb-3">
+                    <input
+                      ref={headerCheckboxRef}
+                      type="checkbox"
+                      checked={isHeaderChecked}
+                      onChange={toggleSelectAll}
+                      className="h-4 w-4 rounded border-gray-300 text-[#2563eb] focus:ring-[#2563eb]"
+                      aria-label="Select all employees across filtered results"
+                      title={isAllMatchingSelected ? "Click to clear selection" : "Select all matching employees across all pages"}
+                    />
+                  </th>
                   {columns.map((column) => {
                     const isActive = sortKey === column.key;
                     return (
@@ -918,6 +1177,15 @@ function AdminAttendance() {
                   <tr><td colSpan={9} className="py-10 text-center text-gray-500">No attendance records found.</td></tr>
                 ) : sortedRecords.map((row) => (
                   <tr key={row.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50">
+                    <td className="py-4">
+                      <input
+                        type="checkbox"
+                        checked={isRowSelected(row)}
+                        onChange={() => toggleRowSelection(row)}
+                        className="h-4 w-4 rounded border-gray-300 text-[#2563eb] focus:ring-[#2563eb]"
+                        aria-label={`Select ${row.employee.first_name} ${row.employee.last_name}`}
+                      />
+                    </td>
                     <td className="py-4">
                       <div className="flex items-center gap-3">
                         <div
@@ -1001,6 +1269,13 @@ function AdminAttendance() {
               sortedRecords.map((row) => (
                 <div key={row.id} className="rounded-xl border border-gray-100 p-3">
                   <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      checked={isRowSelected(row)}
+                      onChange={() => toggleRowSelection(row)}
+                      className="h-4 w-4 rounded border-gray-300 text-[#2563eb] focus:ring-[#2563eb]"
+                      aria-label={`Select ${row.employee.first_name} ${row.employee.last_name}`}
+                    />
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-semibold text-blue-700">
                       {initials(row)}
                     </span>
@@ -1173,6 +1448,7 @@ function AdminAttendance() {
                     type="button"
                     onClick={() => {
                       if (action.label === "Mark My Attendance") handleSelfPunch();
+                      if (action.label === "Mark Attendance") openMarkModal(selectedCount > 0);
                       if (action.label === "Process Regularization")
                         document.getElementById("regularization-requests")?.scrollIntoView({ behavior: "smooth", block: "start" });
                       if (action.label === "Generate Report") exportAttendance();
@@ -1266,71 +1542,430 @@ function AdminAttendance() {
         </div>
       )}
 
-      {/* HR self-punch result popup */}
-      {punchPopup && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          onClick={() => setPunchPopup(null)}
-        >
-          <div
-            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-lg"
-            onClick={(event) => event.stopPropagation()}
-          >
+      {/* Mark Attendance Modal */}
+      {showMarkModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-lg">
             <div className="mb-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span
-                  className={`flex h-10 w-10 items-center justify-center rounded-xl ${
-                    punchPopup.kind === "error" ? "bg-rose-50" : "bg-emerald-50"
-                  }`}
-                >
-                  {punchPopup.kind === "error" ? (
-                    <AlertCircle className="h-5 w-5 text-rose-600" />
-                  ) : (
-                    <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                  )}
-                </span>
-                <h2 className="text-xl font-bold text-gray-900">
-                  {punchPopup.kind === "error"
-                    ? "Attendance Not Marked"
-                    : punchPopup.title}
-                </h2>
-              </div>
-
+              <h2 className="text-xl font-bold text-gray-900">
+                {bulkResult
+                  ? "Mark Attendance Results"
+                  : isBulkModal
+                  ? `Mark Attendance (${selectedCount} Selected)`
+                  : "Mark Attendance"}
+              </h2>
               <button
                 type="button"
-                onClick={() => setPunchPopup(null)}
-                aria-label="Close"
+                onClick={() => {
+                  setShowMarkModal(false);
+                  setMarkError("");
+                  setBulkResult(null);
+                  setConfirmStep(false);
+                }}
                 className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            {punchPopup.kind === "error" ? (
-              <div className="rounded-xl border border-rose-100 bg-rose-50 p-4 text-sm text-rose-700">
-                {punchPopup.message}
+            {markError && (
+              <div className="mb-4 rounded-lg bg-rose-50 p-3 text-sm text-rose-600">
+                {markError}
               </div>
-            ) : (
-              <dl className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-xl border border-gray-100 bg-gray-50 p-4 text-sm">
-                {punchPopup.fields.map((field) => (
-                  <div key={field.label}>
-                    <dt className="text-xs text-gray-400">{field.label}</dt>
-                    <dd className="font-semibold text-gray-800">{field.value}</dd>
-                  </div>
-                ))}
-              </dl>
             )}
 
-            <div className="mt-5 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setPunchPopup(null)}
-                className="rounded-lg bg-[#2563eb] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#1d4ed8]"
-              >
-                Done
-              </button>
-            </div>
+            {/* Results Screen after Bulk Submission */}
+            {bulkResult ? (
+              <div className="space-y-4">
+                <div
+                  className={`rounded-xl border p-4 ${
+                    bulkResult.failure_count === 0
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+                      : "border-amber-200 bg-amber-50 text-amber-900"
+                  }`}
+                >
+                  <div className="flex items-center gap-2 font-semibold text-sm">
+                    {bulkResult.failure_count === 0 ? (
+                      <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+                    ) : (
+                      <AlertCircle className="h-5 w-5 text-amber-600 shrink-0" />
+                    )}
+                    <span>
+                      {bulkResult.failure_count === 0
+                        ? "Attendance Marked Successfully"
+                        : "Partial Attendance Results"}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs">
+                    {bulkResult.success_count} employee(s) succeeded
+                    {bulkResult.failure_count > 0 &&
+                      `, ${bulkResult.failure_count} employee(s) failed`}.
+                  </p>
+                </div>
+
+                {bulkResult.failure_count > 0 && (
+                  <div>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                      Failed Employees
+                    </p>
+                    <div className="max-h-52 overflow-y-auto divide-y divide-gray-100 rounded-xl border border-gray-200">
+                      {bulkResult.results
+                        .filter((r) => !r.success)
+                        .map((item) => (
+                          <div
+                            key={item.employee_id}
+                            className="p-3 text-xs flex items-start justify-between gap-2"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <p className="font-semibold text-gray-900">
+                                {item.employee_name || item.employee_code || item.employee_id}
+                                {item.employee_code && (
+                                  <span className="font-normal text-gray-500">
+                                    {" "}
+                                    ({item.employee_code})
+                                  </span>
+                                )}
+                              </p>
+                              {item.error && (
+                                <p className="mt-0.5 text-rose-600">{item.error}</p>
+                              )}
+                            </div>
+                            <span className="shrink-0 rounded bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-600">
+                              Failed
+                            </span>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex gap-3 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowMarkModal(false);
+                      setBulkResult(null);
+                      setConfirmStep(false);
+                      clearSelection();
+                      setAttendanceRefreshKey((c) => c + 1);
+                    }}
+                    className="flex-1 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    Close
+                  </button>
+                  {bulkResult.failure_count > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const failedIds = new Set(
+                          bulkResult.results
+                            .filter((r) => !r.success)
+                            .map((r) => r.employee_id),
+                        );
+                        setIsAllMatchingSelected(false);
+                        setExcludedIds(new Set());
+                        setSelectedIds(failedIds);
+                        setBulkResult(null);
+                        setConfirmStep(false);
+                        setIsBulkModal(true);
+                      }}
+                      className="flex-1 rounded-lg bg-[#2563eb] px-4 py-2 text-sm font-medium text-white hover:bg-[#1d4ed8]"
+                    >
+                      Retry Failed ({bulkResult.failure_count})
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : confirmStep && isBulkModal ? (
+              /* Confirmation Screen before Applying Bulk Changes */
+              <div className="space-y-4">
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                  <div className="flex items-center gap-2 font-semibold">
+                    <AlertCircle className="h-5 w-5 text-amber-600 shrink-0" />
+                    <span>Confirm Bulk Attendance Marking</span>
+                  </div>
+                  <p className="mt-2 text-xs text-amber-800 leading-relaxed">
+                    You are about to mark attendance as{" "}
+                    <strong className="capitalize">{markForm.status}</strong> for{" "}
+                    <strong>{selectedCount} employee{selectedCount === 1 ? "" : "s"}</strong> on{" "}
+                    <strong>{markForm.date}</strong>.
+                  </p>
+                  <p className="mt-2 text-xs text-amber-700">
+                    Existing attendance records for these employees on this date will be updated and flagged as regularized.
+                  </p>
+                </div>
+
+                <dl className="grid grid-cols-2 gap-3 rounded-xl border border-gray-100 bg-gray-50 p-3 text-xs">
+                  <div>
+                    <dt className="text-gray-400">Total Selected</dt>
+                    <dd className="font-semibold text-gray-800">{selectedCount} employees</dd>
+                  </div>
+                  <div>
+                    <dt className="text-gray-400">Date</dt>
+                    <dd className="font-semibold text-gray-800">{markForm.date}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-gray-400">Status</dt>
+                    <dd className="font-semibold capitalize text-gray-800">{markForm.status}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-gray-400">Shift</dt>
+                    <dd className="font-semibold text-gray-800 truncate">
+                      {markForm.shift_id
+                        ? shifts.find((s) => s.id === markForm.shift_id)?.name ?? "Selected Shift"
+                        : "Assigned shift"}
+                    </dd>
+                  </div>
+                  {(markForm.in_time || markForm.out_time) && (
+                    <div className="col-span-2">
+                      <dt className="text-gray-400">Times</dt>
+                      <dd className="font-semibold text-gray-800">
+                        {markForm.in_time || "--:--"} - {markForm.out_time || "--:--"}
+                      </dd>
+                    </div>
+                  )}
+                </dl>
+
+                <div className="flex gap-3 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmStep(false)}
+                    disabled={isMarkingAttendance}
+                    className="flex-1 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleMarkAttendance}
+                    disabled={isMarkingAttendance}
+                    className="flex-1 rounded-lg bg-[#2563eb] px-4 py-2 text-sm font-medium text-white hover:bg-[#1d4ed8] disabled:opacity-50"
+                  >
+                    {isMarkingAttendance ? "Applying..." : "Confirm & Apply"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* Main Mark Attendance Form */
+              <div className="space-y-4">
+                {isBulkModal ? (
+                  <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-3 text-xs text-blue-900">
+                    <p className="font-semibold">
+                      Marking attendance for {selectedCount} employee{selectedCount === 1 ? "" : "s"}
+                    </p>
+                    <p className="mt-0.5 text-blue-700">
+                      {isAllMatchingSelected
+                        ? "All matching current filters across all pages."
+                        : "Selected from the attendance table across pages."}
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                      Employee
+                    </label>
+                    <select
+                      value={markForm.employee_id}
+                      onChange={(e) =>
+                        setMarkForm((prev) => ({
+                          ...prev,
+                          employee_id: e.target.value,
+                        }))
+                      }
+                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#2563eb] focus:outline-none"
+                    >
+                      <option value="">Select an employee</option>
+                      {records.map((record) => (
+                        <option key={record.id} value={record.employee.id}>
+                          {record.employee.first_name} {record.employee.last_name} ({record.employee.employee_code})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                      Date
+                    </label>
+                    <input
+                      type="date"
+                      value={markForm.date}
+                      onChange={(e) =>
+                        setMarkForm((prev) => ({
+                          ...prev,
+                          date: e.target.value,
+                        }))
+                      }
+                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#2563eb] focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                      Status
+                    </label>
+                    <select
+                      value={markForm.status}
+                      onChange={(e) =>
+                        setMarkForm((prev) => ({
+                          ...prev,
+                          status: e.target.value as AttendanceStatus,
+                        }))
+                      }
+                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#2563eb] focus:outline-none"
+                    >
+                      <option value="present">Present</option>
+                      <option value="late">Late</option>
+                      <option value="absent">Absent</option>
+                      <option value="on_leave">On Leave</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-700">
+                    Shift
+                  </label>
+                  <select
+                    value={markForm.shift_id}
+                    onChange={(e) =>
+                      setMarkForm((prev) => ({
+                        ...prev,
+                        shift_id: e.target.value,
+                      }))
+                    }
+                    className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-[#2563eb] focus:outline-none"
+                  >
+                    <option value="">Employee's assigned shift</option>
+                    {shifts.map((shift) => (
+                      <option key={shift.id} value={shift.id}>
+                        {shift.name} ({formatShiftTime(shift.start_time)} -{" "}
+                        {formatShiftTime(shift.end_time)})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Overtime is worked time beyond this shift's length.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                      In Time
+                    </label>
+                    <input
+                      type="time"
+                      value={markForm.in_time}
+                      onChange={(e) =>
+                        setMarkForm((prev) => ({
+                          ...prev,
+                          in_time: e.target.value,
+                        }))
+                      }
+                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#2563eb] focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                      Out Time
+                    </label>
+                    <input
+                      type="time"
+                      value={markForm.out_time}
+                      onChange={(e) =>
+                        setMarkForm((prev) => ({
+                          ...prev,
+                          out_time: e.target.value,
+                        }))
+                      }
+                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#2563eb] focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowMarkModal(false);
+                      setMarkError("");
+                      setConfirmStep(false);
+                    }}
+                    disabled={isMarkingAttendance}
+                    className="flex-1 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleMarkAttendance}
+                    disabled={isMarkingAttendance}
+                    className="flex-1 rounded-lg bg-[#2563eb] px-4 py-2 text-sm font-medium text-white hover:bg-[#1d4ed8] disabled:opacity-50"
+                  >
+                    {isBulkModal ? "Continue" : isMarkingAttendance ? "Saving..." : "Mark Attendance"}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
+        </div>
+      )}
+
+      {punchPopup && (
+        <div
+          role={punchPopup.kind === "error" ? "alert" : "status"}
+          aria-live={punchPopup.kind === "error" ? "assertive" : "polite"}
+          className={`fixed bottom-5 left-5 z-50 w-[min(24rem,calc(100vw-2.5rem))] rounded-2xl border p-4 shadow-xl ${
+            punchPopup.kind === "error"
+              ? "border-rose-200 bg-white text-rose-700"
+              : "border-emerald-200 bg-white text-gray-800"
+          }`}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="font-semibold">
+                {punchPopup.kind === "error" ? "Attendance error" : punchPopup.title}
+              </p>
+              {punchPopup.kind === "error" ? (
+                <p className="mt-1 text-sm">{punchPopup.message}</p>
+              ) : (
+                <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                  {punchPopup.fields.map((field) => (
+                    <div key={field.label}>
+                      <dt className="text-xs text-gray-400">{field.label}</dt>
+                      <dd className="font-medium">{field.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setPunchPopup(null)}
+              className="shrink-0 rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+              aria-label="Dismiss attendance message"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Success Notification Toast */}
+      {successToast && (
+        <div className="fixed bottom-5 right-5 z-50 flex items-center gap-2.5 rounded-2xl bg-gray-900 px-4 py-3 text-sm font-medium text-white shadow-xl">
+          <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0" />
+          <span>{successToast}</span>
+          <button
+            type="button"
+            onClick={() => setSuccessToast("")}
+            className="ml-2 rounded-lg p-1 text-gray-400 hover:text-white"
+            aria-label="Dismiss notification"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
       )}
 

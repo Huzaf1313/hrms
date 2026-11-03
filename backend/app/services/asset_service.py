@@ -56,55 +56,117 @@ class AssetService:
     # ---------------------------------------------------------------- Helpers
 
     async def _scope_filter(self, current_user: dict | None) -> dict:
-        """Restrict assets to the holder codes the caller may see.
+        if not current_user:
+            return {}
 
-        An asset points at its holder by business code, so the scope resolves
-        through the employee records first. Unassigned stock belongs to nobody
-        and so drops out for a manager - it stays with HR.
-        """
+        role = current_user.get("role")
+        role = role.value if hasattr(role, "value") else role
+
+        # Employees must never inherit unrestricted admin visibility.
+        if role == "employee":
+            employee_id = current_user.get("employee_id")
+            if not employee_id:
+                return {"_id": {"$exists": False}}
+
+            return {
+                "assigned_to_employee_id": employee_id,
+            }
+
+        # Preserve the existing HR/Manager team-visibility logic.
         codes = await visible_employee_codes(
             self.employee_repository,
             current_user,
         )
-
         if codes is None:
             return {}
 
-        return {"assigned_to_employee_id": {"$in": codes}}
+        return {
+            "assigned_to_employee_id": {
+                "$in": codes,
+            }
+        }
 
+    
     async def _assert_assignable(
         self,
-        employee_id: str | None,
+        employee_id: str,
         current_user: dict | None,
-    ) -> None:
-        """A manager may only put assets into their own team's hands."""
-        if not employee_id:
+    ):
+        if not current_user:
             return
 
+        role = current_user.get("role")
+        role = role.value if hasattr(role, "value") else role
+
+        # Employees can only request actions for their own employee record.
+        if role == "employee":
+            current_employee_id = current_user.get("employee_id")
+
+            if not current_employee_id or employee_id != current_employee_id:
+                raise AppException(
+                    "You can only request assets for your own employee account.",
+                    403,
+                )
+
+            return
+
+        # For HR/Admin/Manager, enforce the employee visibility scope
+        # when the current user's scope is restricted.
         scope_filter = await self._scope_filter(current_user)
 
         if not scope_filter:
             return
 
-        if employee_id not in scope_filter["assigned_to_employee_id"]["$in"]:
-            raise AppException(
-                "You can only assign assets to your own team",
-                403,
-            )
+        assigned_filter = scope_filter.get("assigned_to_employee_id")
+
+        # Handle scopes represented as a direct employee ID.
+        if isinstance(assigned_filter, str):
+            if employee_id != assigned_filter:
+                raise AppException(
+                    "You do not have permission to access this employee's assets.",
+                    403,
+                )
+            return
+
+        # Handle scopes represented as a list of visible employee IDs.
+        if isinstance(assigned_filter, dict):
+            allowed_employee_ids = assigned_filter.get("$in", [])
+
+            if employee_id not in allowed_employee_ids:
+                raise AppException(
+                    "You do not have permission to access this employee's assets.",
+                    403,
+                )
 
     async def _assert_asset_access(
         self,
         asset: dict | None,
         current_user: dict | None,
-    ) -> dict:
-        """404 rather than 403 when out of scope, so asset ids do not leak."""
+    ):
         if not asset:
             raise AppException("Asset not found", 404)
 
-        holder = asset.get("assigned_to_employee_id")
-        scope_filter = await self._scope_filter(current_user)
+        if not current_user:
+            return asset
 
-        if scope_filter and holder not in scope_filter["assigned_to_employee_id"]["$in"]:
+        role = current_user.get("role")
+        role = role.value if hasattr(role, "value") else role
+
+        if role == "employee":
+            employee_id = current_user.get("employee_id")
+
+            if (
+                not employee_id
+                or asset.get("assigned_to_employee_id") != employee_id
+            ):
+                raise AppException("Asset not found", 404)
+
+            return asset
+
+        holder = asset.get("assigned_to_employee_id")
+        scope = await self._scope_filter(current_user)
+
+        if scope and holder not in scope.get("assigned_to_employee_id", {}).get("$in", []):
             raise AppException("Asset not found", 404)
 
         return asset
@@ -254,7 +316,27 @@ class AssetService:
         pagination: PaginationParams | None = None,
         current_user: dict | None = None,
     ):
-        filters: dict = await self._scope_filter(current_user)
+        filters = await self._scope_filter(current_user)
+
+        role = current_user.get("role") if current_user else None
+        role = role.value if hasattr(role, "value") else role
+
+        if role == "employee":
+            employee_id_for_scope = current_user.get("employee_id")
+
+            if not employee_id_for_scope:
+                filters = {"_id": {"$exists": False}}
+            elif status == "available":
+                # Employees can browse unassigned assets to request them.
+                filters = {
+                    "status": "available",
+                    "assigned_to_employee_id": None,
+                }
+            else:
+                # By default, employees see only their own allocated assets.
+                filters = {
+                    "assigned_to_employee_id": employee_id_for_scope,
+                }
 
         if status:
             filters["status"] = status

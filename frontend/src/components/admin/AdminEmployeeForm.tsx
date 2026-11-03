@@ -97,7 +97,7 @@ function toFormState(employee?: Employee): EmployeeCreate {
     address: employee.address ?? "",
     department_id: employee.department_id,
     designation: employee.designation,
-    joining_date: employee.joining_date,
+    joining_date: employee.joining_date ?? "",
     employment_type: employee.employment_type,
     work_location: employee.work_location ?? "",
     reporting_manager: employee.reporting_manager ?? "",

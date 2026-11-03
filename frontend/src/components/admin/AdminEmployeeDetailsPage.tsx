@@ -123,7 +123,7 @@ function initialFor(value?: string): string {
   return value?.charAt(0).toUpperCase() ?? "";
 }
 
-function formatDate(value?: string): string {
+function formatDate(value?: string | null): string {
   if (!value) return "—";
 
   const date = new Date(value);

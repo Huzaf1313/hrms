@@ -4,10 +4,10 @@ import jwt
 
 from app.core.config import settings
 
-
 def create_access_token(
     subject: str,
     role: str,
+    session_id: str,
 ) -> str:
     expire = datetime.now(timezone.utc) + timedelta(
         minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
@@ -17,6 +17,7 @@ def create_access_token(
         "sub": subject,
         "role": role,
         "type": "access",
+        "session_id": session_id,
         "exp": expire,
     }
 
@@ -25,7 +26,6 @@ def create_access_token(
         settings.SECRET_KEY,
         algorithm=settings.ALGORITHM,
     )
-
 
 def create_refresh_token(
     subject: str,

@@ -23,6 +23,7 @@ import EmployeeExit from "./pages/employee/EmployeeExit";
 import EmployeeResignation from "./pages/employee/EmployeeResignation";
 import { clearAuthQueries } from "./lib/queryClient";
 import { GlobalDateProvider } from "./context/GlobalDateProvider";
+import EmployeeAssets from "./pages/employee/EmployeeAssets";
 
 function App() {
   async function handleLogout() {
@@ -64,6 +65,7 @@ function App() {
               <Route path="leave" element={<EmployeeLeave />} />
               <Route path="payroll" element={<EmployeePayroll />} />
               <Route path="documents" element={<EmployeeDocuments />} />
+              <Route path="assets" element={<EmployeeAssets />} />
               <Route
                 path="announcements"
                 element={<EmployeeAnnouncements />}

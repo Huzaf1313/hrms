@@ -205,7 +205,7 @@ class EmployeeResponse(BaseModel):
     # Employment
     department_id: str
     designation: str
-    joining_date: date
+    joining_date: date | None = None
 
     employment_type: str
     work_location: str | None = None
