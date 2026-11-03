@@ -1,23 +1,24 @@
 
+import asyncio
 import os
 from pathlib import Path
-import re
-import unicodedata
+from urllib.parse import quote
 
 from fastapi import (
     APIRouter,
     Depends,
     File,
     Form,
-    HTTPException,
     Query,
     UploadFile,
 )
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
+from botocore.exceptions import BotoCoreError, ClientError
 
 from app.api.deps import get_current_user
 from app.core.config import settings
 from app.core.exceptions import AppException
+from app.repositories.employee_repository import EmployeeRepository
 from app.schemas.common import APIResponse
 from app.schemas.employee_document import (
     EmployeeDocumentResponse,
@@ -25,10 +26,8 @@ from app.schemas.employee_document import (
 )
 from app.services.employee_document_service import EmployeeDocumentService
 from app.services.employee_cloudflare_r2_service import CloudflareR2Service
-import asyncio
-from fastapi.responses import StreamingResponse
-from botocore.exceptions import BotoCoreError, ClientError
-from urllib.parse import quote
+from app.utils.employee_storage import employee_document_key
+from app.services.object_storage_service import content_type_for
 
 router = APIRouter(
     prefix="/employee-documents",
@@ -36,7 +35,6 @@ router = APIRouter(
 )
 
 service = EmployeeDocumentService()
-storage_service = ObjectStorageService()
 employee_repository = EmployeeRepository()
 
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
@@ -52,39 +50,6 @@ ALLOWED_EXTENSIONS = {
     ".xls",
     ".xlsx",
 }
-
-def normalize_name(value: str) -> str:
-    """Convert employee name or document label into a safe R2 component."""
-    normalized = unicodedata.normalize("NFKD", value)
-    normalized = normalized.encode("ascii", "ignore").decode("ascii")
-    normalized = re.sub(r"[^a-zA-Z0-9]+", "_", normalized)
-    return normalized.strip("_")
-
-
-def get_employee_folder(employee: dict) -> str:
-    employee_code = str(employee.get("employee_id", "")).strip()
-
-    full_name = (
-        f"{employee.get('first_name', '')} "
-        f"{employee.get('last_name', '')}"
-    ).strip()
-
-    if not employee_code or not full_name:
-        raise HTTPException(
-            status_code=400,
-            detail="Employee code or name is missing.",
-        )
-
-    safe_code = normalize_name(employee_code)
-    safe_name = normalize_name(full_name)
-
-    if not safe_code or not safe_name:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid employee code or name.",
-        )
-
-    return f"{safe_code}_{safe_name}"
 
 def serialize_document(document: dict) -> EmployeeDocumentResponse:
     return EmployeeDocumentResponse(
@@ -270,29 +235,6 @@ async def upload_my_document(
         or current_user.get("name")
         or current_user.get("email")
         or str(current_user.get("_id", ""))
-    mime_type = (
-        file.content_type
-        or mimetypes.guess_type(original_name)[0]
-        or "application/octet-stream"
-    )
-
-    # Generate a unique private R2 object key.
-    employee_folder = get_employee_folder(current_user)
-
-    safe_document_name = normalize_name(document_name)
-
-    if not safe_document_name:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid document name.",
-        )
-
-    stored_name = (
-        f"{employee_folder}_{safe_document_name}{extension}"
-    )
-
-    storage_key = (
-        f"employees/{employee_folder}/documents/{stored_name}"
     )
 
     storage = None
@@ -320,13 +262,8 @@ async def upload_my_document(
                 "file_name": display_file_name,
                 "file_size": len(contents),
                 "mime_type": mime_type,
-                "uploaded_by": (
-                    current_user.get("full_name")
-                    or current_user.get("name")
-                    or current_user.get("email")
-                    or str(current_user.get("_id", ""))
-                ),
-                "source": "employee_upload",
+                "uploaded_by": uploader,
+                "source": source,
                 "storage_key": storage_key,
             }
         )

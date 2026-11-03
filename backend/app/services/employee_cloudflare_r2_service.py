@@ -14,7 +14,7 @@ class CloudflareR2Service:
             "R2_ACCESS_KEY_ID": settings.R2_ACCESS_KEY_ID,
             "R2_SECRET_ACCESS_KEY": settings.R2_SECRET_ACCESS_KEY,
             "R2_BUCKET_NAME": settings.R2_BUCKET_NAME,
-            "R2_ENDPOINT_URL": settings.R2_ENDPOINT_URL,
+            "R2_ENDPOINT_URL": settings.r2_endpoint_url,
         }
 
         missing_settings = [
@@ -30,7 +30,7 @@ class CloudflareR2Service:
 
         self.client = boto3.client(
             "s3",
-            endpoint_url=settings.R2_ENDPOINT_URL,
+            endpoint_url=settings.r2_endpoint_url,
             aws_access_key_id=settings.R2_ACCESS_KEY_ID,
             aws_secret_access_key=settings.R2_SECRET_ACCESS_KEY,
             region_name="auto",

@@ -1,5 +1,5 @@
 
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Archive,
   ChevronLeft,
@@ -118,7 +118,6 @@ export default function EmployeeDocuments() {
   const [uploadValidationError, setUploadValidationError] = useState("");
   const [uploadNotice, setUploadNotice] = useState("");
   const [isUploading, setIsUploading] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchDocuments = useCallback(async () => {
@@ -185,24 +184,6 @@ export default function EmployeeDocuments() {
     (safeCurrentPage - 1) * DOCUMENTS_PER_PAGE,
     safeCurrentPage * DOCUMENTS_PER_PAGE
   );
-
-  const documentGroups = [
-    {
-      key: "employee",
-      title: "Documents Uploaded by You",
-      documents: paginatedDocuments.filter(
-        (document) =>
-          document.source === "employee" || document.source === "employee_upload"
-      ),
-    },
-    {
-      key: "hr_admin",
-      title: "Documents Uploaded by HR",
-      documents: paginatedDocuments.filter(
-        (document) => document.source === "hr_admin" || !document.source
-      ),
-    },
-  ];
 
   const recentDocuments = useMemo(() => {
     return [...documents]
@@ -842,6 +823,26 @@ return (
                                 >
                                   <ExternalLink size={16} />
                                   Open file
+                                </button>
+                              )}
+
+                              {(document.source === "employee" ||
+                                document.source === "employee_upload") && (
+                                <button
+                                  type="button"
+                                  disabled={deletingId === document.id}
+                                  onClick={() => void handleDelete(document)}
+                                  className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                  {deletingId === document.id ? (
+                                    <Loader2
+                                      size={16}
+                                      className="animate-spin"
+                                    />
+                                  ) : (
+                                    <Trash2 size={16} />
+                                  )}
+                                  Delete
                                 </button>
                               )}
                             </div>
