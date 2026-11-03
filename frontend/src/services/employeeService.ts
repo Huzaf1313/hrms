@@ -1,4 +1,4 @@
-import { api } from "./api";
+import { api, downloadFile } from "./api";
 import type {
   Employee,
   EmployeeCreate,
@@ -53,6 +53,22 @@ export const employeeService = {
 
   getMyProfile() {
     return api.get<Employee>("/employees/me");
+  },
+
+    uploadMyProfilePhoto(file: File) {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    return api.postForm<{ avatar_url: string }>(
+      "/employee-profile-photo/me",
+      formData,
+    );
+  },
+
+  getProfilePhoto(employeeId: string) {
+    return downloadFile(
+      `/employee-profile-photo/${employeeId}/image`,
+    );
   },
 
   create(data: EmployeeCreate) {

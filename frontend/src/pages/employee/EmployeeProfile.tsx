@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ElementType } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -7,6 +7,7 @@ import {
   BriefcaseBusiness,
   Building2,
   CalendarDays,
+  Camera,
   CheckCircle2,
   Clock3,
   CreditCard,
@@ -242,6 +243,12 @@ export default function EmployeeProfile() {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [passwordSuccess, setPasswordSuccess] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const profilePhotoInputRef = useRef<HTMLInputElement>(null);
+
+  const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(null);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [photoSuccess, setPhotoSuccess] = useState("");
+  const [photoError, setPhotoError] = useState("");
 
   useEffect(() => {
     let isMounted = true;
@@ -313,6 +320,89 @@ export default function EmployeeProfile() {
       isMounted = false;
     };
   }, []);
+
+  useEffect(() => {
+  if (!employee?.id || !employee.avatar_url) {
+    setProfilePhotoUrl(null);
+    return;
+  }
+
+  let cancelled = false;
+  let objectUrl: string | null = null;
+
+  const loadProfilePhoto = async () => {
+    try {
+      const blob = await employeeService.getProfilePhoto(employee.id);
+
+      if (cancelled) return;
+
+      objectUrl = URL.createObjectURL(blob);
+      setProfilePhotoUrl(objectUrl);
+    } catch (error) {
+      console.error("Failed to load profile photo:", error);
+
+      if (!cancelled) {
+        setProfilePhotoUrl(null);
+      }
+    }
+  };
+
+  setProfilePhotoUrl(null);
+  loadProfilePhoto();
+
+  return () => {
+    cancelled = true;
+
+    if (objectUrl) {
+      URL.revokeObjectURL(objectUrl);
+    }
+  };
+}, [employee?.id, employee?.avatar_url]);
+
+  const handleProfilePhotoChange = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+
+    if (!file) return;
+
+    setPhotoSuccess("");
+    setPhotoError("");
+
+    const allowedTypes = ["image/jpeg", "image/png"];
+
+    if (!allowedTypes.includes(file.type)) {
+      setPhotoError("Please upload a JPG, JPEG, or PNG image.");
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setPhotoError("Profile photo must not exceed 5 MB.");
+      event.target.value = "";
+      return;
+    }
+
+    try {
+      setIsUploadingPhoto(true);
+
+      const response = await employeeService.uploadMyProfilePhoto(file);
+
+      setEmployee((current) =>
+        current
+          ? { ...current, avatar_url: response.avatar_url }
+          : current,
+      );
+
+    setPhotoSuccess("Profile photo updated successfully.");
+      } catch (error) {
+        console.error("Profile photo upload failed:", error);
+        setPhotoError("Unable to update profile photo. Please try again.");
+      } finally {
+        setIsUploadingPhoto(false);
+        event.target.value = "";
+      }
+    };
 
   const handleEditEmergencyContact = () => {
     setEmergencyContactForm({
@@ -586,18 +676,43 @@ const handleChangePassword = async (
           <div className="relative px-6 pb-7 pt-16 sm:px-8 sm:pb-8 sm:pt-16">
             {/* Avatar */}
             <div className="absolute left-6 top-0 -translate-y-1/2 sm:left-8">
-              <div className="flex h-24 w-24 items-center justify-center rounded-2xl border-4 border-white bg-slate-100 text-2xl font-bold text-slate-600 shadow-lg">
-                {employee?.avatar_url ? (
+              <div className="relative flex h-24 w-24 items-center justify-center rounded-2xl border-4 border-white bg-slate-100 text-2xl font-bold text-slate-600 shadow-lg">
+                {profilePhotoUrl ? (
                   <img
-                    src={employee.avatar_url}
+                    src={profilePhotoUrl}
                     alt={displayName}
                     className="h-full w-full rounded-xl object-cover"
                   />
                 ) : (
                   initials || <UserRound size={34} />
                 )}
+
+                {/* Upload Photo Button */}
+                <button
+                  type="button"
+                  onClick={() => profilePhotoInputRef.current?.click()}
+                  disabled={isUploadingPhoto}
+                  title="Change profile photo"
+                  className="absolute bottom-1 left-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-slate-800 text-white shadow-md transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isUploadingPhoto ? (
+                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                  ) : (
+                    <Camera size={14} />
+                  )}
+                </button>
               </div>
 
+              {/* Hidden File Input */}
+              <input
+                ref={profilePhotoInputRef}
+                type="file"
+                accept="image/jpeg,image/png"
+                className="hidden"
+                onChange={handleProfilePhotoChange}
+              />
+
+              {/* Employee Status Indicator */}
               <span
                 className={`absolute bottom-1 right-1 h-4 w-4 rounded-full border-[3px] border-white ${
                   isActive ? "bg-emerald-500" : "bg-slate-400"
@@ -663,6 +778,17 @@ const handleChangePassword = async (
                 </div>
               </div>
             </div>
+            {photoSuccess && (
+              <p className="mt-3 text-sm font-medium text-emerald-600">
+                {photoSuccess}
+              </p>
+            )}
+
+            {photoError && (
+              <p className="mt-3 text-sm font-medium text-red-600">
+                {photoError}
+              </p>
+            )}
           </div>
         </section>
 
