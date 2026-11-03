@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, Depends, Query
 
 from app.core.roles import Permission
@@ -9,8 +10,17 @@ from app.schemas.admin_payslip import (
 )
 from app.schemas.common import APIResponse
 from app.core.exceptions import AppException
+from app.core.cache import (
+    get_cache,
+    set_cache,
+    invalidate_dashboard_cache,
+    invalidate_payroll_analytics_cache,
+    invalidate_payslips_cache,
+    invalidate_employee_payroll_cache,
+)
 from app.services.admin_payslip_service import AdminPayslipService
 
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/admin-payslip",
@@ -18,6 +28,9 @@ router = APIRouter(
 )
 
 service = AdminPayslipService()
+PAYROLL_ANALYTICS_CACHE_TTL = 120
+PAYSLIP_LIST_CACHE_TTL = 120
+PAYSLIP_DETAIL_CACHE_TTL = 300
 
 
 @router.post("")
@@ -32,6 +45,14 @@ async def create_payslip(
         month=payload.month,
         year=payload.year,
     )
+
+    try:
+        await invalidate_payroll_analytics_cache()
+        await invalidate_dashboard_cache()
+        await invalidate_payslips_cache()
+        await invalidate_employee_payroll_cache(payload.employee_id)
+    except Exception as exc:
+        logger.error("Failed to invalidate payroll cache after payslip creation: %s", exc)
 
     return {
         "success": True,
@@ -53,15 +74,35 @@ async def get_payroll_analytics(
         require_permission(Permission.PAYROLL_READ)
     ),
 ):
+    user_role = getattr(current_user.get("role"), "value", current_user.get("role"))
+    user_id = str(current_user.get("_id", ""))
+    cache_key = f"payroll:analytics:{user_role}:{user_id}:{year}:{months}"
+
+    cached_data = await get_cache(cache_key)
+    if cached_data is not None:
+        try:
+            cached_model = PayrollAnalyticsResponse(**cached_data)
+            return APIResponse(
+                success=True,
+                message="Payroll analytics retrieved successfully",
+                data=cached_model,
+            )
+        except Exception:
+            pass
+
     analytics = await service.get_payroll_analytics(
         year=year,
         months=months,
+        current_user=current_user,
     )
+    analytics_model = PayrollAnalyticsResponse(**analytics)
+
+    await set_cache(cache_key, analytics_model.model_dump(), ttl=PAYROLL_ANALYTICS_CACHE_TTL)
 
     return APIResponse(
         success=True,
         message="Payroll analytics retrieved successfully",
-        data=analytics,
+        data=analytics_model,
     )
 
 
@@ -81,6 +122,17 @@ async def get_all_payslips(
         require_permission(Permission.PAYROLL_READ)
     ),
 ):
+    search_str = search.strip().lower() if search else "none"
+    cache_key = f"payroll:payslips:list:{year or 'all'}:{month or 'all'}:{status or 'all'}:{search_str}:{page}:{limit}"
+
+    cached = await get_cache(cache_key)
+    if cached is not None:
+        return {
+            "success": True,
+            "message": "Payslips retrieved successfully",
+            "data": cached,
+        }
+
     payslips = await service.get_all_payslips(
         page=page,
         limit=limit,
@@ -89,6 +141,8 @@ async def get_all_payslips(
         search=search,
         status=status,
     )
+
+    await set_cache(cache_key, payslips, ttl=PAYSLIP_LIST_CACHE_TTL)
 
     return {
         "success": True,
@@ -114,6 +168,15 @@ async def update_payslip_status(
         status=payload.status,
     )
 
+    try:
+        await invalidate_payroll_analytics_cache()
+        await invalidate_dashboard_cache()
+        await invalidate_payslips_cache(payslip_id)
+        emp_id = updated.get("employee_id") if isinstance(updated, dict) else None
+        await invalidate_employee_payroll_cache(emp_id)
+    except Exception as exc:
+        logger.error("Failed to invalidate payroll cache after payslip status update: %s", exc)
+
     return {
         "success": True,
         "message": "Payslip status updated successfully",
@@ -132,9 +195,20 @@ async def get_payslip_by_id(
         require_permission(Permission.PAYSLIPS_READ)
     ),
 ):
+    cache_key = f"payroll:payslips:detail:{payslip_id}"
+    cached = await get_cache(cache_key)
+    if cached is not None:
+        return {
+            "success": True,
+            "message": "Payslip retrieved successfully",
+            "data": cached,
+        }
+
     payslip = await service.get_payslip_by_id(
         payslip_id
     )
+
+    await set_cache(cache_key, payslip, ttl=PAYSLIP_DETAIL_CACHE_TTL)
 
     return {
         "success": True,

@@ -30,6 +30,15 @@ class RecentActivity(BaseModel):
     created_at: datetime
 
 
+class DashboardPayrollSummary(BaseModel):
+    payroll_this_month: float = 0.0
+    payroll_change_percent: float = 0.0
+    total_expenses: float = 0.0
+    expense_change_percent: float = 0.0
+    processed_count: int = 0
+    currency: str = "INR"
+
+
 class DashboardResponse(BaseModel):
     total_headcount: int = 0
     attendance_rate: float | None = None
@@ -37,3 +46,4 @@ class DashboardResponse(BaseModel):
     celebrations: list[Celebration] = []
     hiring_pipeline: HiringPipeline = HiringPipeline()
     recent_activities: list[RecentActivity] = []
+    payroll_summary: DashboardPayrollSummary | None = None

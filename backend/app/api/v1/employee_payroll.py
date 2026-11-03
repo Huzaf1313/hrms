@@ -1,12 +1,15 @@
 from fastapi import APIRouter, Depends, Query
 
 from app.api.deps import get_current_user
+from app.core.cache import get_cache, set_cache
 from app.core.exceptions import AppException
 from app.repositories.employee_repository import EmployeeRepository
 from app.services.employee_payroll_service import (
     EmployeePayrollService,
 )
 
+EMPLOYEE_PAYROLL_LIST_TTL = 180
+EMPLOYEE_PAYROLL_DETAIL_TTL = 300
 
 router = APIRouter(
     prefix="/employee-payroll",
@@ -65,11 +68,25 @@ async def get_employee_payroll(
             403,
         )
 
+    page_val = page if isinstance(page, int) else 1
+    limit_val = limit if isinstance(limit, int) else 100
+    cache_key = f"payroll:emp:{employee_id}:list:{page_val}:{limit_val}"
+
+    cached = await get_cache(cache_key)
+    if cached is not None:
+        return {
+            "success": True,
+            "message": "Payroll records fetched successfully",
+            "data": cached,
+        }
+
     data = await service.get_employee_payroll(
         employee_id=employee_id,
-        page=page,
-        limit=limit,
+        page=page_val,
+        limit=limit_val,
     )
+
+    await set_cache(cache_key, data, ttl=EMPLOYEE_PAYROLL_LIST_TTL)
 
     return {
         "success": True,
@@ -93,9 +110,20 @@ async def get_latest_payroll(
             403,
         )
 
+    cache_key = f"payroll:emp:{employee_id}:latest"
+    cached = await get_cache(cache_key)
+    if cached is not None:
+        return {
+            "success": True,
+            "message": "Latest payroll fetched successfully",
+            "data": cached,
+        }
+
     data = await service.get_latest_payroll(
         employee_id=employee_id
     )
+
+    await set_cache(cache_key, data, ttl=EMPLOYEE_PAYROLL_LIST_TTL)
 
     return {
         "success": True,
@@ -120,10 +148,22 @@ async def get_payroll_by_month(
             403,
         )
 
+    month_str = month.strip().lower() if isinstance(month, str) else str(month)
+    cache_key = f"payroll:emp:{employee_id}:month:{month_str}"
+    cached = await get_cache(cache_key)
+    if cached is not None:
+        return {
+            "success": True,
+            "message": "Payroll record fetched successfully",
+            "data": cached,
+        }
+
     data = await service.get_payroll_by_month(
         employee_id=employee_id,
         month=month,
     )
+
+    await set_cache(cache_key, data, ttl=EMPLOYEE_PAYROLL_DETAIL_TTL)
 
     return {
         "success": True,
@@ -140,11 +180,23 @@ async def get_payroll(
     employee = await get_employee_from_user(
         current_user
     )
+    employee_id = employee["employee_id"]
+
+    cache_key = f"payroll:emp:{employee_id}:record:{payroll_id}"
+    cached = await get_cache(cache_key)
+    if cached is not None:
+        return {
+            "success": True,
+            "message": "Payroll record fetched successfully",
+            "data": cached,
+        }
 
     data = await service.get_payroll(
         payroll_id=payroll_id,
-        employee_id=employee["employee_id"],
+        employee_id=employee_id,
     )
+
+    await set_cache(cache_key, data, ttl=EMPLOYEE_PAYROLL_DETAIL_TTL)
 
     return {
         "success": True,

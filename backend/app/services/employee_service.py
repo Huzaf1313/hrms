@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timezone
+from datetime import date, datetime, time, timedelta, timezone
 
 from app.core.config import settings
 from app.core.exceptions import AppException
@@ -320,41 +320,59 @@ class EmployeeService:
         status: str | None,
         pagination: PaginationParams,
         current_user: dict | None = None,
+        special_filter: str | None = None,
     ):
-        filters = build_filter(
-            {
-                "department_id": department_id,
-                "status": status,
-            }
-        )
+        conditions: list[dict] = []
+        if department_id:
+            conditions.append({"department_id": department_id})
+        if status:
+            conditions.append({"status": status})
+
+        if special_filter == "new_joiners":
+            now = datetime.now(timezone.utc)
+            thirty_days_ago = now - timedelta(days=30)
+            thirty_days_date = thirty_days_ago.date()
+            thirty_days_str = thirty_days_date.isoformat()
+            if not status:
+                conditions.append({"status": {"$nin": ["inactive", "terminated", "Inactive", "Terminated"]}})
+            conditions.append({
+                "$or": [
+                    {"joining_date": {"$gte": thirty_days_ago}},
+                    {"joining_date": {"$gte": datetime.combine(thirty_days_date, time.min)}},
+                    {"joining_date": {"$gte": thirty_days_str}},
+                ]
+            })
+        elif special_filter == "missing_salary_structure":
+            if not status:
+                conditions.append({"status": {"$nin": ["inactive", "terminated", "Inactive", "Terminated"]}})
+            structures = await self.salary_structure_repository.collection.find({}, {"name": 1}).to_list(1000)
+            valid_names = [s.get("name") for s in structures if s.get("name")]
+            valid_ids = [str(s["_id"]) for s in structures if "_id" in s]
+            valid_values = valid_names + valid_ids
+            conditions.append({
+                "$or": [
+                    {"salary_structure": {"$in": [None, ""]}},
+                    {"salary_structure": {"$exists": False}},
+                    {"salary_structure": {"$nin": valid_values}},
+                ]
+            })
 
         if search:
-            filters["$or"] = [
-                {
-                    "first_name": {
-                        "$regex": search,
-                        "$options": "i",
-                    }
-                },
-                {
-                    "last_name": {
-                        "$regex": search,
-                        "$options": "i",
-                    }
-                },
-                {
-                    "employee_id": {
-                        "$regex": search,
-                        "$options": "i",
-                    }
-                },
-                {
-                    "email": {
-                        "$regex": search,
-                        "$options": "i",
-                    }
-                },
-            ]
+            conditions.append({
+                "$or": [
+                    {"first_name": {"$regex": search, "$options": "i"}},
+                    {"last_name": {"$regex": search, "$options": "i"}},
+                    {"employee_id": {"$regex": search, "$options": "i"}},
+                    {"email": {"$regex": search, "$options": "i"}},
+                ]
+            })
+
+        if len(conditions) > 1:
+            filters = {"$and": conditions}
+        elif len(conditions) == 1:
+            filters = conditions[0]
+        else:
+            filters = {}
 
         return await self.repository.get_all(
             filters=filters,

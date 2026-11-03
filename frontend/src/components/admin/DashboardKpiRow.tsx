@@ -13,7 +13,6 @@ import {
 import {
   dashboardPlaceholders,
   formatIndianAmount,
-  payrollSummary,
 } from "./dashboardData";
 import type { DashboardMetrics } from "./useDashboardMetrics";
 import { useAnimationFrame, useCountUp } from "./useDashboardAnimation";
@@ -190,11 +189,14 @@ export default function DashboardKpiRow({
     {
       id: "kpi-payroll",
       label: "Payroll This Month",
-      value: payrollSummary.payrollThisMonth,
+      value: metrics.payrollThisMonth ?? 0,
       icon: IndianRupee,
       iconClass: "text-[#ca8a04]",
       chipClass: "bg-[#fefce8]",
-      renderValue: (value) => `₹ ${formatIndianAmount(Math.round(value))}`,
+      renderValue: (value) =>
+        metrics.isPayrollLoading
+          ? "..."
+          : `₹ ${formatIndianAmount(Math.round(value))}`,
       detail: (
         <button
           type="button"

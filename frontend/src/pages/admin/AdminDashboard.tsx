@@ -94,6 +94,11 @@ export default function AdminDashboard({
               />
               <PayrollExpenseSummaryCard
                 onOpenPayroll={() => onNavigate("Payroll")}
+                payrollThisMonth={metrics.payrollThisMonth}
+                totalExpenses={metrics.totalExpensesThisMonth}
+                payrollChangePercent={metrics.payrollChangePercent}
+                expenseChangePercent={metrics.expenseChangePercent}
+                isLoading={metrics.isPayrollLoading}
               />
             </>
           )}

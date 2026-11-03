@@ -4,6 +4,12 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, File, Query, UploadFile
 
 from app.api.deps import get_current_user, require_permission
+from app.core.cache import (
+    get_cache,
+    invalidate_employees_cache,
+    invalidate_payroll_analytics_cache,
+    set_cache,
+)
 from app.core.roles import Permission, has_permission
 from app.schemas.common import APIResponse
 from app.schemas.employee import (
@@ -24,6 +30,8 @@ from app.utils.employee_storage import employee_profile_key
 from app.utils.pagination import PaginationParams
 from app.core.exceptions import AppException
 
+EMPLOYEE_PROFILE_CACHE_TTL = 300
+EMPLOYEE_LIST_CACHE_TTL = 180
 
 router = APIRouter()
 
@@ -51,21 +59,34 @@ async def serialize_employee(
     if employee.get("avatar_key"):
         avatar_url = await storage_service.signed_url(employee["avatar_key"])
 
+    first_name = employee.get("first_name") or ""
+    last_name = employee.get("last_name") or ""
+    if not first_name and employee.get("full_name"):
+        parts = employee["full_name"].strip().split(" ", 1)
+        first_name = parts[0]
+        last_name = parts[1] if len(parts) > 1 else ""
+
+    joining_date = employee.get("joining_date")
+    if not joining_date and employee.get("created_at"):
+        created_at = employee["created_at"]
+        if hasattr(created_at, "date"):
+            joining_date = created_at.date()
+
     return EmployeeResponse(
         id=str(employee["_id"]),
         employee_id=employee.get("employee_id", ""),
-        first_name=employee.get("first_name", ""),
-        last_name=employee.get("last_name", ""),
+        first_name=first_name,
+        last_name=last_name,
         email=employee.get("email"),
-        phone=employee.get("phone", ""),
+        phone=employee.get("phone") or employee.get("phone_number") or "",
         avatar_url=avatar_url,
         date_of_birth=employee.get("date_of_birth"),
         gender=employee.get("gender"),
         address=employee.get("address"),
-        department_id=employee.get("department_id", ""),
-        designation=employee.get("designation", ""),
-        joining_date=employee.get("joining_date"),
-        employment_type=employee.get("employment_type", "Full-time"),
+        department_id=employee.get("department_id") or "",
+        designation=employee.get("designation") or "",
+        joining_date=joining_date,
+        employment_type=employee.get("employment_type") or "Full-time",
         work_location=employee.get("work_location"),
         reporting_manager=employee.get("reporting_manager"),
         manager_id=employee.get("manager_id"),
@@ -74,7 +95,7 @@ async def serialize_employee(
         shift_id=employee.get("shift_id"),
         emergency_contact=employee.get("emergency_contact"),
         bank_information=employee.get("bank_information"),
-        status=employee.get("status", "active"),
+        status=employee.get("status") or "active",
         created_by=employee.get("created_by"),
         welcome_email_sent=welcome_email_sent,
     )
@@ -138,6 +159,9 @@ async def create_employee(
         current_user=current_user,
     )
 
+    await invalidate_employees_cache()
+    await invalidate_payroll_analytics_cache()
+
     response = await serialize_employee(employee, welcome_email_sent=welcome_email_sent)
     response.credentials = EmployeeCredentials(
         email=response.email,
@@ -165,24 +189,56 @@ async def get_employees(
     search: str | None = Query(default=None),
     department_id: str | None = Query(default=None),
     status: str | None = Query(default=None),
+    filter: str | None = Query(default=None),
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=10, ge=1, le=100),
     current_user: dict = Depends(require_permission(Permission.EMPLOYEES_READ)),
 ):
-    pagination = PaginationParams(page=page, limit=limit)
+    page_val = page if isinstance(page, int) else 1
+    limit_val = limit if isinstance(limit, int) else 10
+    search_val = search if isinstance(search, str) else None
+    dept_val = department_id if isinstance(department_id, str) else None
+    status_val = status if isinstance(status, str) else None
+    filter_val = filter if isinstance(filter, str) else None
+
+    role = getattr(current_user.get("role"), "value", current_user.get("role"))
+    scope = f"mgr_{current_user.get('_id')}" if role == "manager" else "hr"
+    search_str = search_val.strip().lower() if search_val else "none"
+    cache_key = f"employees:list:{scope}:{dept_val or 'all'}:{status_val or 'all'}:{filter_val or 'all'}:{search_str}:{page_val}:{limit_val}"
+
+    cached = await get_cache(cache_key)
+    if cached is not None:
+        try:
+            return APIResponse(
+                success=True,
+                message="Employees retrieved successfully",
+                data=[EmployeeResponse(**item) for item in cached],
+            )
+        except Exception:
+            pass
+
+    pagination = PaginationParams(page=page_val, limit=limit_val)
 
     employees = await service.get_employees(
-        search=search,
-        department_id=department_id,
-        status=status,
+        search=search_val,
+        department_id=dept_val,
+        status=status_val,
         pagination=pagination,
         current_user=current_user,
+        special_filter=filter_val,
+    )
+
+    serialized = [await serialize_employee(employee) for employee in employees]
+    await set_cache(
+        cache_key,
+        [item.model_dump(mode="json") for item in serialized],
+        ttl=EMPLOYEE_LIST_CACHE_TTL,
     )
 
     return APIResponse(
         success=True,
         message="Employees retrieved successfully",
-        data=[await serialize_employee(employee) for employee in employees],
+        data=serialized,
     )
 
 @router.get(
@@ -200,10 +256,26 @@ async def get_my_employee_profile(
         current_user,
     )
 
+    user_id = str(current_user["_id"])
+    cache_key = f"employees:me:{user_id}"
+    cached = await get_cache(cache_key)
+    if cached is not None:
+        try:
+            return APIResponse(
+                success=True,
+                message="Employee profile retrieved successfully",
+                data=EmployeeResponse(**cached),
+            )
+        except Exception:
+            pass
+
+    response_data = await serialize_employee(current_user)
+    await set_cache(cache_key, response_data.model_dump(mode="json"), ttl=EMPLOYEE_PROFILE_CACHE_TTL)
+
     return APIResponse(
         success=True,
         message="Employee profile retrieved successfully",
-        data=await serialize_employee(current_user),
+        data=response_data,
     )
 
 @router.get(
@@ -214,15 +286,32 @@ async def get_employee(
     employee_id: str,
     current_user: dict = Depends(require_permission(Permission.EMPLOYEES_READ)),
 ):
+    role = getattr(current_user.get("role"), "value", current_user.get("role"))
+    scope = f"mgr_{current_user.get('_id')}" if role == "manager" else ("emp_" + str(current_user.get("_id")) if role == "employee" else "hr")
+    cache_key = f"employees:profile:{employee_id}:{scope}"
+    cached = await get_cache(cache_key)
+    if cached is not None:
+        try:
+            return APIResponse(
+                success=True,
+                message="Employee retrieved successfully",
+                data=EmployeeResponse(**cached),
+            )
+        except Exception:
+            pass
+
     employee = await service.get_employee(
         employee_id=employee_id,
         current_user=current_user,
     )
 
+    response_data = await serialize_employee(employee)
+    await set_cache(cache_key, response_data.model_dump(mode="json"), ttl=EMPLOYEE_PROFILE_CACHE_TTL)
+
     return APIResponse(
         success=True,
         message="Employee retrieved successfully",
-        data=await serialize_employee(employee),
+        data=response_data,
     )
 
 
@@ -278,6 +367,8 @@ async def upload_employee_avatar(
 
     if old_key and old_key != key:
         await storage_service.delete(old_key)
+
+    await invalidate_employees_cache(employee_id=employee_id)
 
     return APIResponse(
         success=True,
@@ -349,6 +440,9 @@ async def update_employee(
         current_user=current_user,
     )
 
+    await invalidate_employees_cache(employee_id=employee_id, user_id=str(current_user_id))
+    await invalidate_payroll_analytics_cache()
+
     return APIResponse(
         success=True,
         message="Employee updated successfully",
@@ -378,6 +472,8 @@ async def delete_employee_avatar(
     if old_key:
         await storage_service.delete(old_key)
 
+    await invalidate_employees_cache(employee_id=employee_id)
+
     return APIResponse(
         success=True,
         message="Profile photo removed successfully",
@@ -400,6 +496,9 @@ async def deactivate_employee(
         current_user=current_user,
     )
 
+    await invalidate_employees_cache(employee_id=employee_id)
+    await invalidate_payroll_analytics_cache()
+
     return APIResponse(
         success=True,
         message="Employee deactivated successfully",
@@ -418,6 +517,9 @@ async def delete_employee(
         employee_id=employee_id,
         current_user=current_user,
     )
+
+    await invalidate_employees_cache(employee_id=employee_id)
+    await invalidate_payroll_analytics_cache()
 
     return APIResponse(
         success=True,

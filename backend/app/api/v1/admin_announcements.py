@@ -1,19 +1,29 @@
+import logging
 from datetime import date
 
 from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
 
 from app.api.deps import require_permission
+from app.core.cache import (
+    get_cache,
+    invalidate_announcements_cache,
+    set_cache,
+)
 from app.core.roles import Permission
-from app.schemas.common import APIResponse
 from app.schemas.admin_announcement import (
+    AdminAnnouncementCreate,
+    AdminAnnouncementResponse,
     AnnouncementAudience,
     AnnouncementCategory,
-    AdminAnnouncementCreate,
     AnnouncementPriority,
-    AdminAnnouncementResponse,
 )
+from app.schemas.common import APIResponse
 from app.services.admin_announcement_service import AdminAnnouncementService
 
+logger = logging.getLogger(__name__)
+
+ADMIN_ANNOUNCEMENT_LIST_CACHE_TTL = 180
+ADMIN_ANNOUNCEMENT_DETAIL_CACHE_TTL = 300
 
 router = APIRouter()
 
@@ -57,6 +67,11 @@ async def create_announcement(
         attachment=attachment,
     )
 
+    try:
+        await invalidate_announcements_cache()
+    except Exception as exc:
+        logger.error("Failed to invalidate announcements cache after create: %s", exc)
+
     return APIResponse(
         success=True,
         message="Announcement created successfully",
@@ -76,12 +91,48 @@ async def get_announcements(
     limit: int = Query(20, ge=1, le=100),
     current_user: dict = Depends(require_permission(Permission.ANNOUNCEMENT_MANAGE)),
 ):
+    skip_val = skip if isinstance(skip, int) else 0
+    limit_val = limit if isinstance(limit, int) else 20
+    cat_val = category if isinstance(category, str) else None
+    search_val = (
+        search.strip().lower()
+        if isinstance(search, str) and search.strip()
+        else "none"
+    )
+    pinned_val = pinned if isinstance(pinned, bool) else None
+
+    cache_key = (
+        f"announcements:admin:list:{cat_val or 'all'}:{search_val}:{pinned_val}:{skip_val}:{limit_val}"
+    )
+
+    cached = await get_cache(cache_key)
+    if cached is not None:
+        try:
+            return APIResponse(
+                success=True,
+                message="Announcements retrieved successfully",
+                data=[AdminAnnouncementResponse(**item) for item in cached],
+            )
+        except Exception:
+            pass
+
     announcements, _total = await service.get_announcements(
-        category=category,
-        search=search,
-        pinned=pinned,
-        skip=skip,
-        limit=limit,
+        category=cat_val,
+        search=search_val if search_val != "none" else None,
+        pinned=pinned_val,
+        skip=skip_val,
+        limit=limit_val,
+    )
+
+    await set_cache(
+        cache_key,
+        [
+            item.model_dump(mode="json")
+            if hasattr(item, "model_dump")
+            else item
+            for item in announcements
+        ],
+        ttl=ADMIN_ANNOUNCEMENT_LIST_CACHE_TTL,
     )
 
     return APIResponse(
@@ -99,7 +150,27 @@ async def get_announcement(
     announcement_id: str,
     current_user: dict = Depends(require_permission(Permission.ANNOUNCEMENT_MANAGE)),
 ):
+    cache_key = f"announcements:admin:detail:{announcement_id}"
+    cached = await get_cache(cache_key)
+    if cached is not None:
+        try:
+            return APIResponse(
+                success=True,
+                message="Announcement retrieved successfully",
+                data=AdminAnnouncementResponse(**cached),
+            )
+        except Exception:
+            pass
+
     announcement = await service.get_announcement(announcement_id)
+
+    await set_cache(
+        cache_key,
+        announcement.model_dump(mode="json")
+        if hasattr(announcement, "model_dump")
+        else announcement,
+        ttl=ADMIN_ANNOUNCEMENT_DETAIL_CACHE_TTL,
+    )
 
     return APIResponse(
         success=True,
@@ -150,6 +221,11 @@ async def update_announcement(
         remove_attachment=remove_attachment,
     )
 
+    try:
+        await invalidate_announcements_cache()
+    except Exception as exc:
+        logger.error("Failed to invalidate announcements cache after update: %s", exc)
+
     return APIResponse(
         success=True,
         message="Announcement updated successfully",
@@ -166,6 +242,11 @@ async def delete_announcement(
     current_user: dict = Depends(require_permission(Permission.ANNOUNCEMENT_MANAGE)),
 ):
     await service.delete_announcement(announcement_id)
+
+    try:
+        await invalidate_announcements_cache()
+    except Exception as exc:
+        logger.error("Failed to invalidate announcements cache after delete: %s", exc)
 
     return APIResponse(
         success=True,

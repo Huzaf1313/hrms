@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   AlertCircle,
   BarChart3,
@@ -286,7 +287,9 @@ function PayrollChart({ timeline, hoveredIndex, onHover }: PayrollChartProps) {
 }
 
 export default function AdminPayroll() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
+  const [payslipStatusFilter, setPayslipStatusFilter] = useState<string>("");
   const [periodFilter, setPeriodFilter] = useState<string>("last_6");
   const [hoveredBarIndex, setHoveredBarIndex] = useState<number | null>(null);
 
@@ -390,15 +393,33 @@ export default function AdminPayroll() {
   ];
 
   const pendingItems: Array<[string, string, typeof Users, () => void]> = useMemo(() => {
-    const pendingCount = summary?.pending_payroll ?? 0;
+    const pendingCount = summary?.pending_employees ?? summary?.pending_payroll ?? 0;
     const newJoiners = summary?.new_joiners ?? 0;
     const unassignedStructures = summary?.unassigned_salary_structures ?? 0;
     return [
-      [String(pendingCount), "Employees - Pending Payroll", Users, () => setActiveTab("payslips")],
-      [String(newJoiners), "New Joiners (Last 30 Days)", Users, () => setActiveTab("payslips")],
-      [String(unassignedStructures), "Employees Missing Salary Structure", ClipboardList, () => setActiveTab("structure")],
+      [
+        loading && !analytics ? "..." : String(pendingCount),
+        "Employees - Pending Payroll",
+        Users,
+        () => {
+          setPayslipStatusFilter("Pending");
+          setActiveTab("payslips");
+        },
+      ],
+      [
+        loading && !analytics ? "..." : String(newJoiners),
+        "New Joiners (Last 30 Days)",
+        Users,
+        () => navigate("/dashboard/employees?filter=new_joiners"),
+      ],
+      [
+        loading && !analytics ? "..." : String(unassignedStructures),
+        "Employees Missing Salary Structure",
+        ClipboardList,
+        () => navigate("/dashboard/employees?filter=missing_salary_structure"),
+      ],
     ];
-  }, [summary]);
+  }, [summary, loading, analytics, navigate]);
 
   return (
     <div className="px-4 pb-10 pt-6 sm:px-6 lg:px-8 xl:px-10">
@@ -642,7 +663,10 @@ export default function AdminPayroll() {
                 <h3 className="font-bold text-gray-900">Pending Items</h3>
                 <button
                   type="button"
-                  onClick={() => setActiveTab("payslips")}
+                  onClick={() => {
+                    setPayslipStatusFilter("");
+                    setActiveTab("payslips");
+                  }}
                   className="text-xs font-semibold text-[#2563eb] hover:underline"
                 >
                   Go to Payslips
@@ -728,7 +752,7 @@ export default function AdminPayroll() {
 
       {activeTab === "structure" && <SalaryStructureTab />}
       {activeTab === "deductions" && <DeductionsTab />}
-      {activeTab === "payslips" && <PayslipsTab />}
+      {activeTab === "payslips" && <PayslipsTab initialStatusFilter={payslipStatusFilter} />}
       {activeTab === "reports" && <Reports />}
     </div>
   );

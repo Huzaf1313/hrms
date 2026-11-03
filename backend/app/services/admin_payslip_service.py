@@ -3,6 +3,7 @@ from calendar import monthrange
 import re
 
 from app.core.exceptions import AppException
+from app.core.scope import visibility_scope, visible_employee_codes
 from app.repositories.employee_repository import EmployeeRepository
 from app.repositories.admin_salary_structure_repository import (
     AdminSalaryStructureRepository,
@@ -267,6 +268,8 @@ class AdminPayslipService:
             st = status.strip()
             if st.lower() in {"paid", "credited"}:
                 query["payment.status"] = {"$in": ["Paid", "Credited"]}
+            elif st.lower() == "pending":
+                query["payment.status"] = {"$nin": ["Paid", "Credited"]}
             else:
                 query["payment.status"] = {"$regex": f"^{re.escape(st)}$", "$options": "i"}
 
@@ -451,74 +454,88 @@ class AdminPayslipService:
             "updated_at": document.get("updated_at"),
         }
 
+    @staticmethod
+    def _extract_record_period(rec: dict, default_year: int) -> tuple[int | None, int | None]:
+        p_start = rec.get("pay_period_start")
+        if isinstance(p_start, (datetime, date)):
+            return p_start.year, p_start.month
+
+        m_str = str(rec.get("month") or "").strip().lower()
+        if m_str:
+            if len(m_str) >= 7 and m_str[4] == "-":
+                try:
+                    return int(m_str[:4]), int(m_str[5:7])
+                except ValueError:
+                    pass
+
+            month_map = {
+                "january": 1, "jan": 1,
+                "february": 2, "feb": 2,
+                "march": 3, "mar": 3,
+                "april": 4, "apr": 4,
+                "may": 5,
+                "june": 6, "jun": 6,
+                "july": 7, "jul": 7,
+                "august": 8, "aug": 8,
+                "september": 9, "sep": 9, "sept": 9,
+                "october": 10, "oct": 10,
+                "november": 11, "nov": 11,
+                "december": 12, "dec": 12,
+            }
+            parts = m_str.split()
+            rec_year = None
+            rec_month = None
+            for p in parts:
+                if p.isdigit() and len(p) == 4:
+                    rec_year = int(p)
+                elif p in month_map:
+                    rec_month = month_map[p]
+
+            if not rec_month:
+                for k, v in month_map.items():
+                    if k in m_str:
+                        rec_month = v
+                        break
+
+            if rec_month is not None:
+                return rec_year or default_year, rec_month
+
+        c_at = rec.get("created_at")
+        if isinstance(c_at, (datetime, date)):
+            return c_at.year, c_at.month
+
+        return None, None
+
     async def get_payroll_analytics(
         self,
         year: int | None = None,
         months: int | None = 6,
+        current_user: dict | None = None,
     ):
         all_records = await self.payslip_repository.get_all_records()
+
+        if current_user:
+            scope = visibility_scope(current_user)
+            if scope:
+                visible_codes = await visible_employee_codes(self.employee_repository, current_user)
+                if visible_codes is not None:
+                    all_records = [r for r in all_records if r.get("employee_id") in visible_codes]
 
         now = datetime.now(timezone.utc)
         current_year = now.year
 
         years_set = {current_year}
         for rec in all_records:
-            p_start = rec.get("pay_period_start")
-            if isinstance(p_start, (datetime, date)):
-                years_set.add(p_start.year)
-            c_at = rec.get("created_at")
-            if isinstance(c_at, (datetime, date)):
-                years_set.add(c_at.year)
+            rec_y, _ = self._extract_record_period(rec, current_year)
+            if rec_y:
+                years_set.add(rec_y)
 
         available_years = sorted(list(years_set), reverse=True)
 
-        month_map = {
-            "january": 1, "jan": 1,
-            "february": 2, "feb": 2,
-            "march": 3, "mar": 3,
-            "april": 4, "apr": 4,
-            "may": 5,
-            "june": 6, "jun": 6,
-            "july": 7, "jul": 7,
-            "august": 8, "aug": 8,
-            "september": 9, "sep": 9, "sept": 9,
-            "october": 10, "oct": 10,
-            "november": 11, "nov": 11,
-            "december": 12, "dec": 12,
-        }
-
         bucketed: dict[tuple[int, int], list[dict]] = {}
         for rec in all_records:
-            rec_year = None
-            rec_month_num = None
-
-            p_start = rec.get("pay_period_start")
-            if isinstance(p_start, (datetime, date)):
-                rec_year = p_start.year
-                rec_month_num = p_start.month
-            elif rec.get("month"):
-                m_str = str(rec.get("month")).strip().lower()
-                parts = m_str.split()
-                for p in parts:
-                    if p.isdigit() and len(p) == 4:
-                        rec_year = int(p)
-                    elif p in month_map:
-                        rec_month_num = month_map[p]
-
-                if not rec_month_num:
-                    for k, v in month_map.items():
-                        if k in m_str:
-                            rec_month_num = v
-                            break
-
-            if rec_year is None:
-                c_at = rec.get("created_at")
-                if isinstance(c_at, (datetime, date)):
-                    rec_year = c_at.year
-                else:
-                    rec_year = current_year
-
-            if rec_month_num is not None:
+            rec_year, rec_month_num = self._extract_record_period(rec, current_year)
+            if rec_year is not None and rec_month_num is not None:
                 key = (rec_year, rec_month_num)
                 bucketed.setdefault(key, []).append(rec)
 
@@ -604,41 +621,128 @@ class AdminPayslipService:
             ly, lm = latest_key
             latest_month_str = f"{month_full_names[lm]} {ly}"
             latest_recs = bucketed[latest_key]
-            latest_emps = {r.get("employee_id") for r in latest_recs if r.get("employee_id")}
-            processed_count = len(latest_emps)
-            total_payroll_amount = round(sum(float(r.get("net_salary", 0.0) or 0.0) for r in latest_recs), 2)
 
-        pending_payroll = max(0, total_employees - processed_count)
+            # Deduplicate by employee_id for the latest month
+            latest_by_emp: dict[str, dict] = {}
+            for r in latest_recs:
+                eid = r.get("employee_id")
+                if not eid:
+                    continue
+                prev = latest_by_emp.get(eid)
+                if not prev:
+                    latest_by_emp[eid] = r
+                else:
+                    curr_t = r.get("updated_at") or r.get("created_at") or r.get("_id")
+                    prev_t = prev.get("updated_at") or prev.get("created_at") or prev.get("_id")
+                    if str(curr_t) >= str(prev_t):
+                        latest_by_emp[eid] = r
+
+            for r in latest_by_emp.values():
+                st = (
+                    r.get("payment", {}).get("status")
+                    or r.get("status")
+                    or "Processing"
+                ).strip().lower()
+                if st in {"paid", "credited"}:
+                    processed_count += 1
+                    total_payroll_amount += float(r.get("net_salary", 0.0) or 0.0)
+
+            total_payroll_amount = round(total_payroll_amount, 2)
+
+        # Deduplicate payslips by (employee_id, year, month)
+        # keeping the latest/active record to avoid counting duplicate or superseded records
+        deduplicated_payslips: dict[tuple[str, int, int], dict] = {}
+        for r in all_records:
+            eid = r.get("employee_id")
+            if not eid:
+                continue
+            ry, rm = self._extract_record_period(r, current_year)
+            if ry is None or rm is None:
+                m_raw = str(r.get("month") or "").strip()
+                ident = (eid, m_raw, 0)
+            else:
+                ident = (eid, ry, rm)
+
+            prev = deduplicated_payslips.get(ident)
+            if not prev:
+                deduplicated_payslips[ident] = r
+            else:
+                curr_t = r.get("updated_at") or r.get("created_at") or r.get("_id")
+                prev_t = prev.get("updated_at") or prev.get("created_at") or prev.get("_id")
+                if str(curr_t) >= str(prev_t):
+                    deduplicated_payslips[ident] = r
+
+        # Calculate pending count from actual payslip records using payment status.
+        # Treat 'Pending', 'Processing', and other explicitly unpaid statuses as pending;
+        # Exclude 'Paid' and 'Credited' records.
+        pending_employee_ids = set()
+        for r in deduplicated_payslips.values():
+            st = (
+                r.get("payment", {}).get("status")
+                or r.get("status")
+                or "Processing"
+            ).strip().lower()
+            if st not in {"paid", "credited"}:
+                eid = r.get("employee_id")
+                if eid:
+                    pending_employee_ids.add(eid)
+
+        pending_employees = len(pending_employee_ids)
+        pending_payroll = pending_employees
 
         thirty_days_ago = now - timedelta(days=30)
-        all_emps = await self.employee_repository.collection.find(
-            {"employee_id": {"$exists": True}}
-        ).to_list(length=1000)
+        emp_filter: dict = {
+            "employee_id": {"$exists": True},
+            "status": {"$nin": ["inactive", "terminated", "Inactive", "Terminated"]},
+        }
+        if current_user:
+            scope = visibility_scope(current_user)
+            if scope:
+                emp_filter.update(scope)
+
+        all_emps = await self.employee_repository.collection.find(emp_filter).to_list(length=2000)
+
+        # Retrieve valid salary structures from database to check actual assignment relationship
+        struct_docs = await self.salary_structure_repository.collection.find({}, {"name": 1}).to_list(length=1000)
+        valid_struct_names = {str(s["name"]).strip().lower() for s in struct_docs if s.get("name")}
+        valid_struct_ids = {str(s["_id"]) for s in struct_docs if "_id" in s}
+        valid_structures = valid_struct_names | valid_struct_ids
 
         new_joiners = 0
         unassigned_structures = 0
         for emp in all_emps:
-            if emp.get("status") in {"Inactive", "Terminated"}:
-                continue
-
+            # Check authoritative joining date
             j_date = emp.get("joining_date") or emp.get("created_at")
             if isinstance(j_date, datetime):
-                if j_date.tzinfo is None:
-                    j_date = j_date.replace(tzinfo=timezone.utc)
-                if j_date >= thirty_days_ago:
+                dt_val = j_date if j_date.tzinfo else j_date.replace(tzinfo=timezone.utc)
+                if dt_val >= thirty_days_ago:
                     new_joiners += 1
             elif isinstance(j_date, date):
-                dt_join = datetime.combine(j_date, time.min, timezone.utc)
-                if dt_join >= thirty_days_ago:
+                dt_val = datetime.combine(j_date, time.min, timezone.utc)
+                if dt_val >= thirty_days_ago:
                     new_joiners += 1
+            elif isinstance(j_date, str) and j_date.strip():
+                try:
+                    parsed_dt = datetime.fromisoformat(j_date.strip()[:10]).replace(tzinfo=timezone.utc)
+                    if parsed_dt >= thirty_days_ago:
+                        new_joiners += 1
+                except ValueError:
+                    pass
 
-            if not emp.get("salary_structure") or str(emp.get("salary_structure")).strip() == "":
+            # Check actual salary structure assignment relationship
+            raw_struct = emp.get("salary_structure")
+            if not raw_struct or str(raw_struct).strip() == "":
                 unassigned_structures += 1
+            else:
+                s_str = str(raw_struct).strip()
+                if s_str.lower() not in valid_structures and s_str not in valid_structures:
+                    unassigned_structures += 1
 
         summary = {
             "total_employees": total_employees,
             "processed_payroll": processed_count,
             "pending_payroll": pending_payroll,
+            "pending_employees": pending_employees,
             "new_joiners": new_joiners,
             "unassigned_salary_structures": unassigned_structures,
             "total_payroll_amount": total_payroll_amount,
@@ -668,7 +772,10 @@ class AdminPayslipService:
                 if not run_date_str:
                     run_date_str = f"25 {month_short_names[bm]} {by}"
 
-                all_completed = all(r.get("payment", {}).get("status") == "Credited" for r in brecs)
+                all_completed = all(
+                    (r.get("payment", {}).get("status") or r.get("status") or "").lower() in {"paid", "credited"}
+                    for r in brecs
+                )
                 status = "Completed" if all_completed else "Processing"
 
                 recent_runs.append({
@@ -704,7 +811,7 @@ class AdminPayslipService:
                     dept_agg[d_name]["employees"].add(eid)
                 dept_agg[d_name]["gross"] += float(r.get("salary", {}).get("gross", 0.0) or 0.0)
                 dept_agg[d_name]["net"] += float(r.get("net_salary", 0.0) or 0.0)
-                if r.get("payment", {}).get("status") != "Credited":
+                if (r.get("payment", {}).get("status") or r.get("status") or "").lower() not in {"paid", "credited"}:
                     dept_agg[d_name]["status"] = "Processing"
 
             for d_name, d_info in dept_agg.items():

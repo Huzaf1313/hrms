@@ -18,6 +18,15 @@ export interface RecentActivity {
   created_at: string;
 }
 
+export interface DashboardPayrollSummary {
+  payroll_this_month: number;
+  payroll_change_percent: number;
+  total_expenses: number;
+  expense_change_percent: number;
+  processed_count: number;
+  currency: string;
+}
+
 export interface DashboardData {
   total_headcount: number;
   attendance_rate: number | null;
@@ -25,6 +34,7 @@ export interface DashboardData {
   celebrations: Celebration[];
   hiring_pipeline: HiringPipeline;
   recent_activities: RecentActivity[];
+  payroll_summary?: DashboardPayrollSummary | null;
 }
 
 export async function getDashboardData(): Promise<DashboardData> {
