@@ -22,6 +22,7 @@ import {
 import type { Department } from "../../types/department";
 import type { Employee } from "../../types/employee";
 import type { Shift } from "../../types/shift";
+import AdminEmployeeDocuments from "./AdminEmployeeDocuments";
 import {
   formatDuration,
   formatShiftTime,
@@ -410,9 +411,17 @@ function AdminEmployeeDetailsPage({
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[280px_1fr]">
         {/* LEFT COLUMN */}
         <div className="rounded-3xl bg-white p-6 shadow-sm">
-          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[#2563eb] text-3xl font-semibold text-white">
-            {initials}
-          </div>
+          {employee.avatar_url ? (
+            <img
+              src={employee.avatar_url}
+              alt={`${employee.first_name} ${employee.last_name}`}
+              className="h-24 w-24 rounded-full object-cover"
+            />
+          ) : (
+            <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[#2563eb] text-3xl font-semibold text-white">
+              {initials}
+            </div>
+          )}
 
           {/* EMPLOYEE NAME */}
           <h2 className="mt-4 text-xl font-bold text-gray-800">
@@ -668,6 +677,8 @@ function AdminEmployeeDetailsPage({
               )}
             </div>
           </div>
+
+          <AdminEmployeeDocuments employeeId={employee.employee_id} />
 
           {/* BANK INFORMATION */}
           <div className="rounded-3xl bg-white p-6 shadow-sm">

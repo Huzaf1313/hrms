@@ -1,25 +1,31 @@
 from datetime import date, datetime
 
 from app.repositories.employee_repository import EmployeeRepository
+from app.services.activity_service import ActivityService
 from app.services.employee_service import EmployeeService
+from app.services.object_storage_service import ObjectStorageService
 
 
 class DashboardService:
     def __init__(self):
         self.employee_repository = EmployeeRepository()
         self.employee_service = EmployeeService()
+        self.activity_service = ActivityService()
+        self.storage_service = ObjectStorageService()
 
     async def get_dashboard_data(self, current_user: dict | None = None):
         scope = self.employee_service._visibility_scope(current_user)
 
         total_headcount = await self.employee_repository.count_employees(scope)
         celebrations = await self.get_celebrations(scope=scope)
+        recent_activities = await self.activity_service.recent_for(current_user)
 
         return {
             "total_headcount": total_headcount,
             "attendance_rate": None,
             "on_leave_today": 0,
             "celebrations": celebrations,
+            "recent_activities": recent_activities,
             "hiring_pipeline": {
                 "applied": 0,
                 "screened": 0,
@@ -52,6 +58,9 @@ class DashboardService:
 
         for employee in candidates:
             display_name = self._display_name(employee)
+            avatar_url = None
+            if employee.get("avatar_key"):
+                avatar_url = await self.storage_service.signed_url(employee["avatar_key"])
 
             if self._matches(employee.get("date_of_birth"), targets):
                 celebrations.append(
@@ -60,7 +69,7 @@ class DashboardService:
                         "name": display_name,
                         "type": "birthday",
                         "message": "Birthday today!",
-                        "avatar_url": employee.get("avatar_url"),
+                        "avatar_url": avatar_url,
                         "designation": employee.get("designation"),
                         "years": None,
                     }
@@ -83,7 +92,7 @@ class DashboardService:
                                 f"Work Anniversary ({years} "
                                 f"{'Year' if years == 1 else 'Years'})"
                             ),
-                            "avatar_url": employee.get("avatar_url"),
+                            "avatar_url": avatar_url,
                             "designation": employee.get("designation"),
                             "years": years,
                         }

@@ -19,12 +19,6 @@ export interface DepartmentShare {
   color: string;
 }
 
-export interface ActivityRow {
-  id: string;
-  text: string;
-  timeLabel: string;
-}
-
 export interface QuickActionItem {
   id: string;
   label: string;
@@ -69,14 +63,6 @@ export const departmentShares: DepartmentShare[] = [
   { label: "Marketing", value: 20, color: DEPARTMENT_COLORS[4] },
   { label: "Support", value: 15, color: DEPARTMENT_COLORS[5] },
   { label: "Others", value: 20, color: DEPARTMENT_COLORS[6] },
-];
-
-export const activityRows: ActivityRow[] = [
-  { id: "act-1", text: "Rahul Sharma applied for Casual Leave (20 May – 21 May)", timeLabel: "10 min ago" },
-  { id: "act-2", text: "New employee Priya Singh onboarded", timeLabel: "30 min ago" },
-  { id: "act-3", text: "Payroll processed for May 2024", timeLabel: "1 hour ago" },
-  { id: "act-4", text: "Interview scheduled for Sneha Desai", timeLabel: "2 hours ago" },
-  { id: "act-5", text: "Leave request approved for Ankit Gupta", timeLabel: "3 hours ago" },
 ];
 
 export const quickActions: QuickActionItem[] = [

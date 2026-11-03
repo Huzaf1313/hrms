@@ -14,9 +14,10 @@ import type {
  * Data source for the admin profile page.
  *
  * Profile read/write hits the backend (`GET`/`PATCH /users/me/profile`). The
- * remaining panels (session info, activities, documents, notification
- * preferences, support contact) are still served from placeholder seeds
- * until their endpoints exist - each one swaps for an api call without
+ * remaining panels (session info, activities, notification preferences, support
+ * contact) are still served from placeholder seeds. Documents use the shared
+ * employee document storage so HR files are not disconnected from the profile.
+ * Each remaining panel swaps for an api call without
  * touching the page. TODO: replace those storage reads/seeds with
  * GET /admin/profile/session, GET /admin/profile/activities,
  * GET /admin/profile/documents and a notification-preferences endpoint.
@@ -149,14 +150,6 @@ const SEED_ACTIVITIES: ProfileActivity[] = [
   },
 ];
 
-const SEED_DOCUMENTS: ProfileDocument[] = [
-  { id: "doc-1", name: "Appointment Letter.pdf", type: "Appointment", uploaded_on: "2023-01-18", status: "Verified" },
-  { id: "doc-2", name: "Passport Size Photo.jpg", type: "Identity", uploaded_on: "2023-01-18", status: "Verified" },
-  { id: "doc-3", name: "PAN Card.pdf", type: "Identity", uploaded_on: "2023-01-20", status: "Verified" },
-  { id: "doc-4", name: "Experience Letter.pdf", type: "Employment", uploaded_on: "2023-01-25", status: "Pending" },
-  { id: "doc-5", name: "Degree Certificate.pdf", type: "Education", uploaded_on: "2023-01-25", status: "Verified" },
-];
-
 const SEED_NOTIFICATIONS: NotificationPreferences = {
   email_notifications: true,
   push_notifications: true,
@@ -194,6 +187,21 @@ export const adminProfileService = {
     );
   },
 
+  async saveProfileAvatar(file: File): Promise<AdminProfile> {
+    const form = new FormData();
+    form.append("file", file);
+
+    return normalizeProfile(
+      await api.postForm<BackendProfile>("/users/me/profile/avatar", form),
+    );
+  },
+
+  async removeProfileAvatar(): Promise<AdminProfile> {
+    return normalizeProfile(
+      await api.delete<BackendProfile>("/users/me/profile/avatar"),
+    );
+  },
+
   async getSession(): Promise<SessionInfo> {
     return readJson<SessionInfo>("hrms_admin_profile_session") ?? SEED_SESSION;
   },
@@ -205,7 +213,23 @@ export const adminProfileService = {
   },
 
   async listDocuments(): Promise<ProfileDocument[]> {
-    return readJson<ProfileDocument[]>("hrms_admin_profile_documents") ?? SEED_DOCUMENTS;
+    const response = await api.get<{
+      documents: Array<{
+        id: string;
+        document_name: string;
+        document_type: string;
+        file_name: string;
+        created_at: string;
+      }>;
+    }>("/employee-documents");
+
+    return response.documents.map((document) => ({
+      id: document.id,
+      name: document.file_name || document.document_name,
+      type: document.document_type,
+      uploaded_on: document.created_at,
+      status: "Verified",
+    }));
   },
 
   async getNotificationPreferences(): Promise<NotificationPreferences> {

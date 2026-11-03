@@ -1,5 +1,5 @@
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Archive,
   ChevronLeft,
@@ -17,6 +17,7 @@ import {
   CheckCircle2,
   AlertCircle,
   FolderOpen,
+  Trash2,
 } from "lucide-react";
 import { api, ApiError, downloadFile } from "../../services/api";
 
@@ -65,9 +66,9 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 const ALLOWED_EXTENSIONS = [
   ".pdf",
-  ".png",
   ".jpg",
   ".jpeg",
+  ".png",
   ".webp",
   ".doc",
   ".docx",
@@ -108,6 +109,7 @@ export default function EmployeeDocuments() {
   const [downloadingId, setDownloadingId] = useState<string | null>(
     null
   );
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [uploadDocumentName, setUploadDocumentName] = useState("");
@@ -115,6 +117,7 @@ export default function EmployeeDocuments() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadValidationError, setUploadValidationError] = useState("");
   const [uploadNotice, setUploadNotice] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchDocuments = useCallback(async () => {
@@ -181,6 +184,24 @@ export default function EmployeeDocuments() {
     (safeCurrentPage - 1) * DOCUMENTS_PER_PAGE,
     safeCurrentPage * DOCUMENTS_PER_PAGE
   );
+
+  const documentGroups = [
+    {
+      key: "employee",
+      title: "Documents Uploaded by You",
+      documents: paginatedDocuments.filter(
+        (document) =>
+          document.source === "employee" || document.source === "employee_upload"
+      ),
+    },
+    {
+      key: "hr_admin",
+      title: "Documents Uploaded by HR",
+      documents: paginatedDocuments.filter(
+        (document) => document.source === "hr_admin" || !document.source
+      ),
+    },
+  ];
 
   const recentDocuments = useMemo(() => {
     return [...documents]
@@ -298,6 +319,27 @@ export default function EmployeeDocuments() {
     }
   };
 
+  const handleDelete = async (document: EmployeeDocument) => {
+    try {
+      setOpenMenuId(null);
+      setDeletingId(document.id);
+      setError("");
+
+      await api.delete<null>(`/employee-documents/${document.id}`);
+      await fetchDocuments();
+    } catch (err) {
+      console.error("Failed to delete document:", err);
+
+      if (err instanceof ApiError) {
+        setError(err.message);
+      } else {
+        setError("Unable to delete the document. Please try again.");
+      }
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const handleTabChange = (tab: CategoryTab) => {
     setActiveTab(tab);
     setCurrentPage(1);
@@ -378,7 +420,7 @@ export default function EmployeeDocuments() {
     setSelectedFile(file);
   };
 
-  const handleUploadSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleUploadSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setUploadValidationError("");
     setUploadNotice("");
@@ -400,11 +442,26 @@ export default function EmployeeDocuments() {
       return;
     }
 
-    // Storage and the backend upload endpoint are not available yet.
-    // Do not display a false success message or create a fake document.
-    setUploadNotice(
-      "Your form is ready, but uploading is not available yet. The backend upload endpoint and company-approved file storage must be configured first. Your document has not been saved."
-    );
+    setIsUploading(true);
+
+    try {
+      const form = new FormData();
+      form.append("document_name", uploadDocumentName.trim());
+      form.append("document_type", uploadCategory);
+      form.append("file", selectedFile);
+
+      await api.postForm("/employee-documents", form);
+      await fetchDocuments();
+      closeUploadModal();
+    } catch (err) {
+      setUploadNotice(
+        err instanceof ApiError
+          ? err.message
+          : "Unable to upload the document. Please try again."
+      );
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const openUploadModal = () => {
@@ -562,29 +619,29 @@ export default function EmployeeDocuments() {
               const active = activeTab === tab;
 
               return (
-                <button
-                  key={tab}
-                  type="button"
-                  onClick={() => handleTabChange(tab)}
-                  className={`inline-flex shrink-0 items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition ${
-                    active
-                      ? "bg-blue-600 text-white"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900"
-                  }`}
-                >
-                  {tab}
-                  <span
-                    className={`rounded-md px-1.5 py-0.5 text-xs ${
-                      active
-                        ? "bg-white/20 text-white"
-                        : "bg-white text-gray-600"
-                    }`}
-                  >
-                    {loading ? "—" : getCategoryCount(tab)}
-                  </span>
-                </button>
-              );
-            })}
+    <button
+      key={tab}
+      type="button"
+      onClick={() => handleTabChange(tab)}
+      className={`inline-flex shrink-0 items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition ${
+        active
+          ? "bg-blue-600 text-white"
+          : "bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900"
+      }`}
+    >
+      {tab}
+      <span
+        className={`rounded-md px-1.5 py-0.5 text-xs ${
+          active
+            ? "bg-white/20 text-white"
+            : "bg-white text-gray-600"
+        }`}
+      >
+        {loading ? "—" : getCategoryCount(tab)}
+      </span>
+    </button>
+  );
+})}
           </div>
         </div>
 
@@ -604,7 +661,7 @@ export default function EmployeeDocuments() {
             <p className="mt-2 max-w-md text-sm text-gray-500">
               {searchTerm.trim()
                 ? "Try another search term or select a different category."
-                : "Documents assigned to your profile will appear here. Employee uploads will be enabled once the storage service is available."}
+                : "Documents uploaded by you or HR will appear here."}
             </p>
 
             {searchTerm.trim() && (
@@ -642,11 +699,20 @@ export default function EmployeeDocuments() {
                 </thead>
 
                 <tbody className="divide-y divide-gray-100">
-                  {paginatedDocuments.map((document) => (
-                    <tr
-                      key={document.id}
-                      className="transition hover:bg-gray-50/80"
-                    >
+                  {documentGroups.map((group) => (
+                    <Fragment key={group.key}>
+                      {group.documents.length > 0 && (
+                        <tr key={`${group.key}-heading`} className="bg-gray-50">
+                          <td colSpan={5} className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                            {group.title}
+                          </td>
+                        </tr>
+                      )}
+                      {group.documents.map((document) => (
+                        <tr
+                          key={document.id}
+                          className="transition hover:bg-gray-50/80"
+                        >
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
                           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
@@ -658,9 +724,12 @@ export default function EmployeeDocuments() {
                               {document.document_name}
                             </p>
                             <p className="mt-1 text-xs text-gray-500">
-                              {document.source === "employee_upload"
-                                ? "Employee uploaded"
-                                : "Available document"}
+                               {document.source === "employee" ||
+                               document.source === "employee_upload"
+                                 ? "Uploaded by employee"
+                                 : document.source === "hr_admin"
+                                   ? "Uploaded by HR"
+                                   : "Available document"}
                             </p>
                           </div>
                         </div>
@@ -709,12 +778,27 @@ export default function EmployeeDocuments() {
                           >
                             {downloadingId === document.id ? (
                               <Loader2 size={18} className="animate-spin" />
-                            ) : (
-                              <Download size={18} />
-                            )}
-                          </button>
+                             ) : (
+                               <Download size={18} />
+                             )}
+                           </button>
 
-                          <div className="relative">
+                           <button
+                             type="button"
+                             title="Delete document"
+                             aria-label={`Delete ${document.document_name}`}
+                             disabled={deletingId === document.id}
+                             onClick={() => void handleDelete(document)}
+                             className="rounded-lg p-2 text-gray-500 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                           >
+                             {deletingId === document.id ? (
+                               <Loader2 size={18} className="animate-spin" />
+                             ) : (
+                               <Trash2 size={18} />
+                             )}
+                           </button>
+
+                           <div className="relative">
                             <button
                               type="button"
                               title="More actions"
@@ -777,7 +861,9 @@ export default function EmployeeDocuments() {
                           </div>
                         </div>
                       </td>
-                    </tr>
+                        </tr>
+                      ))}
+                    </Fragment>
                   ))}
                 </tbody>
               </table>
@@ -956,9 +1042,12 @@ export default function EmployeeDocuments() {
                         Document Source
                       </p>
                       <p className="mt-1.5 text-sm font-medium text-gray-900">
-                        {selectedDocument.source === "employee_upload"
+                        {selectedDocument.source === "employee" ||
+                        selectedDocument.source === "employee_upload"
                           ? "Employee upload"
-                          : "Existing document"}
+                          : selectedDocument.source === "hr_admin"
+                            ? "HR upload"
+                            : "Existing document"}
                       </p>
                     </div>
                   </div>
@@ -993,7 +1082,7 @@ export default function EmployeeDocuments() {
         </div>
       )}
 
-      {/* Employee upload modal: frontend only until storage is available */}
+      {/* Employee upload modal */}
       {uploadModalOpen && (
         <div
           className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-gray-950/60 p-4"
@@ -1105,7 +1194,7 @@ export default function EmployeeDocuments() {
                     ref={fileInputRef}
                     id="upload-document-file"
                     type="file"
-                    accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx"
+                    accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx,application/pdf,image/jpeg,image/png,image/webp"
                     onChange={(event) =>
                       handleFileSelection(event.target.files?.[0] ?? null)
                     }
@@ -1177,10 +1266,8 @@ export default function EmployeeDocuments() {
                         Uploading is not enabled yet
                       </p>
                       <p className="mt-1 text-xs leading-5 text-blue-800">
-                        This form currently validates your selection only.
-                        Your document will not be stored or added to your
-                        profile until the company-approved storage and backend
-                        upload service are available.
+                         Your document will be visible to you and HR after a
+                         successful upload.
                       </p>
                     </div>
                   </div>
@@ -1196,13 +1283,14 @@ export default function EmployeeDocuments() {
                   Close
                 </button>
 
-                <button
-                  type="submit"
-                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-600"
-                >
-                  <Upload size={17} />
-                  Check Upload Details
-                </button>
+                   <button
+                     type="submit"
+                   disabled={isUploading}
+                   className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+                   >
+                   {isUploading ? <Loader2 size={17} className="animate-spin" /> : <Upload size={17} />}
+                   {isUploading ? "Uploading..." : "Upload Document"}
+                 </button>
               </div>
             </form>
           </div>

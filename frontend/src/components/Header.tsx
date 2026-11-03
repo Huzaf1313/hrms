@@ -7,6 +7,7 @@ import DatePicker from "./DatePicker";
 import { employeeService } from "../services/employeeService";
 import type { Employee } from "../types/employee";
 import { adminNotificationService } from "../services/adminNotificationService";
+import { adminProfileService } from "../services/adminProfileService";
 
 interface HeaderProps {
   onLogout: () => void;
@@ -75,6 +76,7 @@ function Header({
   const [allEmployees, setAllEmployees] = useState<Employee[]>([]);
   const [showEmployeeSuggestions, setShowEmployeeSuggestions] =
     useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   const user = useMemo(() => readUser(), []);
 
@@ -96,6 +98,23 @@ function Header({
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void adminProfileService
+      .getProfile()
+      .then((profile) => {
+        if (!cancelled) setAvatarUrl(profile.avatar_url);
+      })
+      .catch((error) => {
+        console.error("Failed to load header profile photo", error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [pageTitle]);
 
   const normalizedQuery = employeeSearch.trim().toLowerCase();
 
@@ -337,7 +356,11 @@ function Header({
             className="flex items-center gap-2.5 rounded-full py-1 pl-1 pr-2 transition hover:bg-gray-100"
           >
             <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-[#2563eb] text-xs font-bold text-white">
-              {initials}
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+              ) : (
+                initials
+              )}
             </span>
 
             <span className="hidden min-w-0 max-w-[180px] text-left sm:block">

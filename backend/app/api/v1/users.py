@@ -1,4 +1,7 @@
-from fastapi import APIRouter, Depends, status
+from datetime import datetime
+from pathlib import Path
+
+from fastapi import APIRouter, Depends, File, UploadFile, status
 from pydantic import BaseModel, EmailStr
 
 from app.api.deps import get_current_user, require_hr_admin, require_permission
@@ -12,6 +15,9 @@ from app.schemas.user import (
 )
 from app.services.user_service import UserService, resolve_full_name
 from app.services.employee_identity import ensure_employee_profile
+from app.services.object_storage_service import ObjectStorageService
+from app.utils.employee_storage import employee_profile_key
+from app.core.exceptions import AppException
 
 
 router = APIRouter(
@@ -21,6 +27,10 @@ router = APIRouter(
 
 
 user_service = UserService()
+storage_service = ObjectStorageService()
+
+MAX_PROFILE_PHOTO_SIZE = 5 * 1024 * 1024
+PROFILE_PHOTO_EXTENSIONS = {".jpg", ".jpeg", ".png"}
 
 
 class ManagerAccount(BaseModel):
@@ -115,6 +125,92 @@ async def update_my_admin_profile(
     )
 
     return AdminProfileResponse(**profile)
+
+
+@router.post(
+    "/me/profile/avatar",
+    response_model=AdminProfileResponse,
+)
+async def upload_my_profile_avatar(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(
+        require_permission(Permission.SELF_PROFILE_UPDATE)
+    ),
+):
+    employee = await ensure_employee_profile(
+        user_service.repository.collection,
+        current_user,
+    )
+    extension = Path(file.filename or "").suffix.lower()
+
+    if extension not in PROFILE_PHOTO_EXTENSIONS:
+        raise AppException("Profile photo must be JPG, JPEG, or PNG", 400)
+
+    contents = await file.read(MAX_PROFILE_PHOTO_SIZE + 1)
+    await file.close()
+
+    if not contents:
+        raise AppException("Please select a profile photo", 400)
+    if len(contents) > MAX_PROFILE_PHOTO_SIZE:
+        raise AppException("Profile photo must not exceed 5 MB", 413)
+
+    signatures = {
+        ".jpg": contents.startswith(b"\xff\xd8\xff"),
+        ".jpeg": contents.startswith(b"\xff\xd8\xff"),
+        ".png": contents.startswith(b"\x89PNG\r\n\x1a\n"),
+    }
+    if not signatures[extension]:
+        raise AppException("The selected file is not a valid image", 400)
+
+    key = employee_profile_key(employee, extension)
+    await storage_service.upload(
+        key=key,
+        body=contents,
+        content_type=file.content_type or "image/*",
+        content_length=len(contents),
+    )
+
+    old_key = employee.get("avatar_key")
+    updated = await user_service.repository.update(
+        str(employee["_id"]),
+        {
+            "avatar_key": key,
+            "avatar_url": None,
+            "updated_at": datetime.utcnow(),
+        },
+    )
+    if old_key and old_key != key:
+        await storage_service.delete(old_key)
+
+    return AdminProfileResponse(**await user_service.get_my_profile(updated))
+
+
+@router.delete(
+    "/me/profile/avatar",
+    response_model=AdminProfileResponse,
+)
+async def delete_my_profile_avatar(
+    current_user: dict = Depends(
+        require_permission(Permission.SELF_PROFILE_UPDATE)
+    ),
+):
+    employee = await ensure_employee_profile(
+        user_service.repository.collection,
+        current_user,
+    )
+    old_key = employee.get("avatar_key")
+    updated = await user_service.repository.update(
+        str(employee["_id"]),
+        {
+            "avatar_key": None,
+            "avatar_url": None,
+            "updated_at": datetime.utcnow(),
+        },
+    )
+    if old_key:
+        await storage_service.delete(old_key)
+
+    return AdminProfileResponse(**await user_service.get_my_profile(updated))
 
 
 @router.post(

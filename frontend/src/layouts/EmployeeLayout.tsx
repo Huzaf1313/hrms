@@ -7,6 +7,7 @@ import EmployeeNotificationDropdown from "../components/employee/EmployeeNotific
 import ErrorBoundary from "../components/ErrorBoundary";
 import DatePicker from "../components/DatePicker";
 import { employeeNotificationService } from "../services/employeeNotificationService";
+import { employeeService } from "../services/employeeService";
 
 const pageTitles: Record<string, string> = {
   "/employee/dashboard": "Dashboard",
@@ -44,6 +45,7 @@ function EmployeeLayout({ onLogout }: { onLogout: () => void }) {
   const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const notificationContainerRef = useRef<HTMLDivElement | null>(null);
 
   const user = useMemo(() => readUser(), []);
@@ -74,6 +76,23 @@ function EmployeeLayout({ onLogout }: { onLogout: () => void }) {
       window.clearInterval(interval);
     };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void employeeService
+      .getMyProfile()
+      .then((profile) => {
+        if (!cancelled) setAvatarUrl(profile.avatar_url ?? null);
+      })
+      .catch((error) => {
+        console.error("Failed to load employee header photo", error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [location.pathname]);
 
   useEffect(() => {
     if (!showNotificationDropdown) {
@@ -196,8 +215,12 @@ function EmployeeLayout({ onLogout }: { onLogout: () => void }) {
                 }
                 className="flex items-center gap-2.5 rounded-full py-1 pl-1 pr-2 transition hover:bg-gray-100"
               >
-                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#2563eb] text-xs font-bold text-white">
-                  {initials}
+                <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-[#2563eb] text-xs font-bold text-white">
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    initials
+                  )}
                 </span>
 
                 <span className="hidden text-left sm:block">

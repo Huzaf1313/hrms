@@ -14,7 +14,9 @@ from app.repositories.employee_repository import EmployeeRepository
 from app.repositories.shift_repository import ShiftRepository
 from app.repositories.user_repository import UserRepository
 from app.services.admin_salary_structure_service import parse_salary_floor
+from app.services.activity_service import ActivityService
 from app.services.email_service import EmailService
+from app.services.employee_identity import next_employee_code
 from app.services.otp_service import OTPService
 from app.utils.filtering import build_filter
 from app.utils.pagination import PaginationParams
@@ -31,6 +33,7 @@ class EmployeeService:
         self.shift_repository = ShiftRepository()
         self.otp_service = OTPService()
         self.email_service = EmailService()
+        self.activity_service = ActivityService()
 
     @staticmethod
     def _visibility_scope(current_user: dict | None) -> dict:
@@ -190,18 +193,7 @@ class EmployeeService:
                 400,
             )
 
-        # 2. Check Employee ID uniqueness
-        existing_employee = await self.repository.get_by_employee_id(
-            employee_data["employee_id"]
-        )
-
-        if existing_employee:
-            raise AppException(
-                "Employee ID already exists",
-                400,
-            )
-
-        # 3. Check Email uniqueness across all accounts
+        # 2. Check Email uniqueness across all accounts
         existing_user = await self.user_repository.get_by_email(
             employee_data["email"]
         )
@@ -212,7 +204,7 @@ class EmployeeService:
                 400,
             )
 
-        # 4. Atomically validate and consume verification token
+        # 3. Atomically validate and consume verification token
         await self.otp_service.consume_employee_email_verification(
             token=str(verification_token),
             submitted_email=employee_data["email"],
@@ -235,6 +227,10 @@ class EmployeeService:
         )
 
         await self._validate_shift(employee_data.get("shift_id"))
+
+        employee_data["employee_id"] = await next_employee_code(
+            self.repository.collection
+        )
 
         employee_name = (
             f'{employee_data["first_name"]} {employee_data["last_name"]}'
@@ -263,6 +259,13 @@ class EmployeeService:
             employee_data["created_by"] = admin_id
 
         employee = await self.repository.create(employee_data)
+
+        await self.activity_service.record(
+            text=f"New employee {employee_name} was added ({employee['employee_id']})",
+            actor=current_user,
+            employee_id=employee["employee_id"],
+            target="/dashboard/employees",
+        )
 
         # Dispatch welcome email (do not fail employee creation if SMTP encounters issues)
         welcome_email_sent = False
@@ -440,11 +443,25 @@ class EmployeeService:
 
         update_data["updated_at"] = datetime.utcnow()
 
-        return await self.repository.update(
+        updated_employee = await self.repository.update(
             employee_id,
             update_data,
             scope=self._visibility_scope(current_user),
         )
+
+        if updated_employee:
+            name = (
+                f'{updated_employee.get("first_name", "")} '
+                f'{updated_employee.get("last_name", "")}'
+            ).strip()
+            await self.activity_service.record(
+                text=f"Employee {name or updated_employee.get('employee_id', '')} was updated",
+                actor=current_user,
+                employee_id=updated_employee.get("employee_id"),
+                target="/dashboard/employees",
+            )
+
+        return updated_employee
 
     
     async def deactivate_employee(
@@ -474,6 +491,13 @@ class EmployeeService:
         if not updated_employee:
             raise AppException("Employee not found", 404)
 
+        await self.activity_service.record(
+            text=f"Employee {employee.get('full_name') or employee.get('employee_id', '')} was deactivated",
+            actor=current_user,
+            employee_id=employee.get("employee_id"),
+            target="/dashboard/employees",
+        )
+
         return updated_employee
 
 
@@ -482,6 +506,11 @@ class EmployeeService:
         employee_id: str,
         current_user: dict | None = None,
     ):
+        employee = await self.repository.get_by_id(
+            employee_id,
+            scope=self._visibility_scope(current_user),
+        )
+
         deleted = await self.repository.delete(
             employee_id,
             scope=self._visibility_scope(current_user),
@@ -489,5 +518,12 @@ class EmployeeService:
 
         if not deleted:
             raise AppException("Employee not found", 404)
+
+        await self.activity_service.record(
+            text=f"Employee {employee.get('full_name') or employee.get('employee_id', '')} was deleted",
+            actor=current_user,
+            employee_id=employee.get("employee_id") if employee else None,
+            target="/dashboard/employees",
+        )
 
         return True

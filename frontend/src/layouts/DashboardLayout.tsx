@@ -130,18 +130,23 @@ function DashboardLayout({
   useEffect(() => {
     let isMounted = true;
 
-    getDashboardData()
-      .then((data) => {
-        if (isMounted) {
-          setDashboardData(data);
-        }
-      })
-      .catch((error) => {
-        console.error("Failed to load dashboard data", error);
-      });
+    const loadDashboardData = () =>
+      getDashboardData()
+        .then((data) => {
+          if (isMounted) {
+            setDashboardData(data);
+          }
+        })
+        .catch((error) => {
+          console.error("Failed to load dashboard data", error);
+        });
+
+    void loadDashboardData();
+    const interval = window.setInterval(loadDashboardData, 30_000);
 
     return () => {
       isMounted = false;
+      window.clearInterval(interval);
     };
   }, []);
 
@@ -204,6 +209,7 @@ function DashboardLayout({
           <AdminDashboard
             totalHeadcount={dashboardData?.total_headcount ?? null}
             celebrations={dashboardData?.celebrations ?? []}
+            recentActivities={dashboardData?.recent_activities ?? []}
             onNavigate={handleNavigate}
             onCreateAnnouncement={handleCreateAnnouncement}
           />

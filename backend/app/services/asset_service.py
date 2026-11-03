@@ -15,6 +15,7 @@ from app.schemas.asset import (
     AssetCategory,
     AssetStatus,
 )
+from app.services.activity_service import ActivityService
 from app.utils.pagination import PaginationParams
 
 # Mongo/BSON stores datetime, never a bare date. Every date-only field on an
@@ -50,6 +51,7 @@ class AssetService:
         self.request_repository = AssetRequestRepository()
         self.employee_repository = EmployeeRepository()
         self.department_repository = DepartmentRepository()
+        self.activity_service = ActivityService()
 
     # ---------------------------------------------------------------- Helpers
 
@@ -224,7 +226,14 @@ class AssetService:
         }
 
         try:
-            return await self.repository.create(asset_data)
+            created = await self.repository.create(asset_data)
+            await self.activity_service.record(
+                text=f"Asset {asset_tag} was added",
+                actor=current_user,
+                employee_id=employee_id,
+                target="/dashboard/assets",
+            )
+            return created
         except DuplicateKeyError as exc:
             raise AppException(f"Asset tag {asset_tag} already exists", 409) from exc
 
@@ -488,7 +497,14 @@ class AssetService:
 
         update_data["updated_at"] = _now()
 
-        return await self.repository.update(asset_id, update_data)
+        updated = await self.repository.update(asset_id, update_data)
+        await self.activity_service.record(
+            text=f"Asset {existing.get('asset_tag', asset_id)} was updated",
+            actor=current_user,
+            employee_id=existing.get("assigned_to_employee_id"),
+            target="/dashboard/assets",
+        )
+        return updated
 
     async def delete_asset(self, asset_id: str, current_user: dict | None = None):
         asset = await self.get_asset(asset_id, current_user)
@@ -499,7 +515,13 @@ class AssetService:
                 409,
             )
 
-        return await self.repository.delete(asset_id)
+        deleted = await self.repository.delete(asset_id)
+        await self.activity_service.record(
+            text=f"Asset {asset.get('asset_tag', asset_id)} was deleted",
+            actor=current_user,
+            target="/dashboard/assets",
+        )
+        return deleted
 
     # ----------------------------------------------------------- Assign/return
 
@@ -534,7 +556,14 @@ class AssetService:
             "updated_at": _now(),
         }
 
-        return await self.repository.update(asset_id, update_data)
+        updated = await self.repository.update(asset_id, update_data)
+        await self.activity_service.record(
+            text=f"Asset {asset.get('asset_tag', asset_id)} assigned to {employee_id}",
+            actor=current_user,
+            employee_id=employee_id,
+            target="/dashboard/assets",
+        )
+        return updated
 
     async def return_asset(self, asset_id: str, current_user: dict | None = None):
         asset = await self.get_asset(asset_id, current_user)
@@ -552,4 +581,11 @@ class AssetService:
             "updated_at": _now(),
         }
 
-        return await self.repository.update(asset_id, update_data)
+        updated = await self.repository.update(asset_id, update_data)
+        await self.activity_service.record(
+            text=f"Asset {asset.get('asset_tag', asset_id)} returned by {asset.get('assigned_to_employee_id')}",
+            actor=current_user,
+            employee_id=asset.get("assigned_to_employee_id"),
+            target="/dashboard/assets",
+        )
+        return updated

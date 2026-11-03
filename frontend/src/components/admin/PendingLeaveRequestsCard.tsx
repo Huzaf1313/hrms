@@ -67,6 +67,10 @@ export default function PendingLeaveRequestsCard({
 
   useEffect(() => {
     loadPending();
+
+    const interval = window.setInterval(loadPending, 30_000);
+
+    return () => window.clearInterval(interval);
   }, [loadPending]);
 
   async function updateStatus(

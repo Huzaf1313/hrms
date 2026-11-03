@@ -85,9 +85,17 @@ function AdminEmployeeTable({
           {/* Employee Header */}
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#2563eb] text-sm font-semibold text-white">
-                {initialsFor(employee)}
-              </div>
+              {employee.avatar_url ? (
+                <img
+                  src={employee.avatar_url}
+                  alt={`${employee.first_name} ${employee.last_name}`}
+                  className="h-12 w-12 rounded-full object-cover"
+                />
+              ) : (
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#2563eb] text-sm font-semibold text-white">
+                  {initialsFor(employee)}
+                </div>
+              )}
 
               {/* Name + ID */}
               <div>
@@ -214,5 +222,4 @@ function AdminEmployeeTable({
 }
 
 export default AdminEmployeeTable;
-
 

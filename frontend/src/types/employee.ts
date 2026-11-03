@@ -90,6 +90,8 @@ export interface Employee {
 
 export interface EmployeeCreate {
   employee_id: string;
+  avatar_file?: File;
+  avatar_remove?: boolean;
   first_name: string;
   last_name: string;
   email: string;

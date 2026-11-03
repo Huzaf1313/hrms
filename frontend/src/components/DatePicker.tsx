@@ -40,7 +40,7 @@ function DatePicker({ canManageHolidays = false }: DatePickerProps) {
   const { date: selectedDateKey, setDate, isDefault, resetDate } =
     useGlobalDate();
 
-  const today = useMemo(() => new Date(), []);
+  const today = new Date();
   const selectedDate = useMemo(
     () => new Date(`${selectedDateKey}T00:00:00`),
     [selectedDateKey],

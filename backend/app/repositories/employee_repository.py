@@ -7,6 +7,13 @@ class EmployeeRepository:
     collection = database["users"]
 
     async def ensure_indexes(self):
+        await self.collection.create_index(
+            "employee_id",
+            unique=True,
+            sparse=True,
+            name="unique_employee_id",
+        )
+
         # Manager-scoped reads filter on manager_id; without this the whole
         # collection is scanned for every manager list request.
         await self.collection.create_index("manager_id")

@@ -1,6 +1,7 @@
 from datetime import date, datetime
+from pathlib import Path
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, File, Query, UploadFile
 
 from app.api.deps import get_current_user, require_permission
 from app.core.roles import Permission, has_permission
@@ -18,6 +19,8 @@ from app.schemas.employee import (
 from app.services.employee_service import EmployeeService
 from app.services.employee_identity import ensure_employee_profile
 from app.services.otp_service import OTPService
+from app.services.object_storage_service import ObjectStorageService
+from app.utils.employee_storage import employee_profile_key
 from app.utils.pagination import PaginationParams
 from app.core.exceptions import AppException
 
@@ -26,6 +29,11 @@ router = APIRouter()
 
 service = EmployeeService()
 otp_service = OTPService()
+storage_service = ObjectStorageService()
+
+MAX_AVATAR_SIZE = 5 * 1024 * 1024
+AVATAR_EXTENSIONS = {".jpg", ".jpeg", ".png"}
+
 
 def to_datetime(value: date | None) -> datetime | None:
     """Mongo/BSON only stores datetime, not bare date - convert before saving."""
@@ -35,10 +43,14 @@ def to_datetime(value: date | None) -> datetime | None:
     return datetime(value.year, value.month, value.day)
 
 
-def serialize_employee(
+async def serialize_employee(
     employee: dict,
     welcome_email_sent: bool | None = None,
 ) -> EmployeeResponse:
+    avatar_url = employee.get("avatar_url")
+    if employee.get("avatar_key"):
+        avatar_url = await storage_service.signed_url(employee["avatar_key"])
+
     return EmployeeResponse(
         id=str(employee["_id"]),
         employee_id=employee.get("employee_id", ""),
@@ -46,6 +58,7 @@ def serialize_employee(
         last_name=employee.get("last_name", ""),
         email=employee.get("email"),
         phone=employee.get("phone", ""),
+        avatar_url=avatar_url,
         date_of_birth=employee.get("date_of_birth"),
         gender=employee.get("gender"),
         address=employee.get("address"),
@@ -125,7 +138,7 @@ async def create_employee(
         current_user=current_user,
     )
 
-    response = serialize_employee(employee, welcome_email_sent=welcome_email_sent)
+    response = await serialize_employee(employee, welcome_email_sent=welcome_email_sent)
     response.credentials = EmployeeCredentials(
         email=response.email,
         temporary_password=temporary_password,
@@ -169,7 +182,7 @@ async def get_employees(
     return APIResponse(
         success=True,
         message="Employees retrieved successfully",
-        data=[serialize_employee(employee) for employee in employees],
+        data=[await serialize_employee(employee) for employee in employees],
     )
 
 @router.get(
@@ -190,7 +203,7 @@ async def get_my_employee_profile(
     return APIResponse(
         success=True,
         message="Employee profile retrieved successfully",
-        data=serialize_employee(current_user),
+        data=await serialize_employee(current_user),
     )
 
 @router.get(
@@ -209,7 +222,67 @@ async def get_employee(
     return APIResponse(
         success=True,
         message="Employee retrieved successfully",
-        data=serialize_employee(employee),
+        data=await serialize_employee(employee),
+    )
+
+
+@router.post(
+    "/employees/{employee_id}/avatar",
+    response_model=APIResponse[EmployeeResponse],
+)
+async def upload_employee_avatar(
+    employee_id: str,
+    file: UploadFile = File(...),
+    current_user: dict = Depends(
+        require_permission(Permission.EMPLOYEES_UPDATE)
+    ),
+):
+    employee = await service.get_employee(employee_id, current_user=current_user)
+    filename = Path(file.filename or "").name
+    extension = Path(filename).suffix.lower()
+
+    if extension not in AVATAR_EXTENSIONS:
+        raise AppException("Profile photo must be JPG, JPEG, or PNG", 400)
+
+    contents = await file.read(MAX_AVATAR_SIZE + 1)
+    await file.close()
+
+    if not contents:
+        raise AppException("Please select a profile photo", 400)
+
+    if len(contents) > MAX_AVATAR_SIZE:
+        raise AppException("Profile photo must not exceed 5 MB", 413)
+
+    signatures = {
+        ".jpg": contents.startswith(b"\xff\xd8\xff"),
+        ".jpeg": contents.startswith(b"\xff\xd8\xff"),
+        ".png": contents.startswith(b"\x89PNG\r\n\x1a\n"),
+    }
+    if not signatures.get(extension, False):
+        raise AppException("The selected file is not a valid image", 400)
+
+    key = employee_profile_key(employee, extension)
+    await storage_service.upload(
+        key=key,
+        body=contents,
+        content_type=file.content_type or "image/*",
+        content_length=len(contents),
+    )
+
+    old_key = employee.get("avatar_key")
+    updated = await service.repository.update(
+        employee_id,
+        {"avatar_key": key, "avatar_url": None, "updated_at": datetime.utcnow()},
+        scope=service._visibility_scope(current_user),
+    )
+
+    if old_key and old_key != key:
+        await storage_service.delete(old_key)
+
+    return APIResponse(
+        success=True,
+        message="Profile photo uploaded successfully",
+        data=await serialize_employee(updated),
     )
 
 
@@ -279,7 +352,36 @@ async def update_employee(
     return APIResponse(
         success=True,
         message="Employee updated successfully",
-        data=serialize_employee(employee),
+        data=await serialize_employee(employee),
+    )
+
+
+@router.delete(
+    "/employees/{employee_id}/avatar",
+    response_model=APIResponse[EmployeeResponse],
+)
+async def delete_employee_avatar(
+    employee_id: str,
+    current_user: dict = Depends(
+        require_permission(Permission.EMPLOYEES_UPDATE)
+    ),
+):
+    employee = await service.get_employee(employee_id, current_user=current_user)
+    old_key = employee.get("avatar_key")
+
+    updated = await service.repository.update(
+        employee_id,
+        {"avatar_key": None, "avatar_url": None, "updated_at": datetime.utcnow()},
+        scope=service._visibility_scope(current_user),
+    )
+
+    if old_key:
+        await storage_service.delete(old_key)
+
+    return APIResponse(
+        success=True,
+        message="Profile photo removed successfully",
+        data=await serialize_employee(updated),
     )
 
 
@@ -301,7 +403,7 @@ async def deactivate_employee(
     return APIResponse(
         success=True,
         message="Employee deactivated successfully",
-        data=serialize_employee(employee),
+        data=await serialize_employee(employee),
     )
 
 @router.delete(

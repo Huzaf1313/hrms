@@ -232,7 +232,6 @@ class AdminProfileUpdate(BaseModel):
     emergency_relationship: str | None = Field(default=None, max_length=40)
     emergency_phone: str | None = Field(default=None, max_length=20)
     emergency_email: str | None = Field(default=None, max_length=120)
-    avatar_url: str | None = Field(default=None, max_length=2_000_000)
     designation: str | None = Field(default=None, max_length=80)
     department: str | None = Field(default=None, max_length=80)
     shift: str | None = Field(default=None, max_length=80)

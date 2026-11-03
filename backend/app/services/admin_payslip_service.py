@@ -11,6 +11,7 @@ from app.repositories.admin_payslip_repository import (
     AdminPayslipRepository,
 )
 from app.services.admin_deduction_service import AdminDeductionService
+from app.services.activity_service import ActivityService
 
 
 class AdminPayslipService:
@@ -19,6 +20,7 @@ class AdminPayslipService:
         self.employee_repository = EmployeeRepository()
         self.salary_structure_repository = AdminSalaryStructureRepository()
         self.deduction_service = AdminDeductionService()
+        self.activity_service = ActivityService()
 
     async def create_payslip(
         self,
@@ -169,6 +171,12 @@ class AdminPayslipService:
         # 12. Save payroll
         payroll = await self.payslip_repository.create(
             payroll_data
+        )
+
+        await self.activity_service.record(
+            text=f"Payroll created for {employee_id} ({month} {year})",
+            employee_id=employee_id,
+            target="/dashboard/payroll",
         )
 
         return await self._enrich_payslip(payroll)
@@ -355,6 +363,12 @@ class AdminPayslipService:
             payroll_id=payslip_id,
             status=normalized_status,
             paid_on=paid_on,
+        )
+
+        await self.activity_service.record(
+            text=f"Payroll status changed to {normalized_status} for {payslip.get('employee_id', '')}",
+            employee_id=payslip.get("employee_id"),
+            target="/dashboard/payroll",
         )
 
         return await self._enrich_payslip(updated)
@@ -709,4 +723,3 @@ class AdminPayslipService:
             "recent_runs": recent_runs,
             "departments": departments,
         }
-

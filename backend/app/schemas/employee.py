@@ -69,7 +69,7 @@ class PromotionHistory(BaseModel):
 
 class EmployeeCreate(BaseModel):
     # Employee Profile
-    employee_id: str = Field(min_length=1)
+    employee_id: str | None = None
     first_name: str = Field(min_length=1)
     last_name: str = Field(min_length=1)
 

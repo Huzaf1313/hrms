@@ -30,6 +30,7 @@ from app.services.attendance_calculation import (
     resolve_record_metrics,
     shift_duration_minutes,
 )
+from app.services.object_storage_service import ObjectStorageService
 from app.services.employee_identity import ensure_employee_profile
 from app.utils.filtering import build_filter
 from app.utils.pagination import PaginationParams
@@ -177,6 +178,7 @@ class AttendanceService:
         self.employee_repository = EmployeeRepository()
         self.department_repository = DepartmentRepository()
         self.shift_repository = ShiftRepository()
+        self.storage_service = ObjectStorageService()
 
     
     @staticmethod
@@ -315,7 +317,7 @@ class AttendanceService:
             "departments": departments_by_id,
         }
 
-    def _serialize(
+    async def _serialize(
         self,
         attendance: dict,
         employee: dict | None,
@@ -347,12 +349,16 @@ class AttendanceService:
             if working_hours is None:
                 working_hours = attendance.get("total_hours")
 
+        avatar_url = None
+        if employee and employee.get("avatar_key"):
+            avatar_url = await self.storage_service.signed_url(employee["avatar_key"])
+
         employee_summary = EmployeeSummary(
             id=str(employee["_id"]) if employee else attendance["employee_id"],
             employee_code=employee.get("employee_id", "-") if employee else "-",
             first_name=employee.get("first_name", "Unknown") if employee else "Unknown",
             last_name=employee.get("last_name", "") if employee else "",
-            avatar_url=employee.get("avatar_url") if employee else None,
+            avatar_url=avatar_url,
             department_id=attendance.get("department_id")
             or (employee.get("department_id", "") if employee else ""),
             department_name=department.get("name") if department else None,
@@ -467,7 +473,7 @@ class AttendanceService:
                 employee["department_id"]
             )
 
-        return self._serialize(attendance, employee, department)
+        return await self._serialize(attendance, employee, department)
 
     async def mark_attendance(
         self,
@@ -626,7 +632,7 @@ class AttendanceService:
             else None
         )
 
-        return self._serialize(attendance, employee, department)
+        return await self._serialize(attendance, employee, department)
 
 
     async def get_my_status(
@@ -871,7 +877,7 @@ class AttendanceService:
                     departments[current_department_id] = department
 
         items = [
-            self._serialize(
+            await self._serialize(
                 record,
                 employee,
                 departments.get(employee.get("department_id")),
@@ -939,7 +945,7 @@ class AttendanceService:
         )
 
         return [
-            self._serialize(record, employee, department)
+            await self._serialize(record, employee, department)
             for record in records
         ]
 
@@ -1038,7 +1044,7 @@ class AttendanceService:
             else None
         )
 
-        return self._serialize(updated, employee, department)
+        return await self._serialize(updated, employee, department)
 
     async def get_summary(
         self,

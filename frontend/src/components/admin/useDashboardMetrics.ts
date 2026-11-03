@@ -94,6 +94,7 @@ export function useDashboardMetrics(
     queryKey: queryKeys.admin.leaveSummary(),
     queryFn: () => leaveService.summary(),
     staleTime: 2 * 60 * 1000,
+    refetchInterval: 30 * 1000,
   });
 
   const employeesQuery = useQuery({
