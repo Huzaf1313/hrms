@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { useSearchParams } from "react-router-dom";
 
@@ -76,6 +76,44 @@ export function GlobalDateProvider({ children }: { children: ReactNode }) {
     },
     [setSearchParams],
   );
+
+  useEffect(() => {
+    let isActive = true;
+    let timeout: number | undefined;
+
+    function scheduleNextDayRefresh() {
+      const now = new Date();
+      const currentDay = todayKey();
+      const nextDay = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate() + 1,
+        0,
+        0,
+        1,
+      );
+
+      timeout = window.setTimeout(() => {
+        if (!isActive) return;
+
+        // A date explicitly chosen in the past remains a useful filter. Only
+        // advance the default day that was active when the session crossed
+        // midnight.
+        if (date === currentDay) {
+          setDate(todayKey());
+        }
+
+        scheduleNextDayRefresh();
+      }, Math.max(1, nextDay.getTime() - now.getTime()));
+    }
+
+    scheduleNextDayRefresh();
+
+    return () => {
+      isActive = false;
+      if (timeout !== undefined) window.clearTimeout(timeout);
+    };
+  }, [date, setDate]);
 
   const stepMonth = useCallback(
     (amount: number) => {

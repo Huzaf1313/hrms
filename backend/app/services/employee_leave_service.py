@@ -6,6 +6,7 @@ from app.repositories.employee_leave_repository import (
     EmployeeLeaveRepository,
 )
 from app.services.admin_notification_service import AdminNotificationService
+from app.services.activity_service import ActivityService
 
 
 class EmployeeLeaveService:
@@ -20,6 +21,7 @@ class EmployeeLeaveService:
     def __init__(self):
         self.repository = EmployeeLeaveRepository()
         self.admin_notification_service = AdminNotificationService()
+        self.activity_service = ActivityService()
 
     async def create_request(
         self,
@@ -148,6 +150,12 @@ class EmployeeLeaveService:
 
         created = await self.repository.create(
             leave_data
+        )
+
+        await self.activity_service.record(
+            text=f"{employee_id} submitted a {leave_type} request",
+            employee_id=employee_id,
+            target="/dashboard/leave",
         )
 
         # The admin who owns this employee needs to see it pending. Wrapped so a

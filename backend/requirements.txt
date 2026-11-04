@@ -27,6 +27,9 @@ python-multipart==0.0.32
 # Transactional email templates
 Jinja2==3.1.2
 
+# Cloudflare R2 (S3-compatible object storage)
+boto3==1.42.44
+
 
 # Transitive dependencies, pinned for reproducible installs
 annotated-doc==0.0.5

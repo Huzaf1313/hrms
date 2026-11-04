@@ -10,6 +10,7 @@ from fastapi import UploadFile
 
 from app.core.config import settings
 from app.core.exceptions import AppException
+from app.services.activity_service import ActivityService
 from app.repositories.department_repository import DepartmentRepository
 from app.repositories.employee_repository import EmployeeRepository
 from app.repositories.employee_exit_request_repository import ExitRequestRepository
@@ -66,6 +67,7 @@ class ExitRequestService:
         self.department_repository = DepartmentRepository()
         self.employee_repository = EmployeeRepository()
         self.admin_notification_service = AdminNotificationService()
+        self.activity_service = ActivityService()
 
     async def _department_names(self, department_ids: list[str]) -> dict[str, str]:
         """Resolve department ids to names in one pass.
@@ -313,6 +315,12 @@ class ExitRequestService:
         except Exception:
             self._remove_files(attachments)
             raise
+
+        await self.activity_service.record(
+            text=f"Exit request submitted by {employee_id}",
+            employee_id=employee_id,
+            target="/dashboard/exit-requests",
+        )
 
         # Routed to the admin who onboarded this employee. Wrapped so a
         # notification failure can never lose the resignation itself.

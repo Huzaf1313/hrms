@@ -94,6 +94,17 @@ export const employeeService = {
     return api.put<Employee>(`/employees/${employeeId}`, data);
   },
 
+  uploadAvatar(employeeId: string, file: File) {
+    const form = new FormData();
+    form.append("file", file);
+
+    return api.postForm<Employee>(`/employees/${employeeId}/avatar`, form);
+  },
+
+  removeAvatar(employeeId: string) {
+    return api.delete<Employee>(`/employees/${employeeId}/avatar`);
+  },
+
   deactivate(employeeId: string) {
     return api.patch<Employee>(`/employees/${employeeId}/deactivate`);
   },

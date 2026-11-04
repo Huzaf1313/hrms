@@ -15,6 +15,7 @@ from app.repositories.department_repository import DepartmentRepository
 from app.repositories.shift_repository import ShiftRepository
 from app.services.employee_identity import ensure_employee_profile
 from app.services.session_service import SessionService
+from app.services.object_storage_service import ObjectStorageService
 from datetime import date as date_type
 
 
@@ -475,13 +476,16 @@ class UserService:
         address = user.get("address")
         emergency = user.get("emergency_contact") or {}
         status = (user.get("status") or "active").lower()
+        avatar_url = None
+        if user.get("avatar_key"):
+            avatar_url = await ObjectStorageService().signed_url(user["avatar_key"])
 
         return {
             "id": str(user["_id"]),
             "employee_id": user.get("employee_id"),
             "full_name": resolve_full_name(user),
             "role": user.get("role"),
-            "avatar_url": user.get("avatar_url"),
+            "avatar_url": avatar_url,
             "designation": user.get("designation"),
             "department": user.get("department") or department,
             "department_head": department_head,
@@ -534,7 +538,6 @@ class UserService:
             "designation",
             "work_location",
             "employment_type",
-            "avatar_url",
         )
 
         for field in simple_fields:

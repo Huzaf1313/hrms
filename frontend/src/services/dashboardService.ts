@@ -10,6 +10,14 @@ export interface HiringPipeline {
   offered: number;
 }
 
+export interface RecentActivity {
+  id: string;
+  text: string;
+  actor_name: string;
+  target: string | null;
+  created_at: string;
+}
+
 export interface DashboardPayrollSummary {
   payroll_this_month: number;
   payroll_change_percent: number;
@@ -25,6 +33,7 @@ export interface DashboardData {
   on_leave_today: number;
   celebrations: Celebration[];
   hiring_pipeline: HiringPipeline;
+  recent_activities: RecentActivity[];
   payroll_summary?: DashboardPayrollSummary | null;
 }
 

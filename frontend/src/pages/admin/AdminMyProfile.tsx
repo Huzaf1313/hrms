@@ -11,12 +11,12 @@ import {
   Pencil,
   Phone,
   SlidersHorizontal,
-  Upload,
   UserRound,
   X,
 } from "lucide-react";
 
 import ProfileEditForm from "../../components/admin/profile/ProfileEditForm";
+import AdminEmployeeDocuments from "../../components/admin/AdminEmployeeDocuments";
 import {
   DetailCard,
   DetailRow,
@@ -28,7 +28,6 @@ import {
   StatusPill,
 } from "../../components/admin/profile/ProfileUi";
 import {
-  DOCUMENT_STATUS_STYLES,
   EMPLOYMENT_STATUS_STYLES,
   experienceFrom,
   formatProfileDate,
@@ -39,7 +38,6 @@ import { shiftService } from "../../services/shiftService";
 import type {
   AdminProfile,
   NotificationPreferences,
-  ProfileDocument,
   ProfileTab,
 } from "../../types/adminProfile";
 
@@ -52,17 +50,6 @@ function scrollToSection(id: string) {
   document
     .getElementById(id)
     ?.scrollIntoView({ behavior: "smooth", block: "center" });
-}
-
-/** Opens a picked image in memory so the preview works before any upload. */
-function readAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
 }
 
 function Toggle({
@@ -108,7 +95,6 @@ function Toggle({
 
 export default function AdminMyProfile() {
   const [profile, setProfile] = useState<AdminProfile | null>(null);
-  const [documents, setDocuments] = useState<ProfileDocument[]>([]);
   const [notifications, setNotifications] = useState<NotificationPreferences | null>(null);
 
   const [isLoading, setIsLoading] = useState(true);
@@ -131,22 +117,15 @@ export default function AdminMyProfile() {
     // the whole profile page down with it.
     Promise.allSettled([
       adminProfileService.getProfile(),
-      adminProfileService.listDocuments(),
       adminProfileService.getNotificationPreferences(),
       shiftService.list(),
-    ]).then(([profileResult, documentsResult, notificationsResult, shiftsResult]) => {
+    ]).then(([profileResult, notificationsResult, shiftsResult]) => {
       if (cancelled) return;
 
       let hasError = false;
 
       if (profileResult.status === "fulfilled") {
         setProfile(profileResult.value);
-      } else {
-        hasError = true;
-      }
-
-      if (documentsResult.status === "fulfilled") {
-        setDocuments(documentsResult.value);
       } else {
         hasError = true;
       }
@@ -172,11 +151,33 @@ export default function AdminMyProfile() {
   }, []);
 
   const handlePhoto = useCallback(async (file: File) => {
+    const previewUrl = URL.createObjectURL(file);
+
     try {
-      setPendingAvatar(await readAsDataUrl(file));
-      setNotice("Photo ready. Save changes to keep it.");
+      setPendingAvatar(previewUrl);
+      setNotice("Photo ready. Saving changes to keep it.");
+
+      const saved = await adminProfileService.saveProfileAvatar(file);
+
+      setProfile(saved);
+      setPendingAvatar(null);
+      setNotice("Profile photo updated.");
     } catch {
-      setError("That image could not be read.");
+      setPendingAvatar(null);
+      setError("That image could not be saved.");
+    } finally {
+      URL.revokeObjectURL(previewUrl);
+    }
+  }, []);
+
+  const handleRemovePhoto = useCallback(async () => {
+    try {
+      const saved = await adminProfileService.removeProfileAvatar();
+      setProfile(saved);
+      setPendingAvatar(null);
+      setNotice("Profile photo removed.");
+    } catch {
+      setError("That profile photo could not be removed.");
     }
   }, []);
 
@@ -437,70 +438,15 @@ export default function AdminMyProfile() {
   }
 
   function renderDocumentsTab() {
-    return (
-      <ProfileSection
-        icon={<FileText className="icon-accent h-4 w-4" />}
-        title="My Documents"
-        action={
-          <button
-            type="button"
-            onClick={() => setNotice("Uploads will be connected once document storage is available.")}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 transition hover:bg-gray-50"
-          >
-            <Upload className="h-3.5 w-3.5" />
-            Upload
-          </button>
-        }
-      >
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px] text-left text-sm">
-            <thead>
-              <tr className="border-b border-gray-100 text-xs font-semibold uppercase tracking-wide text-gray-600">
-                <th className="pb-3">Document</th>
-                <th className="pb-3">Type</th>
-                <th className="pb-3">Uploaded On</th>
-                <th className="pb-3">Status</th>
-                <th className="pb-3 text-right">Action</th>
-              </tr>
-            </thead>
+    if (!profile?.employee_id) {
+      return (
+        <ProfileSection icon={<FileText className="icon-accent h-4 w-4" />} title="My Documents">
+          <p className="text-sm text-gray-500">An employee profile is required before documents can be uploaded.</p>
+        </ProfileSection>
+      );
+    }
 
-            <tbody>
-              {documents.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="py-8 text-center text-gray-500">
-                    No documents uploaded yet.
-                  </td>
-                </tr>
-              ) : (
-                documents.map((document) => (
-                  <tr key={document.id} className="border-b border-gray-50 last:border-0">
-                    <td className="py-3.5 font-medium text-gray-800">{document.name}</td>
-                    <td className="py-3.5 text-gray-600">{document.type}</td>
-                    <td className="py-3.5 text-gray-600">{formatProfileDate(document.uploaded_on)}</td>
-                    <td className="py-3.5">
-                      <StatusPill tone={DOCUMENT_STATUS_STYLES[document.status]}>
-                        {document.status}
-                      </StatusPill>
-                    </td>
-                    <td className="py-3.5 text-right">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setNotice(`Opening ${document.name} will be connected once document storage is available.`)
-                        }
-                        className="text-xs font-semibold text-[#2563eb] hover:underline"
-                      >
-                        View
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </ProfileSection>
-    );
+    return <AdminEmployeeDocuments employeeId={profile.employee_id} />;
   }
 
   /**
@@ -714,6 +660,7 @@ export default function AdminMyProfile() {
             name={profile.full_name}
             avatarUrl={pendingAvatar ?? profile.avatar_url}
             onPickPhoto={(file) => void handlePhoto(file)}
+            onRemove={() => void handleRemovePhoto()}
           />
 
           <div className="min-w-0 flex-1">

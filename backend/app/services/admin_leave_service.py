@@ -13,6 +13,7 @@ from app.repositories.leave_repository import LeaveRepository
 from app.services.employee_notification_service import (
     EmployeeNotificationService,
 )
+from app.services.activity_service import ActivityService
 
 IST = timezone(timedelta(hours=5, minutes=30))
 
@@ -39,6 +40,7 @@ class AdminLeaveService:
         self.department_repository = DepartmentRepository()
         self.balance_repository = LeaveBalanceRepository()
         self.notification_service = EmployeeNotificationService()
+        self.activity_service = ActivityService()
 
     async def get_balances(self):
         docs = await self.balance_repository.get_all()
@@ -213,6 +215,17 @@ class AdminLeaveService:
 
         result = await self.repository.create(document)
 
+        employee = await self.employee_repository.get_by_employee_id(
+            leave_data["employee_id"]
+        )
+        employee_name = (employee or {}).get("full_name") or leave_data["employee_id"]
+        await self.activity_service.record(
+            text=f"Leave request submitted for {employee_name}",
+            actor=current_user,
+            employee_id=leave_data["employee_id"],
+            target="/dashboard/leave",
+        )
+
         return await self._serialize(result)
 
     async def get_leave(
@@ -301,6 +314,22 @@ class AdminLeaveService:
                 "$in": accessible_employee_ids
             }
 
+        skip = (page - 1) * limit
+        documents = await self.repository.get_all(
+            filters,
+            skip=skip,
+            limit=limit,
+        )
+        total = await self.repository.count(filters)
+        items = [await self._serialize(document) for document in documents]
+
+        return {
+            "items": items,
+            "total": total,
+            "page": page,
+            "limit": limit,
+            "pages": (total + limit - 1) // limit if total else 0,
+        }
 
     async def update_status(
         self,
@@ -344,6 +373,20 @@ class AdminLeaveService:
             leave_id,
             update_data,
         )
+
+        if updated:
+            employee = await self.employee_repository.get_by_employee_id(
+                leave.get("employee_id", "")
+            )
+            employee_name = (employee or {}).get("full_name") or leave.get(
+                "employee_id", "employee"
+            )
+            await self.activity_service.record(
+                text=f"Leave request {str(status).lower()} for {employee_name}",
+                actor=current_user,
+                employee_id=leave.get("employee_id"),
+                target="/dashboard/leave",
+            )
 
         # Create employee notification after successful review
         normalized_status = str(status).lower()

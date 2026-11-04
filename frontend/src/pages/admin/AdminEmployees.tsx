@@ -388,12 +388,26 @@ function AdminEmployees({
 
     try {
       if (editingEmployee) {
-        const updated = await employeeService.update(editingEmployee.id, data);
+        const { avatar_file, avatar_remove, ...employeeData } = data;
+        let updated = await employeeService.update(editingEmployee.id, employeeData);
+
+        if (avatar_file) {
+          updated = await employeeService.uploadAvatar(editingEmployee.id, avatar_file);
+        } else if (avatar_remove) {
+          updated = await employeeService.removeAvatar(editingEmployee.id);
+        }
+
         setViewingEmployee((current) =>
           current?.id === editingEmployee.id ? updated : current,
         );
       } else {
-        const created = await employeeService.create(data);
+        const { avatar_file, ...employeeData } = data;
+        delete employeeData.avatar_remove;
+        let created = await employeeService.create(employeeData);
+
+        if (avatar_file) {
+          created = await employeeService.uploadAvatar(created.id, avatar_file);
+        }
 
         if (created.credentials) {
           setSharedCredentials({

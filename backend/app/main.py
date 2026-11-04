@@ -95,11 +95,9 @@ from app.repositories.asset_request_repository import AssetRequestRepository
 from app.repositories.candidate_repository import CandidateRepository
 from app.repositories.job_position_repository import JobPositionRepository
 from app.repositories.employee_repository import EmployeeRepository
+from app.repositories.activity_repository import ActivityRepository
 from app.repositories.user_repository import UserRepository
-from app.services.employee_identity import (
-    backfill_minted_profiles,
-    migrate_legacy_hr_codes,
-)
+from app.services.employee_identity import backfill_minted_profiles
 from app.services.user_service import UserService
 from app.api.v1.employee_profile_photo import router as employee_profile_photo_router
 
@@ -123,21 +121,13 @@ async def lifespan(app: FastAPI):
                 f"Bootstrapped HR account: {settings.BOOTSTRAP_HR_EMAIL}"
             )
 
-    migrated = await migrate_legacy_hr_codes(
-        users_collection=UserRepository().collection,
-        attendance_collection=EmployeeAttendanceRepository().collection,
-        regularization_collection=EmployeeAttendanceRegularizationRepository().collection,
-    )
-
     filled = await backfill_minted_profiles(UserRepository().collection)
-
-    if migrated:
-        print(f"Migrated legacy HR employee codes: {migrated}")
 
     if filled:
         print(f"Backfilled joining_date for {filled} minted employee records")
 
     await EmployeeRepository().ensure_indexes()
+    await ActivityRepository().ensure_indexes()
 
     shift_repository = ShiftRepository()
     await shift_repository.ensure_indexes()

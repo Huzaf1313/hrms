@@ -4,11 +4,13 @@ from app.core.exceptions import AppException
 from app.repositories.employee_document_repository import (
     EmployeeDocumentRepository,
 )
+from app.services.object_storage_service import ObjectStorageService
 
 
 class EmployeeDocumentService:
     def __init__(self):
         self.repository = EmployeeDocumentRepository()
+        self.storage_service = ObjectStorageService()
 
     async def create_document(self, document_data: dict):
         document_data["created_at"] = datetime.utcnow()
@@ -88,5 +90,7 @@ class EmployeeDocumentService:
                 "Document not found",
                 404,
             )
+
+        await self.storage_service.delete(document.get("storage_key"))
 
         return True

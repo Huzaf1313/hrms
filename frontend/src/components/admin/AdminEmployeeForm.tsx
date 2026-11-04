@@ -125,7 +125,11 @@ function AdminEmployeeForm({
 
   const [countryCode, setCountryCode] = useState("+91");
 
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(
+    initialEmployee?.avatar_url ?? null,
+  );
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoRemoved, setPhotoRemoved] = useState(false);
 
   const [showPassword, setShowPassword] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
@@ -161,7 +165,9 @@ function AdminEmployeeForm({
   if (lastInitialEmployee !== initialEmployee) {
     setLastInitialEmployee(initialEmployee);
     setForm(toFormState(initialEmployee));
-    setPhotoPreview(null);
+    setPhotoPreview(initialEmployee?.avatar_url ?? null);
+    setPhotoFile(null);
+    setPhotoRemoved(false);
     setSalaryError(null);
     setIdentityErrors({});
     setVerifiedEmail(null);
@@ -444,6 +450,8 @@ function AdminEmployeeForm({
 
       return previewUrl;
     });
+    setPhotoFile(file);
+    setPhotoRemoved(false);
   }
 
   function removePhoto() {
@@ -454,6 +462,8 @@ function AdminEmployeeForm({
 
       return null;
     });
+    setPhotoFile(null);
+    setPhotoRemoved(true);
 
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -508,6 +518,8 @@ function AdminEmployeeForm({
       reporting_manager: form.reporting_manager || undefined,
       shift_id: form.shift_id || undefined,
       email_verification_token: verificationToken ?? undefined,
+      avatar_file: photoFile ?? undefined,
+      avatar_remove: photoRemoved,
     };
 
     if (isEditMode && !form.password) {
@@ -595,7 +607,7 @@ function AdminEmployeeForm({
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/png,image/jpeg,image/jpg,image/webp"
+                 accept="image/png,image/jpeg,image/jpg"
                 onChange={handlePhotoChange}
                 className="hidden"
               />
@@ -613,19 +625,21 @@ function AdminEmployeeForm({
           {/* EMPLOYEE ID */}
           <div>
             <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
-              Employee ID <span className="ml-1 text-red-500">*</span>
+              Employee ID
             </label>
 
             <input
-              required
-              disabled={isEditMode}
+              readOnly
               value={form.employee_id}
-              onChange={(event) =>
-                updateField("employee_id", event.target.value)
-              }
-              placeholder="EMP001"
+              placeholder={isEditMode ? "AAR001" : "Generated on save"}
               className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10 disabled:bg-gray-50 disabled:text-gray-400"
             />
+
+            <p className="mt-1.5 text-xs text-gray-400">
+              {isEditMode
+                ? "Employee IDs are assigned automatically and cannot be changed."
+                : "An AAR### ID will be assigned automatically when saved."}
+            </p>
           </div>
 
           {/* EMPLOYMENT TYPE */}
@@ -978,14 +992,46 @@ function AdminEmployeeForm({
             )}
           </div>
 
+          {/* REPORTING MANAGER */}
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
+              Reporting Manager
+            </label>
+
+            <select
+              value={form.manager_id || unmatchedManager || ""}
+              onChange={(event) => handleManagerChange(event.target.value)}
+              className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
+            >
+              <option value="">Select reporting manager</option>
+
+              {unmatchedManager && (
+                <option value={unmatchedManager}>
+                  {unmatchedManager} (legacy)
+                </option>
+              )}
+
+              {managers.map((manager) => (
+                <option key={manager.id} value={manager.id}>
+                  {manager.full_name}
+                </option>
+              ))}
+            </select>
+
+            <p className="mt-1.5 text-xs text-gray-400">
+              {managers.length === 0
+                ? "No HR or manager accounts available"
+                : unmatchedManager
+                  ? "Previously typed manually — please re-select a current account"
+                  : "HR and manager accounts only"}
+            </p>
+          </div>
+
           {/* LOGIN CREDENTIALS - create mode only */}
           {!isEditMode && (
             <div className="md:col-span-2">
               <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
                 Temporary Password{" "}
-                <span className="font-normal text-gray-400">
-                  (optional — leave empty to auto-generate)
-                </span>
               </label>
 
               <div className="relative">
@@ -1152,41 +1198,6 @@ function AdminEmployeeForm({
             />
           </div>
 
-          {/* REPORTING MANAGER */}
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
-              Reporting Manager
-            </label>
-
-            <select
-              value={form.manager_id || unmatchedManager || ""}
-              onChange={(event) => handleManagerChange(event.target.value)}
-              className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
-            >
-              <option value="">Select reporting manager</option>
-
-              {unmatchedManager && (
-                <option value={unmatchedManager}>
-                  {unmatchedManager} (legacy)
-                </option>
-              )}
-
-              {managers.map((manager) => (
-                <option key={manager.id} value={manager.id}>
-                  {manager.full_name}
-                </option>
-              ))}
-            </select>
-
-            <p className="mt-1.5 text-xs text-gray-400">
-              {managers.length === 0
-                ? "No HR or manager accounts available"
-                : unmatchedManager
-                  ? "Previously typed manually — please re-select a current account"
-                  : "HR and manager accounts only"}
-            </p>
-          </div>
-
           {/* SALARY STRUCTURE */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:col-span-2">
             <div>
@@ -1331,5 +1342,3 @@ function AdminEmployeeForm({
 }
 
 export default AdminEmployeeForm;
-
-

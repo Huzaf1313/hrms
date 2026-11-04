@@ -1,24 +1,24 @@
 
-import mimetypes
+import asyncio
 import os
 from pathlib import Path
-import re
-import unicodedata
+from urllib.parse import quote
 
 from fastapi import (
     APIRouter,
     Depends,
     File,
     Form,
-    HTTPException,
     Query,
     UploadFile,
 )
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
+from botocore.exceptions import BotoCoreError, ClientError
 
 from app.api.deps import get_current_user
 from app.core.config import settings
 from app.core.exceptions import AppException
+from app.repositories.employee_repository import EmployeeRepository
 from app.schemas.common import APIResponse
 from app.schemas.employee_document import (
     EmployeeDocumentResponse,
@@ -26,10 +26,8 @@ from app.schemas.employee_document import (
 )
 from app.services.employee_document_service import EmployeeDocumentService
 from app.services.employee_cloudflare_r2_service import CloudflareR2Service
-import asyncio
-from fastapi.responses import StreamingResponse
-from botocore.exceptions import BotoCoreError, ClientError
-from urllib.parse import quote
+from app.utils.employee_storage import employee_document_key
+from app.services.object_storage_service import content_type_for
 
 router = APIRouter(
     prefix="/employee-documents",
@@ -37,53 +35,21 @@ router = APIRouter(
 )
 
 service = EmployeeDocumentService()
+employee_repository = EmployeeRepository()
 
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 
 ALLOWED_EXTENSIONS = {
     ".pdf",
-    ".png",
     ".jpg",
     ".jpeg",
+    ".png",
     ".webp",
     ".doc",
     ".docx",
     ".xls",
     ".xlsx",
 }
-
-def normalize_name(value: str) -> str:
-    """Convert employee name or document label into a safe R2 component."""
-    normalized = unicodedata.normalize("NFKD", value)
-    normalized = normalized.encode("ascii", "ignore").decode("ascii")
-    normalized = re.sub(r"[^a-zA-Z0-9]+", "_", normalized)
-    return normalized.strip("_")
-
-
-def get_employee_folder(employee: dict) -> str:
-    employee_code = str(employee.get("employee_id", "")).strip()
-
-    full_name = (
-        f"{employee.get('first_name', '')} "
-        f"{employee.get('last_name', '')}"
-    ).strip()
-
-    if not employee_code or not full_name:
-        raise HTTPException(
-            status_code=400,
-            detail="Employee code or name is missing.",
-        )
-
-    safe_code = normalize_name(employee_code)
-    safe_name = normalize_name(full_name)
-
-    if not safe_code or not safe_name:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid employee code or name.",
-        )
-
-    return f"{safe_code}_{safe_name}"
 
 def serialize_document(document: dict) -> EmployeeDocumentResponse:
     return EmployeeDocumentResponse(
@@ -106,9 +72,14 @@ def serialize_document(document: dict) -> EmployeeDocumentResponse:
 async def get_my_documents(
     search: str | None = Query(default=None),
     document_type: str | None = Query(default=None),
+    employee_id: str | None = Query(default=None),
     current_user: dict = Depends(get_current_user),
 ):
-    employee_id = current_user.get("employee_id")
+    role = current_user.get("role")
+    if role == "hr_admin":
+        employee_id = employee_id or current_user.get("employee_id")
+    else:
+        employee_id = current_user.get("employee_id")
 
     if not employee_id:
         return APIResponse(
@@ -151,16 +122,17 @@ async def upload_my_document(
     document_name: str = Form(...),
     document_type: str = Form(...),
     file: UploadFile = File(...),
+    employee_id: str | None = Form(default=None),
     current_user: dict = Depends(get_current_user),
 ):
-    # This endpoint is specifically for employee self-service uploads.
-    if current_user.get("role") != "employee":
+    role = current_user.get("role")
+    if role not in {"employee", "hr_admin"}:
         raise AppException(
-            "This upload endpoint is for employees only",
+            "Only employees and HR admins can upload documents",
             403,
         )
 
-    employee_id = current_user.get("employee_id")
+    employee_id = employee_id if role == "hr_admin" else current_user.get("employee_id")
 
     if not employee_id:
         raise AppException(
@@ -192,7 +164,7 @@ async def upload_my_document(
 
     if extension not in ALLOWED_EXTENSIONS:
         raise AppException(
-            "Unsupported file type. Upload PDF, image, Word, or Excel files",
+            "PDF, image, Word, and Excel documents are supported",
             400,
         )
 
@@ -203,35 +175,66 @@ async def upload_my_document(
     if not contents:
         raise AppException("The selected file is empty", 400)
 
+    signatures = {
+        ".pdf": contents.startswith(b"%PDF"),
+        ".jpg": contents.startswith(b"\xff\xd8\xff"),
+        ".jpeg": contents.startswith(b"\xff\xd8\xff"),
+        ".png": contents.startswith(b"\x89PNG\r\n\x1a\n"),
+        ".webp": contents.startswith(b"RIFF") and contents[8:12] == b"WEBP",
+    }
+    if extension in signatures and not signatures[extension]:
+        raise AppException("The selected file is not a valid document", 400)
+
     if len(contents) > MAX_FILE_SIZE:
         raise AppException(
             "File size must not exceed 10 MB",
             413,
         )
 
-    mime_type = (
-        file.content_type
-        or mimetypes.guess_type(original_name)[0]
-        or "application/octet-stream"
-    )
+    target_employee = await employee_repository.get_by_employee_id(employee_id)
+    if not target_employee:
+        raise AppException("Employee profile not found", 404)
 
-    # Generate a unique private R2 object key.
-    employee_folder = get_employee_folder(current_user)
+    base_file_name = employee_document_key(
+        target_employee,
+        document_name,
+        extension,
+    ).rsplit("/", 1)[-1]
+    file_name = base_file_name
+    duplicate_suffix = 1
 
-    safe_document_name = normalize_name(document_name)
+    existing_documents = await service.get_employee_documents(employee_id)
+    existing_file_names = {
+        document.get("file_name")
+        for document in existing_documents
+        if document.get("file_name")
+    }
 
-    if not safe_document_name:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid document name.",
+    while file_name in existing_file_names:
+        storage_name = employee_document_key(
+            target_employee,
+            document_name,
+            extension,
+            suffix=duplicate_suffix,
         )
+        file_name = storage_name.rsplit("/", 1)[-1]
+        duplicate_suffix += 1
 
-    stored_name = (
-        f"{employee_folder}_{safe_document_name}{extension}"
+    display_file_name = file_name
+    mime_type = content_type_for(display_file_name, file.content_type)
+    storage_key = employee_document_key(
+        target_employee,
+        document_name,
+        extension,
+        suffix=(duplicate_suffix - 1 if file_name != base_file_name else None),
     )
 
-    storage_key = (
-        f"employees/{employee_folder}/documents/{stored_name}"
+    source = "hr_admin" if role == "hr_admin" else "employee"
+    uploader = (
+        current_user.get("full_name")
+        or current_user.get("name")
+        or current_user.get("email")
+        or str(current_user.get("_id", ""))
     )
 
     storage = None
@@ -256,16 +259,11 @@ async def upload_my_document(
                 "document_name": document_name,
                 "document_type": document_type,
                 "file_url": "",
-                "file_name": original_name,
+                "file_name": display_file_name,
                 "file_size": len(contents),
                 "mime_type": mime_type,
-                "uploaded_by": (
-                    current_user.get("full_name")
-                    or current_user.get("name")
-                    or current_user.get("email")
-                    or str(current_user.get("_id", ""))
-                ),
-                "source": "employee_upload",
+                "uploaded_by": uploader,
+                "source": source,
                 "storage_key": storage_key,
             }
         )
@@ -421,8 +419,40 @@ async def download_employee_document(
 
     return FileResponse(
         path=file_path,
-        filename=filename,
-        media_type=mime_type,
+        filename=document.get("file_name") or "document",
+        media_type=(
+            document.get("mime_type")
+            or "application/octet-stream"
+        ),
+    )
+
+
+@router.delete(
+    "/{document_id}",
+    response_model=APIResponse[None],
+)
+async def delete_employee_document(
+    document_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    document = await service.get_document(document_id)
+
+    role = current_user.get("role")
+    is_hr_admin = role == "hr_admin"
+    is_owner = (
+        current_user.get("employee_id") == document.get("employee_id")
+        and document.get("source") in {"employee", "employee_upload"}
+    )
+
+    if not is_hr_admin and not is_owner:
+        raise AppException("Document not found", 404)
+
+    await service.delete_document(document_id)
+
+    return APIResponse(
+        success=True,
+        message="Document deleted successfully",
+        data=None,
     )
 
 

@@ -17,6 +17,7 @@ import {
   CheckCircle2,
   AlertCircle,
   FolderOpen,
+  Trash2,
 } from "lucide-react";
 import { api, ApiError, downloadFile } from "../../services/api";
 
@@ -65,9 +66,9 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 const ALLOWED_EXTENSIONS = [
   ".pdf",
-  ".png",
   ".jpg",
   ".jpeg",
+  ".png",
   ".webp",
   ".doc",
   ".docx",
@@ -108,6 +109,7 @@ export default function EmployeeDocuments() {
   const [downloadingId, setDownloadingId] = useState<string | null>(
     null
   );
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [uploadDocumentName, setUploadDocumentName] = useState("");
@@ -296,6 +298,27 @@ export default function EmployeeDocuments() {
       }
     } finally {
       setDownloadingId(null);
+    }
+  };
+
+  const handleDelete = async (document: EmployeeDocument) => {
+    try {
+      setOpenMenuId(null);
+      setDeletingId(document.id);
+      setError("");
+
+      await api.delete<null>(`/employee-documents/${document.id}`);
+      await fetchDocuments();
+    } catch (err) {
+      console.error("Failed to delete document:", err);
+
+      if (err instanceof ApiError) {
+        setError(err.message);
+      } else {
+        setError("Unable to delete the document. Please try again.");
+      }
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -800,6 +823,26 @@ return (
                                 >
                                   <ExternalLink size={16} />
                                   Open file
+                                </button>
+                              )}
+
+                              {(document.source === "employee" ||
+                                document.source === "employee_upload") && (
+                                <button
+                                  type="button"
+                                  disabled={deletingId === document.id}
+                                  onClick={() => void handleDelete(document)}
+                                  className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                  {deletingId === document.id ? (
+                                    <Loader2
+                                      size={16}
+                                      className="animate-spin"
+                                    />
+                                  ) : (
+                                    <Trash2 size={16} />
+                                  )}
+                                  Delete
                                 </button>
                               )}
                             </div>
