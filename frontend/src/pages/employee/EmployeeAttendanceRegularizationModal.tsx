@@ -5,6 +5,8 @@ interface AttendanceRecord {
   id: string;
   employee_id: string;
   date: string;
+  in_time?: string | null;
+  out_time?: string | null;
   check_in: string | null;
   check_out: string | null;
   status: string;
@@ -31,8 +33,11 @@ function EmployeeAttendanceRegularizationModal({
   const [reason, setReason] = useState("");
   const [attachment, setAttachment] = useState<File | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleClose = () => {
+    if (isSubmitting) return;
+
     setSelectedDate("");
     setIssueType("Missing Check-Out");
     setRequestedTime("");
@@ -45,6 +50,20 @@ function EmployeeAttendanceRegularizationModal({
   if (!isOpen) {
     return null;
   }
+
+  const resolveCheckIn = (
+    record: AttendanceRecord | null | undefined,
+  ) => {
+    if (!record) return null;
+    return record.in_time ?? record.check_in ?? null;
+  };
+
+  const resolveCheckOut = (
+    record: AttendanceRecord | null | undefined,
+  ) => {
+    if (!record) return null;
+    return record.out_time ?? record.check_out ?? null;
+  };
 
   const selectedAttendance = attendanceRecords.find(
     (record) => record.date === selectedDate,
@@ -79,6 +98,60 @@ function EmployeeAttendanceRegularizationModal({
     });
   };
 
+  // Determine which attendance dates should be available.
+  const getSelectableDates = () => {
+    const dates = new Set<string>();
+
+    // Include dates with incomplete attendance records.
+    attendanceRecords.forEach((record) => {
+      const checkIn = resolveCheckIn(record);
+      const checkOut = resolveCheckOut(record);
+
+      if ((!checkIn && checkOut) || (checkIn && !checkOut)) {
+        dates.add(record.date);
+      }
+    });
+
+    // Include today even if no attendance document exists.
+    const today = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Kolkata",
+    }).format(new Date());
+
+    dates.add(today);
+
+    return Array.from(dates).sort((a, b) => b.localeCompare(a));
+  };
+
+  const selectableDates = getSelectableDates();
+
+  const handleDateChange = (date: string) => {
+    setSelectedDate(date);
+    setRequestedTime("");
+    setFormError(null);
+
+    const record = attendanceRecords.find(
+      (item) => item.date === date,
+    );
+
+    if (!record) {
+      // No attendance document means the employee is requesting
+      // a missing check-in.
+      setIssueType("Missing Check-In");
+      return;
+    }
+
+    const checkIn = resolveCheckIn(record);
+    const checkOut = resolveCheckOut(record);
+
+    if (!checkIn && checkOut) {
+      setIssueType("Missing Check-In");
+    } else if (checkIn && !checkOut) {
+      setIssueType("Missing Check-Out");
+    } else {
+      setIssueType("");
+    }
+  };
+
   const handleAttachmentChange = (
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
@@ -96,11 +169,13 @@ function EmployeeAttendanceRegularizationModal({
 
     if (!allowedTypes.includes(file.type)) {
       setFormError("Only JPG, PNG, and PDF files are allowed.");
+      event.target.value = "";
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
       setFormError("File size must be 5MB or less.");
+      event.target.value = "";
       return;
     }
 
@@ -109,76 +184,109 @@ function EmployeeAttendanceRegularizationModal({
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
-  event.preventDefault();
+    event.preventDefault();
+    setFormError(null);
 
-  setFormError(null);
-
-  if (!selectedDate) {
-    setFormError("Please select an attendance date.");
-    return;
-  }
-
-  if (!selectedAttendance) {
-    setFormError("The selected attendance record could not be found.");
-    return;
-  }
-
-  if (!issueType) {
-    setFormError("Please select an issue type.");
-    return;
-  }
-
-  if (!requestedTime) {
-    setFormError("Please provide the requested time.");
-    return;
-  }
-
-  if (!reason.trim()) {
-    setFormError("Please provide a reason for the request.");
-    return;
-  }
-
-  if (reason.trim().length > 300) {
-    setFormError("Reason cannot exceed 300 characters.");
-    return;
-  }
-
-  try {
-    const requestData = {
-      attendance_id: selectedAttendance.id,
-      date: selectedDate,
-      issue_type: issueType,
-      requested_check_in:
-        issueType === "Missing Check-In"
-          ? `${selectedDate}T${requestedTime}:00+05:30`
-          : null,
-      requested_check_out:
-        issueType === "Missing Check-Out"
-          ? `${selectedDate}T${requestedTime}:00+05:30`
-          : null,
-      reason: reason.trim(),
-    };
-
-    const response = await api.post(
-      "/employee-attendance/regularization",
-      requestData,
-    );
-
-    console.log("Regularization request submitted:", response);
-
-     handleClose();
-  } catch (error) {
-    console.error("Regularization submission failed:", error);
-
-    if (error instanceof Error) {
-      setFormError(error.message);
-    } else {
-      setFormError(
-        "Failed to submit regularization request. Please try again.",
-      );
+    if (!selectedDate) {
+      setFormError("Please select an attendance date.");
+      return;
     }
-  }
-};
+
+    if (!issueType) {
+      setFormError("Please select an issue type.");
+      return;
+    }
+
+    if (!requestedTime) {
+      setFormError("Please provide the requested time.");
+      return;
+    }
+
+    if (!reason.trim()) {
+      setFormError("Please provide a reason for the request.");
+      return;
+    }
+
+    if (reason.trim().length > 300) {
+      setFormError("Reason cannot exceed 300 characters.");
+      return;
+    }
+
+    // Missing Check-Out requires an existing attendance record.
+    if (issueType === "Missing Check-Out" && !selectedAttendance) {
+      setFormError(
+        "An attendance record is required for a Missing Check-Out request.",
+      );
+      return;
+    }
+
+    // Prevent submitting an issue that does not match the record.
+    if (selectedAttendance) {
+      const checkIn = resolveCheckIn(selectedAttendance);
+      const checkOut = resolveCheckOut(selectedAttendance);
+
+      if (
+        issueType === "Missing Check-In" &&
+        (checkIn || !checkOut)
+      ) {
+        setFormError(
+          "The selected attendance record is not eligible for a Missing Check-In request.",
+        );
+        return;
+      }
+
+      if (
+        issueType === "Missing Check-Out" &&
+        (!checkIn || checkOut)
+      ) {
+        setFormError(
+          "The selected attendance record is not eligible for a Missing Check-Out request.",
+        );
+        return;
+      }
+    }
+
+    try {
+      setIsSubmitting(true);
+
+      const requestData = {
+        attendance_id: selectedAttendance?.id ?? null,
+        date: selectedDate,
+        issue_type: issueType,
+        requested_check_in:
+          issueType === "Missing Check-In"
+            ? `${selectedDate}T${requestedTime}:00+05:30`
+            : null,
+        requested_check_out:
+          issueType === "Missing Check-Out"
+            ? `${selectedDate}T${requestedTime}:00+05:30`
+            : null,
+        reason: reason.trim(),
+      };
+
+      const response = await api.post(
+        "/employee-attendance/regularization",
+        requestData,
+      );
+
+      console.log("Regularization request submitted:", response);
+
+      handleClose();
+    } catch (error) {
+      console.error("Regularization submission failed:", error);
+
+      if (error instanceof Error) {
+        setFormError(error.message);
+      } else {
+        setFormError(
+          "Failed to submit regularization request. Please try again.",
+        );
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
       <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-xl">
@@ -197,8 +305,9 @@ function EmployeeAttendanceRegularizationModal({
 
           <button
             type="button"
-             onClick={handleClose}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-xl text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
+            onClick={handleClose}
+            disabled={isSubmitting}
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-xl text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 disabled:opacity-50"
             aria-label="Close"
           >
             ×
@@ -223,46 +332,20 @@ function EmployeeAttendanceRegularizationModal({
                 </label>
 
                 <select
-                    value={selectedDate}
-                    onChange={(event) => {
-                        const date = event.target.value;
-
-                        setSelectedDate(date);
-                        setRequestedTime("");
-
-                        const record = attendanceRecords.find(
-                            (item) => item.date === date,
-                        );
-
-                        if (!record) {
-                            setIssueType("");
-                            return;
-                        }
-
-                        if (!record.check_in && record.check_out) {
-                            setIssueType("Missing Check-In");
-                        } else if (record.check_in && !record.check_out) {
-                            setIssueType("Missing Check-Out");
-                        } else {
-                            setIssueType("");
-                        }
-                    }}
+                  value={selectedDate}
+                  onChange={(event) =>
+                    handleDateChange(event.target.value)
+                  }
                   className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm text-gray-700 outline-none transition focus:border-[#2563eb]"
                   required
                 >
                   <option value="">Select attendance date</option>
 
-                 {attendanceRecords
-                    .filter(
-                        (record) =>
-                        (!record.check_in && record.check_out) ||
-                        (record.check_in && !record.check_out),
-                    )
-                    .map((record) => (
-                        <option key={record.id} value={record.date}>
-                        {formatDate(record.date)}
-                        </option>
-                    ))}
+                  {selectableDates.map((date) => (
+                    <option key={date} value={date}>
+                      {formatDate(date)}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -273,26 +356,34 @@ function EmployeeAttendanceRegularizationModal({
                 </label>
 
                 <select
-                    value={issueType}
-                    onChange={(event) =>
-                        setIssueType(event.target.value)
-                    }
-                    className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm text-gray-700 outline-none transition focus:border-[#2563eb]"
-                    required
-                    >
-                    {selectedAttendance?.check_in == null &&
-                        selectedAttendance?.check_out != null && (
-                        <option value="Missing Check-In">
-                            Missing Check-In
-                        </option>
-                        )}
+                  value={issueType}
+                  onChange={(event) => {
+                    setIssueType(event.target.value);
+                    setRequestedTime("");
+                    setFormError(null);
+                  }}
+                  className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm text-gray-700 outline-none transition focus:border-[#2563eb] disabled:bg-gray-100"
+                  required
+                  disabled={!selectedDate}
+                >
+                  <option value="">Select issue type</option>
 
-                    {selectedAttendance?.check_in != null &&
-                        selectedAttendance?.check_out == null && (
-                        <option value="Missing Check-Out">
-                            Missing Check-Out
-                        </option>
-                        )}
+                  {selectedDate &&
+                    (!selectedAttendance ||
+                      (!resolveCheckIn(selectedAttendance) &&
+                        resolveCheckOut(selectedAttendance))) && (
+                      <option value="Missing Check-In">
+                        Missing Check-In
+                      </option>
+                    )}
+
+                  {selectedAttendance &&
+                    resolveCheckIn(selectedAttendance) &&
+                    !resolveCheckOut(selectedAttendance) && (
+                      <option value="Missing Check-Out">
+                        Missing Check-Out
+                      </option>
+                    )}
                 </select>
               </div>
             </div>
@@ -304,9 +395,14 @@ function EmployeeAttendanceRegularizationModal({
                 Current Attendance (as per system)
               </p>
 
-              {!selectedAttendance ? (
+              {!selectedDate ? (
                 <p className="mt-3 text-sm text-gray-400">
                   Select an attendance date to view the current record.
+                </p>
+              ) : !selectedAttendance ? (
+                <p className="mt-3 text-sm text-gray-500">
+                  No attendance record exists for this date.
+                  You can request a Missing Check-In correction.
                 </p>
               ) : (
                 <div className="mt-4 grid gap-4 sm:grid-cols-3">
@@ -317,7 +413,7 @@ function EmployeeAttendanceRegularizationModal({
                     </p>
 
                     <p className="mt-1 text-base font-bold text-[#17213a]">
-                      {formatTime(selectedAttendance.check_in)}
+                      {formatTime(resolveCheckIn(selectedAttendance))}
                     </p>
                   </div>
 
@@ -327,7 +423,7 @@ function EmployeeAttendanceRegularizationModal({
                     </p>
 
                     <p className="mt-1 text-base font-bold text-[#17213a]">
-                      {formatTime(selectedAttendance.check_out)}
+                      {formatTime(resolveCheckOut(selectedAttendance))}
                     </p>
                   </div>
 
@@ -343,9 +439,7 @@ function EmployeeAttendanceRegularizationModal({
 
                 </div>
               )}
-
             </div>
-
           </section>
 
           {/* Provide Correct Information */}
@@ -356,11 +450,11 @@ function EmployeeAttendanceRegularizationModal({
             </h3>
 
             {formError && (
-                <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3">
-                    <p className="text-sm font-medium text-red-700">
-                    {formError}
-                    </p>
-                </div>
+              <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3">
+                <p className="text-sm font-medium text-red-700">
+                  {formError}
+                </p>
+              </div>
             )}
 
             {/* Requested Time */}
@@ -379,17 +473,16 @@ function EmployeeAttendanceRegularizationModal({
                 onChange={(event) =>
                   setRequestedTime(event.target.value)
                 }
-                className="mt-2 w-full rounded-xl border border-gray-200 px-3 py-3 text-sm text-gray-700 outline-none transition focus:border-[#2563eb]"
+                className="mt-2 w-full rounded-xl border border-gray-200 px-3 py-3 text-sm text-gray-700 outline-none transition focus:border-[#2563eb] disabled:bg-gray-100"
                 required
+                disabled={!selectedDate || !issueType}
               />
-
             </div>
 
             {/* Reason */}
             <div className="mt-5">
 
               <div className="flex items-center justify-between">
-
                 <label className="text-sm font-semibold text-gray-700">
                   Reason for Request{" "}
                   <span className="text-red-500">*</span>
@@ -398,7 +491,6 @@ function EmployeeAttendanceRegularizationModal({
                 <span className="text-xs text-gray-400">
                   {reason.length}/300
                 </span>
-
               </div>
 
               <textarea
@@ -413,7 +505,6 @@ function EmployeeAttendanceRegularizationModal({
                 className="mt-2 w-full resize-none rounded-xl border border-gray-200 px-3 py-3 text-sm text-gray-700 outline-none transition focus:border-[#2563eb]"
                 required
               />
-
             </div>
 
             {/* Attachment */}
@@ -444,11 +535,8 @@ function EmployeeAttendanceRegularizationModal({
                   onChange={handleAttachmentChange}
                   className="hidden"
                 />
-
               </label>
-
             </div>
-
           </section>
 
           {/* Actions */}
@@ -456,23 +544,23 @@ function EmployeeAttendanceRegularizationModal({
 
             <button
               type="button"
-               onClick={handleClose}
-              className="rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+              onClick={handleClose}
+              disabled={isSubmitting}
+              className="rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
             >
               Cancel
             </button>
 
             <button
               type="submit"
-              className="rounded-xl bg-[#2563eb] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1d4ed8]"
+              disabled={isSubmitting}
+              className="rounded-xl bg-[#2563eb] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              ➤ Submit Request
+              {isSubmitting ? "Submitting..." : "➤ Submit Request"}
             </button>
 
           </div>
-
         </form>
-
       </div>
     </div>
   );

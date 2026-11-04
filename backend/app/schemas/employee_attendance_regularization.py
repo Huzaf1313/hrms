@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 
 
 class AttendanceRegularizationCreate(BaseModel):
-    attendance_id: str
+    attendance_id: str | None = None
     date: date
     issue_type: str
 
@@ -18,7 +18,7 @@ class AttendanceRegularizationResponse(BaseModel):
     id: str
 
     employee_id: str
-    attendance_id: str
+    attendance_id: str | None = None
 
     date: date
     issue_type: str

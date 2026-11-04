@@ -34,9 +34,14 @@ employee_repository = EmployeeRepository()
 async def serialize_regularization(
     regularization: dict,
 ) -> AttendanceRegularizationResponse:
-    attendance = await service.attendance_repository.get_by_id(
-        regularization["attendance_id"]
-    )
+    attendance_id = regularization.get("attendance_id")
+
+    attendance = None
+
+    if attendance_id:
+        attendance = await service.attendance_repository.get_by_id(
+            attendance_id
+        )
     employee = await employee_repository.get_by_employee_id(
         regularization["employee_id"]
     )
@@ -48,7 +53,7 @@ async def serialize_regularization(
     return AttendanceRegularizationResponse(
         id=str(regularization["_id"]),
         employee_id=regularization["employee_id"],
-        attendance_id=regularization["attendance_id"],
+        attendance_id=attendance_id,
         date=request_date,
         issue_type=regularization["issue_type"],
         requested_check_in=regularization.get(

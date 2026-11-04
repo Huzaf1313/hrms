@@ -93,6 +93,22 @@ class EmployeeAttendanceRegularizationRepository:
             }
         )
 
+    async def get_pending_by_employee_and_date(
+        self,
+        employee_id: str,
+        attendance_date: date,
+    ):
+        if isinstance(attendance_date, datetime):
+            attendance_date = attendance_date.date()
+
+        return await self.collection.find_one(
+            {
+                "employee_id": employee_id,
+                "date": self.date_to_datetime(attendance_date),
+                "status": "Pending",
+            }
+        )
+
     async def get_pending(
         self,
         skip: int = 0,
