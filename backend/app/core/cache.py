@@ -483,5 +483,3 @@ async def invalidate_announcements_cache() -> int:
     except Exception as exc:
         logger.error("Failed to invalidate announcement cache: %s. Relying on TTL expiration.", exc)
         return 0
-
-

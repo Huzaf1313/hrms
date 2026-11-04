@@ -23,6 +23,17 @@ class Settings(BaseSettings):
     UPLOAD_DIR: str = "uploads"
     PRIVATE_UPLOAD_DIR: str = "private_uploads"
 
+    # Cloudflare R2 is S3-compatible. These values must remain backend-only.
+    R2_ACCOUNT_ID: str = ""
+    R2_ACCESS_KEY_ID: str = ""
+    R2_SECRET_ACCESS_KEY: str = ""
+    R2_BUCKET_NAME: str = ""
+    R2_SIGNED_URL_EXPIRY: int = 900
+
+    @property
+    def r2_endpoint_url(self) -> str:
+        return f"https://{self.R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+
     # First HR account, created on startup if no user with this email exists.
     # This is the only way an admin account comes into existence without HR
     # already existing - every other account is created by an existing one.
@@ -30,6 +41,13 @@ class Settings(BaseSettings):
     BOOTSTRAP_HR_EMAIL: str = ""
     BOOTSTRAP_HR_PASSWORD: str = ""
     BOOTSTRAP_HR_NAME: str = "HR Admin"
+
+    # Cloudflare R2 object storage
+    R2_ACCOUNT_ID: str = ""
+    R2_ACCESS_KEY_ID: str = ""
+    R2_SECRET_ACCESS_KEY: str = ""
+    R2_BUCKET_NAME: str = ""
+    R2_ENDPOINT_URL: str = ""
 
     # Redis Cache Configuration
     REDIS_URL: str = "redis://localhost:6379/0"

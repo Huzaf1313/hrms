@@ -1,6 +1,6 @@
 from datetime import datetime
 from pydantic import BaseModel, Field
-
+from typing import Optional
 
 class EmployeeDocumentModel(BaseModel):
     id: str | None = None
@@ -19,3 +19,5 @@ class EmployeeDocumentModel(BaseModel):
 
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+    storage_key: Optional[str] = None

@@ -16,6 +16,7 @@ from app.repositories.employee_repository import EmployeeRepository
 from app.services.employee_notification_service import (
     EmployeeNotificationService,
 )
+from app.services.activity_service import ActivityService
 
 ATTACHMENT_SUBDIR = "announcements"
 
@@ -55,6 +56,7 @@ class AdminAnnouncementService:
         self.repository = AdminAnnouncementRepository()
         self.employee_repository = EmployeeRepository()
         self.notification_service = EmployeeNotificationService()
+        self.activity_service = ActivityService()
 
     def _serialize(self, announcement: dict) -> AdminAnnouncementResponse:
         return AdminAnnouncementResponse(
@@ -229,6 +231,12 @@ class AdminAnnouncementService:
             announcement
         )
 
+        await self.activity_service.record(
+            text=f"Announcement published: {announcement.get('title', 'Untitled')}",
+            actor=author,
+            target="/dashboard/announcements",
+        )
+
         return self._serialize(announcement)
 
     async def get_announcement(self, announcement_id: str):
@@ -313,6 +321,11 @@ class AdminAnnouncementService:
 
         updated = await self.repository.update(announcement_id, update_data)
 
+        await self.activity_service.record(
+            text=f"Announcement updated: {updated.get('title', 'Untitled')}",
+            target="/dashboard/announcements",
+        )
+
         return self._serialize(updated)
 
     async def delete_announcement(self, announcement_id: str):
@@ -324,5 +337,10 @@ class AdminAnnouncementService:
         self._delete_attachment_file(existing.get("attachment"))
 
         await self.repository.delete(announcement_id)
+
+        await self.activity_service.record(
+            text=f"Announcement deleted: {existing.get('title', 'Untitled')}",
+            target="/dashboard/announcements",
+        )
 
         return True

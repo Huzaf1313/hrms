@@ -65,7 +65,7 @@ export interface Employee {
   // Employment
   department_id: string;
   designation: string;
-  joining_date: string;
+  joining_date: string | null;
   employment_type: EmploymentType;
   work_location?: string;
   reporting_manager?: string;
@@ -90,6 +90,8 @@ export interface Employee {
 
 export interface EmployeeCreate {
   employee_id: string;
+  avatar_file?: File;
+  avatar_remove?: boolean;
   first_name: string;
   last_name: string;
   email: string;

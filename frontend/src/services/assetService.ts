@@ -97,15 +97,17 @@ export const assetService = {
     return api.post<AssetRequest>(`/assets/requests/${requestId}/complete-return`);
   },
 
+  
   createRequest(data: {
     request_type: AssetRequestType;
     asset_id: string;
-    employee_id: string;
+    employee_id?: string;
     detail?: string;
     reason?: string;
   }) {
     return api.post<AssetRequest>("/assets/requests", data);
   },
+
 
   reviewRequest(id: string, status: AssetRequestStatus, adminNote?: string) {
     return api.patch<AssetRequest>(`/assets/requests/${id}/review`, {

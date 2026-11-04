@@ -1,5 +1,5 @@
 import type { ChangeEvent, ReactNode } from "react";
-import { Camera } from "lucide-react";
+import { Camera, X } from "lucide-react";
 
 import { PROFILE_TABS } from "../../../types/adminProfile";
 import { PROFILE_PANEL_CLASS } from "./profileFields";
@@ -25,10 +25,12 @@ export function ProfileAvatar({
   name,
   avatarUrl,
   onPickPhoto,
+  onRemove,
 }: {
   name: string;
   avatarUrl: string | null;
   onPickPhoto: (file: File) => void;
+  onRemove: () => void;
 }) {
   function handleChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -56,11 +58,23 @@ export function ProfileAvatar({
         <input
           id="profile-photo"
           type="file"
-          accept="image/*"
+          accept=".jpg,.jpeg,.png,image/jpeg,image/png"
           className="hidden"
           onChange={handleChange}
         />
       </label>
+
+      {avatarUrl && (
+        <button
+          type="button"
+          onClick={onRemove}
+          className="absolute -right-1 -top-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-red-500 text-white shadow-sm transition hover:bg-red-600"
+          title="Remove profile photo"
+          aria-label="Remove profile photo"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      )}
     </div>
   );
 }

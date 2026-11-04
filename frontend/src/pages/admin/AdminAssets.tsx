@@ -1405,6 +1405,143 @@ function AssetReturnRequestsPanel({
   );
 }
 
+function AssetIssueRequestsPanel({
+  version,
+  onReviewed,
+}: {
+  version: number;
+  onReviewed: (message: string) => Promise<void>;
+}) {
+  const [showAll, setShowAll] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const limit = showAll ? ALL_ALLOCATIONS_LIMIT : 5;
+
+  const { data, loading, error } = useAssetQuery<Paginated<AssetRequest>>(
+    () =>
+      assetService.listRequests({
+        request_type: "issue",
+        status: "pending",
+        limit,
+      }),
+    [limit, version],
+  );
+
+  const requests = data?.items ?? [];
+
+  async function handleReview(
+    request: AssetRequest,
+    status: "approved" | "rejected",
+  ) {
+    setBusyId(request.id);
+    setActionError(null);
+
+    try {
+      await assetService.reviewRequest(request.id, status);
+      await onReviewed(
+        status === "approved"
+          ? `Asset request ${request.request_tag} approved.`
+          : `Asset request ${request.request_tag} rejected.`,
+      );
+    } catch (error) {
+      setActionError(
+        error instanceof Error
+          ? error.message
+          : "Unable to review this asset request. Please try again.",
+      );
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  return (
+    <div className={`${PANEL_CLASS} flex h-full min-w-0 flex-col`}>
+      <SectionTitle
+        title="Asset Issue Requests"
+        action={
+          <ViewAllLink
+            onClick={() => setShowAll((previous) => !previous)}
+            label={showAll ? "Show Less" : "View All"}
+          />
+        }
+      />
+
+      {actionError && (
+        <p
+          role="alert"
+          className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700"
+        >
+          {actionError}
+        </p>
+      )}
+
+      <PanelState
+        loading={loading}
+        error={error}
+        empty={requests.length === 0}
+        emptyMessage="No pending asset issue requests."
+      >
+        <div className="min-h-0 flex-1 overflow-x-auto">
+          <table className="w-full table-fixed text-left text-[11px]">
+            <thead>
+              <tr className="bg-[#f1f5fb] text-[9px] font-bold uppercase tracking-wide text-[#1e3a8a]">
+                <th className="w-[18%] rounded-l-xl px-2 py-2.5">Request</th>
+                <th className="w-[24%] px-2 py-2.5">Asset</th>
+                <th className="w-[22%] px-2 py-2.5">Employee</th>
+                <th className="w-[14%] px-1 py-2.5 text-right">Status</th>
+                <th className="w-[22%] rounded-r-xl px-1 py-2.5 text-right">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {requests.map((request) => (
+                <tr
+                  key={request.id}
+                  className="border-b border-gray-50 last:border-0"
+                >
+                  <td className="truncate px-2 py-3 font-semibold text-[#2563eb]">
+                    {request.request_tag}
+                  </td>
+                  <td className="truncate px-2 py-3 text-gray-700">
+                    {request.asset_name}
+                  </td>
+                  <td className="truncate px-2 py-3 text-gray-600">
+                    {request.employee_name}
+                  </td>
+                  <td className="px-1 py-3 text-right">
+                    <RequestStatusBadge status={request.status} />
+                  </td>
+                  <td className="px-1 py-3 text-right">
+                    <div className="flex flex-wrap justify-end gap-1">
+                      <button
+                        type="button"
+                        disabled={busyId !== null}
+                        onClick={() => handleReview(request, "approved")}
+                        className="rounded-md bg-emerald-50 px-2 py-1.5 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {busyId === request.id ? "Saving…" : "Approve"}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busyId !== null}
+                        onClick={() => handleReview(request, "rejected")}
+                        className="rounded-md bg-red-50 px-2 py-1.5 text-[10px] font-semibold text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </PanelState>
+    </div>
+  );
+}
+
 /* -------------------------------------------------------------------------- */
 /*                                    Page                                    */
 /* -------------------------------------------------------------------------- */
@@ -1679,12 +1816,16 @@ export default function AdminAssets() {
           {/* Return Requests keeps its natural height, Quick Actions absorbs the
               remainder so the pair matches Asset Allocation's height. `1fr` has a
               min-content floor, so the band grows rather than clipping. */}
-          <div className="grid min-w-0 items-stretch gap-6 xl:grid-rows-[auto_1fr]">
-            <AssetReturnRequestsPanel
-              version={version}
-              onConfirmReturn={(request) => setModal({ kind: "markReturned", request })}
-            />
-            <QuickActionsPanel
+          <div className="grid min-w-0 items-stretch gap-6 xl:grid-rows-[auto_auto_1fr]">
+          <AssetIssueRequestsPanel
+            version={version}
+            onReviewed={handleSaved}
+          />
+          <AssetReturnRequestsPanel
+            version={version}
+            onConfirmReturn={(request) => setModal({ kind: "markReturned", request })}
+          />
+          <QuickActionsPanel
               onAdd={() => setModal({ kind: "form", asset: null })}
               onAssign={() => setModal({ kind: "assign" })}
               onReturn={() => setModal({ kind: "return" })}

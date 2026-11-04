@@ -69,7 +69,7 @@ class PromotionHistory(BaseModel):
 
 class EmployeeCreate(BaseModel):
     # Employee Profile
-    employee_id: str = Field(min_length=1)
+    employee_id: str | None = None
     first_name: str = Field(min_length=1)
     last_name: str = Field(min_length=1)
 
@@ -205,7 +205,7 @@ class EmployeeResponse(BaseModel):
     # Employment
     department_id: str
     designation: str
-    joining_date: date
+    joining_date: date | None = None
 
     employment_type: str
     work_location: str | None = None

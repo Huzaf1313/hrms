@@ -17,6 +17,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "../../lib/queryKeys";
 import { useGlobalDate } from "../../context/globalDateContext";
 import { GlobalDateBadge } from "../../components/GlobalDateBadge";
+import EmployeeUpcomingLeaveTicker from "../../components/EmployeeUpcomingLeaveTicker";
 
 type LeaveStatus = "Pending" | "Approved" | "Rejected" | "Cancelled";
 
@@ -50,6 +51,7 @@ interface UpcomingLeave {
   weekday: string;
   leaveType: string;
   dates: string;
+  status: LeaveStatus;
 }
 
 interface LeaveListResponse {
@@ -357,9 +359,7 @@ function EmployeeLeave() {
 
         setUpcomingLeaves(
           upcomingList.map((leave) => {
-            const dateParts = getUpcomingDateParts(
-              leave.start_date,
-            );
+            const dateParts = getUpcomingDateParts(leave.start_date);
 
             return {
               id: leave.id,
@@ -371,6 +371,7 @@ function EmployeeLeave() {
                 leave.start_date,
                 leave.end_date,
               ),
+              status: leave.status,
             };
           }),
         );
@@ -603,6 +604,12 @@ function EmployeeLeave() {
         </div>
 
         <div className="px-8 py-7">
+
+          <EmployeeUpcomingLeaveTicker
+            leaves={upcomingLeaves}
+            loading={loading}
+          />
+          
           {/* Error */}
           {error && (
             <div className="mb-6 flex items-center justify-between gap-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">

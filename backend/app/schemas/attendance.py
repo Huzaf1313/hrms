@@ -226,4 +226,4 @@ class BulkAttendanceResponse(BaseModel):
     total: int
     success_count: int
     failure_count: int
-    results: list[BulkAttendanceItemResult]
+    results: list[BulkAttendanceItemResult]

@@ -8,7 +8,7 @@ import { useGlobalDate } from "../../context/globalDateContext";
 import type { EmployeeAttendanceRecord } from "../../types/attendance";
 import type { Shift } from "../../types/shift";
 import {
-  HOLIDAY_STYLE,
+  HOLIDAY_STYLE, 
   formatHolidayDate,
   type Holiday,
 } from "../../types/holiday";

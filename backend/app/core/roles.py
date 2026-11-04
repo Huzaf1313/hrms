@@ -88,6 +88,8 @@ class Permission(str, Enum):
     ASSETS_CREATE = "assets.create"
     ASSETS_UPDATE = "assets.update"
     ASSETS_DELETE = "assets.delete"
+    ASSET_REQUESTS_READ = "asset_requests.read"
+    ASSET_REQUESTS_CREATE = "asset_requests.create"
 
     # Performance
     PERFORMANCE_READ = "performance.read"
@@ -202,6 +204,12 @@ EMPLOYEE_PERMISSIONS = {
     # Own Profile
     Permission.SELF_PROFILE_READ,
     Permission.SELF_PROFILE_UPDATE,
+
+    # Assets — employees can view their own assets and request issue/return
+    Permission.ASSETS_READ,
+    Permission.ASSETS_CREATE,
+    Permission.ASSET_REQUESTS_READ,
+    Permission.ASSET_REQUESTS_CREATE,
 }
 
 

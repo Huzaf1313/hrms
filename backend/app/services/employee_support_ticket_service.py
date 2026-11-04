@@ -14,6 +14,7 @@ from app.services.admin_notification_service import AdminNotificationService
 from app.services.employee_notification_service import (
     EmployeeNotificationService,
 )
+from app.services.activity_service import ActivityService
 
 
 class EmployeeSupportTicketService:
@@ -22,6 +23,7 @@ class EmployeeSupportTicketService:
         self.admin_notification_service = AdminNotificationService()
         # Employee-facing side: used to tell an employee their ticket moved.
         self.notification_service = EmployeeNotificationService()
+        self.activity_service = ActivityService()
 
     @staticmethod
     def _serialize(ticket: dict[str, Any]) -> dict[str, Any]:
@@ -58,6 +60,12 @@ class EmployeeSupportTicketService:
         )
 
         ticket = await self.repository.create(ticket_data)
+
+        await self.activity_service.record(
+            text=f"Support ticket raised by {employee_id}: {data.subject}",
+            employee_id=employee_id,
+            target="/dashboard/support-tickets",
+        )
 
         # Routed to the admin who onboarded this employee. Wrapped so a
         # notification failure can never lose the ticket itself.

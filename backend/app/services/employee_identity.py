@@ -1,4 +1,4 @@
-"""Minting employee identities for admin accounts.
+"""Minting employee identities for employee accounts.
 
 Employees are not a separate collection: an account becomes an employee by
 carrying an employee_id, and every employee-facing query filters on that
@@ -7,74 +7,29 @@ without one, so until a code is minted the HR is invisible to attendance,
 employee lists and summaries. This module mints the code (and the
 first/last name shape those lists read) exactly once per account.
 
-Codes follow the account's role: HR accounts mint HRxxx, other accounts
-mint EMPxxx, each sequence counting up from its own highest existing code.
+Codes use one atomic sequence and are formatted as AAR001, AAR002, and so on.
 """
 
-import re
 from datetime import datetime
+
+from pymongo import ReturnDocument
 
 from app.core.exceptions import AppException
 
-_CODE_PATTERN = re.compile(r"^(?P<prefix>EMP|HR)(?P<number>\d+)$")
-_LEGACY_EMP_CODE_PATTERN = re.compile(r"^EMP\d+$")
+async def next_employee_code(collection) -> str:
+    """Atomically allocate the next employee code.
 
-
-async def _next_employee_code(collection, prefix: str) -> str:
-    """One past the highest existing code with this prefix, zero-padded to
-    three digits. Scanning instead of counting keeps codes stable when
-    low-numbered employees are deleted."""
-    highest = 0
-    pattern = re.compile(f"^{re.escape(prefix)}\\d+$")
-
-    async for doc in collection.find(
-        {"employee_id": {"$regex": pattern}},
-        {"employee_id": 1},
-    ):
-        match = _CODE_PATTERN.match(doc.get("employee_id") or "")
-
-        if not match or match.group("prefix") != prefix:
-            continue
-
-        highest = max(highest, int(match.group("number")))
-
-    return f"{prefix}{highest + 1:03d}"
-
-
-async def migrate_legacy_hr_codes(
-    users_collection,
-    attendance_collection,
-    regularization_collection,
-) -> list[tuple[str, str]]:
-    """Repair HR accounts whose identity was minted while the EMP-only prefix
-    was live. Moves the legacy code onto the HR sequence and drops the
-    historical attendance records so the HR starts with a clean slate under a
-    properly prefixed employee id.
+    Gaps are intentionally preserved when an employee is deleted. This avoids
+    duplicate IDs when multiple employees are created concurrently.
     """
-    migrated: list[tuple[str, str]] = []
+    sequence = await collection.database["sequences"].find_one_and_update(
+        {"_id": "employee_id"},
+        {"$inc": {"value": 1}},
+        upsert=True,
+        return_document=ReturnDocument.AFTER,
+    )
 
-    async for user in users_collection.find({"role": "hr_admin"}):
-        legacy_code = user.get("employee_id") or ""
-
-        if not _LEGACY_EMP_CODE_PATTERN.match(legacy_code):
-            continue
-
-        new_code = await _next_employee_code(users_collection, "HR")
-
-        result = await users_collection.update_one(
-            {"_id": user["_id"], "employee_id": legacy_code},
-            {"$set": {"employee_id": new_code, "updated_at": datetime.utcnow()}},
-        )
-
-        if not result.matched_count:
-            continue
-
-        await attendance_collection.delete_many({"employee_id": legacy_code})
-        await regularization_collection.delete_many({"employee_id": legacy_code})
-
-        migrated.append((legacy_code, new_code))
-
-    return migrated
+    return f"AAR{sequence['value']:03d}"
 
 
 async def backfill_minted_profiles(users_collection) -> int:
@@ -137,9 +92,6 @@ async def ensure_employee_profile(collection, user: dict) -> dict:
     if user_id is None:
         raise AppException("No employee record found for this account", 404)
 
-    role = getattr(user.get("role"), "value", user.get("role"))
-    prefix = "HR" if role == "hr_admin" else "EMP"
-
     first_name, last_name = split_full_name(user.get("full_name", ""))
     now = datetime.utcnow()
 
@@ -154,7 +106,7 @@ async def ensure_employee_profile(collection, user: dict) -> dict:
     joining_date = datetime(joined.year, joined.month, joined.day)
 
     for _ in range(5):
-        code = await _next_employee_code(collection, prefix)
+        code = await next_employee_code(collection)
 
         result = await collection.update_one(
             {

@@ -3,6 +3,7 @@ import { Hand } from "lucide-react";
 
 import CelebrationTicker from "../../components/CelebrationTicker";
 import type { Celebration } from "../../types/celebration";
+import type { RecentActivity } from "../../services/dashboardService";
 
 import AttendanceTrendChart from "../../components/admin/AttendanceTrendChart";
 import BirthdaysAndAnniversariesCard from "../../components/admin/BirthdaysAndAnniversariesCard";
@@ -21,6 +22,7 @@ interface AdminDashboardProps {
   /** Live values the dashboard endpoint already provides. */
   totalHeadcount?: number | null;
   celebrations?: Celebration[];
+  recentActivities?: RecentActivity[];
   onNavigate: (page: string) => void;
   /** Opens the announcement create form, used by the quick action. */
   onCreateAnnouncement?: () => void;
@@ -43,6 +45,7 @@ function readUserFirstName(): string {
 export default function AdminDashboard({
   totalHeadcount,
   celebrations = [],
+  recentActivities = [],
   onNavigate,
   onCreateAnnouncement,
 }: AdminDashboardProps) {
@@ -118,7 +121,7 @@ export default function AdminDashboard({
         </div>
 
         <div className="grid grid-cols-12 gap-4">
-          <RecentActivityCard />
+          <RecentActivityCard activities={recentActivities} />
           <QuickActionsCard
             onNavigate={onNavigate}
             onCreateAnnouncement={onCreateAnnouncement}

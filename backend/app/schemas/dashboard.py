@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel
 
 
@@ -20,6 +22,14 @@ class HiringPipeline(BaseModel):
     offered: int = 0
 
 
+class RecentActivity(BaseModel):
+    id: str
+    text: str
+    actor_name: str = "System"
+    target: str | None = None
+    created_at: datetime
+
+
 class DashboardPayrollSummary(BaseModel):
     payroll_this_month: float = 0.0
     payroll_change_percent: float = 0.0
@@ -35,4 +45,5 @@ class DashboardResponse(BaseModel):
     on_leave_today: int = 0
     celebrations: list[Celebration] = []
     hiring_pipeline: HiringPipeline = HiringPipeline()
+    recent_activities: list[RecentActivity] = []
     payroll_summary: DashboardPayrollSummary | None = None

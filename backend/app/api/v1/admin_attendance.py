@@ -442,4 +442,3 @@ async def approve_regularization(
         message="Attendance record approved successfully",
         data=attendance,
     )
-

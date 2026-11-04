@@ -301,4 +301,3 @@ async def review_regularization_request(
         message="Regularization request reviewed successfully",
         data=await serialize_regularization(regularization),
     )
-

@@ -1,4 +1,4 @@
-import { api } from "./api";
+import { api, downloadFile } from "./api";
 import type {
   Employee,
   EmployeeCreate,
@@ -56,6 +56,22 @@ export const employeeService = {
     return api.get<Employee>("/employees/me");
   },
 
+    uploadMyProfilePhoto(file: File) {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    return api.postForm<{ avatar_url: string }>(
+      "/employee-profile-photo/me",
+      formData,
+    );
+  },
+
+  getProfilePhoto(employeeId: string) {
+    return downloadFile(
+      `/employee-profile-photo/${employeeId}/image`,
+    );
+  },
+
   create(data: EmployeeCreate) {
     return api.post<Employee>("/employees", data);
   },
@@ -76,6 +92,17 @@ export const employeeService = {
 
   update(employeeId: string, data: EmployeeUpdate) {
     return api.put<Employee>(`/employees/${employeeId}`, data);
+  },
+
+  uploadAvatar(employeeId: string, file: File) {
+    const form = new FormData();
+    form.append("file", file);
+
+    return api.postForm<Employee>(`/employees/${employeeId}/avatar`, form);
+  },
+
+  removeAvatar(employeeId: string) {
+    return api.delete<Employee>(`/employees/${employeeId}/avatar`);
   },
 
   deactivate(employeeId: string) {

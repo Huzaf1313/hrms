@@ -111,6 +111,22 @@ EMAIL_FROM=<sender-address>
 
 `UPLOAD_DIR` is optional and defaults to `uploads`.
 
+Employee profile photos and documents are stored privately in Cloudflare R2
+under the employee's actual `AAR###` ID and database name:
+
+```text
+employees/AAR001_Aiman_Mulla/profile/AAR001_Aiman_Mulla_Profile.jpg
+employees/AAR001_Aiman_Mulla/documents/AAR001_Aiman_Mulla_Resume.pdf
+```
+
+After configuring R2, migrate existing employee files with a dry run first:
+
+```bash
+cd backend
+python migrate_employee_storage.py
+python migrate_employee_storage.py --apply
+```
+
 Run the API:
 
 ```bash

@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Hand, Check } from "lucide-react";
+import EmployeeAnnouncementTicker from "../../components/EmployeeAnnouncementTicker";
 
 import {
   useEmployeeAttendance,
@@ -9,7 +10,6 @@ import {
   useEmployeeAnnouncements,
 } from "../../hooks/useEmployeeData";
 import type {
-  Announcement,
   AttendanceRecord,
   LeaveBalance,
   LeaveRequest,
@@ -66,23 +66,6 @@ function formatLeaveDate(value: string) {
     day: "2-digit",
     month: "short",
     year: "numeric",
-  });
-}
-
-function formatAnnouncementDate(value?: string | null) {
-  if (!value) {
-    return "--";
-  }
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return "--";
-  }
-
-  return date.toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
   });
 }
 
@@ -278,7 +261,7 @@ function EmployeeDashboard() {
     data: announcementResponse,
     isLoading: loadingAnnouncements,
     isError: hasAnnouncementError,
-  } = useEmployeeAnnouncements(1, 3);
+  } = useEmployeeAnnouncements(1, 100);
 
   const attendanceRecords = useMemo(() => {
     return (rawAttendanceRecords || []).map(normalizeAttendance);
@@ -453,6 +436,15 @@ const attendanceChart = useMemo(() => {
         </p>
       </section>
 
+      {/* Announcement Ticker - Full Width */}
+      <div className="mb-5">
+        <EmployeeAnnouncementTicker
+          announcements={announcements}
+          loading={loadingAnnouncements}
+          error={announcementError}
+        />
+      </div>
+
       {/* =====================================================
           KPI CARDS
       ===================================================== */}
@@ -624,7 +616,7 @@ const attendanceChart = useMemo(() => {
             ATTENDANCE OVERVIEW
         =================================================== */}
 
-        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm xl:col-span-2">
+        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm xl:col-span-3">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-bold text-[#17213a]">
@@ -761,70 +753,6 @@ const attendanceChart = useMemo(() => {
                 Absent
               </span>
             </div>
-          </div>
-        </div>
-
-        {/* ===================================================
-            RECENT ANNOUNCEMENTS
-        =================================================== */}
-
-        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-[#17213a]">
-              Recent Announcements
-            </h2>
-
-            <button
-              type="button"
-              onClick={() =>
-                navigate("/employee/announcements")
-              }
-              className="text-sm font-semibold text-[#2563eb] hover:underline"
-            >
-              View All
-            </button>
-          </div>
-
-          <div className="mt-5 space-y-4">
-            {loadingAnnouncements ? (
-              <div className="py-8 text-center text-sm text-gray-400">
-                Loading announcements...
-              </div>
-            ) : announcementError ? (
-              <div className="py-8 text-center text-sm text-red-500">
-                {announcementError}
-              </div>
-            ) : announcements.length === 0 ? (
-              <div className="py-8 text-center text-sm text-gray-400">
-                No announcements available.
-              </div>
-            ) : (
-              announcements.map((announcement: Announcement) => (
-                <div
-                  key={
-                    announcement.id ??
-                    `${announcement.title}-${announcement.published_at}`
-                  }
-                  className="rounded-xl border border-gray-100 bg-gray-50 p-4"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <h3 className="text-sm font-semibold text-gray-800">
-                      {announcement.title}
-                    </h3>
-
-                    <span className="shrink-0 text-xs text-gray-400">
-                      {formatAnnouncementDate(
-                        announcement.published_at,
-                      )}
-                    </span>
-                  </div>
-
-                  <p className="mt-2 line-clamp-2 text-xs leading-5 text-gray-500">
-                    {announcement.description}
-                  </p>
-                </div>
-              ))
-            )}
           </div>
         </div>
       </section>
