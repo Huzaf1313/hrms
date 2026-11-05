@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff, CheckCircle2 } from "lucide-react";
 import {
@@ -14,6 +14,7 @@ import { AuthField } from "../components/auth/AuthField";
 import { OtpInput } from "../components/auth/OtpInput";
 import { PasswordStrength } from "../components/auth/PasswordStrength";
 import { clearAuthQueries } from "../lib/queryClient";
+import { consumeLoginRedirectNotice } from "../lib/session";
 
 interface LoginResponse {
   access_token: string;
@@ -76,6 +77,25 @@ function Login() {
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  // Greet users arriving from a forced logout with the reason: a password
+  // change elsewhere, or a revoked/expired session.
+  useEffect(() => {
+    const notice =
+      consumeLoginRedirectNotice() ??
+      (new URLSearchParams(window.location.search).get("reason") ===
+      "session_expired"
+        ? "session_expired"
+        : null);
+
+    if (!notice) return;
+
+    setSuccessMessage(
+      notice === "password_changed"
+        ? "Your password was changed. Please log in with your new password."
+        : "Your session has ended. Please log in again.",
+    );
+  }, []);
 
   const handleLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();

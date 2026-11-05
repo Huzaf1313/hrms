@@ -42,7 +42,7 @@ async def connect_to_database():
         name="email_otp_ttl",
     )
 
-    print("MongoDB connected successfully")
+    print("Connected to MongoDB database")
 
 
 async def close_database_connection():

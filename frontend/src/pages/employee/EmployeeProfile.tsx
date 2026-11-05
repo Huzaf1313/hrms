@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ElementType } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -34,6 +34,9 @@ import type { Employee } from "../../types/employee";
 import type { Department } from "../../types/department";
 import type { Shift } from "../../types/shift";
 import { authService } from "../../services/authService";
+import { clearSession } from "../../services/api";
+import { clearAuthQueries } from "../../lib/queryClient";
+import { setLoginRedirectNotice } from "../../lib/session";
 
 interface UserResponse {
   id: string;
@@ -243,6 +246,25 @@ export default function EmployeeProfile() {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [passwordSuccess, setPasswordSuccess] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const [passwordChangedConfirmation, setPasswordChangedConfirmation] =
+    useState(false);
+
+  const finishPasswordChangeRedirect = useCallback(() => {
+    setLoginRedirectNotice("password_changed");
+    clearSession();
+    clearAuthQueries();
+    window.location.href = "/login";
+  }, []);
+
+  // Even if the OK button is never clicked, leave for the login page a few
+  // seconds after the confirmation appears.
+  useEffect(() => {
+    if (!passwordChangedConfirmation) return;
+
+    const timer = window.setTimeout(finishPasswordChangeRedirect, 3000);
+
+    return () => window.clearTimeout(timer);
+  }, [passwordChangedConfirmation, finishPasswordChangeRedirect]);
   const profilePhotoInputRef = useRef<HTMLInputElement>(null);
 
   const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(null);
@@ -496,7 +518,7 @@ const handleChangePassword = async (
     return;
   }
 
-  setIsChangingPassword(true);
+    setIsChangingPassword(true);
 
   try {
     await authService.changePassword({
@@ -505,7 +527,10 @@ const handleChangePassword = async (
       confirm_password: confirmPassword,
     });
 
-    setPasswordSuccess("Password changed successfully.");
+    // The server has already revoked every session of this user, so the
+    // only way back in is a fresh login. Confirm with a popup first, then
+    // hand off to the login page.
+    setPasswordChangedConfirmation(true);
 
     setCurrentPassword("");
     setNewPassword("");
@@ -1425,6 +1450,40 @@ const handleChangePassword = async (
           </div>
         </form>
       </section>
+
+      {passwordChangedConfirmation && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4"
+          role="presentation"
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="password-changed-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+              <CheckCircle2 className="h-7 w-7" />
+            </div>
+            <h2 id="password-changed-title" className="mt-4 text-lg font-bold text-slate-900">
+              Password changed successfully
+            </h2>
+            <p className="mt-2 text-sm text-slate-500">
+              Your password has been updated and all other sessions were
+              logged out. You will now be redirected to the login page.
+            </p>
+            <button
+              type="button"
+              onClick={finishPasswordChangeRedirect}
+              className="mt-5 inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700"
+            >
+              Go to Login
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
       </div>
     </div>
   );

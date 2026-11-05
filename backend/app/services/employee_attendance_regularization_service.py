@@ -14,6 +14,7 @@ from app.services.employee_notification_service import (
     EmployeeNotificationService,
 )
 from app.services.admin_notification_service import AdminNotificationService
+from app.services.activity_service import ActivityService
 from app.services.attendance_calculation import (
     compute_work_metrics,
     shift_duration_minutes,
@@ -45,6 +46,7 @@ class EmployeeAttendanceRegularizationService:
         # while the above targets the employee when a request is decided.
         self.admin_notification_service = AdminNotificationService()
         self.attendance_service = AttendanceService()
+        self.activity_service = ActivityService()
 
     async def _recompute_metrics(
         self,
@@ -334,6 +336,27 @@ class EmployeeAttendanceRegularizationService:
             regularization_data
         )
 
+        # Feed the admin dashboard's Recent Activities card. Uses the
+        # employee's name like the admin leave flow does, rather than the
+        # bare code. Wrapped so a logging failure can never lose the request.
+        try:
+            employee = await self.employee_repository.get_by_employee_id(
+                employee_id
+            )
+            employee_name = (
+                (employee or {}).get("full_name") or employee_id
+            )
+            await self.activity_service.record(
+                text=(
+                    f"{employee_name} requested attendance "
+                    f"regularization ({issue_type})"
+                ),
+                employee_id=employee_id,
+                target="/dashboard/regularization",
+            )
+        except Exception:
+            pass
+
         # 9. Notify the admin who onboarded this employee
         try:
             await self.admin_notification_service.create_for_employee(
@@ -448,6 +471,11 @@ async def review_request(
                 attendance_id
             )
 
+            if not attendance:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Linked attendance record not found",
+                )
             if not attendance:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,

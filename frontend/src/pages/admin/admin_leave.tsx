@@ -891,59 +891,6 @@ function AdminLeave() {
         })}
       </div>
 
-      {/* Chart + Balance summary */}
-      <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-5">
-        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm lg:col-span-3">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <h3 className="font-bold text-gray-900">Leave Requests Overview</h3>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-4 text-xs text-gray-500">
-                <span className="flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-orange-400" /> Pending
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-emerald-400" /> Approved
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-rose-400" /> Rejected
-                </span>
-              </div>
-              <button className="flex items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs text-gray-600 hover:bg-gray-50">
-                {leaveChartSeries.monthLabel} <ChevronDown className="h-3 w-3" />
-              </button>
-            </div>
-          </div>
-          <LeaveChart series={leaveChartSeries} />
-        </div>
-
-        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm lg:col-span-2">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="font-bold text-gray-900">Leave Balance Summary</h3>
-            <button className="text-xs font-semibold text-[#2563eb] hover:underline">
-              View All
-            </button>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            {leaveBalances.map((balance) => {
-              const Icon = balance.icon;
-              return (
-                <div key={balance.label} className="rounded-2xl border border-gray-100 p-4">
-                  <div className={`mb-3 flex h-8 w-8 items-center justify-center rounded-lg ${balance.iconBg}`}>
-                    <Icon className={`h-4 w-4 ${balance.iconColor}`} />
-                  </div>
-                  <p className="text-xs text-gray-500">{balance.label}</p>
-                  <p className="mt-1 text-xl font-bold text-gray-900">
-                    {balance.used}
-                    <span className="text-sm font-medium text-gray-400"> / {balance.total} Days</span>
-                  </p>
-                  <p className="text-xs text-gray-400">Available</p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
       {/* Recent Leave Requests */}
       <div className="mb-6 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">

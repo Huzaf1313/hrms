@@ -10,6 +10,7 @@ from fastapi.responses import StreamingResponse
 from starlette.concurrency import run_in_threadpool
 
 from app.api.deps import get_current_user
+from app.core.cache import invalidate_employees_cache
 from app.core.roles import UserRole
 from app.repositories.employee_repository import EmployeeRepository
 from app.services.employee_cloudflare_r2_service import CloudflareR2Service
@@ -169,6 +170,8 @@ async def upload_my_profile_photo(
 
         if not updated_employee:
             raise RuntimeError("Employee profile update failed.")
+
+        await invalidate_employees_cache(employee_id=employee_id)
 
         # Remove the previous object only after MongoDB is updated.
         if old_key and old_key != object_key:

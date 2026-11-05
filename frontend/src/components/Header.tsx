@@ -42,9 +42,9 @@ function readUser() {
 function roleDisplay(role?: string): string {
   switch (role) {
     case "hr_admin":
-      return "Admin | HR";
+      return "HR";
     case "manager":
-      return "Admin | Manager";
+      return "Manager";
     case "employee":
       return "Employee";
     default:
