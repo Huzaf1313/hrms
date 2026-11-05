@@ -54,6 +54,12 @@ class SessionService:
             refresh_token
         )
 
+    async def revoke_all_sessions_for_user(
+        self,
+        user_id: str,
+    ):
+        await self.repository.revoke_all_by_user_id(user_id)
+
     async def update_last_used(
         self,
         session_id: str,

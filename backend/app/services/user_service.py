@@ -190,6 +190,13 @@ class UserService:
             },
         )
 
+        # An OTP reset also revokes every active session of this user,
+        # so devices that stayed logged in are forced back to the login
+        # page with the new password.
+        await self.session_service.revoke_all_sessions_for_user(
+            str(user["_id"])
+        )
+
         # Token can only be used once.
         await otp_repository.collection.delete_one(
             {"_id": token_record["_id"]}
@@ -422,6 +429,13 @@ class UserService:
                 "password_hash": hash_password(new_password),
                 "updated_at": datetime.now(timezone.utc),
             },
+        )
+
+        # Any password change invalidates every active session for this
+        # user (all devices), including the one that made this request -
+        # they must log in again with the new password.
+        await self.session_service.revoke_all_sessions_for_user(
+            str(user["_id"])
         )
 
         return {

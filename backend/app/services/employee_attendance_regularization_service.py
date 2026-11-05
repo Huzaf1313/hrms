@@ -14,6 +14,7 @@ from app.services.employee_notification_service import (
     EmployeeNotificationService,
 )
 from app.services.admin_notification_service import AdminNotificationService
+from app.services.activity_service import ActivityService
 from app.services.attendance_calculation import (
     compute_work_metrics,
     shift_duration_minutes,
@@ -43,6 +44,7 @@ class EmployeeAttendanceRegularizationService:
         # Separate instance: this one targets the admins who own the employee,
         # while the above targets the employee when a request is decided.
         self.admin_notification_service = AdminNotificationService()
+        self.activity_service = ActivityService()
 
     async def _recompute_metrics(
         self,
@@ -318,6 +320,27 @@ class EmployeeAttendanceRegularizationService:
         created = await self.regularization_repository.create(
             regularization_data
         )
+
+        # Feed the admin dashboard's Recent Activities card. Uses the
+        # employee's name like the admin leave flow does, rather than the
+        # bare code. Wrapped so a logging failure can never lose the request.
+        try:
+            employee = await self.employee_repository.get_by_employee_id(
+                employee_id
+            )
+            employee_name = (
+                (employee or {}).get("full_name") or employee_id
+            )
+            await self.activity_service.record(
+                text=(
+                    f"{employee_name} requested attendance "
+                    f"regularization ({issue_type})"
+                ),
+                employee_id=employee_id,
+                target="/dashboard/regularization",
+            )
+        except Exception:
+            pass
 
         # Routed to the admin who onboarded this employee. Wrapped so a
         # notification failure can never lose the request itself.

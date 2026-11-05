@@ -1,4 +1,5 @@
-from datetime import date
+import logging
+from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends, Query
 
@@ -30,12 +31,30 @@ router = APIRouter()
 service = EmployeeAttendanceRegularizationService()
 employee_repository = EmployeeRepository()
 
+logger = logging.getLogger(__name__)
+
+# Rows may arrive with lowercase status values (older records or manual
+# inserts). Normalize them so the admin UI's filter chips match.
+STATUS_CANONICAL = {
+    "pending": "Pending",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "cancelled": "Cancelled",
+}
+
+
+def canonical_status(value: str | None) -> str:
+    if not value:
+        return "Pending"
+
+    return STATUS_CANONICAL.get(value.strip().lower(), value)
+
 
 async def serialize_regularization(
     regularization: dict,
 ) -> AttendanceRegularizationResponse:
     attendance = await service.attendance_repository.get_by_id(
-        regularization["attendance_id"]
+        regularization.get("attendance_id")
     )
     employee = await employee_repository.get_by_employee_id(
         regularization["employee_id"]
@@ -48,22 +67,33 @@ async def serialize_regularization(
     return AttendanceRegularizationResponse(
         id=str(regularization["_id"]),
         employee_id=regularization["employee_id"],
-        attendance_id=regularization["attendance_id"],
+        # Older/manual rows can miss the attendance linkage entirely.
+        attendance_id=(
+            str(regularization["attendance_id"])
+            if regularization.get("attendance_id")
+            else None
+        ),
         date=request_date,
-        issue_type=regularization["issue_type"],
+        issue_type=regularization.get("issue_type", "Regularization"),
         requested_check_in=regularization.get(
             "requested_check_in"
         ),
         requested_check_out=regularization.get(
             "requested_check_out"
         ),
-        reason=regularization["reason"],
-        status=regularization["status"],
-        requested_at=regularization["requested_at"],
+        reason=regularization.get("reason", ""),
+        status=canonical_status(regularization.get("status")),
+        requested_at=regularization.get("requested_at")
+        or regularization.get("created_at")
+        or datetime.now(timezone.utc),
         reviewed_at=regularization.get("reviewed_at"),
         reviewed_by=regularization.get("reviewed_by"),
-        created_at=regularization["created_at"],
-        updated_at=regularization["updated_at"],
+        created_at=regularization.get("created_at")
+        or regularization.get("requested_at")
+        or datetime.now(timezone.utc),
+        updated_at=regularization.get("updated_at")
+        or regularization.get("created_at")
+        or datetime.now(timezone.utc),
         current_check_in=(
             (attendance.get("check_in") or attendance.get("in_time"))
             if attendance
@@ -93,6 +123,25 @@ async def serialize_regularization(
         ),
         review_comment=regularization.get("review_comment"),
     )
+
+
+async def serialize_regularization_safe(
+    regularization: dict,
+) -> AttendanceRegularizationResponse | None:
+    """Serialize one record, or None when the row is unusable.
+
+    A single malformed record (typically a manual or legacy insert missing
+    timestamps) must not 500 the whole list - skip it and keep the rest
+    rendering.
+    """
+    try:
+        return await serialize_regularization(regularization)
+    except Exception:
+        logger.exception(
+            "Skipping malformed regularization record %s",
+            regularization.get("_id"),
+        )
+        return None
 
 
 @router.post(
@@ -177,8 +226,10 @@ async def get_employee_regularization_requests(
     )
 
     serialized = [
-        await serialize_regularization(request)
+        serialized_request
         for request in requests
+        if (serialized_request := await serialize_regularization_safe(request))
+        is not None
     ]
     await set_cache(
         cache_key,
@@ -263,7 +314,12 @@ async def get_regularization_requests(
         limit=limit_val,
     )
 
-    serialized = [await serialize_regularization(request) for request in requests]
+    serialized = [
+        serialized_request
+        for request in requests
+        if (serialized_request := await serialize_regularization_safe(request))
+        is not None
+    ]
     await set_cache(
         cache_key,
         [item.model_dump(mode="json") for item in serialized],

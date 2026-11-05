@@ -30,18 +30,16 @@ export function setRefreshToken(token: string | null): void {
     localStorage.removeItem(REFRESH_TOKEN_KEY);
   }
 }
-let onSessionClearCallback: (() => void) | null = null;
+const onSessionClearCallbacks: Array<() => void> = [];
 
 export function setOnSessionClear(cb: () => void): void {
-  onSessionClearCallback = cb;
+  onSessionClearCallbacks.push(cb);
 }
 
 export function clearSession(): void {
   setAccessToken(null);
   setRefreshToken(null);
-  if (onSessionClearCallback) {
-    onSessionClearCallback();
-  }
+  onSessionClearCallbacks.forEach((cb) => cb());
 }
 
 export interface ApiEnvelope<T> {

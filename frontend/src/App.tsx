@@ -16,7 +16,8 @@ import EmployeePayroll from "./pages/employee/EmployeePayroll";
 import EmployeeDocuments from "./pages/employee/EmployeeDocuments";
 import EmployeeAnnouncements from "./pages/employee/EmployeeAnnouncements";
 import EmployeeHelpSupport from "./pages/employee/EmployeeHelpSupport";
-import { clearSession, getRefreshToken } from "./services/api";
+import { clearSession, getRefreshToken, setOnSessionClear } from "./services/api";
+import { clearPendingPasswordRedirect } from "./lib/session";
 import { authService } from "./services/authService";
 import EmployeeLayout from "./layouts/EmployeeLayout";
 import EmployeeExit from "./pages/employee/EmployeeExit";
@@ -24,6 +25,27 @@ import EmployeeResignation from "./pages/employee/EmployeeResignation";
 import { clearAuthQueries } from "./lib/queryClient";
 import { GlobalDateProvider } from "./context/GlobalDateProvider";
 import EmployeeAssets from "./pages/employee/EmployeeAssets";
+
+// Send the browser back to the login page whenever the session is cleared
+// from under it (e.g. the password was changed on another device and the
+// stored token was revoked server-side). Manual logouts already land on
+// /login, so this stays consistent with that flow.
+setOnSessionClear(() => {
+  if (!window.location.pathname.startsWith("/login")) {
+    const wasPasswordChange =
+      sessionStorage.getItem("hrms_login_notice") === "password_changed";
+
+    if (wasPasswordChange) {
+      // Preserve the notice - login.tsx consumes it on the login page.
+      window.location.href = "/login";
+    } else {
+      // Drop any stale notice so a generic expiry redirect is not
+      // mislabelled as "password changed".
+      clearPendingPasswordRedirect();
+      window.location.href = "/login?reason=session_expired";
+    }
+  }
+});
 
 function App() {
   async function handleLogout() {
