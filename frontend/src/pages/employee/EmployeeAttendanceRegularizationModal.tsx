@@ -9,8 +9,6 @@ interface AttendanceRecord {
   out_time?: string | null;
   check_in: string | null;
   check_out: string | null;
-  in_time?: string | null;
-  out_time?: string | null;
   status: string;
   total_hours: number | null;
   remarks: string | null;
@@ -36,12 +34,6 @@ function EmployeeAttendanceRegularizationModal({
   const [attachment, setAttachment] = useState<File | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const getCheckIn = (record: AttendanceRecord) =>
-    record.check_in || record.in_time || null;
-
-  const getCheckOut = (record: AttendanceRecord) =>
-    record.check_out || record.out_time || null;
 
   const handleClose = () => {
     if (isSubmitting) return;
@@ -340,61 +332,20 @@ function EmployeeAttendanceRegularizationModal({
                 </label>
 
                 <select
-<<<<<<< HEAD
                   value={selectedDate}
                   onChange={(event) =>
                     handleDateChange(event.target.value)
                   }
-=======
-                    value={selectedDate}
-                    onChange={(event) => {
-                        const date = event.target.value;
-
-                        setSelectedDate(date);
-                        setRequestedTime("");
-
-                        const record = attendanceRecords.find(
-                            (item) => item.date === date,
-                        );
-
-                        if (!record) {
-                            setIssueType("");
-                            return;
-                        }
-
-                        if (!getCheckIn(record) && getCheckOut(record)) {
-                            setIssueType("Missing Check-In");
-                        } else if (getCheckIn(record) && !getCheckOut(record)) {
-                            setIssueType("Missing Check-Out");
-                        } else {
-                            setIssueType("");
-                        }
-                    }}
->>>>>>> origin/Zaid-Features
                   className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm text-gray-700 outline-none transition focus:border-[#2563eb]"
                   required
                 >
                   <option value="">Select attendance date</option>
 
-<<<<<<< HEAD
                   {selectableDates.map((date) => (
                     <option key={date} value={date}>
                       {formatDate(date)}
                     </option>
                   ))}
-=======
-                 {attendanceRecords
-                    .filter(
-                        (record) =>
-                        (!getCheckIn(record) && getCheckOut(record)) ||
-                        (getCheckIn(record) && !getCheckOut(record)),
-                    )
-                    .map((record) => (
-                        <option key={record.id} value={record.date}>
-                        {formatDate(record.date)}
-                        </option>
-                    ))}
->>>>>>> origin/Zaid-Features
                 </select>
               </div>
 
@@ -405,7 +356,6 @@ function EmployeeAttendanceRegularizationModal({
                 </label>
 
                 <select
-<<<<<<< HEAD
                   value={issueType}
                   onChange={(event) => {
                     setIssueType(event.target.value);
@@ -434,30 +384,6 @@ function EmployeeAttendanceRegularizationModal({
                         Missing Check-Out
                       </option>
                     )}
-=======
-                    value={issueType}
-                    onChange={(event) =>
-                        setIssueType(event.target.value)
-                    }
-                    className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm text-gray-700 outline-none transition focus:border-[#2563eb]"
-                    required
-                    >
-                    {!selectedAttendance ||
-                    (getCheckIn(selectedAttendance) == null &&
-                        getCheckOut(selectedAttendance) != null) ? (
-                        <option value="Missing Check-In">
-                            Missing Check-In
-                        </option>
-                    ) : null}
-
-                    {!selectedAttendance ||
-                    (getCheckIn(selectedAttendance) != null &&
-                        getCheckOut(selectedAttendance) == null) ? (
-                        <option value="Missing Check-Out">
-                            Missing Check-Out
-                        </option>
-                    ) : null}
->>>>>>> origin/Zaid-Features
                 </select>
               </div>
             </div>
@@ -487,11 +413,7 @@ function EmployeeAttendanceRegularizationModal({
                     </p>
 
                     <p className="mt-1 text-base font-bold text-[#17213a]">
-<<<<<<< HEAD
                       {formatTime(resolveCheckIn(selectedAttendance))}
-=======
-                      {formatTime(getCheckIn(selectedAttendance))}
->>>>>>> origin/Zaid-Features
                     </p>
                   </div>
 
@@ -501,11 +423,7 @@ function EmployeeAttendanceRegularizationModal({
                     </p>
 
                     <p className="mt-1 text-base font-bold text-[#17213a]">
-<<<<<<< HEAD
                       {formatTime(resolveCheckOut(selectedAttendance))}
-=======
-                      {formatTime(getCheckOut(selectedAttendance))}
->>>>>>> origin/Zaid-Features
                     </p>
                   </div>
 
