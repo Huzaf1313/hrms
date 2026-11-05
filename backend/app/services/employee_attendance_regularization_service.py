@@ -444,19 +444,18 @@ class EmployeeAttendanceRegularizationService:
         if comment is not None:
             update_data["review_comment"] = comment
 
-        # Get linked attendance record so we can use its date
-        # in the employee notification.
-        attendance = await self.attendance_repository.get_by_id(
-            request["attendance_id"]
-        )
-
-        if not attendance:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Linked attendance record not found",
+        attendance = None
+        if normalized_status == "Approved":
+            attendance = await self.attendance_repository.get_by_id(
+                request["attendance_id"]
             )
 
-        if normalized_status == "Approved":
+            if not attendance:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Linked attendance record not found",
+                )
+
             attendance_update = {}
 
             if request.get("requested_check_in") is not None:
@@ -498,7 +497,9 @@ class EmployeeAttendanceRegularizationService:
             else "regularization_rejected"
         )
 
-        attendance_date = attendance.get("date")
+        attendance_date = (
+            attendance.get("date") if attendance else request.get("date")
+        )
 
         if hasattr(attendance_date, "strftime"):
             formatted_attendance_date = attendance_date.strftime("%d/%m/%Y")

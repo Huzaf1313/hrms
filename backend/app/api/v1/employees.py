@@ -56,8 +56,12 @@ async def serialize_employee(
     welcome_email_sent: bool | None = None,
 ) -> EmployeeResponse:
     avatar_url = employee.get("avatar_url")
-    if employee.get("avatar_key"):
-        avatar_url = await storage_service.signed_url(employee["avatar_key"])
+    # Employee self-service uploads use profile_photo_key, while admin
+    # uploads use avatar_key. Both point to the same private object storage and
+    # must be exposed as signed URLs for <img> requests in the admin UI.
+    photo_key = employee.get("avatar_key") or employee.get("profile_photo_key")
+    if photo_key:
+        avatar_url = await storage_service.signed_url(photo_key)
 
     first_name = employee.get("first_name") or ""
     last_name = employee.get("last_name") or ""

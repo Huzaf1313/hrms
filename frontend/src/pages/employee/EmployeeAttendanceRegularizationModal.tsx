@@ -7,6 +7,8 @@ interface AttendanceRecord {
   date: string;
   check_in: string | null;
   check_out: string | null;
+  in_time?: string | null;
+  out_time?: string | null;
   status: string;
   total_hours: number | null;
   remarks: string | null;
@@ -31,6 +33,12 @@ function EmployeeAttendanceRegularizationModal({
   const [reason, setReason] = useState("");
   const [attachment, setAttachment] = useState<File | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+
+  const getCheckIn = (record: AttendanceRecord) =>
+    record.check_in || record.in_time || null;
+
+  const getCheckOut = (record: AttendanceRecord) =>
+    record.check_out || record.out_time || null;
 
   const handleClose = () => {
     setSelectedDate("");
@@ -239,9 +247,9 @@ function EmployeeAttendanceRegularizationModal({
                             return;
                         }
 
-                        if (!record.check_in && record.check_out) {
+                        if (!getCheckIn(record) && getCheckOut(record)) {
                             setIssueType("Missing Check-In");
-                        } else if (record.check_in && !record.check_out) {
+                        } else if (getCheckIn(record) && !getCheckOut(record)) {
                             setIssueType("Missing Check-Out");
                         } else {
                             setIssueType("");
@@ -255,8 +263,8 @@ function EmployeeAttendanceRegularizationModal({
                  {attendanceRecords
                     .filter(
                         (record) =>
-                        (!record.check_in && record.check_out) ||
-                        (record.check_in && !record.check_out),
+                        (!getCheckIn(record) && getCheckOut(record)) ||
+                        (getCheckIn(record) && !getCheckOut(record)),
                     )
                     .map((record) => (
                         <option key={record.id} value={record.date}>
@@ -280,19 +288,21 @@ function EmployeeAttendanceRegularizationModal({
                     className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm text-gray-700 outline-none transition focus:border-[#2563eb]"
                     required
                     >
-                    {selectedAttendance?.check_in == null &&
-                        selectedAttendance?.check_out != null && (
+                    {!selectedAttendance ||
+                    (getCheckIn(selectedAttendance) == null &&
+                        getCheckOut(selectedAttendance) != null) ? (
                         <option value="Missing Check-In">
                             Missing Check-In
                         </option>
-                        )}
+                    ) : null}
 
-                    {selectedAttendance?.check_in != null &&
-                        selectedAttendance?.check_out == null && (
+                    {!selectedAttendance ||
+                    (getCheckIn(selectedAttendance) != null &&
+                        getCheckOut(selectedAttendance) == null) ? (
                         <option value="Missing Check-Out">
                             Missing Check-Out
                         </option>
-                        )}
+                    ) : null}
                 </select>
               </div>
             </div>
@@ -317,7 +327,7 @@ function EmployeeAttendanceRegularizationModal({
                     </p>
 
                     <p className="mt-1 text-base font-bold text-[#17213a]">
-                      {formatTime(selectedAttendance.check_in)}
+                      {formatTime(getCheckIn(selectedAttendance))}
                     </p>
                   </div>
 
@@ -327,7 +337,7 @@ function EmployeeAttendanceRegularizationModal({
                     </p>
 
                     <p className="mt-1 text-base font-bold text-[#17213a]">
-                      {formatTime(selectedAttendance.check_out)}
+                      {formatTime(getCheckOut(selectedAttendance))}
                     </p>
                   </div>
 

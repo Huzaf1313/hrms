@@ -76,7 +76,7 @@ async def get_my_documents(
     current_user: dict = Depends(get_current_user),
 ):
     role = current_user.get("role")
-    if role == "hr_admin":
+    if role in {"hr_admin", "manager"}:
         employee_id = employee_id or current_user.get("employee_id")
     else:
         employee_id = current_user.get("employee_id")
@@ -126,7 +126,7 @@ async def upload_my_document(
     current_user: dict = Depends(get_current_user),
 ):
     role = current_user.get("role")
-    if role not in {"employee", "hr_admin"}:
+    if role not in {"employee", "hr_admin", "manager"}:
         raise AppException(
             "Only employees and HR admins can upload documents",
             403,
@@ -229,7 +229,7 @@ async def upload_my_document(
         suffix=(duplicate_suffix - 1 if file_name != base_file_name else None),
     )
 
-    source = "hr_admin" if role == "hr_admin" else "employee"
+    source = "hr_admin" if role in {"hr_admin", "manager"} else "employee"
     uploader = (
         current_user.get("full_name")
         or current_user.get("name")
@@ -306,24 +306,7 @@ async def upload_my_document(
         raise
 
 
-@router.get("/{document_id}/download")
-async def download_employee_document(
-    document_id: str,
-    current_user: dict = Depends(get_current_user),
-):
-    document = await service.get_document(document_id)
-
-    # Preserve existing role and ownership authorization.
-    role = current_user.get("role")
-    is_hr_or_manager = role in {"hr_admin", "manager"}
-    is_owner = (
-        current_user.get("employee_id")
-        == document.get("employee_id")
-    )
-
-    if not is_hr_or_manager and not is_owner:
-        raise AppException("Document not found", 404)
-
+async def _get_document_file_response(document: dict, disposition: str):
     filename = document.get("file_name") or "document"
     mime_type = (
         document.get("mime_type")
@@ -387,7 +370,7 @@ async def download_employee_document(
             media_type=mime_type,
             headers={
                 "Content-Disposition": (
-                    f"attachment; filename*=UTF-8''{quote(filename)}"
+                    f"{disposition}; filename*=UTF-8''{quote(filename)}"
                 ),
                 "Cache-Control": "private, no-store",
             },
@@ -424,7 +407,39 @@ async def download_employee_document(
             document.get("mime_type")
             or "application/octet-stream"
         ),
+        content_disposition_type=disposition,
     )
+
+
+async def _authorize_document(document_id: str, current_user: dict):
+    document = await service.get_document(document_id)
+
+    role = current_user.get("role")
+    is_hr_or_manager = role in {"hr_admin", "manager"}
+    is_owner = current_user.get("employee_id") == document.get("employee_id")
+
+    if not is_hr_or_manager and not is_owner:
+        raise AppException("Document not found", 404)
+
+    return document
+
+
+@router.get("/{document_id}/download")
+async def download_employee_document(
+    document_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    document = await _authorize_document(document_id, current_user)
+    return await _get_document_file_response(document, "attachment")
+
+
+@router.get("/{document_id}/preview")
+async def preview_employee_document(
+    document_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    document = await _authorize_document(document_id, current_user)
+    return await _get_document_file_response(document, "inline")
 
 
 @router.delete(
@@ -438,13 +453,13 @@ async def delete_employee_document(
     document = await service.get_document(document_id)
 
     role = current_user.get("role")
-    is_hr_admin = role == "hr_admin"
+    is_admin = role in {"hr_admin", "manager"}
     is_owner = (
         current_user.get("employee_id") == document.get("employee_id")
         and document.get("source") in {"employee", "employee_upload"}
     )
 
-    if not is_hr_admin and not is_owner:
+    if not is_admin and not is_owner:
         raise AppException("Document not found", 404)
 
     await service.delete_document(document_id)

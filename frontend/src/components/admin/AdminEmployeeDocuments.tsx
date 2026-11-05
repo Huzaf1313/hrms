@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Download, FileText, Loader2, Trash2, Upload } from "lucide-react";
+import {
+  Download,
+  Eye,
+  FileText,
+  Loader2,
+  Trash2,
+  Upload,
+  X,
+} from "lucide-react";
 
 import { api, downloadFile } from "../../services/api";
 
@@ -9,6 +17,7 @@ interface EmployeeDocument {
   document_type: string;
   file_name: string;
   file_size: number | null;
+  mime_type?: string | null;
   created_at: string;
   source?: string | null;
   uploaded_by?: string | null;
@@ -31,6 +40,11 @@ export default function AdminEmployeeDocuments({
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [viewingId, setViewingId] = useState<string | null>(null);
+  const [preview, setPreview] = useState<{
+    document: EmployeeDocument;
+    url: string;
+  } | null>(null);
   const [message, setMessage] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -53,6 +67,12 @@ export default function AdminEmployeeDocuments({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadDocuments();
   }, [loadDocuments]);
+
+  useEffect(() => {
+    return () => {
+      if (preview?.url) URL.revokeObjectURL(preview.url);
+    };
+  }, [preview]);
 
   async function uploadDocument() {
     if (!file || !name.trim()) {
@@ -82,13 +102,38 @@ export default function AdminEmployeeDocuments({
   }
 
   async function downloadDocument(document: EmployeeDocument) {
-    const blob = await downloadFile(`/employee-documents/${document.id}/download`);
+    const blob = await downloadFile(
+      `/employee-documents/${document.id}/download`,
+    );
     const url = URL.createObjectURL(blob);
     const link = window.document.createElement("a");
     link.href = url;
     link.download = document.file_name || document.document_name;
+    window.document.body.appendChild(link);
     link.click();
-    URL.revokeObjectURL(url);
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  async function viewDocument(document: EmployeeDocument) {
+    setViewingId(document.id);
+    setMessage("");
+
+    try {
+      const blob = await downloadFile(
+        `/employee-documents/${document.id}/preview`,
+      );
+      const url = URL.createObjectURL(blob);
+
+      setPreview((current) => {
+        if (current) URL.revokeObjectURL(current.url);
+        return { document, url };
+      });
+    } catch {
+      setMessage("Unable to view this document.");
+    } finally {
+      setViewingId(null);
+    }
   }
 
   async function deleteDocument(document: EmployeeDocument) {
@@ -184,29 +229,54 @@ export default function AdminEmployeeDocuments({
                             {document.document_type} · {document.file_name} · {document.uploaded_by || "Unknown uploader"}
                           </p>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => void downloadDocument(document)}
-                          disabled={deletingId === document.id}
-                          className="flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-[#2563eb] hover:bg-blue-50 disabled:opacity-50"
-                        >
-                          <Download className="h-3.5 w-3.5" />
-                          Download
-                        </button>
+                        <div className="flex shrink-0 items-center gap-1">
+                          <button
+                            type="button"
+                            title="View document"
+                            aria-label={`View ${document.document_name}`}
+                            onClick={() => void viewDocument(document)}
+                            disabled={viewingId === document.id}
+                            className="rounded-lg p-2 text-gray-500 hover:bg-blue-50 hover:text-blue-600 disabled:opacity-50"
+                          >
+                            {viewingId === document.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
+                          </button>
 
-                        <button
-                          type="button"
-                          onClick={() => void deleteDocument(document)}
-                          disabled={deletingId === document.id}
-                          className="flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
-                        >
-                          {deletingId === document.id ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-3.5 w-3.5" />
-                          )}
-                          Delete
-                        </button>
+                          <button
+                            type="button"
+                            title="Download document"
+                            aria-label={`Download ${document.document_name}`}
+                            onClick={() => void downloadDocument(document)}
+                            disabled={
+                              deletingId === document.id ||
+                              viewingId === document.id
+                            }
+                            className="rounded-lg p-2 text-gray-500 hover:bg-blue-50 hover:text-blue-600 disabled:opacity-50"
+                          >
+                            <Download className="h-4 w-4" />
+                          </button>
+
+                          <button
+                            type="button"
+                            title="Delete document"
+                            aria-label={`Delete ${document.document_name}`}
+                            onClick={() => void deleteDocument(document)}
+                            disabled={
+                              deletingId === document.id ||
+                              viewingId === document.id
+                            }
+                            className="rounded-lg p-2 text-gray-500 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                          >
+                            {deletingId === document.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -214,6 +284,72 @@ export default function AdminEmployeeDocuments({
               </section>
             );
           })}
+        </div>
+      )}
+
+      {preview && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Preview ${preview.document.document_name}`}
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setPreview(null);
+            }
+          }}
+        >
+          <div className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+              <div className="min-w-0">
+                <h3 className="truncate font-semibold text-gray-900">
+                  {preview.document.document_name}
+                </h3>
+                <p className="text-xs text-gray-500">
+                  {preview.document.file_name}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreview(null)}
+                aria-label="Close preview"
+                className="rounded-lg p-2 text-gray-500 hover:bg-gray-100"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {preview.document.mime_type?.startsWith("image/") ? (
+              <div className="flex min-h-96 items-center justify-center overflow-auto bg-gray-50 p-6">
+                <img
+                  src={preview.url}
+                  alt={preview.document.document_name}
+                  className="max-h-[70vh] max-w-full object-contain"
+                />
+              </div>
+            ) : preview.document.mime_type === "application/pdf" ? (
+              <iframe
+                src={preview.url}
+                title={preview.document.document_name}
+                className="h-[70vh] w-full"
+              />
+            ) : (
+              <div className="flex flex-col items-center gap-3 p-12 text-center">
+                <FileText className="h-12 w-12 text-gray-400" />
+                <p className="text-sm text-gray-600">
+                  Preview is unavailable for this file type.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => void downloadDocument(preview.document)}
+                  className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+                >
+                  <Download className="h-4 w-4" />
+                  Download file
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
