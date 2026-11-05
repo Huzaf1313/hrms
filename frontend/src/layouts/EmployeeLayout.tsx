@@ -46,6 +46,8 @@ function EmployeeLayout({ onLogout }: { onLogout: () => void }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [designation, setDesignation] = useState("");
+  const [avatarRefreshKey, setAvatarRefreshKey] = useState(0);
   const notificationContainerRef = useRef<HTMLDivElement | null>(null);
 
   const user = useMemo(() => readUser(), []);
@@ -79,20 +81,80 @@ function EmployeeLayout({ onLogout }: { onLogout: () => void }) {
 
   useEffect(() => {
     let cancelled = false;
+    let objectUrl: string | null = null;
 
-    void employeeService
-      .getMyProfile()
-      .then((profile) => {
-        if (!cancelled) setAvatarUrl(profile.avatar_url ?? null);
-      })
-      .catch((error) => {
-        console.error("Failed to load employee header photo", error);
-      });
+    setAvatarUrl(null);
+
+    const loadEmployeeHeader = async () => {
+      try {
+        const profile = await employeeService.getMyProfile();
+
+        if (cancelled) return;
+
+        setDesignation(profile.designation ?? "");
+
+        try {
+          // Fetch the actual uploaded profile photo using authentication.
+          const photoBlob = await employeeService.getProfilePhoto(
+            profile.id,
+          );
+
+          const newObjectUrl = URL.createObjectURL(photoBlob);
+
+          if (cancelled) {
+            URL.revokeObjectURL(newObjectUrl);
+            return;
+          }
+
+          objectUrl = newObjectUrl;
+          setAvatarUrl(newObjectUrl);
+        } catch (error) {
+          if (!cancelled) {
+            setAvatarUrl(null);
+            console.error(
+              "Failed to load employee header photo:",
+              error,
+            );
+          }
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.error(
+            "Failed to load employee header profile:",
+            error,
+          );
+        }
+      }
+    };
+
+    void loadEmployeeHeader();
 
     return () => {
       cancelled = true;
+
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
     };
-  }, [location.pathname]);
+  }, [location.pathname, avatarRefreshKey]);
+
+useEffect(() => {
+  const handleProfilePhotoUpdate = () => {
+    setAvatarRefreshKey((previous) => previous + 1);
+  };
+
+  window.addEventListener(
+    "employee-profile-photo-updated",
+    handleProfilePhotoUpdate,
+  );
+
+  return () => {
+    window.removeEventListener(
+      "employee-profile-photo-updated",
+      handleProfilePhotoUpdate,
+    );
+  };
+}, []);
 
   useEffect(() => {
     if (!showNotificationDropdown) {
@@ -229,7 +291,7 @@ function EmployeeLayout({ onLogout }: { onLogout: () => void }) {
                   </span>
 
                   <span className="block text-[11px] leading-tight text-gray-500">
-                    Employee
+                    {designation || "Employee"}
                   </span>
                 </span>
 

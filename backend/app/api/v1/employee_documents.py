@@ -1,4 +1,3 @@
-
 import asyncio
 import os
 from pathlib import Path
@@ -309,6 +308,7 @@ async def upload_my_document(
 @router.get("/{document_id}/download")
 async def download_employee_document(
     document_id: str,
+    inline: bool = Query(default=False),
     current_user: dict = Depends(get_current_user),
 ):
     document = await service.get_document(document_id)
@@ -387,7 +387,8 @@ async def download_employee_document(
             media_type=mime_type,
             headers={
                 "Content-Disposition": (
-                    f"attachment; filename*=UTF-8''{quote(filename)}"
+                    f"{'inline' if inline else 'attachment'}; "
+                    f"filename*=UTF-8''{quote(filename)}"
                 ),
                 "Cache-Control": "private, no-store",
             },
@@ -419,13 +420,18 @@ async def download_employee_document(
 
     return FileResponse(
         path=file_path,
-        filename=document.get("file_name") or "document",
         media_type=(
             document.get("mime_type")
             or "application/octet-stream"
         ),
+        headers={
+            "Content-Disposition": (
+                f"{'inline' if inline else 'attachment'}; "
+                f"filename*=UTF-8''{quote(filename)}"
+            ),
+            "Cache-Control": "private, no-store",
+        },
     )
-
 
 @router.delete(
     "/{document_id}",
