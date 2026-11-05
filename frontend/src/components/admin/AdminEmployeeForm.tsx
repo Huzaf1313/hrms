@@ -263,7 +263,11 @@ function AdminEmployeeForm({
 
   // Tolerates a stale or missing prop: a parent running an older module can
   // pass undefined, and an unguarded .find()/.map() there blanks the form.
-  const availableShifts: Shift[] = Array.isArray(shifts) ? shifts : [];
+  const availableShifts: Shift[] = Array.isArray(shifts)
+    ? isEditMode
+      ? shifts
+      : shifts.filter((shift) => shift.is_active)
+    : [];
 
   const selectedShift = availableShifts.find(
     (shift) => shift.id === form.shift_id,

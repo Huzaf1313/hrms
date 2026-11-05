@@ -69,6 +69,19 @@ class SessionRepository:
 
         return await self.get_by_refresh_token(refresh_token)
 
+    async def revoke_all_by_user_id(self, user_id: str):
+        now = datetime.utcnow()
+
+        await self.collection.update_many(
+            {"user_id": user_id, "is_active": True},
+            {
+                "$set": {
+                    "is_active": False,
+                    "revoked_at": now,
+                }
+            },
+        )
+
     async def update_last_used(self, session_id: str):
         if not ObjectId.is_valid(session_id):
             return None

@@ -34,6 +34,9 @@ import {
 } from "../../components/admin/profile/profileFields";
 import { adminProfileService } from "../../services/adminProfileService";
 import { authService } from "../../services/authService";
+import { clearSession } from "../../services/api";
+import { clearAuthQueries } from "../../lib/queryClient";
+import { setLoginRedirectNotice } from "../../lib/session";
 import { shiftService } from "../../services/shiftService";
 import type {
   AdminProfile,
@@ -102,6 +105,8 @@ export default function AdminMyProfile() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [updateConfirmation, setUpdateConfirmation] = useState(false);
+  const [passwordChangedConfirmation, setPasswordChangedConfirmation] =
+    useState(false);
   const [shiftOptions, setShiftOptions] = useState<string[]>([]);
 
   const [activeTab, setActiveTab] = useState<ProfileTab>("Overview");
@@ -109,6 +114,29 @@ export default function AdminMyProfile() {
   const [pendingAvatar, setPendingAvatar] = useState<string | null>(null);
 
   const support = adminProfileService.getSupportContact();
+
+  /**
+   * The password change revoked every session of this user server-side, so
+   * the only way back in is a fresh login. Mark the redirect so the login
+   * page greets the user with the right message, then clear the local
+   * session and leave.
+   */
+  const finishPasswordChangeRedirect = useCallback(() => {
+    setLoginRedirectNotice("password_changed");
+    clearSession();
+    clearAuthQueries();
+    window.location.href = "/login";
+  }, []);
+
+  // Safety net: even if the user never clicks OK, leave for the login page
+  // a few seconds after the confirmation appears.
+  useEffect(() => {
+    if (!passwordChangedConfirmation) return;
+
+    const timer = window.setTimeout(finishPasswordChangeRedirect, 3000);
+
+    return () => window.clearTimeout(timer);
+  }, [passwordChangedConfirmation, finishPasswordChangeRedirect]);
 
   useEffect(() => {
     let cancelled = false;
@@ -461,7 +489,7 @@ export default function AdminMyProfile() {
         title="Change Password"
       >
         <ChangePasswordForm
-          onSubmit={(message) => setNotice(message)}
+          onSubmit={() => setPasswordChangedConfirmation(true)}
           isSaving={isSaving}
         />
       </ProfileSection>
@@ -647,6 +675,40 @@ export default function AdminMyProfile() {
               className="mt-5 inline-flex items-center gap-2 rounded-lg bg-[#2563eb] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1d4ed8]"
             >
               Continue
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {passwordChangedConfirmation && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4"
+          role="presentation"
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="password-changed-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+              <CheckCircle2 className="h-7 w-7" />
+            </div>
+            <h2 id="password-changed-title" className="mt-4 text-lg font-bold text-slate-900">
+              Password changed successfully
+            </h2>
+            <p className="mt-2 text-sm text-slate-500">
+              Your password has been updated and all other sessions were
+              logged out. You will now be redirected to the login page.
+            </p>
+            <button
+              type="button"
+              onClick={finishPasswordChangeRedirect}
+              className="mt-5 inline-flex items-center gap-2 rounded-lg bg-[#2563eb] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1d4ed8]"
+            >
+              Go to Login
               <X className="h-4 w-4" />
             </button>
           </div>

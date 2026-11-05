@@ -35,3 +35,33 @@ export function currentSessionUser(): SessionUser | null {
     return null;
   }
 }
+
+/**
+ * One-shot flag telling login.tsx to greet the user with a specific notice
+ * after a redirect, e.g. "your password was changed, please log in again".
+ * Read once and immediately forgotten, so the message never lingers across
+ * unrelated navigations back to /login.
+ */
+export type LoginRedirectNotice =
+  | "password_changed"
+  | "session_expired";
+
+const LOGIN_NOTICE_KEY = "hrms_login_notice";
+
+export function setLoginRedirectNotice(notice: LoginRedirectNotice): void {
+  sessionStorage.setItem(LOGIN_NOTICE_KEY, notice);
+}
+
+export function consumeLoginRedirectNotice(): LoginRedirectNotice | null {
+  const notice = sessionStorage.getItem(LOGIN_NOTICE_KEY);
+
+  sessionStorage.removeItem(LOGIN_NOTICE_KEY);
+
+  return notice === "password_changed" || notice === "session_expired"
+    ? notice
+    : null;
+}
+
+export function clearPendingPasswordRedirect(): void {
+  sessionStorage.removeItem(LOGIN_NOTICE_KEY);
+}
