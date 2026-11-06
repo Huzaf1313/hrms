@@ -53,9 +53,14 @@ def canonical_status(value: str | None) -> str:
 async def serialize_regularization(
     regularization: dict,
 ) -> AttendanceRegularizationResponse:
-    attendance = await service.attendance_repository.get_by_id(
-        regularization.get("attendance_id")
-    )
+    attendance_id = regularization.get("attendance_id")
+
+    attendance = None
+
+    if attendance_id:
+        attendance = await service.attendance_repository.get_by_id(
+            attendance_id
+        )
     employee = await employee_repository.get_by_employee_id(
         regularization["employee_id"]
     )
@@ -67,12 +72,7 @@ async def serialize_regularization(
     return AttendanceRegularizationResponse(
         id=str(regularization["_id"]),
         employee_id=regularization["employee_id"],
-        # Older/manual rows can miss the attendance linkage entirely.
-        attendance_id=(
-            str(regularization["attendance_id"])
-            if regularization.get("attendance_id")
-            else None
-        ),
+        attendance_id=attendance_id,
         date=request_date,
         issue_type=regularization.get("issue_type", "Regularization"),
         requested_check_in=regularization.get(

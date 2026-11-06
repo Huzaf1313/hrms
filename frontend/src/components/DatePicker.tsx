@@ -37,7 +37,7 @@ function sameDate(first: Date, second: Date): boolean {
 }
 
 function DatePicker({ canManageHolidays = false }: DatePickerProps) {
-  const { date: selectedDateKey, setDate, isDefault, resetDate } =
+  const { date: selectedDateKey, setDate, isDefault } =
     useGlobalDate();
 
   const today = new Date();
@@ -422,20 +422,6 @@ function DatePicker({ canManageHolidays = false }: DatePickerProps) {
               </button>
             )}
 
-            {/* Only offered when a day other than today is actually in force,
-                so there is nothing to undo the rest of the time. */}
-            {!isDefault && (
-              <button
-                type="button"
-                onClick={() => {
-                  resetDate();
-                  setIsOpen(false);
-                }}
-                className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 transition hover:bg-gray-50"
-              >
-                Today
-              </button>
-            )}
           </div>
         </div>
       )}

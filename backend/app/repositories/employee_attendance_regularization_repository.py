@@ -10,6 +10,19 @@ class EmployeeAttendanceRegularizationRepository:
     collection = database["employee_attendance_regularization"]
 
     @staticmethod
+    def _id_filter(regularization_id: str) -> dict:
+        """Match both native Mongo IDs and legacy string IDs."""
+        if ObjectId.is_valid(regularization_id):
+            return {
+                "$or": [
+                    {"_id": ObjectId(regularization_id)},
+                    {"_id": regularization_id},
+                ]
+            }
+
+        return {"_id": regularization_id}
+
+    @staticmethod
     def date_to_datetime(value: date) -> datetime:
         return datetime.combine(value, time.min)
 
@@ -45,11 +58,8 @@ class EmployeeAttendanceRegularizationRepository:
         )
 
     async def get_by_id(self, regularization_id: str):
-        if not ObjectId.is_valid(regularization_id):
-            return None
-
         return await self.collection.find_one(
-            {"_id": ObjectId(regularization_id)}
+            self._id_filter(regularization_id)
         )
 
     async def get_by_employee(
@@ -93,6 +103,22 @@ class EmployeeAttendanceRegularizationRepository:
             }
         )
 
+    async def get_pending_by_employee_and_date(
+        self,
+        employee_id: str,
+        attendance_date: date,
+    ):
+        if isinstance(attendance_date, datetime):
+            attendance_date = attendance_date.date()
+
+        return await self.collection.find_one(
+            {
+                "employee_id": employee_id,
+                "date": self.date_to_datetime(attendance_date),
+                "status": "Pending",
+            }
+        )
+
     async def get_pending(
         self,
         skip: int = 0,
@@ -130,16 +156,13 @@ class EmployeeAttendanceRegularizationRepository:
         regularization_id: str,
         update_data: dict,
     ):
-        if not ObjectId.is_valid(regularization_id):
-            return None
-
         if isinstance(update_data.get("date"), date):
             update_data["date"] = self.date_to_datetime(
                 update_data["date"]
             )
 
         await self.collection.update_one(
-            {"_id": ObjectId(regularization_id)},
+            self._id_filter(regularization_id),
             {"$set": update_data},
         )
 

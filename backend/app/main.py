@@ -318,6 +318,12 @@ app.include_router(
 )
 
 app.include_router(
+    employee_announcement_router,
+    prefix="/api/v1",
+    tags=["Employee Announcements"],
+)
+
+app.include_router(
     employee_payslip.router,
     prefix="/api/v1",
 )

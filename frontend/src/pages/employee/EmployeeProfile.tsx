@@ -410,6 +410,10 @@ export default function EmployeeProfile() {
 
       const response = await employeeService.uploadMyProfilePhoto(file);
 
+      window.dispatchEvent(
+        new Event("employee-profile-photo-updated"),
+      );
+
       setEmployee((current) =>
         current
           ? { ...current, avatar_url: response.avatar_url }

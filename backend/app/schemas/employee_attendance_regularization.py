@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 
 
 class AttendanceRegularizationCreate(BaseModel):
-    attendance_id: str
+    attendance_id: str | None = None
     date: date
     issue_type: str
 
@@ -18,8 +18,6 @@ class AttendanceRegularizationResponse(BaseModel):
     id: str
 
     employee_id: str
-    # Older/manual records may miss this linkage; it is display-only, so a
-    # missing value must not invalidate the whole list.
     attendance_id: str | None = None
 
     date: date

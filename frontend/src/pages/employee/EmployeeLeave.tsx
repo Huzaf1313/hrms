@@ -356,24 +356,29 @@ function EmployeeLeave() {
             used: balance.used,
           })),
         );
-
+       
         setUpcomingLeaves(
-          upcomingList.map((leave) => {
-            const dateParts = getUpcomingDateParts(leave.start_date);
+          upcomingList
+            .filter(
+              (leave) =>
+                String(leave.status).toLowerCase() === "approved",
+            )
+            .map((leave) => {
+              const dateParts = getUpcomingDateParts(leave.start_date);
 
-            return {
-              id: leave.id,
-              day: dateParts.day,
-              month: dateParts.month,
-              weekday: dateParts.weekday,
-              leaveType: leave.leave_type,
-              dates: formatUpcomingDateRange(
-                leave.start_date,
-                leave.end_date,
-              ),
-              status: leave.status,
-            };
-          }),
+              return {
+                id: leave.id,
+                day: dateParts.day,
+                month: dateParts.month,
+                weekday: dateParts.weekday,
+                leaveType: leave.leave_type,
+                dates: formatUpcomingDateRange(
+                  leave.start_date,
+                  leave.end_date,
+                ),
+                status: "Approved" as const,
+              };
+            }),
         );
 
         setPendingCount(pendingResponse.pending_count);

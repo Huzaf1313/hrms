@@ -8,54 +8,28 @@ import {
 } from "./globalDateContext";
 import { isDateKey, toDateKey, todayKey } from "../utils/dateKeys";
 
-const STORAGE_KEY = "hrms_global_date";
 const QUERY_KEY = "date";
-
-function readStoredDate(): string | null {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-
-    return isDateKey(stored) ? stored : null;
-  } catch {
-    // Private browsing can make localStorage throw. The header date is not
-    // worth crashing the app over, so fall back to today.
-    return null;
-  }
-}
 
 /**
  * Holds the one day picked in the header calendar and shares it with every
  * page that has date-driven data.
  *
- * localStorage is the source of truth and the query param is only a mirror of
- * it. A handful of navigate() calls across the app build a bare pathname, which
- * would drop the param on every sidebar click; keeping the authoritative value
- * outside the URL means those links cost shareability but never correctness.
+ * The selected date is session state. The query parameter is only a mirror of
+ * it, so navigation can preserve the current filter without making an old date
+ * reappear on the next login.
  */
 export function GlobalDateProvider({ children }: { children: ReactNode }) {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [, setSearchParams] = useSearchParams();
 
-  // Read once. From here on the URL is written by setDate and never consulted
-  // again, so a param stripped by navigation cannot change what is on screen.
-  const [date, setDateState] = useState<string>(() => {
-    const fromQuery = searchParams.get(QUERY_KEY);
-
-    if (isDateKey(fromQuery)) return fromQuery;
-
-    return readStoredDate() ?? todayKey();
-  });
+  // Manual date selections apply to the current session only. A fresh login
+  // must always start on the actual local calendar day.
+  const [date, setDateState] = useState<string>(() => todayKey());
 
   const setDate = useCallback(
     (next: string) => {
       const value = isDateKey(next) ? next : todayKey();
 
       setDateState(value);
-
-      try {
-        localStorage.setItem(STORAGE_KEY, value);
-      } catch {
-        // Persisting is best effort; the date still applies for this session.
-      }
 
       setSearchParams(
         (current) => {
@@ -83,7 +57,6 @@ export function GlobalDateProvider({ children }: { children: ReactNode }) {
 
     function scheduleNextDayRefresh() {
       const now = new Date();
-      const currentDay = todayKey();
       const nextDay = new Date(
         now.getFullYear(),
         now.getMonth(),
@@ -96,10 +69,7 @@ export function GlobalDateProvider({ children }: { children: ReactNode }) {
       timeout = window.setTimeout(() => {
         if (!isActive) return;
 
-        // A date explicitly chosen in the past remains a useful filter. Only
-        // advance the default day that was active when the session crossed
-        // midnight.
-        if (date === currentDay) {
+        if (date !== todayKey()) {
           setDate(todayKey());
         }
 
@@ -109,9 +79,18 @@ export function GlobalDateProvider({ children }: { children: ReactNode }) {
 
     scheduleNextDayRefresh();
 
+    function refreshAfterVisibilityChange() {
+      if (document.visibilityState === "visible" && date !== todayKey()) {
+        setDate(todayKey());
+      }
+    }
+
+    document.addEventListener("visibilitychange", refreshAfterVisibilityChange);
+
     return () => {
       isActive = false;
       if (timeout !== undefined) window.clearTimeout(timeout);
+      document.removeEventListener("visibilitychange", refreshAfterVisibilityChange);
     };
   }, [date, setDate]);
 

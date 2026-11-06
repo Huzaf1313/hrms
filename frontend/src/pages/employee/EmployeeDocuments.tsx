@@ -106,6 +106,11 @@ export default function EmployeeDocuments() {
   const [selectedDocument, setSelectedDocument] =
     useState<EmployeeDocument | null>(null);
   const [loadingDocument, setLoadingDocument] = useState(false);
+  const [previewDocument, setPreviewDocument] =
+  useState<EmployeeDocument | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  const [previewMimeType, setPreviewMimeType] = useState("");
   const [downloadingId, setDownloadingId] = useState<string | null>(
     null
   );
@@ -171,6 +176,14 @@ export default function EmployeeDocuments() {
     setCurrentPage(1);
   }, [activeTab, searchTerm]);
 
+  useEffect(() => {
+  return () => {
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+  };
+}, [previewUrl]);
+
   const filteredDocuments = useMemo(() => documents, [documents]);
 
   const totalPages = Math.max(
@@ -227,18 +240,25 @@ export default function EmployeeDocuments() {
       setLoadingDocument(true);
       setError("");
 
-      const response = await api.get<EmployeeDocument>(
-        `/employee-documents/${document.id}`
+      const blob = await downloadFile(
+        `/employee-documents/${document.id}/download?inline=true`
       );
 
-      setSelectedDocument(response);
+      const blobUrl = URL.createObjectURL(blob);
+
+      setPreviewMimeType(
+        document.mime_type || blob.type || "application/octet-stream"
+      );
+
+      setPreviewDocument(document);
+      setPreviewUrl(blobUrl);
     } catch (err) {
-      console.error("Failed to load document:", err);
+      console.error("Failed to preview document:", err);
 
       if (err instanceof ApiError) {
         setError(err.message);
       } else {
-        setError("Unable to load the document.");
+        setError("Unable to preview the document. Please try again.");
       }
     } finally {
       setLoadingDocument(false);
@@ -251,43 +271,26 @@ export default function EmployeeDocuments() {
       setDownloadingId(document.id);
       setError("");
 
-      if (!document.file_url) {
-        setError("No file is available for this document.");
-        return;
-      }
+      const blob = await downloadFile(
+        `/employee-documents/${document.id}/download`
+      );
 
-      if (
-        document.file_url.startsWith("http://") ||
-        document.file_url.startsWith("https://")
-      ) {
-        const anchor = window.document.createElement("a");
-        anchor.href = document.file_url;
-        anchor.target = "_blank";
-        anchor.rel = "noopener noreferrer";
-
-        if (document.file_name) {
-          anchor.download = document.file_name;
-        }
-
-        window.document.body.appendChild(anchor);
-        anchor.click();
-        anchor.remove();
-        return;
-      }
-
-      const blob = await downloadFile(document.file_url);
       const blobUrl = URL.createObjectURL(blob);
       const anchor = window.document.createElement("a");
 
       anchor.href = blobUrl;
       anchor.download =
-        document.file_name || document.document_name || "document";
+        document.file_name ||
+        document.document_name ||
+        "document";
 
       window.document.body.appendChild(anchor);
       anchor.click();
       anchor.remove();
 
-      window.setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+      window.setTimeout(() => {
+        URL.revokeObjectURL(blobUrl);
+      }, 1000);
     } catch (err) {
       console.error("Failed to download document:", err);
 
@@ -746,8 +749,8 @@ return (
                       <div className="flex items-center justify-end gap-1">
                         <button
                           type="button"
-                          title="View document details"
-                          aria-label={`View ${document.document_name}`}
+                          title="Preview document"
+                          aria-label={`Preview ${document.document_name}`}
                           onClick={() => void handleView(document)}
                           className="rounded-lg p-2 text-gray-500 transition hover:bg-blue-50 hover:text-blue-600"
                         >
@@ -795,7 +798,7 @@ return (
                                 className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
                               >
                                 <Eye size={16} />
-                                View details
+                                  Preview document
                               </button>
 
                               <button
@@ -1305,6 +1308,104 @@ return (
         </div>
       </div>
     )}
+
+    {/* Document Preview Modal */}
+{previewDocument && (
+  <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-3 sm:p-6">
+    <div className="flex max-h-[95vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+
+      {/* Header */}
+      <div className="flex items-center justify-between gap-4 border-b border-gray-200 px-5 py-4">
+        <div className="min-w-0">
+          <h2 className="truncate text-base font-semibold text-gray-900">
+            {previewDocument.document_name}
+          </h2>
+          <p className="mt-1 truncate text-xs text-gray-500">
+            {previewDocument.file_name}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            setPreviewDocument(null);
+            setPreviewUrl(null);
+            setPreviewMimeType("");
+          }}
+          className="shrink-0 rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900"
+          aria-label="Close document preview"
+          title="Close preview"
+        >
+          <X size={20} />
+        </button>
+      </div>
+
+      {/* Preview Content */}
+      <div className="min-h-[400px] flex-1 overflow-auto bg-gray-100">
+
+        {previewUrl && previewMimeType === "application/pdf" ? (
+          <iframe
+            src={previewUrl}
+            title={previewDocument.document_name}
+            className="h-[75vh] min-h-[400px] w-full border-0"
+          />
+        ) : previewUrl && previewMimeType.startsWith("image/") ? (
+          <div className="flex min-h-[400px] items-center justify-center p-4">
+            <img
+              src={previewUrl}
+              alt={previewDocument.document_name}
+              className="max-h-[75vh] max-w-full rounded-lg object-contain"
+            />
+          </div>
+        ) : (
+          <div className="flex min-h-[400px] flex-col items-center justify-center p-8 text-center">
+            <FileText size={52} className="text-gray-400" />
+
+            <h3 className="mt-4 text-base font-semibold text-gray-900">
+              Preview not available
+            </h3>
+
+            <p className="mt-2 max-w-md text-sm text-gray-500">
+              This file format cannot be previewed directly in your browser.
+              Download the document to open it.
+            </p>
+
+            <button
+              type="button"
+              onClick={() => void handleDownload(previewDocument)}
+              disabled={downloadingId === previewDocument.id}
+              className="mt-5 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:opacity-50"
+            >
+              {downloadingId === previewDocument.id ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Download size={16} />
+              )}
+
+              Download document
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="flex items-center justify-between gap-3 border-t border-gray-200 px-5 py-3">
+        <span className="truncate text-xs text-gray-500">
+          {formatFileSize(previewDocument.file_size)}
+        </span>
+        <button
+          type="button"
+          onClick={() => void handleDownload(previewDocument)}
+          disabled={downloadingId === previewDocument.id}
+          className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-gray-300 px-3.5 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
+        >
+          <Download size={16} />
+          Download
+        </button>
+      </div>
+    </div>
+  </div>
+)}
   </div>
 );
 }

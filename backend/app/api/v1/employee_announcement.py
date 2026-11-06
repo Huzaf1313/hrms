@@ -82,7 +82,7 @@ async def get_employee_announcements(
 
     await set_cache(
         cache_key,
-        result.model_dump(mode="json"),
+        result,
         ttl=ANNOUNCEMENT_FEED_CACHE_TTL,
     )
 
