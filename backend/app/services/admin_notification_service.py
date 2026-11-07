@@ -1,5 +1,6 @@
 from typing import Any
 
+from app.core.roles import ADMIN_ROLES
 from app.repositories.employee_notification_repository import (
     EmployeeNotificationRepository,
 )
@@ -96,7 +97,7 @@ class AdminNotificationService:
                 creator
                 and creator.get("is_active")
                 and not creator.get("is_locked")
-                and creator.get("role") in ("hr_admin", "manager")
+                and creator.get("role") in ADMIN_ROLES
             ):
                 return [str(creator["_id"])]
 

@@ -33,6 +33,15 @@ class UserRepository:
         )
 
 
+    async def list_by_roles(self, roles):
+        """Every account holding one of `roles`, active or not - the super
+        admin's Admin Accounts page shows deactivated and locked ones too."""
+        return await (
+            self.collection.find({"role": {"$in": list(roles)}})
+            .sort([("role", 1), ("full_name", 1)])
+            .to_list(length=500)
+        )
+
     async def get_admin_account_by_name(self, full_name: str):
         """Resolve a stored reporting_manager name to its account.
 

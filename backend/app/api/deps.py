@@ -3,7 +3,13 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.core.exceptions import AppException
 from app.core.jwt import decode_token
-from app.core.roles import Permission, UserRole, has_permission
+from app.core.roles import (
+    HR_LEVEL_ROLES,
+    Permission,
+    UserRole,
+    has_permission,
+    role_value,
+)
 from app.repositories.user_repository import UserRepository
 from app.repositories.session_repository import SessionRepository
 
@@ -114,13 +120,29 @@ def require_permission(permission: Permission):
 async def require_hr_admin(
     current_user: dict = Depends(get_current_user),
 ):
-    """HR only. Managers are admins in roles.py but must not reach these
-    endpoints - manager account creation and exit-request review."""
-    role = getattr(current_user.get("role"), "value", current_user.get("role"))
+    """HR only (the super admin counts as HR). Managers are admins in
+    roles.py but must not reach these endpoints - manager account creation
+    and exit-request review."""
+    role = role_value(current_user.get("role"))
 
-    if role != UserRole.HR_ADMIN.value:
+    if role not in HR_LEVEL_ROLES:
         raise AppException(
             "Only HR can perform this action",
+            403,
+        )
+
+    return current_user
+
+
+async def require_super_admin(
+    current_user: dict = Depends(get_current_user),
+):
+    """Super admin only - managing the HR and manager accounts themselves."""
+    role = role_value(current_user.get("role"))
+
+    if role != UserRole.SUPER_ADMIN.value:
+        raise AppException(
+            "Only the super admin can perform this action",
             403,
         )
 

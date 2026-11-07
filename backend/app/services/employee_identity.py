@@ -15,6 +15,7 @@ from datetime import datetime
 from pymongo import ReturnDocument
 
 from app.core.exceptions import AppException
+from app.core.roles import UserRole
 
 async def next_employee_code(collection) -> str:
     """Atomically allocate the next employee code.
@@ -85,6 +86,13 @@ async def ensure_employee_profile(collection, user: dict) -> dict:
     loser picks up the winner's code.
     """
     if user.get("employee_id"):
+        return user
+
+    # The super admin is deliberately never an employee. Employee routes only
+    # see accounts that carry an employee_id, and the employee update path
+    # can reset a password and rewrite the role - so minting one here would
+    # let HR take over the account that is meant to sit above HR.
+    if getattr(user.get("role"), "value", user.get("role")) == UserRole.SUPER_ADMIN.value:
         return user
 
     user_id = user.get("_id")

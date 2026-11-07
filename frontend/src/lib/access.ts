@@ -20,14 +20,48 @@ export function currentRole(): string | null {
   }
 }
 
+/** Pages only the super admin may open. */
+export const SUPER_ADMIN_ONLY_PAGES = ["Admin Accounts"];
+
+/** Roles that use the admin portal. */
+export const ADMIN_ROLES = ["super_admin", "hr_admin", "manager"];
+
+export function isSuperAdmin(): boolean {
+  return currentRole() === "super_admin";
+}
+
+/**
+ * HR-level access: HR itself, and the super admin, who holds every HR
+ * permission on top of managing the HR and manager accounts.
+ */
 export function isHrAdmin(): boolean {
-  return currentRole() === "hr_admin";
+  const role = currentRole();
+
+  return role === "hr_admin" || role === "super_admin";
 }
 
 export function isAdminRole(): boolean {
-  return currentRole() === "hr_admin" || currentRole() === "manager";
+  return ADMIN_ROLES.includes(currentRole() ?? "");
 }
 
 export function canAccessPage(page: string): boolean {
+  if (SUPER_ADMIN_ONLY_PAGES.includes(page)) return isSuperAdmin();
+
   return !HR_ONLY_PAGES.includes(page) || isHrAdmin();
+}
+
+/** Human label for a stored role value. */
+export function roleLabel(role?: string | null): string {
+  switch (role) {
+    case "super_admin":
+      return "Super Admin";
+    case "hr_admin":
+      return "HR Admin";
+    case "manager":
+      return "Manager";
+    case "employee":
+      return "Employee";
+    default:
+      return role ? role.replaceAll("_", " ") : "";
+  }
 }

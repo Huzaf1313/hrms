@@ -17,6 +17,7 @@ from botocore.exceptions import BotoCoreError, ClientError
 from app.api.deps import get_current_user
 from app.core.config import settings
 from app.core.exceptions import AppException
+from app.core.roles import ADMIN_ROLES, HR_LEVEL_ROLES
 from app.repositories.employee_repository import EmployeeRepository
 from app.schemas.common import APIResponse
 from app.schemas.employee_document import (
@@ -75,7 +76,7 @@ async def get_my_documents(
     current_user: dict = Depends(get_current_user),
 ):
     role = current_user.get("role")
-    if role in {"hr_admin", "manager"}:
+    if role in ADMIN_ROLES:
         employee_id = employee_id or current_user.get("employee_id")
     else:
         employee_id = current_user.get("employee_id")
@@ -125,13 +126,13 @@ async def upload_my_document(
     current_user: dict = Depends(get_current_user),
 ):
     role = current_user.get("role")
-    if role not in {"employee", "hr_admin", "manager"}:
+    if role != "employee" and role not in ADMIN_ROLES:
         raise AppException(
             "Only employees and HR admins can upload documents",
             403,
         )
 
-    employee_id = employee_id if role == "hr_admin" else current_user.get("employee_id")
+    employee_id = employee_id if role in HR_LEVEL_ROLES else current_user.get("employee_id")
 
     if not employee_id:
         raise AppException(
@@ -228,7 +229,9 @@ async def upload_my_document(
         suffix=(duplicate_suffix - 1 if file_name != base_file_name else None),
     )
 
-    source = "hr_admin" if role in {"hr_admin", "manager"} else "employee"
+    # "hr_admin" is the document-source label for any admin upload, not a role
+    # check - the documents page groups on it ("Documents Uploaded by HR").
+    source = "hr_admin" if role in ADMIN_ROLES else "employee"
     uploader = (
         current_user.get("full_name")
         or current_user.get("name")
@@ -423,7 +426,7 @@ async def _authorize_document(document_id: str, current_user: dict):
     document = await service.get_document(document_id)
 
     role = current_user.get("role")
-    is_hr_or_manager = role in {"hr_admin", "manager"}
+    is_hr_or_manager = role in ADMIN_ROLES
     is_owner = current_user.get("employee_id") == document.get("employee_id")
 
     if not is_hr_or_manager and not is_owner:
@@ -460,7 +463,7 @@ async def delete_employee_document(
     document = await service.get_document(document_id)
 
     role = current_user.get("role")
-    is_admin = role in {"hr_admin", "manager"}
+    is_admin = role in ADMIN_ROLES
     is_owner = (
         current_user.get("employee_id") == document.get("employee_id")
         and document.get("source") in {"employee", "employee_upload"}

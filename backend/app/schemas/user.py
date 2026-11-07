@@ -1,5 +1,6 @@
 import re
 from datetime import date, datetime
+from typing import Literal
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
@@ -78,6 +79,51 @@ class UserCreate(BaseModel):
 class ManagerCreate(UserCreate):
     """Manager account request. The role is fixed server-side so a client
     cannot ask for anything else."""
+
+
+class AdminAccountCreate(BaseModel):
+    """HR admin or manager account, created by the super admin. The role is
+    limited to those two so the super admin role can never be handed out
+    through the API."""
+
+    full_name: str = Field(min_length=2, max_length=100)
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=128)
+    role: Literal["hr_admin", "manager"]
+
+    @field_validator("full_name")
+    @classmethod
+    def validate_full_name(cls, value: str) -> str:
+        value = value.strip()
+
+        if not NAME_PATTERN.match(value):
+            raise ValueError(
+                "Full name must contain only letters, spaces, dots, apostrophes or hyphens"
+            )
+
+        return value
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, value: str) -> str:
+        return validate_password_strength(value)
+
+
+class AdminAccountStatusUpdate(BaseModel):
+    is_active: bool | None = None
+    is_locked: bool | None = None
+
+
+class AdminAccountResponse(BaseModel):
+    id: str
+    employee_id: str | None = None
+    full_name: str
+    email: EmailStr
+    role: UserRole
+    is_active: bool
+    is_locked: bool
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
 
 class UserResponse(BaseModel):

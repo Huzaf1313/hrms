@@ -41,6 +41,8 @@ function readUser() {
 
 function roleDisplay(role?: string): string {
   switch (role) {
+    case "super_admin":
+      return "Super Admin";
     case "hr_admin":
       return "HR";
     case "manager":
@@ -58,7 +60,7 @@ function employeeFullName(employee: Employee) {
 
 /** Only admin-level roles may create or edit holidays. */
 function isAdminRole(role?: string): boolean {
-  return role === "hr_admin" || role === "manager";
+  return role === "super_admin" || role === "hr_admin" || role === "manager";
 }
 
 function Header({

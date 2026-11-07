@@ -260,6 +260,9 @@ async def get_my_employee_profile(
         current_user,
     )
 
+    if not current_user.get("employee_id"):
+        raise AppException("No employee record found for this account", 404)
+
     user_id = str(current_user["_id"])
     cache_key = f"employees:me:{user_id}"
     cached = await get_cache(cache_key)

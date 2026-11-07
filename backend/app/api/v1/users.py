@@ -5,10 +5,18 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, File, UploadFile, status
 from pydantic import BaseModel, EmailStr
 
-from app.api.deps import get_current_user, require_hr_admin, require_permission
+from app.api.deps import (
+    get_current_user,
+    require_hr_admin,
+    require_permission,
+    require_super_admin,
+)
 from app.core.roles import Permission, UserRole
 from app.schemas.common import APIResponse
 from app.schemas.user import (
+    AdminAccountCreate,
+    AdminAccountResponse,
+    AdminAccountStatusUpdate,
     AdminProfileResponse,
     AdminProfileUpdate,
     ManagerCreate,
@@ -81,6 +89,94 @@ async def list_manager_accounts(
         success=True,
         message="Reporting managers retrieved successfully",
         data=managers,
+    )
+
+
+def serialize_admin_account(user: dict) -> AdminAccountResponse:
+    return AdminAccountResponse(
+        id=str(user["_id"]),
+        employee_id=user.get("employee_id"),
+        full_name=resolve_full_name(user),
+        email=user["email"],
+        role=user["role"],
+        is_active=user.get("is_active", True),
+        is_locked=user.get("is_locked", False),
+        created_at=user.get("created_at"),
+        updated_at=user.get("updated_at"),
+    )
+
+
+@router.get(
+    "/admin-accounts",
+    response_model=APIResponse[list[AdminAccountResponse]],
+)
+async def list_admin_accounts(
+    current_user: dict = Depends(require_super_admin),
+):
+    """Every HR admin and manager account, for the super admin."""
+    accounts = await user_service.list_admin_accounts()
+
+    return APIResponse(
+        success=True,
+        message="Admin accounts retrieved successfully",
+        data=[serialize_admin_account(account) for account in accounts],
+    )
+
+
+@router.post(
+    "/admin-accounts",
+    response_model=APIResponse[AdminAccountResponse],
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_admin_account(
+    data: AdminAccountCreate,
+    current_user: dict = Depends(require_super_admin),
+):
+    account = await user_service.create_admin_account(
+        full_name=data.full_name,
+        email=data.email,
+        password=data.password,
+        role=UserRole(data.role),
+    )
+
+    try:
+        await invalidate_managers_cache()
+    except Exception as exc:
+        logger.error("Failed to invalidate manager cache after create: %s", exc)
+
+    return APIResponse(
+        success=True,
+        message="Admin account created successfully",
+        data=serialize_admin_account(account),
+    )
+
+
+@router.patch(
+    "/admin-accounts/{user_id}/status",
+    response_model=APIResponse[AdminAccountResponse],
+)
+async def update_admin_account_status(
+    user_id: str,
+    data: AdminAccountStatusUpdate,
+    current_user: dict = Depends(require_super_admin),
+):
+    """Activate / deactivate or lock / unlock an HR admin or manager."""
+    account = await user_service.update_admin_account_status(
+        user_id=user_id,
+        is_active=data.is_active,
+        is_locked=data.is_locked,
+    )
+
+    # Inactive or locked accounts drop out of the reporting-manager list.
+    try:
+        await invalidate_managers_cache()
+    except Exception as exc:
+        logger.error("Failed to invalidate manager cache after status change: %s", exc)
+
+    return APIResponse(
+        success=True,
+        message="Admin account updated successfully",
+        data=serialize_admin_account(account),
     )
 
 

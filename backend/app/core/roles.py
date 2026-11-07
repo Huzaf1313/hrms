@@ -2,6 +2,9 @@ from enum import Enum
 
 
 class UserRole(str, Enum):
+    # Platform owner - sits above HR and manages the HR / manager accounts.
+    SUPER_ADMIN = "super_admin"
+
     # Admin-level roles
     HR_ADMIN = "hr_admin"      # Admin • HR
     MANAGER = "manager"        # Admin • Manager
@@ -215,10 +218,38 @@ EMPLOYEE_PERMISSIONS = {
 
 
 ROLE_PERMISSIONS: dict[UserRole, set[Permission]] = {
+    # The super admin holds every HR permission. What sets it apart is not a
+    # permission but account control: only it can create, deactivate or
+    # unlock HR and manager accounts (see require_super_admin).
+    UserRole.SUPER_ADMIN: ADMIN_PERMISSIONS,
     UserRole.HR_ADMIN: ADMIN_PERMISSIONS,
     UserRole.MANAGER: MANAGER_PERMISSIONS,
     UserRole.EMPLOYEE: EMPLOYEE_PERMISSIONS,
 }
+
+
+# Role groups for the places that branch on role rather than on a
+# permission. Plain strings, because user documents store the raw value.
+
+# Organisation-wide, HR-level access: full visibility, HR-only endpoints.
+HR_LEVEL_ROLES = frozenset({
+    UserRole.SUPER_ADMIN.value,
+    UserRole.HR_ADMIN.value,
+})
+
+# Every account that uses the admin portal.
+ADMIN_ROLES = HR_LEVEL_ROLES | {UserRole.MANAGER.value}
+
+# Accounts a super admin manages from the Admin Accounts page.
+MANAGED_ADMIN_ROLES = frozenset({
+    UserRole.HR_ADMIN.value,
+    UserRole.MANAGER.value,
+})
+
+
+def role_value(role) -> str | None:
+    """The raw role string, whether `role` is the enum or already a string."""
+    return getattr(role, "value", role)
 
 
 def has_permission(

@@ -7,7 +7,7 @@ from app.core.jwt import (
     create_refresh_token,
     decode_token,
 )
-from app.core.roles import UserRole
+from app.core.roles import MANAGED_ADMIN_ROLES, UserRole, role_value
 from app.core.security import hash_password, verify_password
 from app.repositories.user_repository import UserRepository
 from app.repositories.otp_repository import OTPRepository
@@ -77,6 +77,140 @@ class UserService:
         user = await ensure_employee_profile(self.repository.collection, user)
 
         return user
+
+    @staticmethod
+    def _new_login_document(
+        full_name: str,
+        email: str,
+        password: str,
+        role: UserRole,
+    ) -> dict:
+        now = datetime.utcnow()
+
+        return {
+            "full_name": full_name.strip(),
+            "email": email,
+            "phone_number": "",
+            "password_hash": hash_password(password),
+            "company_name": "",
+            "company_address": "",
+            "reference": "",
+            "role": role.value,
+            "is_active": True,
+            "is_locked": False,
+            "failed_login_attempts": 0,
+            "created_at": now,
+            "updated_at": now,
+        }
+
+    async def bootstrap_super_admin(
+        self,
+        email: str,
+        password: str,
+        full_name: str,
+    ):
+        """Create the super admin from settings on startup.
+
+        Idempotent like bootstrap_hr_admin. Unlike HR, no employee identity is
+        minted - see ensure_employee_profile for why.
+        """
+        email = email.lower().strip()
+
+        if await self.repository.get_by_email(email):
+            return None
+
+        return await self.repository.create(
+            self._new_login_document(
+                full_name,
+                email,
+                password,
+                UserRole.SUPER_ADMIN,
+            )
+        )
+
+    # ------------------------------------------------------------------ #
+    # Admin account management (super admin only)                        #
+    # ------------------------------------------------------------------ #
+
+    async def list_admin_accounts(self) -> list[dict]:
+        """HR and manager accounts, including deactivated and locked ones."""
+        return await self.repository.list_by_roles(MANAGED_ADMIN_ROLES)
+
+    async def create_admin_account(
+        self,
+        full_name: str,
+        email: str,
+        password: str,
+        role: UserRole,
+    ):
+        if role.value not in MANAGED_ADMIN_ROLES:
+            raise AppException(
+                "Only HR admin or manager accounts can be created here",
+                400,
+            )
+
+        if role == UserRole.MANAGER:
+            return await self.create_manager_account(
+                full_name=full_name,
+                email=email,
+                password=password,
+            )
+
+        email = email.lower().strip()
+
+        if await self.repository.get_by_email(email):
+            raise AppException(
+                "User with this email already exists",
+                409,
+            )
+
+        user = await self.repository.create(
+            self._new_login_document(full_name, email, password, role)
+        )
+
+        # Same as the bootstrapped HR: an HR account is also a working
+        # employee, so it gets its employee code up front.
+        return await ensure_employee_profile(self.repository.collection, user)
+
+    async def update_admin_account_status(
+        self,
+        user_id: str,
+        is_active: bool | None = None,
+        is_locked: bool | None = None,
+    ):
+        """Activate / deactivate and lock / unlock an HR or manager account.
+
+        Deactivating or locking also revokes every session of that account,
+        so the change takes effect immediately rather than when the current
+        access token expires.
+        """
+        user = await self.repository.get_by_id(user_id)
+
+        if not user or role_value(user.get("role")) not in MANAGED_ADMIN_ROLES:
+            raise AppException("Admin account not found", 404)
+
+        updates: dict = {}
+
+        if is_active is not None:
+            updates["is_active"] = is_active
+
+        if is_locked is not None:
+            updates["is_locked"] = is_locked
+
+            if not is_locked:
+                updates["failed_login_attempts"] = 0
+
+        if not updates:
+            raise AppException("Nothing to update", 400)
+
+        updates["updated_at"] = datetime.utcnow()
+
+        updated = await self.repository.update(user_id, updates)
+
+        if is_active is False or is_locked is True:
+            await self.session_service.revoke_all_sessions_for_user(user_id)
+
+        return updated
 
     async def list_manager_accounts(self):
         """Accounts that can be picked as an employee's reporting manager."""

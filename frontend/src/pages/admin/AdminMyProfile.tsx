@@ -38,15 +38,12 @@ import { clearSession } from "../../services/api";
 import { clearAuthQueries } from "../../lib/queryClient";
 import { setLoginRedirectNotice } from "../../lib/session";
 import { shiftService } from "../../services/shiftService";
+import { roleLabel } from "../../lib/access";
 import type {
   AdminProfile,
   NotificationPreferences,
   ProfileTab,
 } from "../../types/adminProfile";
-
-function roleLabel(role: string): string {
-  return role === "hr_admin" ? "HR Admin" : role.replaceAll("_", " ");
-}
 
 /** Brings a panel into view, so a quick action can jump to it. */
 function scrollToSection(id: string) {

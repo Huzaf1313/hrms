@@ -8,6 +8,7 @@ import {
   Megaphone,
   Package,
   Settings,
+  ShieldCheck,
   Users,
   Wallet,
   PanelLeftClose,
@@ -31,6 +32,8 @@ interface NavItem {
   page?: string;
   /** Pages only HR may open. Hidden from a manager's menu. */
   hrOnly?: boolean;
+  /** Pages only the super admin may open. */
+  superAdminOnly?: boolean;
 }
 
 interface NavSection {
@@ -45,6 +48,17 @@ const sections: NavSection[] = [
   {
     title: "Main",
     items: [{ label: "Dashboard", icon: LayoutDashboard, page: "Dashboard" }],
+  },
+  {
+    title: "Super Admin",
+    items: [
+      {
+        label: "Admin Accounts",
+        icon: ShieldCheck,
+        page: "Admin Accounts",
+        superAdminOnly: true,
+      },
+    ],
   },
   {
     title: "Organization",
@@ -139,7 +153,9 @@ function Sidebar({ activePage, onNavigate, collapsed, open, onClose }: SidebarPr
       <nav className="sidebar-scrollbar min-h-0 flex-1 overflow-y-auto">
         {sections.map((section) => {
           const items = section.items.filter(
-            (item) => !item.hrOnly || canAccessPage(item.page ?? ""),
+            (item) =>
+              (!item.hrOnly && !item.superAdminOnly) ||
+              canAccessPage(item.page ?? ""),
           );
 
           if (items.length === 0) return null;

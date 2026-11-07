@@ -42,6 +42,13 @@ class Settings(BaseSettings):
     BOOTSTRAP_HR_PASSWORD: str = ""
     BOOTSTRAP_HR_NAME: str = "HR Admin"
 
+    # Super admin account, created on startup the same way. It sits above HR
+    # and is the only account that can create, deactivate or unlock HR and
+    # manager accounts. Leave empty to skip.
+    BOOTSTRAP_SUPER_ADMIN_EMAIL: str = ""
+    BOOTSTRAP_SUPER_ADMIN_PASSWORD: str = ""
+    BOOTSTRAP_SUPER_ADMIN_NAME: str = "Super Admin"
+
     # Cloudflare R2 object storage
     R2_ACCOUNT_ID: str = ""
     R2_ACCESS_KEY_ID: str = ""

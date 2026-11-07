@@ -121,6 +121,22 @@ async def lifespan(app: FastAPI):
                 f"Bootstrapped HR account: {settings.BOOTSTRAP_HR_EMAIL}"
             )
 
+    if (
+        settings.BOOTSTRAP_SUPER_ADMIN_EMAIL
+        and settings.BOOTSTRAP_SUPER_ADMIN_PASSWORD
+    ):
+        created = await UserService().bootstrap_super_admin(
+            email=settings.BOOTSTRAP_SUPER_ADMIN_EMAIL,
+            password=settings.BOOTSTRAP_SUPER_ADMIN_PASSWORD,
+            full_name=settings.BOOTSTRAP_SUPER_ADMIN_NAME,
+        )
+
+        if created:
+            print(
+                "Bootstrapped super admin account: "
+                f"{settings.BOOTSTRAP_SUPER_ADMIN_EMAIL}"
+            )
+
     filled = await backfill_minted_profiles(UserRepository().collection)
 
     if filled:
