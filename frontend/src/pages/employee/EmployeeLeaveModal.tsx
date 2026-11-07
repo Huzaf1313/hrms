@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import {
   CalendarDays,
@@ -7,6 +7,7 @@ import {
   Upload,
   X,
 } from "lucide-react";
+import { api } from "../../services/api";
 
 interface EmployeeLeaveModalProps {
   onClose: () => void;
@@ -19,13 +20,6 @@ interface EmployeeLeaveModalProps {
   ) => Promise<void>;
   isSubmitting?: boolean;
 }
-
-const leaveTypes = [
-  "Casual Leave",
-  "Sick Leave",
-  "Earned Leave",
-  "Comp Off",
-];
 
 function getTodayDate() {
   const today = new Date();
@@ -44,12 +38,31 @@ function EmployeeLeaveModal({
 }: EmployeeLeaveModalProps) {
   const today = getTodayDate();
 
-  const [leaveType, setLeaveType] = useState("Casual Leave");
+  const [leaveTypes, setLeaveTypes] = useState<string[]>([]);
+  const [leaveType, setLeaveType] = useState("");
   const [fromDate, setFromDate] = useState(today);
   const [toDate, setToDate] = useState(today);
   const [reason, setReason] = useState("");
   const [attachment, setAttachment] = useState<File | null>(null);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    let mounted = true;
+
+    api.get<string[]>("/employee-leave/types")
+      .then((types) => {
+        if (!mounted) return;
+        setLeaveTypes(types);
+        setLeaveType((current) => current || types[0] || "");
+      })
+      .catch(() => {
+        if (mounted) setError("Unable to load leave types.");
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const totalDays = useMemo(() => {
     if (!fromDate || !toDate) {

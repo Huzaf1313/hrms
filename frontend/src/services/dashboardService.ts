@@ -32,6 +32,7 @@ export interface DashboardData {
   attendance_rate: number | null;
   on_leave_today: number;
   celebrations: Celebration[];
+  announcement_titles: string[];
   hiring_pipeline: HiringPipeline;
   recent_activities: RecentActivity[];
   payroll_summary?: DashboardPayrollSummary | null;

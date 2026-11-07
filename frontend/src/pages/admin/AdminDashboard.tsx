@@ -22,6 +22,7 @@ interface AdminDashboardProps {
   /** Live values the dashboard endpoint already provides. */
   totalHeadcount?: number | null;
   celebrations?: Celebration[];
+  announcementTitles?: string[];
   recentActivities?: RecentActivity[];
   onNavigate: (page: string) => void;
   /** Opens the announcement create form, used by the quick action. */
@@ -45,6 +46,7 @@ function readUserFirstName(): string {
 export default function AdminDashboard({
   totalHeadcount,
   celebrations = [],
+  announcementTitles = [],
   recentActivities = [],
   onNavigate,
   onCreateAnnouncement,
@@ -72,7 +74,10 @@ export default function AdminDashboard({
 
       {/* Birthdays, anniversaries and daily thought banner */}
       <div className="mb-4">
-        <CelebrationTicker celebrations={celebrations} />
+        <CelebrationTicker
+          celebrations={celebrations}
+          announcementTitles={announcementTitles}
+        />
       </div>
 
       <div className="space-y-4">

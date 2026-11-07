@@ -46,6 +46,16 @@ class LeaveBalanceUpdate(BaseModel):
     balances: list[LeaveBalanceEntry] = Field(min_length=1)
 
 
+class LeaveTypeCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+    allocated_days: int = Field(ge=0)
+
+
+class LeaveTypeUpdate(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+    allocated_days: int = Field(ge=0)
+
+
 class LeaveSummaryResponse(BaseModel):
     total_leave_requests: int
     pending_requests: int

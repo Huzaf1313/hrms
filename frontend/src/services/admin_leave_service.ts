@@ -46,6 +46,13 @@ export interface LeaveBalance {
   total: number;
 }
 
+export interface EmployeeLeaveBalance {
+  leave_type: string;
+  allocated: number;
+  used: number;
+  available: number;
+}
+
 export const leaveService = {
   list(params: {
     page?: number;
@@ -65,6 +72,30 @@ export const leaveService = {
 
   balances() {
     return api.get<LeaveBalance[]>("/admin/leaves/balances");
+  },
+
+  employeeBalance(employeeId: string) {
+    return api.get<EmployeeLeaveBalance[]>(
+      `/admin/leaves/employee/${employeeId}/balance`,
+    );
+  },
+
+  createType(name: string, allocated_days: number) {
+    return api.post<{ name: string; allocated_days: number; active: boolean }>(
+      "/admin/leaves/types",
+      { name, allocated_days },
+    );
+  },
+
+  updateType(oldName: string, name: string, allocated_days: number) {
+    return api.put<{ name: string; allocated_days: number; active: boolean }>(
+      `/admin/leaves/types/${encodeURIComponent(oldName)}`,
+      { name, allocated_days },
+    );
+  },
+
+  deleteType(name: string) {
+    return api.delete(`/admin/leaves/types/${encodeURIComponent(name)}`);
   },
 
   updateBalances(balances: LeaveBalance[]) {

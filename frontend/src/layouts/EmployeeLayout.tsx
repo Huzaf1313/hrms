@@ -49,6 +49,7 @@ function EmployeeLayout({ onLogout }: { onLogout: () => void }) {
   const [designation, setDesignation] = useState("");
   const [avatarRefreshKey, setAvatarRefreshKey] = useState(0);
   const notificationContainerRef = useRef<HTMLDivElement | null>(null);
+  const profileContainerRef = useRef<HTMLDivElement | null>(null);
 
   const user = useMemo(() => readUser(), []);
 
@@ -170,6 +171,13 @@ useEffect(() => {
       ) {
         setShowNotificationDropdown(false);
       }
+
+      if (
+        profileContainerRef.current &&
+        !profileContainerRef.current.contains(target)
+      ) {
+        setShowProfileMenu(false);
+      }
     };
 
     document.addEventListener("mousedown", handleOutsideClick);
@@ -269,7 +277,7 @@ useEffect(() => {
             <DatePicker />
 
             {/* Profile */}
-            <div className="relative">
+            <div ref={profileContainerRef} className="relative">
               <button
                 type="button"
                 onClick={() =>

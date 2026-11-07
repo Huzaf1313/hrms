@@ -209,6 +209,7 @@ function DashboardLayout({
           <AdminDashboard
             totalHeadcount={dashboardData?.total_headcount ?? null}
             celebrations={dashboardData?.celebrations ?? []}
+            announcementTitles={dashboardData?.announcement_titles ?? []}
             recentActivities={dashboardData?.recent_activities ?? []}
             onNavigate={handleNavigate}
             onCreateAnnouncement={handleCreateAnnouncement}

@@ -5,6 +5,7 @@ from app.core.working_days import count_working_days
 from app.repositories.employee_leave_repository import (
     EmployeeLeaveRepository,
 )
+from app.repositories.leave_balance_repository import LeaveBalanceRepository
 from app.services.admin_notification_service import AdminNotificationService
 from app.services.activity_service import ActivityService
 
@@ -20,6 +21,7 @@ class EmployeeLeaveService:
 
     def __init__(self):
         self.repository = EmployeeLeaveRepository()
+        self.balance_repository = LeaveBalanceRepository()
         self.admin_notification_service = AdminNotificationService()
         self.activity_service = ActivityService()
 
@@ -51,12 +53,8 @@ class EmployeeLeaveService:
             current_date += timedelta(days=1)
 
         # 3. Validate leave type
-        allowed_leave_types = {
-            "Casual Leave",
-            "Sick Leave",
-            "Earned Leave",
-            "Comp Off",
-        }
+        allocations = await self.get_allocations()
+        allowed_leave_types = set(allocations)
 
         if leave_type not in allowed_leave_types:
             raise AppException(
@@ -91,19 +89,9 @@ class EmployeeLeaveService:
             )
 
         # 5. Validate leave balance
-        balance_records = (
-            await self.repository.get_balance_records(
-                employee_id=employee_id,
-            )
+        balance_records = await self.repository.get_balance_records(
+            employee_id=employee_id,
         )
-
-        allocations = {
-            "Casual Leave": 12,
-            "Sick Leave": 10,
-            "Earned Leave": 18,
-            "Comp Off": 5,
-        }
-
         used_days = sum(
             record.get("total_days", 0)
             for record in balance_records
@@ -111,7 +99,7 @@ class EmployeeLeaveService:
         )
 
         available_days = max(
-            self.LEAVE_ALLOCATIONS[leave_type] - used_days,
+            allocations[leave_type] - used_days,
             0,
         )
 
@@ -279,22 +267,9 @@ class EmployeeLeaveService:
             employee_id=employee_id,
         )
 
-        # These are temporary policy values.
-        # Actual balances should eventually come
-        # from the employee/company leave policy.
-        allocations = {
-            "Casual Leave": 12,
-            "Sick Leave": 10,
-            "Earned Leave": 18,
-            "Comp Off": 5,
-        }
+        allocations = await self.get_allocations()
 
-        used = {
-            "Casual Leave": 0,
-            "Sick Leave": 0,
-            "Earned Leave": 0,
-            "Comp Off": 0,
-        }
+        used: dict[str, int] = {}
 
         for record in records:
             leave_type = record.get("leave_type")
@@ -303,13 +278,13 @@ class EmployeeLeaveService:
                 0,
             )
 
-            if leave_type in used:
-                used[leave_type] += total_days
+            if leave_type:
+                used[leave_type] = used.get(leave_type, 0) + total_days
 
         balances = []
 
-        for leave_type, allocated in self.LEAVE_ALLOCATIONS.items():
-            leave_used = used[leave_type]
+        for leave_type, allocated in allocations.items():
+            leave_used = used.get(leave_type, 0)
 
             balances.append(
                 {
@@ -324,6 +299,32 @@ class EmployeeLeaveService:
             )
 
         return balances
+
+    async def get_allocations(self) -> dict[str, int]:
+        """Return admin-configured totals, with legacy defaults on first use."""
+        all_records = await self.balance_repository.get_all()
+        records = [record for record in all_records if record.get("active") is not False]
+        known_types = {
+            record.get("leave_type") for record in all_records if record.get("leave_type")
+        }
+        configured = {
+            record.get("leave_type"): int(record.get("total", 0))
+            for record in records
+            if record.get("leave_type")
+        }
+
+        allocations = {
+            leave_type: configured.get(leave_type, allocation)
+            for leave_type, allocation in self.LEAVE_ALLOCATIONS.items()
+            if leave_type not in known_types
+        }
+
+        allocations.update(configured)
+
+        return allocations
+
+    async def get_leave_types(self) -> list[str]:
+        return list((await self.get_allocations()).keys())
 
     async def cancel_request(
         self,

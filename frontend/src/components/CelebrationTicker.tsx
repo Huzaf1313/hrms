@@ -19,12 +19,11 @@ interface TickerItem {
   /** Employee name. Absent for the daily thought, whose header carries it. */
   label?: string;
   message: string;
+  isThought?: boolean;
 }
 
 interface MarqueeProps {
   items: TickerItem[];
-  /** Thought-only mode: quoted prose on a dark glass pill. */
-  isThought?: boolean;
 }
 
 interface MarqueeLayout {
@@ -46,7 +45,7 @@ interface MarqueeLayout {
  * at once. That case gets a full-viewport gap appended instead, so each copy
  * leaves the screen before the next one arrives.
  */
-function Marquee({ items, isThought = false }: MarqueeProps) {
+function Marquee({ items }: MarqueeProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const itemsRef = useRef<HTMLDivElement>(null);
   const [layout, setLayout] = useState<MarqueeLayout>({
@@ -135,7 +134,7 @@ function Marquee({ items, isThought = false }: MarqueeProps) {
                 >
                   <span
                     className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-base ring-2 ${
-                      isThought
+                      item.isThought
                         ? "bg-gradient-to-br from-amber-300 to-orange-500 text-white shadow-md shadow-orange-500/40 ring-amber-200/40"
                         : "bg-white/15 shadow-inner ring-white/25"
                     }`}
@@ -155,12 +154,12 @@ function Marquee({ items, isThought = false }: MarqueeProps) {
 
                   <span
                     className={`rounded-full border border-white/20 bg-white/10 px-4 py-1 text-sm shadow-lg shadow-black/20 backdrop-blur ${
-                      isThought
+                      item.isThought
                         ? "italic text-white"
                         : "font-medium text-white/90"
                     }`}
                   >
-                    {isThought && (
+                    {item.isThought && (
                       <span
                         aria-hidden="true"
                         className="mr-1.5 font-serif text-base leading-none text-amber-300"
@@ -171,7 +170,7 @@ function Marquee({ items, isThought = false }: MarqueeProps) {
 
                     {item.message}
 
-                    {isThought && (
+                    {item.isThought && (
                       <span
                         aria-hidden="true"
                         className="ml-1 font-serif text-base leading-none text-amber-300"
@@ -210,27 +209,43 @@ interface CelebrationTickerProps {
   // Optional with a default: a missing prop here would otherwise throw during
   // render and take down every admin page, not just this banner.
   celebrations?: Celebration[];
+  announcementTitles?: string[];
 }
 
-function CelebrationTicker({ celebrations = [] }: CelebrationTickerProps) {
+function CelebrationTicker({
+  celebrations = [],
+  announcementTitles = [],
+}: CelebrationTickerProps) {
   const hasCelebrations = celebrations.length > 0;
+  const hasAnnouncements = announcementTitles.length > 0;
 
-  // On a quiet day the banner carries a thought instead, so it never sits
-  // empty and the scroll always has something to move.
-  const items: TickerItem[] = hasCelebrations
-    ? celebrations.map((celebration) => ({
+  const items: TickerItem[] = [];
+
+  if (hasCelebrations) {
+    items.push(
+      ...celebrations.map((celebration) => ({
         key: `${celebration.employee_id}-${celebration.type}`,
         icon: ICONS[celebration.type] ?? "\u{1F389}",
         label: celebration.name,
         message: celebration.message,
-      }))
-    : [
-        {
-          key: "thought-of-the-day",
-          icon: "\u{1F4A1}",
-          message: getThoughtForDate(),
-        },
-      ];
+      })),
+    );
+  } else {
+    items.push({
+      key: "thought-of-the-day",
+      icon: "\u{1F4A1}",
+      message: getThoughtForDate(),
+      isThought: true,
+    });
+  }
+
+  items.push(
+    ...announcementTitles.map((title, index) => ({
+      key: `announcement-${index}-${title}`,
+      icon: "\u{1F4E2}",
+      message: title,
+    })),
+  );
 
   return (
     <section
@@ -269,18 +284,26 @@ function CelebrationTicker({ celebrations = [] }: CelebrationTickerProps) {
 
           <div className="min-w-0">
             <h3 className="truncate text-sm font-bold tracking-wide text-white">
-              {hasCelebrations ? "Celebrations" : "Thought of the Day"}
+              {hasCelebrations
+                ? hasAnnouncements
+                  ? "Celebrations & Announcements"
+                  : "Celebrations"
+                : hasAnnouncements
+                  ? "Thoughts & Announcements"
+                  : "Thought of the Day"}
             </h3>
 
             <p className="mt-0.5 truncate text-xs text-blue-200/80">
               {hasCelebrations
-                ? "Birthdays & Anniversaries"
+                ? hasAnnouncements
+                  ? "Birthdays, anniversaries & updates"
+                  : "Birthdays & Anniversaries"
                 : "Something to take to work"}
             </p>
           </div>
         </div>
 
-        <Marquee items={items} isThought={!hasCelebrations} />
+        <Marquee items={items} />
       </div>
     </section>
   );

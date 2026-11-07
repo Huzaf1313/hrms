@@ -6,6 +6,7 @@ from app.api.deps import require_permission
 from app.core.cache import (
     get_cache,
     invalidate_attendance_cache,
+    invalidate_employee_leaves_cache,
     invalidate_leaves_cache,
     set_cache,
 )
@@ -14,6 +15,8 @@ from app.schemas.admin_leave import (
     LeaveBalanceUpdate,
     LeaveCreate,
     LeaveStatusUpdate,
+    LeaveTypeCreate,
+    LeaveTypeUpdate,
 )
 from app.services.admin_leave_service import AdminLeaveService
 
@@ -138,6 +141,69 @@ async def get_leave_balances(
     }
 
 
+@router.get("/types")
+async def get_leave_types(
+    current_user: dict | None = Depends(require_permission(Permission.LEAVE_READ)),
+):
+    return {
+        "success": True,
+        "message": "Leave types fetched successfully",
+        "data": await service.get_leave_types(),
+    }
+
+
+@router.post("/types")
+async def create_leave_type(
+    payload: LeaveTypeCreate,
+    current_user: dict | None = Depends(require_permission(Permission.LEAVE_UPDATE)),
+):
+    data = await service.create_leave_type(payload.name, payload.allocated_days)
+    await invalidate_employee_leaves_cache()
+    return {"success": True, "message": "Leave type created successfully", "data": data}
+
+
+@router.put("/types/{leave_type}")
+async def update_leave_type(
+    leave_type: str,
+    payload: LeaveTypeUpdate,
+    current_user: dict | None = Depends(require_permission(Permission.LEAVE_UPDATE)),
+):
+    data = await service.update_leave_type(
+        leave_type,
+        payload.name,
+        payload.allocated_days,
+    )
+    await invalidate_employee_leaves_cache()
+    return {"success": True, "message": "Leave type updated successfully", "data": data}
+
+
+@router.delete("/types/{leave_type}")
+async def delete_leave_type(
+    leave_type: str,
+    current_user: dict | None = Depends(require_permission(Permission.LEAVE_UPDATE)),
+):
+    await service.delete_leave_type(leave_type)
+    await invalidate_employee_leaves_cache()
+    return {"success": True, "message": "Leave type deactivated successfully", "data": None}
+
+
+@router.get("/employee/{employee_id}/balance")
+async def get_employee_leave_balance(
+    employee_id: str,
+    current_user: dict | None = Depends(
+        require_permission(Permission.LEAVE_READ)
+    ),
+):
+    return {
+        "success": True,
+        "message": "Employee leave balance fetched successfully",
+        "data": await service.get_employee_balance(
+            employee_id,
+            current_user=current_user,
+        ),
+    }
+
+
 @router.put("/balances")
 async def update_leave_balances(
     payload: LeaveBalanceUpdate,
@@ -151,6 +217,7 @@ async def update_leave_balances(
             for entry in payload.balances
         ]
     )
+    await invalidate_employee_leaves_cache()
 
     return {
         "success": True,
@@ -203,6 +270,8 @@ async def create_leave(
     )
 
     await invalidate_leaves_cache()
+    if data and data.get("employee_id"):
+        await invalidate_employee_leaves_cache(data["employee_id"])
 
     return {
         "success": True,
@@ -228,6 +297,8 @@ async def update_leave_status(
     )
 
     await invalidate_leaves_cache()
+    if data and data.get("employee_id"):
+        await invalidate_employee_leaves_cache(data["employee_id"])
 
     if getattr(payload.status, "value", payload.status) == "approved":
         await invalidate_attendance_cache()
@@ -246,12 +317,16 @@ async def delete_leave(
         require_permission(Permission.LEAVE_UPDATE)
     ),
 ):
+    leave = await service.repository.get_by_id(leave_id)
+
     await service.delete_leave(
         leave_id,
         current_user=current_user,
     )
 
     await invalidate_leaves_cache()
+    if leave and leave.get("employee_id"):
+        await invalidate_employee_leaves_cache(leave["employee_id"])
 
     return {
         "success": True,

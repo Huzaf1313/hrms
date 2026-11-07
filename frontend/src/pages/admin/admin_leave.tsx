@@ -22,9 +22,16 @@ import {
   ChevronRight,
   ChevronDown,
   Pencil,
+  Trash2,
 } from "lucide-react";
 import { departmentService } from "../../services/departmentService";
-import { leaveService, type LeaveRequest, type LeaveStatus, type LeaveSummary } from "../../services/admin_leave_service";
+import {
+  leaveService,
+  type LeaveBalance,
+  type LeaveRequest,
+  type LeaveStatus,
+  type LeaveSummary,
+} from "../../services/admin_leave_service";
 import { adminMyLeaveStore } from "../../services/adminMyLeaveStore";
 import { useGlobalDate } from "../../context/globalDateContext";
 import { GlobalDateBadge } from "../../components/GlobalDateBadge";
@@ -74,6 +81,26 @@ const leaveTypeColors: Record<string, string> = {
   "Earned Leave": "bg-orange-50 text-orange-500",
   "Comp Off": "bg-violet-50 text-violet-600",
 };
+
+function decorateLeaveBalance(balance: LeaveBalance) {
+  const style = {
+    "Casual Leave": { icon: Palmtree, iconBg: "bg-teal-50", iconColor: "text-teal-600" },
+    "Sick Leave": { icon: Stethoscope, iconBg: "bg-blue-50", iconColor: "text-blue-600" },
+    "Earned Leave": { icon: Gift, iconBg: "bg-orange-50", iconColor: "text-orange-500" },
+    "Comp Off": { icon: Timer, iconBg: "bg-violet-50", iconColor: "text-violet-600" },
+  }[balance.leave_type] ?? {
+    icon: CalendarDays,
+    iconBg: "bg-slate-50",
+    iconColor: "text-slate-600",
+  };
+
+  return {
+    label: balance.leave_type,
+    used: balance.used,
+    total: balance.total,
+    ...style,
+  };
+}
 
 const statusStyles: Record<LeaveStatus, string> = {
   pending: "bg-orange-50 text-orange-500",
@@ -571,20 +598,33 @@ function AdminLeave() {
   // Editable leave-balance quotas (days per leave type). The numbers live in
   // the database and are synced below, so edits survive reloads across every
   // admin session.
-  const [leaveBalancesState, setLeaveBalancesState] = useState(leaveBalances);
+  const [leaveBalancesState, setLeaveBalancesState] = useState(
+    leaveBalances.map((balance) => decorateLeaveBalance({
+      leave_type: balance.label,
+      used: balance.used,
+      total: balance.total,
+    })),
+  );
   const [isBalanceEditOpen, setIsBalanceEditOpen] = useState(false);
   /** Per-type working copy of the numbers shown in the edit modal. */
   const [balanceDraft, setBalanceDraft] = useState<
-    Record<string, { used: string; total: string }>
+    Record<string, { name: string; used: string; total: string }>
   >({});
   const [isBalanceSaving, setIsBalanceSaving] = useState(false);
+  const [newLeaveName, setNewLeaveName] = useState("");
+  const [newLeaveTotal, setNewLeaveTotal] = useState("0");
+  const [isAddingLeaveType, setIsAddingLeaveType] = useState(false);
 
   function openBalanceEdit() {
     setBalanceDraft(
       Object.fromEntries(
         leaveBalancesState.map((balance) => [
           balance.label,
-          { used: String(balance.used), total: String(balance.total) },
+          {
+            name: balance.label,
+            used: String(balance.used),
+            total: String(balance.total),
+          },
         ]),
       ),
     );
@@ -598,36 +638,45 @@ function AdminLeave() {
 
     const next = leaveBalancesState.map((balance) => {
       const draft = balanceDraft[balance.label] ?? {
+        name: balance.label,
         used: String(balance.used),
         total: String(balance.total),
       };
 
       return {
         ...balance,
+        label: draft.name.trim() || balance.label,
         used: Math.max(0, Math.round(Number(draft.used) || 0)),
         total: Math.max(0, Math.round(Number(draft.total) || 0)),
       };
     });
 
-    const payload = next.map((balance) => ({
-      leave_type: balance.label,
-      used: balance.used,
-      total: balance.total,
-    }));
+    const renamed = next
+      .map((balance, index) => ({
+        balance,
+        previous: leaveBalancesState[index],
+      }))
+      .filter(({ balance, previous }) => balance.label !== previous.label);
 
     try {
-      const savedBalances = await leaveService.updateBalances(payload);
+      for (const { balance, previous } of renamed) {
+        await leaveService.updateType(
+          previous.label,
+          balance.label,
+          balance.total,
+        );
+      }
+
+      const savedBalances = await leaveService.updateBalances(
+        next.map((balance) => ({
+          leave_type: balance.label,
+          used: balance.used,
+          total: balance.total,
+        })),
+      );
 
       setLeaveBalancesState(
-        next.map((balance) => {
-          const saved = savedBalances.find(
-            (item) => item.leave_type === balance.label,
-          );
-
-          return saved
-            ? { ...balance, used: saved.used, total: saved.total }
-            : balance;
-        }),
+        savedBalances.map(decorateLeaveBalance),
       );
       setIsBalanceEditOpen(false);
       setNotice({ type: "success", text: "Leave balances saved." });
@@ -635,6 +684,45 @@ function AdminLeave() {
       setNotice({ type: "error", text: "Unable to save leave balances. Please try again." });
     } finally {
       setIsBalanceSaving(false);
+    }
+  }
+
+  async function reloadLeaveBalances() {
+    const balances = await leaveService.balances();
+    setLeaveBalancesState(balances.map(decorateLeaveBalance));
+  }
+
+  async function addLeaveType() {
+    const name = newLeaveName.trim();
+    const allocatedDays = Math.max(0, Math.round(Number(newLeaveTotal) || 0));
+
+    if (!name || isAddingLeaveType) return;
+
+    try {
+      setIsAddingLeaveType(true);
+      await leaveService.createType(name, allocatedDays);
+      await reloadLeaveBalances();
+      setNewLeaveName("");
+      setNewLeaveTotal("0");
+      setNotice({ type: "success", text: "Leave type added." });
+    } catch {
+      setNotice({ type: "error", text: "Unable to add leave type." });
+    } finally {
+      setIsAddingLeaveType(false);
+    }
+  }
+
+  async function deleteLeaveType(name: string) {
+    if (!window.confirm(`Deactivate ${name}? Existing leave records will be kept.`)) {
+      return;
+    }
+
+    try {
+      await leaveService.deleteType(name);
+      await reloadLeaveBalances();
+      setNotice({ type: "success", text: "Leave type deactivated." });
+    } catch {
+      setNotice({ type: "error", text: "Unable to deactivate leave type." });
     }
   }
 
@@ -659,17 +747,7 @@ function AdminLeave() {
       .then((savedBalances) => {
         if (cancelled) return;
 
-        setLeaveBalancesState((current) =>
-          current.map((balance) => {
-            const saved = savedBalances.find(
-              (item) => item.leave_type === balance.label,
-            );
-
-            return saved
-              ? { ...balance, used: saved.used, total: saved.total }
-              : balance;
-          }),
-        );
+        setLeaveBalancesState(savedBalances.map(decorateLeaveBalance));
       })
       .catch(() => {
         /* The static defaults stay on screen if the request fails. */
@@ -1382,8 +1460,8 @@ function AdminLeave() {
 
       {isBalanceEditOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-            <div className="mb-4 flex items-center justify-between">
+          <div className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-xl">
+            <div className="flex shrink-0 items-start justify-between border-b border-gray-100 p-6">
               <div>
                 <h3 className="text-lg font-bold text-gray-900">
                   Edit Leave Balances
@@ -1404,12 +1482,39 @@ function AdminLeave() {
               </button>
             </div>
 
-            <div className="space-y-4">
-              {leaveBalancesState.map((balance) => (
-                <div key={balance.label} className="rounded-xl border border-gray-100 p-3">
-                  <p className="mb-2 text-sm font-semibold text-gray-800">
-                    {balance.label}
-                  </p>
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-6">
+               {leaveBalancesState.map((balance) => (
+                 <div key={balance.label} className="rounded-xl border border-gray-100 p-3">
+                   <div className="mb-2 flex items-center justify-between gap-2">
+                     <label className="text-xs font-medium text-gray-500">
+                       Leave name
+                     </label>
+                     <button
+                       type="button"
+                       onClick={() => void deleteLeaveType(balance.label)}
+                       aria-label={`Delete ${balance.label}`}
+                       title={`Delete ${balance.label}`}
+                       className="rounded-lg p-1.5 text-rose-600 transition hover:bg-rose-50"
+                     >
+                       <Trash2 className="h-4 w-4" />
+                     </button>
+                   </div>
+
+                   <input
+                     type="text"
+                     value={balanceDraft[balance.label]?.name ?? balance.label}
+                     onChange={(event) =>
+                       setBalanceDraft((current) => ({
+                         ...current,
+                         [balance.label]: {
+                           name: event.target.value,
+                           used: current[balance.label]?.used ?? String(balance.used),
+                           total: current[balance.label]?.total ?? String(balance.total),
+                         },
+                       }))
+                     }
+                     className="mb-3 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#2563eb] focus:outline-none"
+                   />
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
@@ -1424,9 +1529,10 @@ function AdminLeave() {
                         onChange={(event) =>
                           setBalanceDraft((current) => ({
                             ...current,
-                            [balance.label]: {
-                              total: current[balance.label]?.total ?? "",
-                              used: event.target.value,
+                             [balance.label]: {
+                               name: current[balance.label]?.name ?? balance.label,
+                               total: current[balance.label]?.total ?? "",
+                               used: event.target.value,
                             },
                           }))
                         }
@@ -1446,9 +1552,10 @@ function AdminLeave() {
                         onChange={(event) =>
                           setBalanceDraft((current) => ({
                             ...current,
-                            [balance.label]: {
-                              used: current[balance.label]?.used ?? "",
-                              total: event.target.value,
+                             [balance.label]: {
+                               name: current[balance.label]?.name ?? balance.label,
+                               used: current[balance.label]?.used ?? "",
+                               total: event.target.value,
                             },
                           }))
                         }
@@ -1457,10 +1564,41 @@ function AdminLeave() {
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
+               ))}
+             </div>
 
-            <div className="mt-5 flex justify-end gap-3">
+             <div className="mt-4 rounded-xl border border-dashed border-gray-300 p-3">
+               <p className="mb-2 text-sm font-semibold text-gray-800">
+                 Add leave type
+               </p>
+               <div className="grid grid-cols-2 gap-3">
+                 <input
+                   type="text"
+                   value={newLeaveName}
+                   onChange={(event) => setNewLeaveName(event.target.value)}
+                   placeholder="Leave name"
+                   className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#2563eb] focus:outline-none"
+                 />
+                 <input
+                   type="number"
+                   min={0}
+                   value={newLeaveTotal}
+                   onChange={(event) => setNewLeaveTotal(event.target.value)}
+                   placeholder="Allocated days"
+                   className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#2563eb] focus:outline-none"
+                 />
+               </div>
+               <button
+                 type="button"
+                 onClick={() => void addLeaveType()}
+                 disabled={isAddingLeaveType || !newLeaveName.trim()}
+                 className="mt-3 rounded-lg border border-[#2563eb] px-3 py-2 text-xs font-semibold text-[#2563eb] hover:bg-blue-50 disabled:opacity-50"
+               >
+                 {isAddingLeaveType ? "Adding..." : "Add Leave Type"}
+               </button>
+             </div>
+
+            <div className="flex shrink-0 justify-end gap-3 border-t border-gray-100 bg-white p-6">
               <button
                 type="button"
                 onClick={() => setIsBalanceEditOpen(false)}
