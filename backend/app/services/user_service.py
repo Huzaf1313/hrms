@@ -13,7 +13,10 @@ from app.repositories.user_repository import UserRepository
 from app.repositories.otp_repository import OTPRepository
 from app.repositories.department_repository import DepartmentRepository
 from app.repositories.shift_repository import ShiftRepository
-from app.services.employee_identity import ensure_employee_profile
+from app.services.employee_identity import (
+    SUPER_ADMIN_EMPLOYEE_CODE,
+    ensure_employee_profile,
+)
 from app.services.session_service import SessionService
 from app.services.object_storage_service import ObjectStorageService
 from datetime import date as date_type
@@ -628,9 +631,14 @@ class UserService:
         if user.get("avatar_key"):
             avatar_url = await ObjectStorageService().signed_url(user["avatar_key"])
 
+        employee_id = user.get("employee_id")
+
+        if not employee_id and role_value(user.get("role")) == UserRole.SUPER_ADMIN.value:
+            employee_id = SUPER_ADMIN_EMPLOYEE_CODE
+
         return {
             "id": str(user["_id"]),
-            "employee_id": user.get("employee_id"),
+            "employee_id": employee_id,
             "full_name": resolve_full_name(user),
             "role": user.get("role"),
             "avatar_url": avatar_url,
@@ -670,6 +678,19 @@ class UserService:
         record the id is linked, otherwise the name is stored as-is so a
         save never fails just because the picklist differs from master data."""
         updates: dict = {}
+
+        # Names are normally set by whoever manages the account. The super
+        # admin has no one above it, so it renames itself here.
+        if (
+            "full_name" in data
+            and role_value(user.get("role")) == UserRole.SUPER_ADMIN.value
+        ):
+            full_name = " ".join((data["full_name"] or "").split())
+
+            if not full_name:
+                raise AppException("Full name is required", 400)
+
+            updates["full_name"] = full_name
 
         simple_fields = (
             "phone",

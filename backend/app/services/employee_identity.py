@@ -17,6 +17,12 @@ from pymongo import ReturnDocument
 from app.core.exceptions import AppException
 from app.core.roles import UserRole
 
+# Shown as the super admin's Employee ID on its profile. It is display-only
+# and never stored as an employee_id: the super admin must stay out of the
+# employee records (see ensure_employee_profile). The sequence starts at 1,
+# so no real employee can ever be issued this code.
+SUPER_ADMIN_EMPLOYEE_CODE = "AAR000"
+
 async def next_employee_code(collection) -> str:
     """Atomically allocate the next employee code.
 

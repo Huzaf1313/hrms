@@ -264,8 +264,13 @@ class AdminProfileUpdate(BaseModel):
     employee_id, joining date, employment status) are deliberately absent -
     those are system-owned and change through their own flows. Dates and
     emails stay plain strings so a cleared field ("") round-trips instead of
-    failing validation; the service parses what it accepts."""
+    failing validation; the service parses what it accepts.
 
+    full_name is the one exception: it is applied only for the super admin,
+    which has no account above it to rename it. For every other role the
+    service ignores it."""
+
+    full_name: str | None = Field(default=None, max_length=80)
     phone: str | None = Field(default=None, max_length=20)
     date_of_birth: str | None = None
     gender: str | None = Field(default=None, max_length=20)

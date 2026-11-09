@@ -6,6 +6,8 @@ export interface LeaveRequest {
   id: string;
   employee_id: string;
   employee_name?: string | null;
+  /** Applicant's role, so HR and manager requests stand out. */
+  employee_role?: string | null;
   department_id?: string | null;
   department_name?: string | null;
   leave_type: string;
@@ -73,5 +75,36 @@ export const leaveService = {
 
   updateStatus(id: string, status: Exclude<LeaveStatus, "pending" | "cancelled">) {
     return api.patch<LeaveRequest>(`/admin/leaves/${id}/status`, { status });
+  },
+
+  /**
+   * File a leave request for the signed-in HR or manager account. It goes
+   * through the employee endpoint, so it is stored like any other request
+   * and shows up for the approvers above them (HR, the super admin).
+   */
+  applyForSelf(payload: {
+    leave_type: string;
+    start_date: string;
+    end_date: string;
+    reason: string;
+  }) {
+    return api.post<unknown>("/employee-leave", payload);
+  },
+
+  /** The signed-in account's own requests, newest first. */
+  async listMine(employeeId: string, employeeName?: string): Promise<LeaveRequest[]> {
+    const response = await api.get<{
+      items: Array<Omit<LeaveRequest, "created_at"> & {
+        created_at?: string;
+        requested_at?: string;
+      }>;
+    }>(`/employee-leave/employees/${encodeURIComponent(employeeId)}`, { limit: 100 });
+
+    return response.items.map((item) => ({
+      ...item,
+      employee_name: item.employee_name ?? employeeName ?? null,
+      status: String(item.status).toLowerCase() as LeaveStatus,
+      created_at: item.created_at ?? item.requested_at ?? "",
+    }));
   },
 };

@@ -15,7 +15,6 @@ import {
   Users2,
   Timer,
   RotateCcw,
-  MoreVertical,
   SlidersHorizontal,
   X,
   CheckSquare,
@@ -24,6 +23,7 @@ import {
 } from "lucide-react";
 import { CardSkeleton, TableRowSkeleton } from "../../components/ui";
 import { ApiError } from "../../services/api";
+import { isSuperAdmin } from "../../lib/access";
 import {
   attendanceService,
   type BulkAttendanceResponse,
@@ -321,6 +321,13 @@ function AdminAttendance() {
   const [myStatus, setMyStatus] = useState<MyAttendanceStatus | null>(null);
   const [isPunching, setIsPunching] = useState(false);
 
+  // The super admin is not an employee, so it has no attendance of its own
+  // to punch. Asking for it only produced a "No employee record" error.
+  const canSelfPunch = useMemo(() => !isSuperAdmin(), []);
+  const visibleQuickActions = canSelfPunch
+    ? quickActions
+    : quickActions.filter((action) => action.label !== "Mark My Attendance");
+
   type PunchPopup =
     | { kind: "success"; title: string; fields: { label: string; value: string }[] }
     | { kind: "error"; message: string };
@@ -350,6 +357,8 @@ function AdminAttendance() {
   });
 
   useEffect(() => {
+    if (!canSelfPunch) return;
+
     let isCurrent = true;
 
     attendanceService
@@ -372,7 +381,7 @@ function AdminAttendance() {
     return () => {
       isCurrent = false;
     };
-  }, []);
+  }, [canSelfPunch]);
 
   function clearSelection() {
     setIsAllMatchingSelected(false);
@@ -838,6 +847,7 @@ function AdminAttendance() {
             <Download className="h-4 w-4" />
             Export
           </button>
+          {canSelfPunch && (
           <button
             type="button"
             className={`flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-white transition ${
@@ -868,6 +878,7 @@ function AdminAttendance() {
               ? "Mark Out"
               : "Mark In"}
           </button>
+          )}
         </div>
       </div>
 
@@ -1239,15 +1250,6 @@ function AdminAttendance() {
                         >
                           View
                         </button>
-
-                        <button
-                          type="button"
-                          onClick={() => setDetailRow(row)}
-                          aria-label={`More actions for ${row.employee.first_name} ${row.employee.last_name}`}
-                          className="flex h-7 w-7 items-center justify-center rounded-lg border border-gray-200 text-gray-400 transition hover:bg-gray-50 hover:text-gray-600"
-                        >
-                          <MoreVertical className="h-4 w-4" />
-                        </button>
                       </div>
                     </td>
                   </tr>
@@ -1439,7 +1441,7 @@ function AdminAttendance() {
             <h3 className="mb-3 shrink-0 font-bold text-gray-900">Quick Actions</h3>
 
             <div className="grid grid-cols-2 gap-2.5 flex-1 content-start">
-              {quickActions.map((action) => {
+              {visibleQuickActions.map((action) => {
                 const Icon = action.icon;
 
                 return (

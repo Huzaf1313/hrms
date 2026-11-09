@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Bell, ChevronDown, ChevronRight, LogOut, Menu, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -8,6 +8,7 @@ import { employeeService } from "../services/employeeService";
 import type { Employee } from "../types/employee";
 import { adminNotificationService } from "../services/adminNotificationService";
 import { adminProfileService } from "../services/adminProfileService";
+import { SESSION_USER_UPDATED_EVENT } from "../lib/session";
 
 interface HeaderProps {
   onLogout: () => void;
@@ -80,7 +81,16 @@ function Header({
     useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
-  const user = useMemo(() => readUser(), []);
+  const [user, setUser] = useState(() => readUser());
+
+  // A profile save renames the cached session user; pick that up live.
+  useEffect(() => {
+    const refresh = () => setUser(readUser());
+
+    window.addEventListener(SESSION_USER_UPDATED_EVENT, refresh);
+
+    return () => window.removeEventListener(SESSION_USER_UPDATED_EVENT, refresh);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
