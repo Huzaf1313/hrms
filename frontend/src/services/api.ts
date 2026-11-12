@@ -2,32 +2,56 @@ const API_BASE_URL: string =
   (import.meta.env.VITE_API_BASE_URL as string | undefined) ??
   "http://localhost:8000/api/v1";
 
-const TOKEN_KEY = "hrms_access_token";
-const REFRESH_TOKEN_KEY = "hrms_refresh_token";
+// Where the tokens live:
+//  - The refresh token is an HttpOnly cookie set by the server. Page scripts
+//    cannot read it; the browser sends it only to the /auth routes.
+//  - The access token is kept in this module's memory and nowhere else, so
+//    it is gone on reload and restored from the cookie by restoreSession().
+// Neither token is ever written to localStorage or sessionStorage.
+const USER_KEY = "user";
 
+let accessToken: string | null = null;
 let refreshPromise: Promise<string> | null = null;
 
+// Tokens used to be stored here; remove any left behind by an older build.
+try {
+  localStorage.removeItem("hrms_access_token");
+  localStorage.removeItem("hrms_refresh_token");
+  localStorage.removeItem("token_type");
+} catch {
+  // Storage can be unavailable (private mode); nothing to clean up then.
+}
+
 export function getAccessToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY);
+  return accessToken;
 }
 
 export function setAccessToken(token: string | null): void {
-  if (token) {
-    localStorage.setItem(TOKEN_KEY, token);
-  } else {
-    localStorage.removeItem(TOKEN_KEY);
+  accessToken = token;
+}
+
+/** True when this browser has signed in before and may still hold a session
+ *  cookie. The cookie itself is invisible to scripts, so the stored profile
+ *  is the only hint available. */
+export function hasSessionHint(): boolean {
+  try {
+    return localStorage.getItem(USER_KEY) !== null;
+  } catch {
+    return false;
   }
 }
 
-export function getRefreshToken(): string | null {
-  return localStorage.getItem(REFRESH_TOKEN_KEY);
-}
+/** After a reload the access token is gone; get a new one from the session
+ *  cookie. Resolves false when there is no usable session. */
+export async function restoreSession(): Promise<boolean> {
+  if (accessToken) return true;
+  if (!hasSessionHint()) return false;
 
-export function setRefreshToken(token: string | null): void {
-  if (token) {
-    localStorage.setItem(REFRESH_TOKEN_KEY, token);
-  } else {
-    localStorage.removeItem(REFRESH_TOKEN_KEY);
+  try {
+    await refreshAccessToken();
+    return true;
+  } catch {
+    return false;
   }
 }
 const onSessionClearCallbacks: Array<() => void> = [];
@@ -38,7 +62,13 @@ export function setOnSessionClear(cb: () => void): void {
 
 export function clearSession(): void {
   setAccessToken(null);
-  setRefreshToken(null);
+
+  try {
+    localStorage.removeItem(USER_KEY);
+  } catch {
+    // Ignore: storage unavailable.
+  }
+
   onSessionClearCallbacks.forEach((cb) => cb());
 }
 
@@ -72,26 +102,16 @@ interface FormRequestOptions {
 }
 
 async function refreshAccessToken(): Promise<string> {
-  const refreshToken = getRefreshToken();
-
-  if (!refreshToken) {
-    throw new ApiError("Session expired. Please log in again.", 401);
-  }
-
   if (!refreshPromise) {
+    // No body: the refresh token rides along as the HttpOnly cookie.
     refreshPromise = requestRaw<{
       access_token: string;
-      refresh_token: string;
       token_type: string;
     }>("/auth/refresh", {
       method: "POST",
-      body: {
-        refresh_token: refreshToken,
-      },
     })
       .then((response) => {
         setAccessToken(response.access_token);
-        setRefreshToken(response.refresh_token);
 
         return response.access_token;
       })
@@ -351,6 +371,8 @@ async function requestRaw<T>(path: string, options: RequestOptions = {}): Promis
       method,
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
+      // The /auth routes set, read and clear the session cookie.
+      credentials: "include",
     });
   } catch {
     throw new ApiError(

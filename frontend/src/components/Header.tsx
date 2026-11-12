@@ -178,6 +178,7 @@ function Header({
     useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const notificationRef = useRef<HTMLDivElement>(null);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
 
   // A newly created employee has no `created_by` on file yet, so notifications
   // route to every active admin until their creator is known.
@@ -214,10 +215,25 @@ function Header({
       ) {
         setShowNotificationDropdown(false);
       }
+
+      if (
+        profileMenuRef.current &&
+        !profileMenuRef.current.contains(event.target as Node)
+      ) {
+        setShowProfileMenu(false);
+      }
+    }
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setShowProfileMenu(false);
     }
 
     document.addEventListener("mousedown", closeOnOutsideClick);
-    return () => document.removeEventListener("mousedown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("mousedown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
   }, []);
 
   const fullName = user?.full_name ?? "Admin";
@@ -361,7 +377,7 @@ function Header({
 
         <DatePicker canManageHolidays={isAdminRole(user?.role)} />
 
-        <div className="relative">
+        <div className="relative" ref={profileMenuRef}>
           <button
             type="button"
             onClick={() => setShowProfileMenu((previous) => !previous)}

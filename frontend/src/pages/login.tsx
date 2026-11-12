@@ -7,7 +7,6 @@ import {
   ApiError,
   clearSession,
   setAccessToken,
-  setRefreshToken,
 } from "../services/api";
 import { AuthShell } from "../components/auth/AuthShell";
 import { AuthField } from "../components/auth/AuthField";
@@ -18,7 +17,6 @@ import { consumeLoginRedirectNotice } from "../lib/session";
 
 interface LoginResponse {
   access_token: string;
-  refresh_token: string;
   token_type: string;
 }
 
@@ -124,14 +122,12 @@ function Login() {
         },
       );
 
-      const { access_token, refresh_token, token_type } = loginResponse;
+      const { access_token } = loginResponse;
 
       // Clear any cached data from previous session
       clearAuthQueries();
 
       setAccessToken(access_token);
-      setRefreshToken(refresh_token);
-      localStorage.setItem("token_type", token_type);
 
       const userResponse = await api.get("/users/me");
       const user = userResponse as UserResponse;
@@ -150,7 +146,6 @@ function Login() {
       );
     } catch (err: unknown) {
       clearSession();
-      localStorage.removeItem("token_type");
       setError(
         err instanceof ApiError
           ? err.message

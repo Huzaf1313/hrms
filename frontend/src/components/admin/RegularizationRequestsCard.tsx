@@ -1,3 +1,4 @@
+import { currentSessionUser } from "../../lib/session";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { X, FileText, Check } from "lucide-react";
@@ -346,7 +347,12 @@ function RegularizationRequestsCard({
 
                     {/* Footer actions */}
             <div className="border-t border-gray-100 p-5">
-              {selectedRequest.status === "Pending" ? (
+              {selectedRequest.status === "Pending" &&
+              selectedRequest.employeeCode === currentSessionUser()?.employee_id ? (
+                <div className="rounded-lg bg-amber-50 px-4 py-2.5 text-center text-sm font-semibold text-amber-700">
+                  This is your own request. It is waiting for another approver.
+                </div>
+              ) : selectedRequest.status === "Pending" ? (
                 <div className="flex gap-3">
                   <button
                     type="button"

@@ -68,6 +68,12 @@ class Settings(BaseSettings):
 
     FRONTEND_URL: str = "http://localhost:5173"
 
+    # Refresh-token cookie. Local http development needs Secure off. When the
+    # frontend and the API are on different sites in production, set
+    # COOKIE_SECURE=true and COOKIE_SAMESITE=none or the browser drops it.
+    COOKIE_SECURE: bool = False
+    COOKIE_SAMESITE: str = "lax"
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [

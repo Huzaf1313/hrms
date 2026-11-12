@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { ComponentProps } from "react";
 import {
   Users,
   UserCheck,
@@ -22,7 +23,9 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { CardSkeleton, TableRowSkeleton } from "../../components/ui";
-import { ApiError } from "../../services/api";
+import { api, ApiError } from "../../services/api";
+import { currentSessionUser } from "../../lib/session";
+import EmployeeAttendanceRegularizationModal from "../employee/EmployeeAttendanceRegularizationModal";
 import { isSuperAdmin } from "../../lib/access";
 import {
   attendanceService,
@@ -327,6 +330,36 @@ function AdminAttendance() {
   const visibleQuickActions = canSelfPunch
     ? quickActions
     : quickActions.filter((action) => action.label !== "Mark My Attendance");
+
+  // HR and managers correct their own missed punches through the same
+  // request form employees use; someone else then reviews it.
+  type OwnAttendanceRecords = ComponentProps<
+    typeof EmployeeAttendanceRegularizationModal
+  >["attendanceRecords"];
+  const [isSelfRegularizationOpen, setIsSelfRegularizationOpen] = useState(false);
+  const [myAttendanceRecords, setMyAttendanceRecords] =
+    useState<OwnAttendanceRecords>([]);
+  const [regularizationListKey, setRegularizationListKey] = useState(0);
+
+  async function openSelfRegularization() {
+    const employeeId = currentSessionUser()?.employee_id;
+
+    if (employeeId) {
+      try {
+        setMyAttendanceRecords(
+          await api.get<OwnAttendanceRecords>(
+            `/employee-attendance/employees/${employeeId}`,
+            { page: 1, limit: 100 },
+          ),
+        );
+      } catch {
+        // The form still works for today's missing check-in without history.
+        setMyAttendanceRecords([]);
+      }
+    }
+
+    setIsSelfRegularizationOpen(true);
+  }
 
   type PunchPopup =
     | { kind: "success"; title: string; fields: { label: string; value: string }[] }
@@ -847,6 +880,16 @@ function AdminAttendance() {
             <Download className="h-4 w-4" />
             Export
           </button>
+          {canSelfPunch && (
+          <button
+            type="button"
+            onClick={() => void openSelfRegularization()}
+            className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+          >
+            <ClipboardEdit className="h-4 w-4" />
+            Regularize My Attendance
+          </button>
+          )}
           {canSelfPunch && (
           <button
             type="button"
@@ -1473,6 +1516,7 @@ function AdminAttendance() {
 
           <div id="regularization-requests" className="scroll-mt-6 h-[340px]">
             <RegularizationRequestsCard
+              key={regularizationListKey}
               onReviewed={() => setAttendanceRefreshKey((current) => current + 1)}
             />
           </div>
@@ -1978,6 +2022,16 @@ function AdminAttendance() {
           onChanged={() => setAttendanceRefreshKey((current) => current + 1)}
         />
       )}
+
+      <EmployeeAttendanceRegularizationModal
+        isOpen={isSelfRegularizationOpen}
+        onClose={() => {
+          setIsSelfRegularizationOpen(false);
+          // Reload the requests card so a new request shows up straight away.
+          setRegularizationListKey((current) => current + 1);
+        }}
+        attendanceRecords={myAttendanceRecords}
+      />
     </div>
   );
 }

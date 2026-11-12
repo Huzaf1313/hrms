@@ -16,7 +16,7 @@ import EmployeePayroll from "./pages/employee/EmployeePayroll";
 import EmployeeDocuments from "./pages/employee/EmployeeDocuments";
 import EmployeeAnnouncements from "./pages/employee/EmployeeAnnouncements";
 import EmployeeHelpSupport from "./pages/employee/EmployeeHelpSupport";
-import { clearSession, getRefreshToken, setOnSessionClear } from "./services/api";
+import { clearSession, setOnSessionClear } from "./services/api";
 import { clearPendingPasswordRedirect } from "./lib/session";
 import { authService } from "./services/authService";
 import EmployeeLayout from "./layouts/EmployeeLayout";
@@ -49,11 +49,7 @@ setOnSessionClear(() => {
 
 function App() {
   async function handleLogout() {
-    const refreshToken = getRefreshToken();
-
-    if (refreshToken) {
-      await authService.logout(refreshToken);
-    }
+    await authService.logout();
     clearSession();
     clearAuthQueries();
 

@@ -1,4 +1,4 @@
-import { apiRaw, clearSession, setAccessToken, setRefreshToken } from "./api";
+import { apiRaw, clearSession, setAccessToken } from "./api";
 
 export interface LoginPayload {
   email: string;
@@ -7,7 +7,6 @@ export interface LoginPayload {
 
 export interface TokenResponse {
   access_token: string;
-  refresh_token: string;
   token_type: string;
 }
 
@@ -33,14 +32,16 @@ export const authService = {
     const tokens = await apiRaw.post<TokenResponse>("/auth/login", data);
 
     setAccessToken(tokens.access_token);
-    setRefreshToken(tokens.refresh_token);
 
     return tokens;
   },
 
-  async logout(refreshToken: string) {
+  /** Revokes the session and clears its cookie on the server. */
+  async logout() {
     try {
-      await apiRaw.post("/auth/logout", { refresh_token: refreshToken });
+      await apiRaw.post("/auth/logout");
+    } catch {
+      // Signing out locally must work even when the server is unreachable.
     } finally {
       clearSession();
     }

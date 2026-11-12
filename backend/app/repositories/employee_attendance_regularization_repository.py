@@ -139,8 +139,13 @@ class EmployeeAttendanceRegularizationRepository:
         status: str | None = None,
         skip: int = 0,
         limit: int = 100,
+        employee_ids: list[str] | None = None,
     ):
         filters = {"status": status} if status else {}
+
+        # None means unrestricted; an empty list matches nothing.
+        if employee_ids is not None:
+            filters["employee_id"] = {"$in": employee_ids}
         cursor = (
             self.collection
             .find(filters)

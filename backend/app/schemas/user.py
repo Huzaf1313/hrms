@@ -151,6 +151,13 @@ class TokenResponse(BaseModel):
     refresh_token: str
     token_type: str = "bearer"
 
+class AccessTokenResponse(BaseModel):
+    """What the browser gets back from login and refresh. The refresh token
+    is not in the body: it travels only as an HttpOnly cookie."""
+    access_token: str
+    token_type: str = "bearer"
+
+
 class RefreshTokenRequest(BaseModel):
     refresh_token: str = Field(min_length=1)
 
