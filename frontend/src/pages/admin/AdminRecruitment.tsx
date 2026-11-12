@@ -9,7 +9,6 @@ import {
   Trash2,
   UserCheck,
   Users,
-  X,
 } from "lucide-react";
 
 import {
@@ -17,6 +16,7 @@ import {
   JobModal,
 } from "../../components/admin/RecruitmentModals";
 import ResumeViewerModal from "../../components/admin/ResumeViewerModal";
+import NoticePopup from "../../components/ui/NoticePopup";
 import { departmentService } from "../../services/departmentService";
 import { recruitmentService } from "../../services/recruitmentService";
 import {
@@ -322,15 +322,6 @@ function AdminRecruitment() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  // Hide the message banner after a few seconds.
-  useEffect(() => {
-    if (!notice) return;
-
-    const timer = setTimeout(() => setNotice(null), notice.type === "error" ? 10000 : 6000);
-
-    return () => clearTimeout(timer);
-  }, [notice]);
-
   // Department names for the "Add job" form suggestions (loaded once).
   useEffect(() => {
     let active = true;
@@ -564,21 +555,7 @@ function AdminRecruitment() {
         </button>
       </div>
 
-      {notice && (
-        <div
-          role="alert"
-          className={`fixed right-6 top-24 z-[60] flex max-w-md items-start gap-3 rounded-lg border px-4 py-3 text-sm shadow-lg ${
-            notice.type === "success"
-              ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-              : "border-red-200 bg-red-50 text-red-800"
-          }`}
-        >
-          <span className="flex-1">{notice.text}</span>
-          <button type="button" onClick={() => setNotice(null)} aria-label="Dismiss">
-            <X aria-hidden="true" className="h-4 w-4" />
-          </button>
-        </div>
-      )}
+      <NoticePopup notice={notice} onDismiss={() => setNotice(null)} />
 
       {/* Top cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">

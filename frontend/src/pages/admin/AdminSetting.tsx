@@ -16,6 +16,7 @@ import {
 
 import AddHolidayModal from "../../components/AddHolidayModal";
 import { ApiError } from "../../services/api";
+import NoticePopup from "../../components/ui/NoticePopup";
 import { departmentService } from "../../services/departmentService";
 import {
   formatDuration,
@@ -593,7 +594,6 @@ export default function AdminSettings() {
 
   function showNotice(message: string) {
     setNotice(message);
-    window.setTimeout(() => setNotice(""), 2500);
   }
 
   function startEdit(card: CardId) {
@@ -1013,12 +1013,10 @@ export default function AdminSettings() {
           </p>
         </div>
 
-        {notice && (
-          <span className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
-            <Check className="h-3.5 w-3.5" />
-            {notice}
-          </span>
-        )}
+        <NoticePopup
+          notice={notice ? { type: "success", text: notice } : null}
+          onDismiss={() => setNotice("")}
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">

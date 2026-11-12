@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { CardSkeleton, TableRowSkeleton } from "../../components/ui";
 import { api, ApiError } from "../../services/api";
+import NoticePopup from "../../components/ui/NoticePopup";
 import { currentSessionUser } from "../../lib/session";
 import EmployeeAttendanceRegularizationModal from "../employee/EmployeeAttendanceRegularizationModal";
 import { isSuperAdmin } from "../../lib/access";
@@ -1959,61 +1960,33 @@ function AdminAttendance() {
         </div>
       )}
 
-      {punchPopup && (
-        <div
-          role={punchPopup.kind === "error" ? "alert" : "status"}
-          aria-live={punchPopup.kind === "error" ? "assertive" : "polite"}
-          className={`fixed bottom-5 left-5 z-50 w-[min(24rem,calc(100vw-2.5rem))] rounded-2xl border p-4 shadow-xl ${
-            punchPopup.kind === "error"
-              ? "border-rose-200 bg-white text-rose-700"
-              : "border-emerald-200 bg-white text-gray-800"
-          }`}
-        >
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="font-semibold">
-                {punchPopup.kind === "error" ? "Attendance error" : punchPopup.title}
-              </p>
-              {punchPopup.kind === "error" ? (
-                <p className="mt-1 text-sm">{punchPopup.message}</p>
-              ) : (
-                <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                  {punchPopup.fields.map((field) => (
-                    <div key={field.label}>
-                      <dt className="text-xs text-gray-400">{field.label}</dt>
-                      <dd className="font-medium">{field.value}</dd>
-                    </div>
-                  ))}
-                </dl>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={() => setPunchPopup(null)}
-              className="shrink-0 rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
-              aria-label="Dismiss attendance message"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      )}
+      <NoticePopup
+        notice={
+          punchPopup
+            ? punchPopup.kind === "error"
+              ? { type: "error", title: "Attendance error", text: punchPopup.message }
+              : { type: "success", title: punchPopup.title, text: "" }
+            : null
+        }
+        onDismiss={() => setPunchPopup(null)}
+        timeout={6000}
+      >
+        {punchPopup?.kind === "success" && (
+          <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-left text-sm">
+            {punchPopup.fields.map((field) => (
+              <div key={field.label}>
+                <dt className="text-xs text-gray-400">{field.label}</dt>
+                <dd className="font-medium text-gray-800">{field.value}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+      </NoticePopup>
 
-      {/* Success Notification Toast */}
-      {successToast && (
-        <div className="fixed bottom-5 right-5 z-50 flex items-center gap-2.5 rounded-2xl bg-gray-900 px-4 py-3 text-sm font-medium text-white shadow-xl">
-          <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0" />
-          <span>{successToast}</span>
-          <button
-            type="button"
-            onClick={() => setSuccessToast("")}
-            className="ml-2 rounded-lg p-1 text-gray-400 hover:text-white"
-            aria-label="Dismiss notification"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      )}
+      <NoticePopup
+        notice={successToast ? { type: "success", text: successToast } : null}
+        onDismiss={() => setSuccessToast("")}
+      />
 
       {/* Manage Shifts Modal */}
       {showShiftManager && (
