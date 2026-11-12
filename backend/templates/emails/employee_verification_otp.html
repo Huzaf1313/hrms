@@ -62,7 +62,7 @@
                     font-size: 22px;
                     color: #111827;
                 ">
-                    Employee Email Verification
+                    {{ 'Email Verification' if account_label else 'Employee Email Verification' }}
                 </h2>
 
                 <p style="
@@ -79,8 +79,8 @@
                     line-height: 1.6;
                     color: #4b5563;
                 ">
-                    An administrator is creating your employee account in HRMS.
-                    Please provide the verification code below to your HR administrator to confirm your email address.
+                    An administrator is creating your {{ account_label or 'employee' }} account in HRMS.
+                    Please provide the verification code below to your {{ 'administrator' if account_label else 'HR administrator' }} to confirm your email address.
                 </p>
 
                 <!-- OTP Box -->

@@ -6,6 +6,7 @@ import {
   type ReactNode,
 } from "react";
 import {
+  BadgeCheck,
   Lock,
   LockOpen,
   Plus,
@@ -42,6 +43,8 @@ const EMPTY_FORM: AdminAccountCreate = {
   password: "",
   role: "hr_admin",
 };
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const PASSWORD_HINT =
   "At least 8 characters, with an uppercase letter, a lowercase letter, a number and a symbol.";
@@ -225,10 +228,97 @@ function CreateAccountForm({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Email OTP verification. The token is tied to verifiedEmail, so editing
+  // the address afterwards throws the verification away.
+  const [verifiedEmail, setVerifiedEmail] = useState<string | null>(null);
+  const [verificationToken, setVerificationToken] = useState<string | null>(null);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpValue, setOtpValue] = useState("");
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
+  const [otpError, setOtpError] = useState<string | null>(null);
+  const [otpInfo, setOtpInfo] = useState<string | null>(null);
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+
+    const timer = window.setTimeout(() => setCooldown((value) => value - 1), 1000);
+    return () => window.clearTimeout(timer);
+  }, [cooldown]);
+
+  const normalizedEmail = form.email.trim().toLowerCase();
+  const emailVerified =
+    Boolean(verificationToken) && verifiedEmail === normalizedEmail;
+
   const update = <K extends keyof AdminAccountCreate>(
     key: K,
     value: AdminAccountCreate[K],
   ) => setForm((current) => ({ ...current, [key]: value }));
+
+  const changeEmail = (value: string) => {
+    update("email", value);
+
+    // A code or verification belongs to the address it was sent to.
+    if (otpSent || verifiedEmail || otpError) {
+      setVerifiedEmail(null);
+      setVerificationToken(null);
+      setOtpSent(false);
+      setOtpValue("");
+      setOtpError(null);
+      setOtpInfo(null);
+      setCooldown(0);
+    }
+  };
+
+  const sendOtp = async () => {
+    if (!EMAIL_PATTERN.test(normalizedEmail)) {
+      setOtpError("Enter a valid email address before requesting an OTP.");
+      return;
+    }
+
+    setSendingOtp(true);
+    setOtpError(null);
+    setOtpInfo(null);
+
+    try {
+      const response = await userService.requestAdminEmailOtp(normalizedEmail);
+
+      setOtpSent(true);
+      setOtpValue("");
+      setCooldown(response.cooldown_seconds);
+      setOtpInfo(
+        `Code sent to ${normalizedEmail}. It expires in ${response.expires_in_minutes} minutes.`,
+      );
+    } catch (cause: unknown) {
+      setOtpError(errorText(cause, "Unable to send the verification code."));
+    } finally {
+      setSendingOtp(false);
+    }
+  };
+
+  const verifyOtp = async () => {
+    if (!/^\d{6}$/.test(otpValue)) {
+      setOtpError("Enter the 6-digit code.");
+      return;
+    }
+
+    setVerifyingOtp(true);
+    setOtpError(null);
+
+    try {
+      const response = await userService.verifyAdminEmailOtp(normalizedEmail, otpValue);
+
+      setVerifiedEmail(response.email.toLowerCase());
+      setVerificationToken(response.verification_token);
+      setOtpInfo(null);
+      setError(null);
+    } catch (cause: unknown) {
+      setOtpError(errorText(cause, "Invalid or expired OTP. Try again."));
+    } finally {
+      setVerifyingOtp(false);
+    }
+  };
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -253,6 +343,11 @@ function CreateAccountForm({
       return;
     }
 
+    if (!emailVerified || !verificationToken) {
+      setError("Verify the email address with an OTP before creating the account.");
+      return;
+    }
+
     setSaving(true);
     setError(null);
 
@@ -261,6 +356,7 @@ function CreateAccountForm({
         ...form,
         full_name: name,
         email,
+        email_verification_token: verificationToken,
       });
 
       onCreated(account);
@@ -300,17 +396,106 @@ function CreateAccountForm({
           />
         </label>
 
-        <label className="block">
-          <span className="mb-1 block text-xs font-semibold text-slate-600">Email</span>
-          <input
-            className={INPUT_CLASS}
-            type="email"
-            value={form.email}
-            onChange={(event) => update("email", event.target.value)}
-            autoComplete="off"
-            required
-          />
-        </label>
+        <div>
+          <label
+            htmlFor="admin-account-email"
+            className="mb-1 flex items-center justify-between text-xs font-semibold text-slate-600"
+          >
+            Email
+            {emailVerified && (
+              <span className="inline-flex items-center gap-1 text-emerald-700">
+                <BadgeCheck className="h-3.5 w-3.5" />
+                Verified
+              </span>
+            )}
+          </label>
+          <div className="flex gap-2">
+            <input
+              id="admin-account-email"
+              className={INPUT_CLASS}
+              type="email"
+              value={form.email}
+              onChange={(event) => changeEmail(event.target.value)}
+              autoComplete="off"
+              required
+            />
+            <button
+              type="button"
+              onClick={sendOtp}
+              disabled={sendingOtp || verifyingOtp || cooldown > 0 || emailVerified}
+              className="inline-flex h-9 shrink-0 items-center rounded-lg border border-blue-200 bg-blue-50 px-3 text-xs font-semibold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-400"
+            >
+              {sendingOtp
+                ? "Sending..."
+                : emailVerified
+                  ? "Verified"
+                  : cooldown > 0
+                    ? `Resend in ${cooldown}s`
+                    : otpSent
+                      ? "Resend OTP"
+                      : "Send OTP"}
+            </button>
+          </div>
+          {!otpSent && !emailVerified && !otpError && (
+            <p className="mt-1 text-[11px] text-slate-500">
+              Send an OTP to confirm this address before creating the account.
+            </p>
+          )}
+          {!otpSent && otpError && (
+            <p className="mt-1 text-[11px] text-rose-600" role="alert">
+              {otpError}
+            </p>
+          )}
+        </div>
+
+        {otpSent && !emailVerified && (
+          <div className="rounded-xl border border-blue-100 bg-blue-50/40 p-3 sm:col-span-2">
+            <label
+              htmlFor="admin-account-otp"
+              className="mb-1 block text-xs font-semibold text-slate-600"
+            >
+              Enter the 6-digit OTP sent to {normalizedEmail}
+            </label>
+            <div className="flex gap-2">
+              <input
+                id="admin-account-otp"
+                className={`${INPUT_CLASS} max-w-48 font-mono tracking-widest`}
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                placeholder="000000"
+                value={otpValue}
+                onChange={(event) => {
+                  setOtpValue(event.target.value.replace(/\D/g, "").slice(0, 6));
+                  setOtpError(null);
+                }}
+                onKeyDown={(event) => {
+                  // Enter here verifies the code rather than submitting the form.
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    if (otpValue.length === 6 && !verifyingOtp) void verifyOtp();
+                  }
+                }}
+              />
+              <button
+                type="button"
+                onClick={verifyOtp}
+                disabled={verifyingOtp || sendingOtp || otpValue.length !== 6}
+                className="inline-flex h-9 shrink-0 items-center rounded-lg bg-emerald-600 px-4 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {verifyingOtp ? "Verifying..." : "Verify OTP"}
+              </button>
+            </div>
+            {otpError ? (
+              <p className="mt-2 text-xs text-rose-600" role="alert">
+                {otpError}
+              </p>
+            ) : (
+              otpInfo && <p className="mt-2 text-xs text-slate-500">{otpInfo}</p>
+            )}
+          </div>
+        )}
 
         <label className="block">
           <span className="mb-1 block text-xs font-semibold text-slate-600">Role</span>
@@ -354,7 +539,8 @@ function CreateAccountForm({
           </button>
           <button
             type="submit"
-            disabled={saving}
+            disabled={saving || !emailVerified}
+            title={emailVerified ? undefined : "Verify the email address first"}
             className="inline-flex h-10 items-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {saving ? "Creating..." : "Create account"}

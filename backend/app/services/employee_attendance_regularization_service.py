@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException, status
@@ -22,6 +23,23 @@ from app.services.attendance_calculation import (
 from app.services.attendance_service import AttendanceService
 
 IST = timezone(timedelta(hours=5, minutes=30))
+
+logger = logging.getLogger(__name__)
+
+
+def same_moment(left: datetime | None, right: datetime | None) -> bool:
+    """True when both are the same instant. Naive values are read as UTC,
+    which is how Mongo hands them back."""
+    if left is None or right is None:
+        return False
+
+    if left.tzinfo is None:
+        left = left.replace(tzinfo=timezone.utc)
+
+    if right.tzinfo is None:
+        right = right.replace(tzinfo=timezone.utc)
+
+    return left == right
 
 
 def normalize_requested_time(value: datetime | None) -> datetime | None:
@@ -441,7 +459,9 @@ class EmployeeAttendanceRegularizationService:
                 detail="Status must be Approved or Rejected",
             )
 
-        if request.get("status") != "Pending":
+        # Older rows carry a lowercase status; the list shows them as Pending,
+        # so they must be reviewable too.
+        if str(request.get("status") or "").strip().lower() != "pending":
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Only pending requests can be reviewed",
@@ -600,7 +620,13 @@ class EmployeeAttendanceRegularizationService:
                         or attendance.get("in_time")
                     )
 
-                    if existing_check_in is not None:
+                    # An earlier approval that failed part-way has already
+                    # written this exact time: let the retry finish the job
+                    # instead of leaving the request pending for good.
+                    if existing_check_in is not None and not same_moment(
+                        existing_check_in,
+                        request.get("requested_check_in"),
+                    ):
                         raise HTTPException(
                             status_code=status.HTTP_400_BAD_REQUEST,
                             detail=(
@@ -623,7 +649,10 @@ class EmployeeAttendanceRegularizationService:
                         or attendance.get("out_time")
                     )
 
-                    if existing_check_out is not None:
+                    if existing_check_out is not None and not same_moment(
+                        existing_check_out,
+                        request.get("requested_check_out"),
+                    ):
                         raise HTTPException(
                             status_code=status.HTTP_400_BAD_REQUEST,
                             detail=(
@@ -690,15 +719,24 @@ class EmployeeAttendanceRegularizationService:
         if comment:
             message += f" Note: {comment}"
 
-        await self.notification_service.create(
-            employee_id=str(request["employee_id"]),
-            notification_type=notification_type,
-            title=f"Attendance Regularization {normalized_status}",
-            message=message,
-            target="/employee/attendance",
-            target_id=str(
-                request.get("_id", regularization_id)
-            ),
-        )
+        # The decision is already saved. A notification that fails to send
+        # must not turn it into an error the reviewer then retries.
+        try:
+            await self.notification_service.create(
+                employee_id=str(request["employee_id"]),
+                notification_type=notification_type,
+                title=f"Attendance Regularization {normalized_status}",
+                message=message,
+                target="/employee/attendance",
+                target_id=str(
+                    request.get("_id", regularization_id)
+                ),
+            )
+        except Exception:
+            logger.exception(
+                "Could not notify %s about regularization %s",
+                request.get("employee_id"),
+                regularization_id,
+            )
 
         return updated_request

@@ -13,6 +13,12 @@ from app.api.deps import (
 )
 from app.core.roles import Permission, UserRole
 from app.schemas.common import APIResponse
+from app.schemas.employee import (
+    EmployeeOTPRequest,
+    EmployeeOTPRequestResponse,
+    EmployeeOTPVerifyRequest,
+    EmployeeOTPVerifyResponse,
+)
 from app.schemas.user import (
     AdminAccountCreate,
     AdminAccountResponse,
@@ -31,6 +37,7 @@ from app.core.cache import (
 from app.services.employee_identity import ensure_employee_profile
 from app.services.object_storage_service import ObjectStorageService
 from app.services.email_service import EmailService
+from app.services.otp_service import OTPService
 from app.utils.employee_storage import employee_profile_key
 from app.core.config import settings
 from app.core.exceptions import AppException
@@ -45,6 +52,7 @@ router = APIRouter(
 user_service = UserService()
 storage_service = ObjectStorageService()
 email_service = EmailService()
+otp_service = OTPService()
 
 MAX_PROFILE_PHOTO_SIZE = 5 * 1024 * 1024
 PROFILE_PHOTO_EXTENSIONS = {".jpg", ".jpeg", ".png"}
@@ -159,6 +167,49 @@ async def list_admin_accounts(
 
 
 @router.post(
+    "/admin-accounts/request-email-otp",
+    response_model=APIResponse[EmployeeOTPRequestResponse],
+)
+async def request_admin_account_email_otp(
+    data: EmployeeOTPRequest,
+    current_user: dict = Depends(require_super_admin),
+):
+    """Email a one-time code to the address of the account being created."""
+    result = await otp_service.create_employee_verification_otp(
+        email=data.email,
+        admin_id=str(current_user["_id"]),
+        account_label="admin",
+    )
+
+    return APIResponse(
+        success=True,
+        message=result["message"],
+        data=EmployeeOTPRequestResponse(**result),
+    )
+
+
+@router.post(
+    "/admin-accounts/verify-email-otp",
+    response_model=APIResponse[EmployeeOTPVerifyResponse],
+)
+async def verify_admin_account_email_otp(
+    data: EmployeeOTPVerifyRequest,
+    current_user: dict = Depends(require_super_admin),
+):
+    result = await otp_service.verify_employee_verification_otp(
+        email=data.email,
+        otp=data.otp,
+        admin_id=str(current_user["_id"]),
+    )
+
+    return APIResponse(
+        success=True,
+        message=result["message"],
+        data=EmployeeOTPVerifyResponse(**result),
+    )
+
+
+@router.post(
     "/admin-accounts",
     response_model=APIResponse[AdminAccountResponse],
     status_code=status.HTTP_201_CREATED,
@@ -167,6 +218,23 @@ async def create_admin_account(
     data: AdminAccountCreate,
     current_user: dict = Depends(require_super_admin),
 ):
+    if not data.email_verification_token.strip():
+        raise AppException(
+            "Verify the email address with an OTP before creating the account.",
+            400,
+        )
+
+    # Checked before the one-time token is consumed, so a duplicate email
+    # does not burn a verification that could not have been used anyway.
+    if await user_service.repository.get_by_email(data.email.lower().strip()):
+        raise AppException("User with this email already exists", 409)
+
+    await otp_service.consume_employee_email_verification(
+        token=data.email_verification_token,
+        submitted_email=data.email,
+        admin_id=str(current_user["_id"]),
+    )
+
     account = await user_service.create_admin_account(
         full_name=data.full_name,
         email=data.email,

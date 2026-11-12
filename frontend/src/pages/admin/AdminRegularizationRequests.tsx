@@ -106,6 +106,7 @@ function AdminRegularizationRequests() {
   const [selectedRequest, setSelectedRequest] = useState<RegularizationRequest | null>(null);
   const [comment, setComment] = useState("");
   const [isReviewing, setIsReviewing] = useState(false);
+  const [reviewError, setReviewError] = useState("");
 
   const loadRequests = useCallback(() => {
     setIsLoading(true);
@@ -162,6 +163,7 @@ function AdminRegularizationRequests() {
     if (!selectedRequest) return;
 
     setIsReviewing(true);
+    setReviewError("");
 
     try {
       await api.patch(
@@ -178,8 +180,12 @@ function AdminRegularizationRequests() {
         ),
       );
       closeModal();
-    } catch (reviewError) {
-      if (reviewError instanceof ApiError) setComment(reviewError.message);
+    } catch (cause) {
+      setReviewError(
+        cause instanceof ApiError
+          ? cause.message
+          : `Could not ${status === "Approved" ? "approve" : "reject"} the request. Try again.`,
+      );
     } finally {
       setIsReviewing(false);
     }
@@ -188,6 +194,7 @@ function AdminRegularizationRequests() {
   function closeModal() {
     setSelectedRequest(null);
     setComment("");
+    setReviewError("");
   }
 
   return (
@@ -346,6 +353,7 @@ function AdminRegularizationRequests() {
                         type="button"
                         onClick={() => {
                           setComment("");
+                          setReviewError("");
                           setSelectedRequest(request);
                         }}
                         className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-[#2563eb] hover:bg-blue-50"
@@ -510,6 +518,15 @@ function AdminRegularizationRequests() {
 
             {/* Footer actions */}
             <div className="border-t border-gray-100 p-5">
+              {reviewError && (
+                <p
+                  role="alert"
+                  className="mb-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700"
+                >
+                  {reviewError}
+                </p>
+              )}
+
               {selectedRequest.status === "Pending" &&
               selectedRequest.employeeCode === currentSessionUser()?.employee_id ? (
                 <div className="rounded-lg bg-amber-50 px-4 py-2.5 text-center text-sm font-semibold text-amber-700">
@@ -534,7 +551,7 @@ function AdminRegularizationRequests() {
                     className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-600 disabled:opacity-50"
                   >
                     <Check className="h-4 w-4" />
-                    Approve
+                    {isReviewing ? "Saving..." : "Approve"}
                   </button>
                 </div>
               ) : (

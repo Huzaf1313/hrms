@@ -90,6 +90,9 @@ class AdminAccountCreate(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
     role: Literal["hr_admin", "manager"]
+    # Issued by /users/admin-accounts/verify-email-otp once the address has
+    # been confirmed with an OTP. Required: see create_admin_account.
+    email_verification_token: str = Field(default="", max_length=2048)
 
     @field_validator("full_name")
     @classmethod

@@ -29,6 +29,21 @@ export interface AdminAccountCreate {
   email: string;
   password: string;
   role: ManagedAdminRole;
+  /** From verifyAdminEmailOtp. The server rejects a create without it. */
+  email_verification_token?: string;
+}
+
+export interface AdminEmailOtpRequestResponse {
+  message: string;
+  expires_in_minutes: number;
+  cooldown_seconds: number;
+}
+
+export interface AdminEmailOtpVerifyResponse {
+  message: string;
+  email: string;
+  verification_token: string;
+  expires_in_minutes: number;
 }
 
 export interface AdminAccountStatusUpdate {
@@ -44,6 +59,20 @@ export const userService = {
   // Super admin only.
   listAdminAccounts() {
     return api.get<AdminAccount[]>("/users/admin-accounts");
+  },
+
+  requestAdminEmailOtp(email: string) {
+    return api.post<AdminEmailOtpRequestResponse>(
+      "/users/admin-accounts/request-email-otp",
+      { email },
+    );
+  },
+
+  verifyAdminEmailOtp(email: string, otp: string) {
+    return api.post<AdminEmailOtpVerifyResponse>(
+      "/users/admin-accounts/verify-email-otp",
+      { email, otp },
+    );
   },
 
   createAdminAccount(data: AdminAccountCreate) {

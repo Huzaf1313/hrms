@@ -182,7 +182,10 @@ class OTPService:
         self,
         email: str,
         admin_id: str,
+        account_label: str | None = None,
     ):
+        """account_label overrides the "employee" wording in the email, for
+        accounts that are not plain employees (HR admin, manager)."""
         email = email.lower().strip()
 
         # Reject if an account with this email already exists
@@ -252,6 +255,7 @@ class OTPService:
                 template_data={
                     "otp": otp,
                     "expiry_minutes": self.OTP_EXPIRY_MINUTES,
+                    **({"account_label": account_label} if account_label else {}),
                 },
             )
         except Exception as exc:
