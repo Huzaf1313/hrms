@@ -124,6 +124,8 @@ class AdminAccountResponse(BaseModel):
     is_locked: bool
     created_at: datetime | None = None
     updated_at: datetime | None = None
+    # Only set on the create response: whether the welcome email went out.
+    welcome_email_sent: bool | None = None
 
 
 class UserResponse(BaseModel):

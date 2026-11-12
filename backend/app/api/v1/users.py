@@ -30,7 +30,9 @@ from app.core.cache import (
 )
 from app.services.employee_identity import ensure_employee_profile
 from app.services.object_storage_service import ObjectStorageService
+from app.services.email_service import EmailService
 from app.utils.employee_storage import employee_profile_key
+from app.core.config import settings
 from app.core.exceptions import AppException
 
 logger = logging.getLogger(__name__)
@@ -42,6 +44,7 @@ router = APIRouter(
 
 user_service = UserService()
 storage_service = ObjectStorageService()
+email_service = EmailService()
 
 MAX_PROFILE_PHOTO_SIZE = 5 * 1024 * 1024
 PROFILE_PHOTO_EXTENSIONS = {".jpg", ".jpeg", ".png"}
@@ -92,8 +95,40 @@ async def list_manager_accounts(
     )
 
 
-def serialize_admin_account(user: dict) -> AdminAccountResponse:
+async def send_admin_welcome_email(account: dict, creator: dict) -> bool:
+    """Welcome email for a new HR admin / manager. Never raises: the account
+    already exists, so an SMTP problem must not fail the request. The email
+    carries the sign-in link only - the password is shared by the creator."""
+    company_name = creator.get("company_name") or "HRMS"
+
+    try:
+        await email_service.send_html_email_async(
+            to_email=account["email"],
+            subject=f"Welcome to {company_name}!",
+            template_name="emails/welcome_email.html",
+            template_data={
+                "company_name": company_name,
+                "employee_name": resolve_full_name(account),
+                "hr_team": "HR Team",
+                "login_url": settings.login_url,
+            },
+        )
+        return True
+    except Exception as exc:
+        logger.warning(
+            "Welcome email could not be delivered to %s: %s",
+            account.get("email"),
+            type(exc).__name__,
+        )
+        return False
+
+
+def serialize_admin_account(
+    user: dict,
+    welcome_email_sent: bool | None = None,
+) -> AdminAccountResponse:
     return AdminAccountResponse(
+        welcome_email_sent=welcome_email_sent,
         id=str(user["_id"]),
         employee_id=user.get("employee_id"),
         full_name=resolve_full_name(user),
@@ -144,10 +179,12 @@ async def create_admin_account(
     except Exception as exc:
         logger.error("Failed to invalidate manager cache after create: %s", exc)
 
+    welcome_email_sent = await send_admin_welcome_email(account, current_user)
+
     return APIResponse(
         success=True,
         message="Admin account created successfully",
-        data=serialize_admin_account(account),
+        data=serialize_admin_account(account, welcome_email_sent),
     )
 
 

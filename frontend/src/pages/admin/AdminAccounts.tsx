@@ -124,6 +124,96 @@ function StatCard({
   );
 }
 
+interface PendingAction {
+  account: AdminAccount;
+  change: { is_active?: boolean; is_locked?: boolean };
+  successText: string;
+  title: string;
+  message: string;
+  confirmLabel: string;
+  tone: "warning" | "danger";
+}
+
+/** In-app replacement for window.confirm on lock / deactivate. */
+function ConfirmDialog({
+  pending,
+  working,
+  onConfirm,
+  onCancel,
+}: {
+  pending: PendingAction;
+  working: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const danger = pending.tone === "danger";
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !working) onCancel();
+    };
+
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onCancel, working]);
+
+  return (
+    <div
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/40 p-6"
+      onClick={working ? undefined : onCancel}
+    >
+      <div
+        className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl"
+        onClick={(event) => event.stopPropagation()}
+        role="alertdialog"
+        aria-modal="true"
+        aria-label={pending.title}
+      >
+        <div className="flex items-start gap-3">
+          <span
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
+              danger ? "bg-rose-50" : "bg-amber-50"
+            }`}
+          >
+            {danger ? (
+              <Power className="h-5 w-5 text-rose-600" />
+            ) : (
+              <Lock className="h-5 w-5 text-amber-600" />
+            )}
+          </span>
+
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold text-slate-900">{pending.title}</h2>
+            <p className="mt-1 text-sm text-slate-500">{pending.message}</p>
+          </div>
+        </div>
+
+        <div className="mt-6 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={working}
+            className="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-60"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={working}
+            autoFocus
+            className={`inline-flex h-10 items-center rounded-xl px-5 text-sm font-semibold text-white shadow-sm transition disabled:cursor-not-allowed disabled:opacity-60 ${
+              danger ? "bg-rose-600 hover:bg-rose-700" : "bg-amber-600 hover:bg-amber-700"
+            }`}
+          >
+            {working ? "Working..." : pending.confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function CreateAccountForm({
   onCancel,
   onCreated,
@@ -284,6 +374,7 @@ export default function AdminAccounts() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
   const [search, setSearch] = useState("");
+  const [pending, setPending] = useState<PendingAction | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -316,10 +407,7 @@ export default function AdminAccounts() {
     account: AdminAccount,
     change: { is_active?: boolean; is_locked?: boolean },
     successText: string,
-    confirmText?: string,
   ) => {
-    if (confirmText && !window.confirm(confirmText)) return;
-
     setBusyId(account.id);
 
     try {
@@ -334,6 +422,13 @@ export default function AdminAccounts() {
     } finally {
       setBusyId(null);
     }
+  };
+
+  const confirmPending = async () => {
+    if (!pending) return;
+
+    await changeStatus(pending.account, pending.change, pending.successText);
+    setPending(null);
   };
 
   const counts = useMemo(
@@ -392,7 +487,11 @@ export default function AdminAccounts() {
             setCreating(false);
             setNotice({
               type: "success",
-              text: `${roleLabel(account.role)} account created for ${account.full_name}.`,
+              text: `${roleLabel(account.role)} account created for ${account.full_name}. ${
+                account.welcome_email_sent
+                  ? `A welcome email was sent to ${account.email}.`
+                  : "The welcome email could not be sent, so share the sign-in details yourself."
+              }`,
             });
           }}
         />
@@ -515,12 +614,15 @@ export default function AdminAccounts() {
                               type="button"
                               disabled={busy}
                               onClick={() =>
-                                changeStatus(
+                                setPending({
                                   account,
-                                  { is_locked: true },
-                                  `${account.full_name} locked.`,
-                                  `Lock ${account.full_name}'s account? They will be signed out and cannot sign in until unlocked.`,
-                                )
+                                  change: { is_locked: true },
+                                  successText: `${account.full_name} locked.`,
+                                  title: "Lock account",
+                                  message: `Lock ${account.full_name}'s account? They will be signed out and cannot sign in until unlocked.`,
+                                  confirmLabel: "Lock account",
+                                  tone: "warning",
+                                })
                               }
                               className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
                             >
@@ -534,12 +636,15 @@ export default function AdminAccounts() {
                               type="button"
                               disabled={busy}
                               onClick={() =>
-                                changeStatus(
+                                setPending({
                                   account,
-                                  { is_active: false },
-                                  `${account.full_name} deactivated.`,
-                                  `Deactivate ${account.full_name}'s account? They will be signed out and cannot sign in until reactivated.`,
-                                )
+                                  change: { is_active: false },
+                                  successText: `${account.full_name} deactivated.`,
+                                  title: "Deactivate account",
+                                  message: `Deactivate ${account.full_name}'s account? They will be signed out and cannot sign in until reactivated.`,
+                                  confirmLabel: "Deactivate",
+                                  tone: "danger",
+                                })
                               }
                               className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-rose-200 px-3 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 disabled:opacity-50"
                             >
@@ -573,6 +678,15 @@ export default function AdminAccounts() {
           </div>
         )}
       </Panel>
+
+      {pending && (
+        <ConfirmDialog
+          pending={pending}
+          working={busyId === pending.account.id}
+          onConfirm={confirmPending}
+          onCancel={() => setPending(null)}
+        />
+      )}
     </div>
   );
 }

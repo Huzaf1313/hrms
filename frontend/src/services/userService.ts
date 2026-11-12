@@ -20,6 +20,8 @@ export interface AdminAccount {
   is_locked: boolean;
   created_at: string | null;
   updated_at: string | null;
+  /** Only present on the create response. */
+  welcome_email_sent?: boolean | null;
 }
 
 export interface AdminAccountCreate {

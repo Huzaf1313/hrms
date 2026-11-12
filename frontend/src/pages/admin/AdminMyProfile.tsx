@@ -484,7 +484,7 @@ export default function AdminMyProfile() {
   }
 
   function renderDocumentsTab() {
-    // The super admin's AAR000 is display-only, not an employee record, so
+    // The super admin's AAR001 is display-only, not an employee record, so
     // there is no document store behind it.
     if (!profile?.employee_id || profile.role === "super_admin") {
       return (

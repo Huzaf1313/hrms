@@ -23,7 +23,10 @@ from app.schemas.employee import (
     EmployeeUpdate,
 )
 from app.services.employee_service import EmployeeService
-from app.services.employee_identity import ensure_employee_profile
+from app.services.employee_identity import (
+    ensure_employee_profile,
+    peek_next_employee_code,
+)
 from app.services.otp_service import OTPService
 from app.services.object_storage_service import ObjectStorageService
 from app.utils.employee_storage import employee_profile_key
@@ -102,6 +105,23 @@ async def serialize_employee(
         status=employee.get("status") or "active",
         created_by=employee.get("created_by"),
         welcome_email_sent=welcome_email_sent,
+    )
+
+
+@router.get(
+    "/employees/next-id",
+    response_model=APIResponse[dict[str, str]],
+)
+async def get_next_employee_id(
+    current_user: dict = Depends(require_permission(Permission.EMPLOYEES_CREATE)),
+):
+    """Preview of the ID the next employee will get. Nothing is reserved."""
+    code = await peek_next_employee_code(service.user_repository.collection)
+
+    return APIResponse(
+        success=True,
+        message="Next employee ID retrieved successfully",
+        data={"employee_id": code},
     )
 
 

@@ -19,9 +19,10 @@ from app.core.roles import UserRole
 
 # Shown as the super admin's Employee ID on its profile. It is display-only
 # and never stored as an employee_id: the super admin must stay out of the
-# employee records (see ensure_employee_profile). The sequence starts at 1,
-# so no real employee can ever be issued this code.
-SUPER_ADMIN_EMPLOYEE_CODE = "AAR000"
+# employee records (see ensure_employee_profile). Employee codes start at
+# AAR002 (see next_employee_code), so no real employee is issued this code.
+SUPER_ADMIN_EMPLOYEE_CODE = "AAR001"
+FIRST_EMPLOYEE_NUMBER = 2
 
 async def next_employee_code(collection) -> str:
     """Atomically allocate the next employee code.
@@ -29,14 +30,33 @@ async def next_employee_code(collection) -> str:
     Gaps are intentionally preserved when an employee is deleted. This avoids
     duplicate IDs when multiple employees are created concurrently.
     """
-    sequence = await collection.database["sequences"].find_one_and_update(
-        {"_id": "employee_id"},
-        {"$inc": {"value": 1}},
-        upsert=True,
-        return_document=ReturnDocument.AFTER,
+    while True:
+        sequence = await collection.database["sequences"].find_one_and_update(
+            {"_id": "employee_id"},
+            {"$inc": {"value": 1}},
+            upsert=True,
+            return_document=ReturnDocument.AFTER,
+        )
+
+        # On a fresh database the first value is 1, which is the super
+        # admin's code - skip it.
+        if sequence["value"] >= FIRST_EMPLOYEE_NUMBER:
+            return f"AAR{sequence['value']:03d}"
+
+
+async def peek_next_employee_code(collection) -> str:
+    """The code the next employee would be issued, without allocating it.
+
+    Display-only, for the Add Employee form. Another employee created in the
+    meantime takes this code, so the saved record is the source of truth.
+    """
+    sequence = await collection.database["sequences"].find_one(
+        {"_id": "employee_id"}
     )
 
-    return f"AAR{sequence['value']:03d}"
+    upcoming = (sequence["value"] if sequence else 0) + 1
+
+    return f"AAR{max(upcoming, FIRST_EMPLOYEE_NUMBER):03d}"
 
 
 async def backfill_minted_profiles(users_collection) -> int:

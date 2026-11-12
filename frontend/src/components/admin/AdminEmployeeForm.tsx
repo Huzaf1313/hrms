@@ -157,6 +157,30 @@ function AdminEmployeeForm({
     return () => clearInterval(interval);
   }, [cooldownSeconds]);
 
+  // The ID the new employee will get, shown in the read-only field. Kept out
+  // of `form` because the server allocates the real one on save.
+  const [nextEmployeeId, setNextEmployeeId] = useState("");
+  const isCreating = !initialEmployee;
+
+  useEffect(() => {
+    if (!isCreating) return;
+
+    let active = true;
+
+    employeeService
+      .getNextEmployeeId()
+      .then((result) => {
+        if (active) setNextEmployeeId(result.employee_id);
+      })
+      .catch(() => {
+        // Falls back to the placeholder; the ID is still assigned on save.
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [isCreating]);
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [lastInitialEmployee, setLastInitialEmployee] =
@@ -634,16 +658,11 @@ function AdminEmployeeForm({
 
             <input
               readOnly
-              value={form.employee_id}
+              value={isEditMode ? form.employee_id : nextEmployeeId}
               placeholder={isEditMode ? "AAR001" : "Generated on save"}
-              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10 disabled:bg-gray-50 disabled:text-gray-400"
+              title="Employee IDs are assigned automatically and cannot be changed."
+              className="w-full cursor-default rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700 outline-none"
             />
-
-            <p className="mt-1.5 text-xs text-gray-400">
-              {isEditMode
-                ? "Employee IDs are assigned automatically and cannot be changed."
-                : "An AAR### ID will be assigned automatically when saved."}
-            </p>
           </div>
 
           {/* EMPLOYMENT TYPE */}
