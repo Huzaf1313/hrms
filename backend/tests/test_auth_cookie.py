@@ -1,4 +1,4 @@
-"""The refresh token travels only as an HttpOnly cookie, never in a body."""
+"""Both JWTs travel as HttpOnly cookies; the refresh token never in a body."""
 from unittest.mock import AsyncMock, patch
 
 import asyncio
@@ -37,10 +37,17 @@ def test_login_sets_httponly_cookie_and_hides_refresh_token():
     assert response.status_code == 200
     assert response.json() == {"access_token": "access-1", "token_type": "bearer"}
 
-    cookie = response.headers["set-cookie"]
-    assert "hrms_refresh_token=refresh-1" in cookie
-    assert "HttpOnly" in cookie
-    assert "Path=/api/v1/auth" in cookie
+    cookies = response.headers.get_list("set-cookie")
+    refresh = next(c for c in cookies if c.startswith("hrms_refresh_token="))
+    access = next(c for c in cookies if c.startswith("hrms_access_token="))
+
+    assert "hrms_refresh_token=refresh-1" in refresh
+    assert "HttpOnly" in refresh
+    assert "Path=/api/v1/auth" in refresh
+
+    assert "hrms_access_token=access-1" in access
+    assert "HttpOnly" in access
+    assert "Path=/api/v1" in access
 
 
 def test_refresh_reads_the_cookie():
@@ -53,6 +60,7 @@ def test_refresh_reads_the_cookie():
     assert response.json()["access_token"] == "access-1"
     assert "refresh_token" not in response.json()
     assert refresh.await_args.kwargs == {"refresh_token": "refresh-1"}
+    assert "hrms_access_token=access-1" in response.headers["set-cookie"]
 
 
 def test_refresh_without_cookie_is_401():
@@ -68,6 +76,7 @@ def test_refresh_with_dead_session_clears_the_cookie():
     assert response.status_code == 401
     assert response.json()["message"] == "Session has been revoked"
     assert 'hrms_refresh_token=""' in response.headers["set-cookie"]
+    assert 'hrms_access_token=""' in response.headers["set-cookie"]
 
 
 def test_logout_revokes_and_clears_even_when_already_revoked():
@@ -79,5 +88,60 @@ def test_logout_revokes_and_clears_even_when_already_revoked():
     assert response.status_code == 200
     assert logout.await_args.kwargs == {"refresh_token": "refresh-1"}
     assert 'hrms_refresh_token=""' in response.headers["set-cookie"]
+    assert 'hrms_access_token=""' in response.headers["set-cookie"]
 
     assert post("/logout").status_code == 200
+
+
+def call_protected(method: str, headers: dict | None = None, cookie: str | None = None):
+    """Hit a route guarded by access_credentials, returning the token it saw."""
+    from fastapi import Depends
+    from fastapi.security import HTTPAuthorizationCredentials
+
+    from app.api.deps import access_credentials
+
+    app = FastAPI()
+    app.add_exception_handler(AppException, app_exception_handler)
+
+    @app.api_route("/api/v1/thing", methods=["GET", "POST"])
+    async def thing(credentials: HTTPAuthorizationCredentials = Depends(access_credentials)):
+        return {"token": credentials.credentials}
+
+    async def send():
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app),
+            base_url="http://test",
+            cookies={"hrms_access_token": cookie} if cookie else None,
+        ) as http:
+            return await http.request(method, "/api/v1/thing", headers=headers)
+
+    return asyncio.run(send())
+
+
+def test_access_token_is_read_from_the_cookie():
+    response = call_protected("GET", cookie="access-1")
+
+    assert response.status_code == 200
+    assert response.json() == {"token": "access-1"}
+
+
+def test_bearer_header_wins_over_the_cookie():
+    response = call_protected(
+        "POST", headers={"Authorization": "Bearer header-1"}, cookie="access-1"
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"token": "header-1"}
+
+
+def test_no_token_is_401():
+    assert call_protected("GET").status_code == 401
+
+
+def test_cookie_write_without_csrf_header_is_rejected():
+    assert call_protected("POST", cookie="access-1").status_code == 403
+
+    response = call_protected(
+        "POST", headers={"X-Requested-With": "fetch"}, cookie="access-1"
+    )
+    assert response.status_code == 200

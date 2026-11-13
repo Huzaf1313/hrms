@@ -6,7 +6,7 @@ import {
   apiRaw,
   ApiError,
   clearSession,
-  setAccessToken,
+  markSessionActive,
 } from "../services/api";
 import { AuthShell } from "../components/auth/AuthShell";
 import { AuthField } from "../components/auth/AuthField";
@@ -14,11 +14,6 @@ import { OtpInput } from "../components/auth/OtpInput";
 import { PasswordStrength } from "../components/auth/PasswordStrength";
 import { clearAuthQueries } from "../lib/queryClient";
 import { consumeLoginRedirectNotice } from "../lib/session";
-
-interface LoginResponse {
-  access_token: string;
-  token_type: string;
-}
 
 interface UserResponse {
   id: string;
@@ -114,7 +109,8 @@ function Login() {
     setIsLoading(true);
 
     try {
-      const loginResponse = await apiRaw.post<LoginResponse>(
+      // The server sets the session cookies; the token in the body is unused.
+      await apiRaw.post(
         "/auth/login",
         {
           email: trimmedEmail,
@@ -122,12 +118,10 @@ function Login() {
         },
       );
 
-      const { access_token } = loginResponse;
-
       // Clear any cached data from previous session
       clearAuthQueries();
 
-      setAccessToken(access_token);
+      markSessionActive();
 
       const userResponse = await api.get("/users/me");
       const user = userResponse as UserResponse;

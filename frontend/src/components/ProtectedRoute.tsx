@@ -2,19 +2,19 @@ import { useEffect, useState } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 
 import { isAdminRole } from "../lib/access";
-import { getAccessToken, hasSessionHint, restoreSession } from "../services/api";
+import { hasSessionHint, isSessionConfirmed, restoreSession } from "../services/api";
 
 type SessionState = "checking" | "signed-in" | "signed-out";
 
 /**
- * The access token lives in memory only, so a page reload starts without
- * one. When this browser has signed in before, ask the server for a new one
- * (using the HttpOnly session cookie) before deciding to send the user to
- * the login page.
+ * The session lives in HttpOnly cookies that scripts cannot see, so after a
+ * page reload this tab does not know whether it is still signed in. When
+ * this browser has signed in before, check with the server (refreshing the
+ * access cookie if it expired) before deciding to send the user to login.
  */
 function useSession(): SessionState {
   const [state, setState] = useState<SessionState>(() =>
-    getAccessToken() ? "signed-in" : hasSessionHint() ? "checking" : "signed-out",
+    isSessionConfirmed() ? "signed-in" : hasSessionHint() ? "checking" : "signed-out",
   );
 
   useEffect(() => {

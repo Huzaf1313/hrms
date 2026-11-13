@@ -2,16 +2,23 @@ const API_BASE_URL: string =
   (import.meta.env.VITE_API_BASE_URL as string | undefined) ??
   "http://localhost:8000/api/v1";
 
-// Where the tokens live:
-//  - The refresh token is an HttpOnly cookie set by the server. Page scripts
-//    cannot read it; the browser sends it only to the /auth routes.
-//  - The access token is kept in this module's memory and nowhere else, so
-//    it is gone on reload and restored from the cookie by restoreSession().
-// Neither token is ever written to localStorage or sessionStorage.
+// Where the tokens live: both JWTs are HttpOnly cookies set by the server.
+//  - hrms_access_token goes with every API request.
+//  - hrms_refresh_token goes only to the /auth routes.
+// Page scripts cannot read either one, so nothing here stores a token. Every
+// fetch uses `credentials: "include"` so the browser attaches the cookies.
 const USER_KEY = "user";
 
-let accessToken: string | null = null;
-let refreshPromise: Promise<string> | null = null;
+// The server rejects cookie-authenticated writes without this header (a
+// cross-site form cannot send it), so every request carries it.
+const BASE_HEADERS: Record<string, string> = {
+  "X-Requested-With": "fetch",
+};
+
+/** Set once the cookie session is known to work in this tab, so moving
+ *  between protected pages does not ask the server again each time. */
+let sessionConfirmed = false;
+let refreshPromise: Promise<void> | null = null;
 
 // Tokens used to be stored here; remove any left behind by an older build.
 try {
@@ -22,17 +29,18 @@ try {
   // Storage can be unavailable (private mode); nothing to clean up then.
 }
 
-export function getAccessToken(): string | null {
-  return accessToken;
+export function isSessionConfirmed(): boolean {
+  return sessionConfirmed;
 }
 
-export function setAccessToken(token: string | null): void {
-  accessToken = token;
+/** Called after a successful login: the server has just set the cookies. */
+export function markSessionActive(): void {
+  sessionConfirmed = true;
 }
 
 /** True when this browser has signed in before and may still hold a session
- *  cookie. The cookie itself is invisible to scripts, so the stored profile
- *  is the only hint available. */
+ *  cookie. The cookies themselves are invisible to scripts, so the stored
+ *  profile is the only hint available. */
 export function hasSessionHint(): boolean {
   try {
     return localStorage.getItem(USER_KEY) !== null;
@@ -41,27 +49,33 @@ export function hasSessionHint(): boolean {
   }
 }
 
-/** After a reload the access token is gone; get a new one from the session
- *  cookie. Resolves false when there is no usable session. */
+/** After a reload, check the cookie session still works. A request that gets
+ *  a 401 refreshes the access cookie and retries on its own. Resolves false
+ *  when there is no usable session. */
 export async function restoreSession(): Promise<boolean> {
-  if (accessToken) return true;
+  if (sessionConfirmed) return true;
   if (!hasSessionHint()) return false;
 
   try {
-    await refreshAccessToken();
+    await request("/users/me");
+    sessionConfirmed = true;
     return true;
   } catch {
     return false;
   }
 }
+
 const onSessionClearCallbacks: Array<() => void> = [];
 
 export function setOnSessionClear(cb: () => void): void {
   onSessionClearCallbacks.push(cb);
 }
 
+/** Forget the session in this tab. The cookies themselves are cleared by the
+ *  server on logout or a failed refresh; scripts cannot touch HttpOnly
+ *  cookies. */
 export function clearSession(): void {
-  setAccessToken(null);
+  sessionConfirmed = false;
 
   try {
     localStorage.removeItem(USER_KEY);
@@ -88,8 +102,6 @@ export class ApiError extends Error {
   }
 }
 
-
-
 interface RequestOptions {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
@@ -99,156 +111,6 @@ interface RequestOptions {
 interface FormRequestOptions {
   method?: "POST" | "PUT" | "PATCH";
   body: FormData;
-}
-
-async function refreshAccessToken(): Promise<string> {
-  if (!refreshPromise) {
-    // No body: the refresh token rides along as the HttpOnly cookie.
-    refreshPromise = requestRaw<{
-      access_token: string;
-      token_type: string;
-    }>("/auth/refresh", {
-      method: "POST",
-    })
-      .then((response) => {
-        setAccessToken(response.access_token);
-
-        return response.access_token;
-      })
-      .catch((error) => {
-        clearSession();
-        throw error;
-      })
-      .finally(() => {
-        refreshPromise = null;
-      });
-  }
-
-  return refreshPromise;
-}
-
-async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = "GET", body, params } = options;
-
-  const url = new URL(`${API_BASE_URL}${path}`);
-
-  if (params) {
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== "") {
-        url.searchParams.set(key, String(value));
-      }
-    });
-  }
-
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-
-  const token = getAccessToken();
-
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
-
-  let response: Response;
-
-  try {
-    response = await fetch(url.toString(), {
-      method,
-      headers,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
-    });
-  } catch {
-    throw new ApiError(
-      "Could not reach the server. Check your connection and that the backend is running.",
-      0,
-    );
-  }
-
-  const payload = await response.json().catch(() => null);
-
-if (!response.ok) {
-  if (response.status === 401) {
-    try {
-      const newAccessToken = await refreshAccessToken();
-
-      const retryHeaders: Record<string, string> = {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${newAccessToken}`,
-      };
-
-      const retryResponse = await fetch(url.toString(), {
-        method,
-        headers: retryHeaders,
-        body: body !== undefined ? JSON.stringify(body) : undefined,
-      });
-
-      const retryPayload = await retryResponse.json().catch(() => null);
-
-      if (!retryResponse.ok) {
-        const retryMessage =
-          retryPayload?.detail ??
-          retryPayload?.message ??
-          `Request failed with status ${retryResponse.status}`;
-
-        throw new ApiError(retryMessage, retryResponse.status);
-      }
-
-      if (!retryPayload) {
-        throw new ApiError(
-          "Received an empty response from the server.",
-          retryResponse.status,
-        );
-      }
-
-      if (
-        typeof retryPayload === "object" &&
-        retryPayload !== null &&
-        "data" in retryPayload &&
-        "success" in retryPayload
-      ) {
-        return retryPayload.data as T;
-      }
-
-      return retryPayload as T;
-    } catch (error) {
-      if (error instanceof ApiError) {
-        throw error;
-      }
-
-      throw new ApiError(
-        "Session expired. Please log in again.",
-        401,
-      );
-    }
-  }
-
-  const message =
-    payload?.detail ??
-    payload?.message ??
-    `Request failed with status ${response.status}`;
-
-  throw new ApiError(message, response.status);
-}
-
-if (!payload) {
-  throw new ApiError(
-    "Received an empty response from the server.",
-    response.status,
-  );
-}
-
-// Support both API envelope responses and direct FastAPI responses.
-if (
-  typeof payload === "object" &&
-  payload !== null &&
-  "data" in payload &&
-  "success" in payload
-) {
-  return payload.data as T;
-}
-
-return payload as T;
 }
 
 function unwrapEnvelope<T>(payload: unknown): T {
@@ -278,40 +140,99 @@ function errorMessage(payload: unknown, status: number): string {
   return `Request failed with status ${status}`;
 }
 
+/** fetch() with the session cookies attached and a readable network error. */
+async function send(url: string, init: RequestInit): Promise<Response> {
+  try {
+    return await fetch(url, {
+      ...init,
+      headers: { ...BASE_HEADERS, ...(init.headers as Record<string, string> | undefined) },
+      credentials: "include",
+    });
+  } catch {
+    throw new ApiError(
+      "Could not reach the server. Check your connection and that the backend is running.",
+      0,
+    );
+  }
+}
+
+/** Swap the refresh cookie for a new access cookie. Concurrent 401s share
+ *  one refresh. */
+function refreshAccessToken(): Promise<void> {
+  if (!refreshPromise) {
+    refreshPromise = requestRaw<unknown>("/auth/refresh", { method: "POST" })
+      .then(() => {
+        sessionConfirmed = true;
+      })
+      .catch((error: unknown) => {
+        clearSession();
+        throw error;
+      })
+      .finally(() => {
+        refreshPromise = null;
+      });
+  }
+
+  return refreshPromise;
+}
+
+/** send(), and on a 401 refresh the access cookie once and replay. */
+async function sendWithRefresh(url: string, init: RequestInit): Promise<Response> {
+  const response = await send(url, init);
+
+  if (response.status !== 401) return response;
+
+  try {
+    await refreshAccessToken();
+  } catch {
+    throw new ApiError("Session expired. Please log in again.", 401);
+  }
+
+  return send(url, init);
+}
+
+async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const { method = "GET", body, params } = options;
+
+  const url = new URL(`${API_BASE_URL}${path}`);
+
+  if (params) {
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== "") {
+        url.searchParams.set(key, String(value));
+      }
+    });
+  }
+
+  const response = await sendWithRefresh(url.toString(), {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+
+  const payload = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    throw new ApiError(errorMessage(payload, response.status), response.status);
+  }
+
+  if (!payload) {
+    throw new ApiError("Received an empty response from the server.", response.status);
+  }
+
+  // Support both API envelope responses and direct FastAPI responses.
+  return unwrapEnvelope<T>(payload);
+}
+
 async function requestForm<T>(
   path: string,
   options: FormRequestOptions,
 ): Promise<T> {
-  const send = async (token: string | null): Promise<Response> => {
-    const headers: Record<string, string> = {};
-
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
-    }
-
-    try {
-      return await fetch(`${API_BASE_URL}${path}`, {
-        method: options.method ?? "POST",
-        headers,
-        body: options.body,
-      });
-    } catch {
-      throw new ApiError(
-        "Could not reach the server. Check your connection and that the backend is running.",
-        0,
-      );
-    }
-  };
-
-  let response: Response = await send(getAccessToken());
-
-  // Access tokens are short lived. Refresh once and replay, matching the
-  // behaviour of request(), so an expired token never blocks a multipart post.
-  if (response.status === 401) {
-    const newAccessToken = await refreshAccessToken();
-
-    response = await send(newAccessToken);
-  }
+  // No Content-Type: the browser sets the multipart boundary itself.
+  const response = await sendWithRefresh(`${API_BASE_URL}${path}`, {
+    method: options.method ?? "POST",
+    body: options.body,
+  });
 
   const payload = await response.json().catch(() => null);
 
@@ -349,43 +270,22 @@ export const api = {
 //
 // It also skips the refresh-on-401 that `request` does. On /auth/login a 401
 // means the credentials were wrong, not that the session died - retrying with
-// a refresh token there throws "Session expired" and throws away the real
-// message the server sent.
+// a refresh there throws "Session expired" and throws away the real message
+// the server sent.
 async function requestRaw<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { method = "GET", body } = options;
 
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-
-  const token = getAccessToken();
-
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
-
-  let response: Response;
-
-  try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
-      method,
-      headers,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
-      // The /auth routes set, read and clear the session cookie.
-      credentials: "include",
-    });
-  } catch {
-    throw new ApiError(
-      "Could not reach the server. Check your connection and that the backend is running.",
-      0,
-    );
-  }
+  // The /auth routes set, read and clear the session cookies.
+  const response = await send(`${API_BASE_URL}${path}`, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
 
   const payload = await response.json().catch(() => null);
-  
+
   if (!response.ok) {
-    const message = errorMessage(payload, response.status);
-    throw new ApiError(message, response.status);
+    throw new ApiError(errorMessage(payload, response.status), response.status);
   }
 
   return payload as T;
@@ -397,55 +297,14 @@ export const apiRaw = {
 };
 
 export async function downloadFile(path: string): Promise<Blob> {
-  const url = new URL(`${API_BASE_URL}${path}`);
-
-  const makeRequest = async (token: string | null): Promise<Response> => {
-    const headers: Record<string, string> = {};
-
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
-    }
-
-    try {
-      return await fetch(url.toString(), {
-        method: "GET",
-        headers,
-      });
-    } catch {
-      throw new ApiError(
-        "Could not reach the server. Check your connection and that the backend is running.",
-        0,
-      );
-    }
-  };
-
-  let response = await makeRequest(getAccessToken());
-
-  if (response.status === 401) {
-    try {
-      const newAccessToken = await refreshAccessToken();
-      response = await makeRequest(newAccessToken);
-    } catch (error) {
-      if (error instanceof ApiError) {
-        throw error;
-      }
-
-      throw new ApiError(
-        "Session expired. Please log in again.",
-        401,
-      );
-    }
-  }
+  const response = await sendWithRefresh(`${API_BASE_URL}${path}`, {
+    method: "GET",
+  });
 
   if (!response.ok) {
     const payload = await response.json().catch(() => null);
 
-    const message =
-      payload?.detail ??
-      payload?.message ??
-      `Request failed with status ${response.status}`;
-
-    throw new ApiError(message, response.status);
+    throw new ApiError(errorMessage(payload, response.status), response.status);
   }
 
   return response.blob();

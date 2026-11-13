@@ -1,6 +1,7 @@
-from fastapi import Depends
+from fastapi import Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
+from app.core.cookies import ACCESS_COOKIE, CSRF_HEADER
 from app.core.exceptions import AppException
 from app.core.jwt import decode_token
 from app.core.roles import (
@@ -13,15 +14,40 @@ from app.core.roles import (
 from app.repositories.user_repository import UserRepository
 from app.repositories.session_repository import SessionRepository
 
-security = HTTPBearer()
+# auto_error=False: the browser sends the token as a cookie instead of a
+# header. The scheme is still declared so Swagger offers its Authorize box.
+security = HTTPBearer(auto_error=False)
 
 user_repository = UserRepository()
 session_repository = SessionRepository()
 
+SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
+
+
+async def access_credentials(
+    request: Request,
+    bearer: HTTPAuthorizationCredentials | None = Depends(security),
+) -> HTTPAuthorizationCredentials:
+    """The access token from the Authorization header (API clients) or the
+    HttpOnly access cookie (the web app)."""
+    if bearer and bearer.credentials:
+        return bearer
+
+    token = request.cookies.get(ACCESS_COOKIE)
+
+    if not token:
+        raise AppException("Not authenticated", 401)
+
+    # Browsers attach cookies to cross-site requests too. Requiring a custom
+    # header on writes stops a forged form or link from acting as the user.
+    if request.method not in SAFE_METHODS and not request.headers.get(CSRF_HEADER):
+        raise AppException("Missing CSRF header", 403)
+
+    return HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    credentials: HTTPAuthorizationCredentials = Depends(access_credentials),
 ):
     token = credentials.credentials
 

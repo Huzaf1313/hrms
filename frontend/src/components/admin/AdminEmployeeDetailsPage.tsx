@@ -23,6 +23,7 @@ import type { Department } from "../../types/department";
 import type { Employee } from "../../types/employee";
 import type { Shift } from "../../types/shift";
 import AdminEmployeeDocuments from "./AdminEmployeeDocuments";
+import { api } from "../../services/api";
 import {
   formatDuration,
   formatShiftTime,
@@ -221,17 +222,21 @@ function AdminEmployeeDetailsPage({
       try {
         setLeaveLoading(true);
 
-        const response = await fetch(
-          `http://localhost:8000/api/v1/admin/leaves?employee_id=${employee.employee_id}&limit=100`,
-        );
+        // Through the shared client so the session cookie goes along.
+        const result = await api.get<{
+          items?: Array<{
+            status?: string;
+            leave_type: string;
+            start_date: string;
+            end_date: string;
+            total_days?: number | null;
+          }>;
+        }>("/admin/leaves", {
+          employee_id: employee.employee_id,
+          limit: 100,
+        });
 
-        if (!response.ok) {
-          throw new Error("Failed to fetch leave requests");
-        }
-
-        const result = await response.json();
-
-        const approvedLeaves = result?.data?.items ?? [];
+        const approvedLeaves = result?.items ?? [];
 
         const used: Record<string, number> = {};
 

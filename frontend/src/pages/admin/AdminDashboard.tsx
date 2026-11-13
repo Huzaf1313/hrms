@@ -1,8 +1,7 @@
 import { useMemo } from "react";
 import { Hand } from "lucide-react";
 
-import CelebrationTicker from "../../components/CelebrationTicker";
-import EmployeeAnnouncementTicker from "../../components/EmployeeAnnouncementTicker";
+import DashboardTicker from "../../components/DashboardTicker";
 import { useEmployeeAnnouncements } from "../../hooks/useEmployeeData";
 import type { Celebration } from "../../types/celebration";
 import type { RecentActivity } from "../../services/dashboardService";
@@ -52,11 +51,9 @@ export default function AdminDashboard({
   onCreateAnnouncement,
 }: AdminDashboardProps) {
   const firstName = useMemo(() => readUserFirstName(), []);
-  const {
-    data: announcementFeed,
-    isLoading: loadingAnnouncements,
-    isError: hasAnnouncementError,
-  } = useEmployeeAnnouncements(1, 5);
+  // If the feed fails to load the banner just shows celebrations (or the
+  // daily thought); announcements have their own page with error handling.
+  const { data: announcementFeed } = useEmployeeAnnouncements(1, 5);
 
   // Hiring, payroll and interview widgets are HR-only and the manager has no
   // permission behind them, so they are not rendered at all.
@@ -77,18 +74,14 @@ export default function AdminDashboard({
         </p>
       </div>
 
-      {/* Birthdays, anniversaries and daily thought banner */}
+      {/* One banner: birthdays, anniversaries and the announcements this
+          account can see (same feed as the employee portal). Falls back to
+          a daily thought when there is nothing to show. */}
       <div className="mb-4">
-        <CelebrationTicker celebrations={celebrations} />
-      </div>
-
-      {/* Announcements this account can see, same feed as the employee portal */}
-      <div className="mb-4">
-        <EmployeeAnnouncementTicker
+        <DashboardTicker
+          celebrations={celebrations}
           announcements={announcementFeed?.announcements ?? []}
-          loading={loadingAnnouncements}
-          error={hasAnnouncementError ? "Unable to load announcements." : ""}
-          onSelect={() => onNavigate("Announcement")}
+          onSelectAnnouncement={() => onNavigate("Announcement")}
         />
       </div>
 

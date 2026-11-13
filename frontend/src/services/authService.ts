@@ -1,4 +1,4 @@
-import { apiRaw, clearSession, setAccessToken } from "./api";
+import { apiRaw, clearSession, markSessionActive } from "./api";
 
 export interface LoginPayload {
   email: string;
@@ -31,7 +31,8 @@ export const authService = {
   async login(data: LoginPayload) {
     const tokens = await apiRaw.post<TokenResponse>("/auth/login", data);
 
-    setAccessToken(tokens.access_token);
+    // The session lives in HttpOnly cookies the server just set.
+    markSessionActive();
 
     return tokens;
   },

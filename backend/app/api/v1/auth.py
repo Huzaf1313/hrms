@@ -1,7 +1,13 @@
 from fastapi import APIRouter, Cookie, Depends, Response
 from fastapi.responses import JSONResponse
 
-from app.core.config import settings
+from app.core.cookies import (
+    REFRESH_COOKIE,
+    clear_access_cookie,
+    clear_refresh_cookie,
+    set_access_cookie,
+    set_refresh_cookie,
+)
 from app.core.exceptions import AppException
 from app.schemas.user import (
     AccessTokenResponse,
@@ -27,32 +33,10 @@ router = APIRouter(
 # POST /api/v1/users, and employees are created through POST /api/v1/employees
 # with shared credentials. Nothing here can mint an account.
 
-# The refresh token lives in an HttpOnly cookie so page scripts can never
-# read it. It is scoped to the auth routes: only refresh and logout need it.
-REFRESH_COOKIE = "hrms_refresh_token"
-REFRESH_COOKIE_PATH = "/api/v1/auth"
-
-
-def set_refresh_cookie(response: Response, refresh_token: str) -> None:
-    response.set_cookie(
-        key=REFRESH_COOKIE,
-        value=refresh_token,
-        max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
-        path=REFRESH_COOKIE_PATH,
-        httponly=True,
-        secure=settings.COOKIE_SECURE,
-        samesite=settings.COOKIE_SAMESITE.lower(),
-    )
-
-
-def clear_refresh_cookie(response: Response) -> None:
-    response.delete_cookie(
-        key=REFRESH_COOKIE,
-        path=REFRESH_COOKIE_PATH,
-        httponly=True,
-        secure=settings.COOKIE_SECURE,
-        samesite=settings.COOKIE_SAMESITE.lower(),
-    )
+# Both tokens are HttpOnly cookies (see app/core/cookies.py). The refresh
+# cookie is scoped to these auth routes; the access cookie goes to the whole
+# API. The access token is also returned in the body for API clients such as
+# Swagger, but the web app never stores it.
 
 
 @router.post(
@@ -110,6 +94,7 @@ async def login(login_data: LoginRequest, response: Response):
         password=login_data.password,
     )
 
+    set_access_cookie(response, tokens["access_token"])
     set_refresh_cookie(response, tokens["refresh_token"])
 
     return AccessTokenResponse(access_token=tokens["access_token"])
@@ -153,9 +138,11 @@ async def refresh_token(
             status_code=exc.status_code,
             content={"success": False, "message": exc.message, "data": None},
         )
+        clear_access_cookie(failure)
         clear_refresh_cookie(failure)
         return failure
 
+    set_access_cookie(response, tokens["access_token"])
     set_refresh_cookie(response, tokens["refresh_token"])
 
     return AccessTokenResponse(access_token=tokens["access_token"])
@@ -168,6 +155,7 @@ async def logout(
     response: Response,
     refresh_token: str | None = Cookie(default=None, alias=REFRESH_COOKIE),
 ):
+    clear_access_cookie(response)
     clear_refresh_cookie(response)
 
     # Logging out twice, or with an already revoked session, is still a
