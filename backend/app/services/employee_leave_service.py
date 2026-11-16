@@ -9,7 +9,6 @@ from app.repositories.leave_balance_repository import LeaveBalanceRepository
 from app.services.admin_notification_service import AdminNotificationService
 from app.services.activity_service import ActivityService
 
-
 class EmployeeLeaveService:
 
     LEAVE_ALLOCATIONS = {
@@ -258,11 +257,12 @@ class EmployeeLeaveService:
             employee_id=employee_id,
             status="Pending",
         )
-
+   
     async def get_leave_balance(
         self,
         employee_id: str,
     ):
+        # Fetch this employee's leave records.
         records = await self.repository.get_balance_records(
             employee_id=employee_id,
         )
@@ -272,11 +272,11 @@ class EmployeeLeaveService:
         used: dict[str, int] = {}
 
         for record in records:
+            if str(record.get("status", "")).lower() != "approved":
+                continue
+
             leave_type = record.get("leave_type")
-            total_days = record.get(
-                "total_days",
-                0,
-            )
+            total_days = record.get("total_days") or 0
 
             if leave_type:
                 used[leave_type] = used.get(leave_type, 0) + total_days

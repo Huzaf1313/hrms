@@ -148,6 +148,20 @@ interface LeaveListResponse {
   items: BackendLeaveRequest[];
 }
 
+interface BackendLeaveBalance {
+  leave_type: string;
+  allocated: number;
+  used: number;
+  available: number;
+}
+
+interface LeaveBalance {
+  type: string;
+  allocated: number;
+  used: number;
+  available: number;
+}
+
 /** "YYYY-MM-DD" from local parts, so it matches the backend's date strings
  *  without a timezone shifting the day. */
 const getLocalDateKey = (date: Date) => {
@@ -191,6 +205,7 @@ function EmployeeAttendance() {
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [showAllRequests, setShowAllRequests] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [leaveBalances, setLeaveBalances] = useState<LeaveBalance[]>([]);
 
   // The day picked in the header calendar. It does not narrow this page down to
   // one day the way it narrows the admin report, because this grid is a month of
@@ -397,6 +412,19 @@ setLeaveRequests(
     adminNote: leave.admin_note ?? null,
   })),
 );
+
+  const balanceList = await api.get<BackendLeaveBalance[]>(
+    `/employee-leave/employees/${user.employee_id}/balance`,
+  );
+
+  setLeaveBalances(
+    balanceList.map((balance) => ({
+      type: balance.leave_type,
+      allocated: balance.allocated,
+      used: balance.used,
+      available: balance.available,
+    })),
+  );
 
     } catch (err) {
       if (err instanceof ApiError) {
@@ -1109,7 +1137,7 @@ if (
 
             {/* Work Status */}
             <div className="mt-4 flex items-center justify-between rounded-xl border border-gray-100 p-4">
-
+  
             <div className="flex items-center gap-3">
 
                 <span
@@ -1217,103 +1245,30 @@ if (
         </div>
 
         {/* Leave Balance */}
-        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-
-            <div className="flex items-start justify-between">
-
-            <div>
-                <h2 className="text-lg font-bold text-[#17213a]">
-                Leave Balance
-                </h2>
-
-                <p className="mt-1 text-sm text-gray-500">
-                Your available leave quotas.
-                </p>
-            </div>
-
-            <button
-                type="button"
-                className="text-sm font-semibold text-[#2563eb] hover:underline"
+        <div className="mt-6 grid grid-cols-2 gap-4">
+          {leaveBalances.map((balance) => (
+            <div
+              key={balance.type}
+              className="rounded-xl border border-gray-100 p-4"
             >
-                View All
-            </button>
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                {balance.type}
+              </p>
 
-            </div>
+              <p className="mt-2 text-2xl font-bold text-[#17213a]">
+                {balance.available}
+              </p>
 
-            <div className="mt-6 grid grid-cols-2 gap-4">
-
-            {/* Casual Leave */}
-            <div className="rounded-xl border border-gray-100 p-4">
-
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                Casual Leave
-                </p>
-
-                <p className="mt-2 text-2xl font-bold text-[#17213a]">
-                8
-                </p>
-
-                <p className="mt-1 text-xs text-gray-400">
+              <p className="mt-1 text-xs text-gray-400">
                 Days available
-                </p>
+              </p>
 
+              <p className="mt-2 text-xs text-gray-400">
+                {balance.allocated} Allocated · {balance.used} Used
+              </p>
             </div>
-
-            {/* Sick Leave */}
-            <div className="rounded-xl border border-gray-100 p-4">
-
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                Sick Leave
-                </p>
-
-                <p className="mt-2 text-2xl font-bold text-[#17213a]">
-                6
-                </p>
-
-                <p className="mt-1 text-xs text-gray-400">
-                Days available
-                </p>
-
-            </div>
-
-            {/* Earned Leave */}
-            <div className="rounded-xl border border-gray-100 p-4">
-
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                Earned Leave
-                </p>
-
-                <p className="mt-2 text-2xl font-bold text-[#17213a]">
-                12
-                </p>
-
-                <p className="mt-1 text-xs text-gray-400">
-                Days available
-                </p>
-
-            </div>
-
-            {/* Comp Off */}
-            <div className="rounded-xl border border-gray-100 p-4">
-
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                Comp Off
-                </p>
-
-                <p className="mt-2 text-2xl font-bold text-[#17213a]">
-                2
-                </p>
-
-                <p className="mt-1 text-xs text-gray-400">
-                Days available
-                </p>
-
-            </div>
-
-            </div>
-
+          ))}
         </div>
-
         </section>
 
         {/* =========================================================
@@ -1445,7 +1400,7 @@ if (
 
                       </div>
                     );
-                  })
+                  }) 
 
               )}
 

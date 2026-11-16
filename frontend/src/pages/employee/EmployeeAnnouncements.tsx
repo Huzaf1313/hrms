@@ -391,7 +391,7 @@ function EmployeeAnnouncements() {
                   <select
                     value={filterCategory}
                     onChange={(event) => {
-                      setFilterCategory(event.target.value);
+                      setFilterCategory(event.target.value);  
                       setSelectedCategory("All");
                       setCurrentPage(1);
                     }}

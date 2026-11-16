@@ -66,6 +66,12 @@ export const employeeService = {
     );
   },
 
+  removeMyProfilePhoto() {
+    return api.delete<{ avatar_url: null }>(
+      "/employee-profile-photo/me",
+    );
+  },
+
   getProfilePhoto(employeeId: string) {
     return downloadFile(
       `/employee-profile-photo/${employeeId}/image`,
