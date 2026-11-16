@@ -32,6 +32,7 @@ from app.services.user_service import UserService, resolve_full_name
 from app.core.cache import (
     get_cache,
     set_cache,
+    invalidate_employees_cache,
     invalidate_managers_cache,
 )
 from app.services.employee_identity import ensure_employee_profile
@@ -300,6 +301,34 @@ async def update_admin_account_status(
         success=True,
         message="Admin account updated successfully",
         data=serialize_admin_account(account),
+    )
+
+
+@router.delete(
+    "/admin-accounts/{user_id}",
+    response_model=APIResponse[None],
+)
+async def delete_admin_account(
+    user_id: str,
+    current_user: dict = Depends(require_super_admin),
+):
+    """Permanently delete an HR admin or manager account (super admin only).
+
+    Refused with 409 while a manager still has employees assigned.
+    """
+    account = await user_service.delete_admin_account(user_id)
+
+    # The account was also a reporting-manager option and an Employees row.
+    try:
+        await invalidate_managers_cache()
+        await invalidate_employees_cache(user_id=user_id)
+    except Exception as exc:
+        logger.error("Failed to invalidate caches after deleting admin account: %s", exc)
+
+    return APIResponse(
+        success=True,
+        message=f"{resolve_full_name(account)}'s account was deleted",
+        data=None,
     )
 
 
