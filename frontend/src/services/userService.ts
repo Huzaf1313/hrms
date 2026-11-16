@@ -99,4 +99,10 @@ export const userService = {
   updateAdminAccountStatus(id: string, data: AdminAccountStatusUpdate) {
     return api.patch<AdminAccount>(`/users/admin-accounts/${id}/status`, data);
   },
+
+  /** Permanently delete an HR or manager account. The server signs it out
+   *  everywhere, and refuses (409) while a manager still has a team. */
+  deleteAdminAccount(id: string) {
+    return api.delete<null>(`/users/admin-accounts/${id}`);
+  },
 };

@@ -252,3 +252,71 @@ if __name__ == "__main__":
         print(f"ok  {test.__name__}")
 
     print(f"\n{len(tests)} checks passed")
+
+class _FakeAccounts:
+    """Stands in for UserRepository and SessionService in delete tests."""
+
+    def __init__(self, user, team_size=0):
+        self.user = user
+        self.team_size = team_size
+        self.deleted = []
+        self.revoked = []
+        self.collection = self
+
+    async def get_by_id(self, user_id):
+        return self.user
+
+    async def count_documents(self, query):
+        return self.team_size
+
+    async def delete(self, user_id):
+        self.deleted.append(user_id)
+        return True
+
+    async def revoke_all_sessions_for_user(self, user_id):
+        self.revoked.append(user_id)
+
+
+def _account_service(fake):
+    from app.services.user_service import UserService
+
+    service = UserService.__new__(UserService)
+    service.repository = fake
+    service.session_service = fake
+    return service
+
+
+def _delete_status(service, user_id):
+    try:
+        asyncio.run(service.delete_admin_account(user_id))
+    except AppException as exc:
+        return exc.status_code
+    return 200
+
+
+def test_delete_admin_account_signs_out_and_deletes():
+    fake = _FakeAccounts({"_id": "hr1", "role": "hr_admin", "full_name": "Asha"})
+
+    assert _delete_status(_account_service(fake), "hr1") == 200
+    assert fake.revoked == ["hr1"]
+    assert fake.deleted == ["hr1"]
+
+
+def test_delete_refuses_manager_with_a_team():
+    """Deleting a manager would leave their employees reporting to nobody."""
+    fake = _FakeAccounts(
+        {"_id": "mgr1", "role": "manager", "full_name": "Ravi"},
+        team_size=3,
+    )
+
+    assert _delete_status(_account_service(fake), "mgr1") == 409
+    assert fake.deleted == []
+    assert fake.revoked == []
+
+
+def test_delete_cannot_touch_employees_or_the_super_admin():
+    for role in ("employee", "super_admin"):
+        fake = _FakeAccounts({"_id": "x1", "role": role, "full_name": "X"})
+
+        assert _delete_status(_account_service(fake), "x1") == 404, role
+        assert fake.deleted == [], role

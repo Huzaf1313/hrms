@@ -1,6 +1,7 @@
 /**
- * Admin Accounts: the super admin's page for creating HR admin and manager
- * accounts and for locking, unlocking, deactivating and reactivating them.
+ * Admin Accounts: the super admin's page for creating and deleting HR admin
+ * and manager accounts, and for unlocking accounts that locked themselves
+ * after too many failed sign-ins.
  *
  * Every call goes to /users/admin-accounts, which the backend guards with
  * require_super_admin. Hiding the page from other roles (canAccessPage,
@@ -20,6 +21,7 @@ import {
   Plus,
   Power,
   ShieldCheck,
+  Trash2,
   UserCog,
   Users,
   X,
@@ -145,34 +147,20 @@ function StatCard({
   );
 }
 
-/**
- * A lock or deactivate waiting for the super admin to confirm. Both sign the
- * person out everywhere, so they go through ConfirmDialog; unlock and
- * activate only restore access and apply straight away.
- */
-interface PendingAction {
-  account: AdminAccount;
-  change: { is_active?: boolean; is_locked?: boolean };
-  successText: string;
-  title: string;
-  message: string;
-  confirmLabel: string;
-  tone: "warning" | "danger";
-}
-
-/** In-app replacement for window.confirm on lock / deactivate. */
-function ConfirmDialog({
-  pending,
+/** In-app replacement for window.confirm before deleting an account.
+ *  Unlock and activate only restore access, so they apply straight away. */
+function ConfirmDeleteDialog({
+  account,
   working,
   onConfirm,
   onCancel,
 }: {
-  pending: PendingAction;
+  account: AdminAccount;
   working: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
-  const danger = pending.tone === "danger";
+  const title = "Delete account";
 
   // Escape cancels, like the backdrop click below, but neither does while
   // the request is in flight.
@@ -195,24 +183,19 @@ function ConfirmDialog({
         onClick={(event) => event.stopPropagation()}
         role="alertdialog"
         aria-modal="true"
-        aria-label={pending.title}
+        aria-label={title}
       >
         <div className="flex items-start gap-3">
-          <span
-            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
-              danger ? "bg-rose-50" : "bg-amber-50"
-            }`}
-          >
-            {danger ? (
-              <Power className="h-5 w-5 text-rose-600" />
-            ) : (
-              <Lock className="h-5 w-5 text-amber-600" />
-            )}
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-50">
+            <Trash2 className="h-5 w-5 text-rose-600" />
           </span>
 
           <div className="min-w-0">
-            <h2 className="text-base font-semibold text-slate-900">{pending.title}</h2>
-            <p className="mt-1 text-sm text-slate-500">{pending.message}</p>
+            <h2 className="text-base font-semibold text-slate-900">{title}</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Delete {account.full_name}'s {roleLabel(account.role)} account? They
+              will be signed out and can no longer sign in. This cannot be undone.
+            </p>
           </div>
         </div>
 
@@ -230,11 +213,9 @@ function ConfirmDialog({
             onClick={onConfirm}
             disabled={working}
             autoFocus
-            className={`inline-flex h-10 items-center rounded-xl px-5 text-sm font-semibold text-white shadow-sm transition disabled:cursor-not-allowed disabled:opacity-60 ${
-              danger ? "bg-rose-600 hover:bg-rose-700" : "bg-amber-600 hover:bg-amber-700"
-            }`}
+            className="inline-flex h-10 items-center rounded-xl bg-rose-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {working ? "Working..." : pending.confirmLabel}
+            {working ? "Deleting..." : "Delete account"}
           </button>
         </div>
       </div>
@@ -428,7 +409,7 @@ function CreateAccountForm({
     >
       <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
         <label className="block">
-          <span className="mb-1 block text-xs font-semibold text-slate-600">Full name</span>
+          <span className="mb-1 block text-xs font-semibold text-slate-600">Full name<span className="text-rose-500"> *</span></span>
           <input
             className={INPUT_CLASS}
             value={form.full_name}
@@ -444,7 +425,9 @@ function CreateAccountForm({
             htmlFor="admin-account-email"
             className="mb-1 flex items-center justify-between text-xs font-semibold text-slate-600"
           >
-            Email
+            <span>
+              Email<span className="text-rose-500"> *</span>
+            </span>
             {emailVerified && (
               <span className="inline-flex items-center gap-1 text-emerald-700">
                 <BadgeCheck className="h-3.5 w-3.5" />
@@ -542,11 +525,12 @@ function CreateAccountForm({
         )}
 
         <label className="block">
-          <span className="mb-1 block text-xs font-semibold text-slate-600">Role</span>
+          <span className="mb-1 block text-xs font-semibold text-slate-600">Role<span className="text-rose-500"> *</span></span>
           <select
             className={INPUT_CLASS}
             value={form.role}
             onChange={(event) => update("role", event.target.value as ManagedAdminRole)}
+            required
           >
             <option value="hr_admin">HR: full access</option>
             <option value="manager">Manager: own team, no payroll or recruitment</option>
@@ -554,7 +538,7 @@ function CreateAccountForm({
         </label>
 
         <label className="block">
-          <span className="mb-1 block text-xs font-semibold text-slate-600">Password</span>
+          <span className="mb-1 block text-xs font-semibold text-slate-600">Password<span className="text-rose-500"> *</span></span>
           <input
             className={INPUT_CLASS}
             type="password"
@@ -605,7 +589,8 @@ export default function AdminAccounts() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
   const [search, setSearch] = useState("");
-  const [pending, setPending] = useState<PendingAction | null>(null);
+  // The account waiting on the delete confirmation, if any.
+  const [pendingDelete, setPendingDelete] = useState<AdminAccount | null>(null);
 
   // Load once on mount. `active` stops a late response from updating the
   // page after it has unmounted.
@@ -638,9 +623,8 @@ export default function AdminAccounts() {
     );
 
   /**
-   * Set is_active and/or is_locked. On deactivate or lock the server also
-   * revokes every session of that account, so it is signed out at once;
-   * unlocking resets its failed-login counter.
+   * Unlock (which also resets the failed-login counter) or reactivate an
+   * account that was deactivated before Delete replaced Deactivate.
    */
   const changeStatus = async (
     account: AdminAccount,
@@ -663,13 +647,27 @@ export default function AdminAccounts() {
     }
   };
 
-  // The dialog closes whether or not the change worked; the result shows in
-  // the notice banner.
-  const confirmPending = async () => {
-    if (!pending) return;
+  // The dialog closes whether or not the delete worked; the result shows in
+  // the notice banner (e.g. a manager who still has a team is refused).
+  const confirmDelete = async () => {
+    if (!pendingDelete) return;
 
-    await changeStatus(pending.account, pending.change, pending.successText);
-    setPending(null);
+    const account = pendingDelete;
+    setBusyId(account.id);
+
+    try {
+      await userService.deleteAdminAccount(account.id);
+      setAccounts((current) => current.filter((row) => row.id !== account.id));
+      setNotice({ type: "success", text: `${account.full_name}'s account was deleted.` });
+    } catch (cause: unknown) {
+      setNotice({
+        type: "error",
+        text: errorText(cause, "Unable to delete the account."),
+      });
+    } finally {
+      setBusyId(null);
+      setPendingDelete(null);
+    }
   };
 
   const counts = useMemo(
@@ -704,7 +702,7 @@ export default function AdminAccounts() {
             Admin Accounts
           </h1>
           <p className="mt-1 text-sm text-slate-500">
-            Create, deactivate and unlock the HR admin and manager accounts.
+            Create, delete and unlock the HR admin and manager accounts.
           </p>
         </div>
 
@@ -766,7 +764,7 @@ export default function AdminAccounts() {
 
       <Panel
         title="All admin accounts"
-        description="Deactivating or locking an account signs it out on every device straight away."
+        description="Deleting an account signs it out on every device straight away. Accounts lock themselves after 5 failed sign-ins."
         bodyClassName="p-0"
         action={
           <div className="flex flex-wrap items-center gap-2">
@@ -837,9 +835,11 @@ export default function AdminAccounts() {
                         <StatusBadge account={account} />
                       </td>
                       <td className="px-5 py-3">
-                        {/* Unlock / Activate apply at once; Lock / Deactivate ask first. */}
+                        {/* Unlock (accounts lock themselves after 5 failed
+                            sign-ins) and Activate (accounts deactivated before
+                            Delete existed) apply at once; Delete asks first. */}
                         <div className="flex justify-end gap-2">
-                          {account.is_locked ? (
+                          {account.is_locked && (
                             <button
                               type="button"
                               disabled={busy}
@@ -855,49 +855,9 @@ export default function AdminAccounts() {
                               <LockOpen className="h-3.5 w-3.5" />
                               Unlock
                             </button>
-                          ) : (
-                            <button
-                              type="button"
-                              disabled={busy}
-                              onClick={() =>
-                                setPending({
-                                  account,
-                                  change: { is_locked: true },
-                                  successText: `${account.full_name} locked.`,
-                                  title: "Lock account",
-                                  message: `Lock ${account.full_name}'s account? They will be signed out and cannot sign in until unlocked.`,
-                                  confirmLabel: "Lock account",
-                                  tone: "warning",
-                                })
-                              }
-                              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
-                            >
-                              <Lock className="h-3.5 w-3.5" />
-                              Lock
-                            </button>
                           )}
 
-                          {account.is_active ? (
-                            <button
-                              type="button"
-                              disabled={busy}
-                              onClick={() =>
-                                setPending({
-                                  account,
-                                  change: { is_active: false },
-                                  successText: `${account.full_name} deactivated.`,
-                                  title: "Deactivate account",
-                                  message: `Deactivate ${account.full_name}'s account? They will be signed out and cannot sign in until reactivated.`,
-                                  confirmLabel: "Deactivate",
-                                  tone: "danger",
-                                })
-                              }
-                              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-rose-200 px-3 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 disabled:opacity-50"
-                            >
-                              <Power className="h-3.5 w-3.5" />
-                              Deactivate
-                            </button>
-                          ) : (
+                          {!account.is_active && (
                             <button
                               type="button"
                               disabled={busy}
@@ -914,6 +874,16 @@ export default function AdminAccounts() {
                               Activate
                             </button>
                           )}
+
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => setPendingDelete(account)}
+                            className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-rose-200 px-3 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 disabled:opacity-50"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Delete
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -925,12 +895,12 @@ export default function AdminAccounts() {
         )}
       </Panel>
 
-      {pending && (
-        <ConfirmDialog
-          pending={pending}
-          working={busyId === pending.account.id}
-          onConfirm={confirmPending}
-          onCancel={() => setPending(null)}
+      {pendingDelete && (
+        <ConfirmDeleteDialog
+          account={pendingDelete}
+          working={busyId === pendingDelete.id}
+          onConfirm={confirmDelete}
+          onCancel={() => setPendingDelete(null)}
         />
       )}
     </div>

@@ -231,6 +231,46 @@ class UserService:
 
         return updated
 
+    async def delete_admin_account(self, user_id: str) -> dict:
+        """Permanently delete an HR or manager account.
+
+        Mirrors employee deletion: the account document goes, while records
+        keyed on its employee code (attendance, leave, payslips) stay as
+        history. Every session is revoked first so it is signed out at once.
+        Returns the deleted document for the caller's cache invalidation.
+        """
+        user = await self.repository.get_by_id(user_id)
+
+        # Employees and the super admin are "not found" here, as in
+        # update_admin_account_status.
+        if not user or role_value(user.get("role")) not in MANAGED_ADMIN_ROLES:
+            raise AppException("Admin account not found", 404)
+
+        # A manager's team is linked by manager_id. Deleting the manager
+        # would leave those employees reporting to nobody, so the super admin
+        # has to reassign them first.
+        team_size = await self.repository.collection.count_documents(
+            {
+                "employee_id": {"$exists": True},
+                "manager_id": str(user["_id"]),
+            }
+        )
+
+        if team_size:
+            raise AppException(
+                f"{resolve_full_name(user)} still manages {team_size} "
+                f"employee{'s' if team_size != 1 else ''}. Reassign them to "
+                "another manager before deleting this account.",
+                409,
+            )
+
+        await self.session_service.revoke_all_sessions_for_user(user_id)
+
+        if not await self.repository.delete(user_id):
+            raise AppException("Admin account not found", 404)
+
+        return user
+
     async def list_manager_accounts(self):
         """Accounts that can be picked as an employee's reporting manager."""
         users = await self.repository.get_admin_accounts()
