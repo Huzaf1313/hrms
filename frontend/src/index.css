@@ -100,7 +100,7 @@ aside.app-sidebar svg.lucide {
    ========================================= */
 
 /* Marquee spacing comes from the measured width of one set of items, injected
-   as --marquee-distance by CelebrationTicker. The percentage fallback applies
+   as --marquee-distance by DashboardTicker. The percentage fallback applies
    only for the frame before that measurement lands. */
 .celebration-marquee {
   animation: celebration-scroll var(--marquee-duration, 35s) linear infinite;

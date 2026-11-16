@@ -16,7 +16,7 @@ import EmployeePayroll from "./pages/employee/EmployeePayroll";
 import EmployeeDocuments from "./pages/employee/EmployeeDocuments";
 import EmployeeAnnouncements from "./pages/employee/EmployeeAnnouncements";
 import EmployeeHelpSupport from "./pages/employee/EmployeeHelpSupport";
-import { clearSession, getRefreshToken, setOnSessionClear } from "./services/api";
+import { clearSession, setOnSessionClear } from "./services/api";
 import { clearPendingPasswordRedirect } from "./lib/session";
 import { authService } from "./services/authService";
 import EmployeeLayout from "./layouts/EmployeeLayout";
@@ -49,11 +49,9 @@ setOnSessionClear(() => {
 
 function App() {
   async function handleLogout() {
-    const refreshToken = getRefreshToken();
-
-    if (refreshToken) {
-      await authService.logout(refreshToken);
-    }
+    // Only the server can clear the HttpOnly session cookies, so logout is
+    // always a request; it reads the refresh cookie itself.
+    await authService.logout();
     clearSession();
     clearAuthQueries();
 

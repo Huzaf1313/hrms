@@ -1,7 +1,8 @@
 import { useMemo } from "react";
 import { Hand } from "lucide-react";
 
-import CelebrationTicker from "../../components/CelebrationTicker";
+import DashboardTicker from "../../components/DashboardTicker";
+import { useEmployeeAnnouncements } from "../../hooks/useEmployeeData";
 import type { Celebration } from "../../types/celebration";
 import type { RecentActivity } from "../../services/dashboardService";
 
@@ -22,7 +23,6 @@ interface AdminDashboardProps {
   /** Live values the dashboard endpoint already provides. */
   totalHeadcount?: number | null;
   celebrations?: Celebration[];
-  announcementTitles?: string[];
   recentActivities?: RecentActivity[];
   onNavigate: (page: string) => void;
   /** Opens the announcement create form, used by the quick action. */
@@ -46,12 +46,14 @@ function readUserFirstName(): string {
 export default function AdminDashboard({
   totalHeadcount,
   celebrations = [],
-  announcementTitles = [],
   recentActivities = [],
   onNavigate,
   onCreateAnnouncement,
 }: AdminDashboardProps) {
   const firstName = useMemo(() => readUserFirstName(), []);
+  // If the feed fails to load the banner just shows celebrations (or the
+  // daily thought); announcements have their own page with error handling.
+  const { data: announcementFeed } = useEmployeeAnnouncements(1, 5);
 
   // Hiring, payroll and interview widgets are HR-only and the manager has no
   // permission behind them, so they are not rendered at all.
@@ -72,11 +74,14 @@ export default function AdminDashboard({
         </p>
       </div>
 
-      {/* Birthdays, anniversaries and daily thought banner */}
+      {/* One banner: birthdays, anniversaries and the announcements this
+          account can see (same feed as the employee portal). Falls back to
+          a daily thought when there is nothing to show. */}
       <div className="mb-4">
-        <CelebrationTicker
+        <DashboardTicker
           celebrations={celebrations}
-          announcementTitles={announcementTitles}
+          announcements={announcementFeed?.announcements ?? []}
+          onSelectAnnouncement={() => onNavigate("Announcement")}
         />
       </div>
 

@@ -76,6 +76,11 @@ export const employeeService = {
     return api.post<Employee>("/employees", data);
   },
 
+  // Preview only: the ID is allocated when the employee is saved.
+  getNextEmployeeId() {
+    return api.get<{ employee_id: string }>("/employees/next-id");
+  },
+
   requestEmailOtp(email: string) {
     return api.post<EmployeeOTPRequestResponse>(
       "/employees/request-email-otp",

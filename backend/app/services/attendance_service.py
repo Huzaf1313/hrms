@@ -688,6 +688,11 @@ class AttendanceService:
                 self.employee_repository.collection, current_user
             )
 
+        # The super admin is never minted an employee identity, so it has no
+        # attendance of its own to mark.
+        if not employee or not employee.get("employee_id"):
+            raise AppException("No employee record found for this account", 404)
+
         attendance_date = business_today()
         attendance_key = to_datetime(attendance_date)
 

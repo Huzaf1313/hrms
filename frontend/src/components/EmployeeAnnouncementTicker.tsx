@@ -7,6 +7,9 @@ interface EmployeeAnnouncementTickerProps {
   announcements: Announcement[];
   loading?: boolean;
   error?: string;
+  /** Where a click on an announcement goes. Defaults to the employee list;
+   *  the admin dashboard points it at the admin announcements page. */
+  onSelect?: () => void;
 }
 
 const PIXELS_PER_SECOND = 40;
@@ -16,6 +19,7 @@ function EmployeeAnnouncementTicker({
   announcements,
   loading = false,
   error = "",
+  onSelect,
 }: EmployeeAnnouncementTickerProps) {
   const navigate = useNavigate();
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -77,6 +81,11 @@ function EmployeeAnnouncementTicker({
   );
 
   const handleAnnouncementClick = () => {
+    if (onSelect) {
+      onSelect();
+      return;
+    }
+
     navigate("/employee/announcements");
   };
 

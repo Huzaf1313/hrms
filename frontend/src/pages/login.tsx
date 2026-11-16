@@ -6,8 +6,7 @@ import {
   apiRaw,
   ApiError,
   clearSession,
-  setAccessToken,
-  setRefreshToken,
+  markSessionActive,
 } from "../services/api";
 import { AuthShell } from "../components/auth/AuthShell";
 import { AuthField } from "../components/auth/AuthField";
@@ -15,12 +14,6 @@ import { OtpInput } from "../components/auth/OtpInput";
 import { PasswordStrength } from "../components/auth/PasswordStrength";
 import { clearAuthQueries } from "../lib/queryClient";
 import { consumeLoginRedirectNotice } from "../lib/session";
-
-interface LoginResponse {
-  access_token: string;
-  refresh_token: string;
-  token_type: string;
-}
 
 interface UserResponse {
   id: string;
@@ -116,7 +109,8 @@ function Login() {
     setIsLoading(true);
 
     try {
-      const loginResponse = await apiRaw.post<LoginResponse>(
+      // The server sets the session cookies; the token in the body is unused.
+      await apiRaw.post(
         "/auth/login",
         {
           email: trimmedEmail,
@@ -124,14 +118,12 @@ function Login() {
         },
       );
 
-      const { access_token, refresh_token, token_type } = loginResponse;
-
       // Clear any cached data from previous session
       clearAuthQueries();
 
-      setAccessToken(access_token);
-      setRefreshToken(refresh_token);
-      localStorage.setItem("token_type", token_type);
+      // Tell the route guards the cookie session is live, so the redirect
+      // below does not trigger another server check.
+      markSessionActive();
 
       const userResponse = await api.get("/users/me");
       const user = userResponse as UserResponse;
@@ -150,7 +142,6 @@ function Login() {
       );
     } catch (err: unknown) {
       clearSession();
-      localStorage.removeItem("token_type");
       setError(
         err instanceof ApiError
           ? err.message

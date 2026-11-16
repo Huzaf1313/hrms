@@ -1,5 +1,6 @@
 import re
 from datetime import date, datetime
+from typing import Literal
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
@@ -80,6 +81,62 @@ class ManagerCreate(UserCreate):
     cannot ask for anything else."""
 
 
+class AdminAccountCreate(BaseModel):
+    """HR admin or manager account, created by the super admin. The role is
+    limited to those two so the super admin role can never be handed out
+    through the API."""
+
+    full_name: str = Field(min_length=2, max_length=100)
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=128)
+    role: Literal["hr_admin", "manager"]
+    # Issued by /users/admin-accounts/verify-email-otp once the address has
+    # been confirmed with an OTP. Required: see create_admin_account.
+    email_verification_token: str = Field(default="", max_length=2048)
+
+    @field_validator("full_name")
+    @classmethod
+    def validate_full_name(cls, value: str) -> str:
+        value = value.strip()
+
+        if not NAME_PATTERN.match(value):
+            raise ValueError(
+                "Full name must contain only letters, spaces, dots, apostrophes or hyphens"
+            )
+
+        return value
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, value: str) -> str:
+        return validate_password_strength(value)
+
+
+class AdminAccountStatusUpdate(BaseModel):
+    """Partial status change for an HR or manager account; omitted fields are
+    left as they are. Deactivating or locking also revokes the account's
+    sessions (see UserService.update_admin_account_status)."""
+
+    is_active: bool | None = None
+    is_locked: bool | None = None
+
+
+class AdminAccountResponse(BaseModel):
+    """An HR or manager account as the Admin Accounts page lists it."""
+
+    id: str
+    employee_id: str | None = None
+    full_name: str
+    email: EmailStr
+    role: UserRole
+    is_active: bool
+    is_locked: bool
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+    # Only set on the create response: whether the welcome email went out.
+    welcome_email_sent: bool | None = None
+
+
 class UserResponse(BaseModel):
     id: str
     employee_id: str | None = None
@@ -102,6 +159,13 @@ class TokenResponse(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
+
+class AccessTokenResponse(BaseModel):
+    """What the browser gets back from login and refresh. The refresh token
+    is not in the body: it travels only as an HttpOnly cookie."""
+    access_token: str
+    token_type: str = "bearer"
+
 
 class RefreshTokenRequest(BaseModel):
     refresh_token: str = Field(min_length=1)
@@ -218,8 +282,13 @@ class AdminProfileUpdate(BaseModel):
     employee_id, joining date, employment status) are deliberately absent -
     those are system-owned and change through their own flows. Dates and
     emails stay plain strings so a cleared field ("") round-trips instead of
-    failing validation; the service parses what it accepts."""
+    failing validation; the service parses what it accepts.
 
+    full_name is the one exception: it is applied only for the super admin,
+    which has no account above it to rename it. For every other role the
+    service ignores it."""
+
+    full_name: str | None = Field(default=None, max_length=80)
     phone: str | None = Field(default=None, max_length=20)
     date_of_birth: str | None = None
     gender: str | None = Field(default=None, max_length=20)

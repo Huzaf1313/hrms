@@ -113,6 +113,10 @@ export function useEmployeeAnnouncements(
         page,
         page_size: pageSize,
       }),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    // A new announcement should reach a dashboard that is already open, so
+    // this feed is refreshed on a timer and whenever the tab regains focus.
+    staleTime: 30 * 1000,
+    refetchInterval: 60 * 1000,
+    refetchOnWindowFocus: true,
   });
 }

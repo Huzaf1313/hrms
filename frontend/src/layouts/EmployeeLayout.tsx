@@ -42,6 +42,31 @@ function EmployeeLayout({ onLogout }: { onLogout: () => void }) {
   const location = useLocation();
 
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close the profile menu on a click outside it or on Escape, as the admin
+  // Header does.
+  useEffect(() => {
+    function closeOnOutsideClick(event: MouseEvent) {
+      if (
+        profileMenuRef.current &&
+        !profileMenuRef.current.contains(event.target as Node)
+      ) {
+        setShowProfileMenu(false);
+      }
+    }
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setShowProfileMenu(false);
+    }
+
+    document.addEventListener("mousedown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("mousedown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, []);
   const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
@@ -49,7 +74,6 @@ function EmployeeLayout({ onLogout }: { onLogout: () => void }) {
   const [designation, setDesignation] = useState("");
   const [avatarRefreshKey, setAvatarRefreshKey] = useState(0);
   const notificationContainerRef = useRef<HTMLDivElement | null>(null);
-  const profileContainerRef = useRef<HTMLDivElement | null>(null);
 
   const user = useMemo(() => readUser(), []);
 
@@ -171,13 +195,6 @@ useEffect(() => {
       ) {
         setShowNotificationDropdown(false);
       }
-
-      if (
-        profileContainerRef.current &&
-        !profileContainerRef.current.contains(target)
-      ) {
-        setShowProfileMenu(false);
-      }
     };
 
     document.addEventListener("mousedown", handleOutsideClick);
@@ -277,7 +294,7 @@ useEffect(() => {
             <DatePicker />
 
             {/* Profile */}
-            <div ref={profileContainerRef} className="relative">
+            <div className="relative" ref={profileMenuRef}>
               <button
                 type="button"
                 onClick={() =>

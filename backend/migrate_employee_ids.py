@@ -49,7 +49,9 @@ def build_mapping(employees: list[dict]) -> list[dict]:
     mapping = []
     old_ids: dict[str, str] = {}
 
-    for number, employee in enumerate(employees, start=1):
+    # Numbering starts at 2: AAR001 is reserved as the super admin's
+    # display code (see SUPER_ADMIN_EMPLOYEE_CODE).
+    for number, employee in enumerate(employees, start=2):
         old_id = (employee.get("employee_id") or "").strip()
         user_id = str(employee["_id"])
 
@@ -144,9 +146,11 @@ async def apply_mapping(mapping: list[dict]) -> None:
             {"$set": {"employee_id": item["new_id"]}},
         )
 
+    # The last code issued is len(mapping) + 1 because numbering started at 2.
+    # $max never moves the sequence backwards.
     await database["sequences"].update_one(
         {"_id": "employee_id"},
-        {"$max": {"value": len(mapping)}},
+        {"$max": {"value": len(mapping) + 1}},
         upsert=True,
     )
     await users.create_index(
@@ -167,7 +171,7 @@ async def main(apply: bool) -> None:
 
         print(f"Found {len(mapping)} employee profile(s)")
         print(f"Converting {len(old_ids)} existing employee ID(s)")
-        print(f"Assigning IDs from AAR001 through AAR{len(mapping):03d}")
+        print(f"Assigning IDs from AAR002 through AAR{len(mapping) + 1:03d}")
 
         for item in mapping:
             print(

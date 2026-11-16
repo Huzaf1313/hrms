@@ -8,7 +8,7 @@ class Settings(BaseSettings):
 
     SECRET_KEY: str
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     EMAIL_HOST: str
@@ -42,6 +42,13 @@ class Settings(BaseSettings):
     BOOTSTRAP_HR_PASSWORD: str = ""
     BOOTSTRAP_HR_NAME: str = "HR Admin"
 
+    # Super admin account, created on startup the same way. It sits above HR
+    # and is the only account that can create, deactivate or unlock HR and
+    # manager accounts. Leave empty to skip.
+    BOOTSTRAP_SUPER_ADMIN_EMAIL: str = ""
+    BOOTSTRAP_SUPER_ADMIN_PASSWORD: str = ""
+    BOOTSTRAP_SUPER_ADMIN_NAME: str = "Super Admin"
+
     # Cloudflare R2 object storage
     R2_ACCOUNT_ID: str = ""
     R2_ACCESS_KEY_ID: str = ""
@@ -60,6 +67,13 @@ class Settings(BaseSettings):
     )
 
     FRONTEND_URL: str = "http://localhost:5173"
+
+    # Session cookies (access and refresh token). Local http development needs Secure off. When the
+    # frontend and the API are on different sites in production, set
+    # COOKIE_SECURE=true and COOKIE_SAMESITE=none or the browser drops them.
+    COOKIE_SECURE: bool = False
+    # "lax", "strict" or "none"; cookies.py lower-cases it before use.
+    COOKIE_SAMESITE: str = "lax"
 
     @property
     def cors_origins_list(self) -> list[str]:

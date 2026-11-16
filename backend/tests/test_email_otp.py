@@ -390,11 +390,17 @@ class TestEmailOTPWorkflow(unittest.IsolatedAsyncioTestCase):
             "email_verification_token": "valid_signed_token",
         }
 
+        # The activity log and the employee-code sequence are real database
+        # writes. Unmocked, every test run added a "New employee Alice Smith"
+        # entry to the dashboard's Recent Activities and burned an AAR code.
         with patch.object(employee_service.repository, "get_by_employee_id", new_callable=AsyncMock) as mock_emp_id, \
              patch.object(employee_service.user_repository, "get_by_email", new_callable=AsyncMock) as mock_user_email, \
              patch.object(employee_service.department_repository, "get_by_id", new_callable=AsyncMock) as mock_dept, \
-             patch.object(employee_service.repository, "create", new_callable=AsyncMock) as mock_emp_create:
+             patch.object(employee_service.repository, "create", new_callable=AsyncMock) as mock_emp_create, \
+             patch.object(employee_service.activity_service, "record", new_callable=AsyncMock) as mock_activity, \
+             patch("app.services.employee_service.next_employee_code", new_callable=AsyncMock) as mock_next_code:
 
+            mock_next_code.return_value = "EMP-9999"
             mock_emp_id.return_value = None
             mock_user_email.return_value = None
             mock_dept.return_value = {"_id": employee_data["department_id"], "name": "Engineering"}
@@ -418,6 +424,7 @@ class TestEmailOTPWorkflow(unittest.IsolatedAsyncioTestCase):
                 admin_id=self.admin_id,
             )
             mock_send_welcome.assert_awaited_once()
+            mock_activity.assert_awaited_once()
             self.assertEqual(
                 mock_send_welcome.await_args.kwargs["template_data"]["employee_name"],
                 "Alice Smith",
@@ -518,11 +525,15 @@ class TestEmailOTPWorkflow(unittest.IsolatedAsyncioTestCase):
             "email_verification_token": "valid_token",
         }
 
+        # Same real writes as test_employee_creation_and_welcome_email.
         with patch.object(employee_service.repository, "get_by_employee_id", new_callable=AsyncMock) as mock_emp_id, \
              patch.object(employee_service.user_repository, "get_by_email", new_callable=AsyncMock) as mock_user_email, \
              patch.object(employee_service.department_repository, "get_by_id", new_callable=AsyncMock) as mock_dept, \
-             patch.object(employee_service.repository, "create", new_callable=AsyncMock) as mock_emp_create:
+             patch.object(employee_service.repository, "create", new_callable=AsyncMock) as mock_emp_create, \
+             patch.object(employee_service.activity_service, "record", new_callable=AsyncMock), \
+             patch("app.services.employee_service.next_employee_code", new_callable=AsyncMock) as mock_next_code:
 
+            mock_next_code.return_value = "EMP-8888"
             mock_emp_id.return_value = None
             mock_user_email.return_value = None
             mock_dept.return_value = {"_id": employee_data["department_id"], "name": "Design"}

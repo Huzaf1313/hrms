@@ -1,5 +1,6 @@
 from typing import Any
 
+from app.core.roles import ADMIN_ROLES
 from app.repositories.employee_notification_repository import (
     EmployeeNotificationRepository,
 )
@@ -92,11 +93,14 @@ class AdminNotificationService:
         if owner:
             creator = await self.user_repository.get_by_id(str(owner))
 
+            # ADMIN_ROLES includes the super admin, so an employee it onboarded
+            # notifies it alone. The fallback below (get_admin_accounts) only
+            # covers HR and managers.
             if (
                 creator
                 and creator.get("is_active")
                 and not creator.get("is_locked")
-                and creator.get("role") in ("hr_admin", "manager")
+                and creator.get("role") in ADMIN_ROLES
             ):
                 return [str(creator["_id"])]
 

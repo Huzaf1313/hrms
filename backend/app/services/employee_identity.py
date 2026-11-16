@@ -15,6 +15,15 @@ from datetime import datetime
 from pymongo import ReturnDocument
 
 from app.core.exceptions import AppException
+from app.core.roles import UserRole
+
+# Shown as the super admin's Employee ID on its profile. It is display-only
+# and never stored as an employee_id: the super admin must stay out of the
+# employee records (see ensure_employee_profile). Employee codes start at
+# AAR002 (see next_employee_code), so no real employee is issued this code.
+SUPER_ADMIN_EMPLOYEE_CODE = "AAR001"
+# Lowest sequence number that is turned into a real employee code.
+FIRST_EMPLOYEE_NUMBER = 2
 
 async def next_employee_code(collection) -> str:
     """Atomically allocate the next employee code.
@@ -22,14 +31,33 @@ async def next_employee_code(collection) -> str:
     Gaps are intentionally preserved when an employee is deleted. This avoids
     duplicate IDs when multiple employees are created concurrently.
     """
-    sequence = await collection.database["sequences"].find_one_and_update(
-        {"_id": "employee_id"},
-        {"$inc": {"value": 1}},
-        upsert=True,
-        return_document=ReturnDocument.AFTER,
+    while True:
+        sequence = await collection.database["sequences"].find_one_and_update(
+            {"_id": "employee_id"},
+            {"$inc": {"value": 1}},
+            upsert=True,
+            return_document=ReturnDocument.AFTER,
+        )
+
+        # On a fresh database the first value is 1, which is the super
+        # admin's code - skip it.
+        if sequence["value"] >= FIRST_EMPLOYEE_NUMBER:
+            return f"AAR{sequence['value']:03d}"
+
+
+async def peek_next_employee_code(collection) -> str:
+    """The code the next employee would be issued, without allocating it.
+
+    Display-only, for the Add Employee form. Another employee created in the
+    meantime takes this code, so the saved record is the source of truth.
+    """
+    sequence = await collection.database["sequences"].find_one(
+        {"_id": "employee_id"}
     )
 
-    return f"AAR{sequence['value']:03d}"
+    upcoming = (sequence["value"] if sequence else 0) + 1
+
+    return f"AAR{max(upcoming, FIRST_EMPLOYEE_NUMBER):03d}"
 
 
 async def backfill_minted_profiles(users_collection) -> int:
@@ -85,6 +113,13 @@ async def ensure_employee_profile(collection, user: dict) -> dict:
     loser picks up the winner's code.
     """
     if user.get("employee_id"):
+        return user
+
+    # The super admin is deliberately never an employee. Employee routes only
+    # see accounts that carry an employee_id, and the employee update path
+    # can reset a password and rewrite the role - so minting one here would
+    # let HR take over the account that is meant to sit above HR.
+    if getattr(user.get("role"), "value", user.get("role")) == UserRole.SUPER_ADMIN.value:
         return user
 
     user_id = user.get("_id")

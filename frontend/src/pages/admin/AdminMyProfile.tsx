@@ -36,17 +36,14 @@ import { adminProfileService } from "../../services/adminProfileService";
 import { authService } from "../../services/authService";
 import { clearSession } from "../../services/api";
 import { clearAuthQueries } from "../../lib/queryClient";
-import { setLoginRedirectNotice } from "../../lib/session";
+import { setLoginRedirectNotice, syncSessionName } from "../../lib/session";
 import { shiftService } from "../../services/shiftService";
+import { roleLabel } from "../../lib/access";
 import type {
   AdminProfile,
   NotificationPreferences,
   ProfileTab,
 } from "../../types/adminProfile";
-
-function roleLabel(role: string): string {
-  return role === "hr_admin" ? "HR Admin" : role.replaceAll("_", " ");
-}
 
 /** Brings a panel into view, so a quick action can jump to it. */
 function scrollToSection(id: string) {
@@ -111,6 +108,8 @@ export default function AdminMyProfile() {
 
   const [activeTab, setActiveTab] = useState<ProfileTab>("Overview");
   const [isEditing, setIsEditing] = useState(false);
+  /** Bumped on every Edit click so the form scrolls into view each time. */
+  const [editScrollRequest, setEditScrollRequest] = useState(0);
   const [pendingAvatar, setPendingAvatar] = useState<string | null>(null);
 
   const support = adminProfileService.getSupportContact();
@@ -216,6 +215,9 @@ export default function AdminMyProfile() {
       const saved = await adminProfileService.saveProfile({ ...next, avatar_url: avatarUrl });
 
       setProfile(saved);
+      // Updates the cached login payload so the header shows a renamed
+      // super admin straight away.
+      syncSessionName(saved.full_name);
       setIsEditing(false);
       setPendingAvatar(null);
       setUpdateConfirmation(true);
@@ -227,8 +229,26 @@ export default function AdminMyProfile() {
   function startEditing() {
     setPendingAvatar(profile?.avatar_url ?? null);
     setNotice("");
+    // Documents has no edit form, so editing from there opens Overview.
+    if (activeTab === "Documents") setActiveTab("Overview");
     setIsEditing(true);
+    setEditScrollRequest((current) => current + 1);
   }
+
+  // The form opens in the tab area, which can sit below the fold when Edit is
+  // clicked from the hero or the side rail. Bring it into view so the click
+  // visibly does something.
+  useEffect(() => {
+    if (editScrollRequest === 0) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      document
+        .getElementById("profile-edit-form")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [editScrollRequest]);
 
   function cancelEditing() {
     setIsEditing(false);
@@ -466,7 +486,9 @@ export default function AdminMyProfile() {
   }
 
   function renderDocumentsTab() {
-    if (!profile?.employee_id) {
+    // The super admin's AAR001 is display-only, not an employee record, so
+    // there is no document store behind it.
+    if (!profile?.employee_id || profile.role === "super_admin") {
       return (
         <ProfileSection icon={<FileText className="icon-accent h-4 w-4" />} title="My Documents">
           <p className="text-sm text-gray-500">An employee profile is required before documents can be uploaded.</p>

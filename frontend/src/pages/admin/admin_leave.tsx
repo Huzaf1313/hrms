@@ -32,7 +32,9 @@ import {
   type LeaveStatus,
   type LeaveSummary,
 } from "../../services/admin_leave_service";
-import { adminMyLeaveStore } from "../../services/adminMyLeaveStore";
+import { ApiError } from "../../services/api";
+import { currentSessionUser } from "../../lib/session";
+import { isSuperAdmin, roleLabel } from "../../lib/access";
 import { useGlobalDate } from "../../context/globalDateContext";
 import { GlobalDateBadge } from "../../components/GlobalDateBadge";
 import NewLeaveRequestModal from "../../components/admin/NewLeaveRequestModal";
@@ -588,12 +590,39 @@ function AdminLeave() {
     text: string;
   } | null>(null);
 
-  // Leave the admin files for themselves. The admin portal has no create
-  // endpoint of its own yet, so these are kept in the browser.
-  const [myRequests, setMyRequests] = useState<LeaveRequest[]>(() =>
-    adminMyLeaveStore.list(),
-  );
+  // Leave the signed-in HR or manager files for themselves. It is stored on
+  // the server like any employee request, so the approvers above them see it.
+  // The super admin is not an employee and files no leave of its own.
+  const session = useMemo(() => currentSessionUser(), []);
+  const superAdmin = useMemo(() => isSuperAdmin(), []);
+  const myEmployeeId = superAdmin ? "" : session?.employee_id?.trim() ?? "";
+  const [myRequests, setMyRequests] = useState<LeaveRequest[]>([]);
   const [onlyMine, setOnlyMine] = useState(false);
+  /** Bumped after a submission so every list reloads from the server. */
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    if (!myEmployeeId) return;
+
+    let cancelled = false;
+
+    leaveService
+      .listMine(myEmployeeId, session?.full_name)
+      .then((rows) => {
+        if (!cancelled) setMyRequests(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setMyRequests([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [myEmployeeId, session?.full_name, refreshKey]);
+
+  /** Nobody approves or rejects their own leave; the backend enforces it too. */
+  const isOwnRequest = (request: LeaveRequest) =>
+    Boolean(myEmployeeId) && request.employee_id === myEmployeeId;
 
   // Editable leave-balance quotas (days per leave type). The numbers live in
   // the database and are synced below, so edits survive reloads across every
@@ -756,10 +785,9 @@ function AdminLeave() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [refreshKey]);
 
-  // The rows the table and the widgets below show: the admin's own requests
-  // from this browser, plus the page the API returned.
+  // "My Requests" narrows the table to the signed-in account's own leave.
   const filteredMyRequests = useMemo(
     () =>
       myRequests.filter((request) => {
@@ -774,8 +802,8 @@ function AdminLeave() {
           return false;
         }
 
-        // A department filter is about the organisation, and a request the
-        // admin filed for themselves carries no department of its own.
+        // A department filter is about the organisation; the employee
+        // endpoint does not return a department to match against.
         if (departmentFilter) {
           return false;
         }
@@ -785,21 +813,15 @@ function AdminLeave() {
     [myRequests, statusFilter, leaveTypeFilter, departmentFilter],
   );
 
-  const tableRequests = useMemo(
-    () => (onlyMine ? filteredMyRequests : [...filteredMyRequests, ...requests]),
-    [filteredMyRequests, requests, onlyMine],
-  );
+  // Everyone the signed-in account may review comes from the server already:
+  // employees, managers and HR for HR and the super admin, the team for a
+  // manager. A manager's own leave is not in that list, so it lives under
+  // "My Requests".
+  const tableRequests = onlyMine ? filteredMyRequests : requests;
 
-  const chartRows = useMemo(
-    () => [...myRequests, ...chartRequests],
-    [myRequests, chartRequests],
-  );
+  const displayTotal = onlyMine ? filteredMyRequests.length : total;
 
-  const displayTotal = onlyMine
-    ? filteredMyRequests.length
-    : total + filteredMyRequests.length;
-
-  const leaveChartSeries = useMemo(() => buildMonthlySeries(chartRows), [chartRows]);
+  const leaveChartSeries = useMemo(() => buildMonthlySeries(chartRequests), [chartRequests]);
 
   useEffect(() => {
     let cancelled = false;
@@ -834,7 +856,7 @@ function AdminLeave() {
       if (!cancelled) setIsLoading(false);
     });
     return () => { cancelled = true; };
-  }, [departmentFilter, globalDate, isGlobalDateDefault, leaveTypeFilter, page, pageSize, statusFilter]);
+  }, [departmentFilter, globalDate, isGlobalDateDefault, leaveTypeFilter, page, pageSize, statusFilter, refreshKey]);
 
   const statCards = [
     { label: "Total Leave Requests", value: summary?.total_leave_requests ?? "-", sub: "This Month", icon: CalendarDays, iconBg: "bg-blue-500" },
@@ -845,69 +867,39 @@ function AdminLeave() {
     { label: "Upcoming Leaves", value: summary?.upcoming_leaves ?? "-", sub: "Next 7 Days", icon: CalendarClock, iconBg: "bg-teal-500" },
   ];
 
+  /**
+   * Approve or reject on the server, then reload the summary so the stat
+   * cards match. Errors surface the backend's message (e.g. a self-approval
+   * refusal) in the notice popup.
+   */
   async function updateRequestStatus(request: LeaveRequest, nextStatus: "approved" | "rejected") {
-    // A request the admin filed for themselves lives in the browser, so it is
-    // updated there instead of on the server.
-    if (request.id.startsWith("local-leave-")) {
-      setMyRequests(adminMyLeaveStore.update(request.id, { status: nextStatus }));
-      setSummary((current) =>
-        current
-          ? {
-              ...current,
-              pending_requests: Math.max(0, current.pending_requests - 1),
-              approved_requests:
-                nextStatus === "approved"
-                  ? current.approved_requests + 1
-                  : current.approved_requests,
-              rejected_requests:
-                nextStatus === "rejected"
-                  ? current.rejected_requests + 1
-                  : current.rejected_requests,
-            }
-          : current,
-      );
-      setNotice({ type: "success", text: `Your leave request was marked as ${nextStatus}.` });
-      return;
-    }
-
     try {
       await leaveService.updateStatus(request.id, nextStatus);
       setRequests((current) => current.map((item) => item.id === request.id ? { ...item, status: nextStatus } : item));
       setSummary(await leaveService.summary());
-    } catch {
-      setError("Unable to update this leave request.");
+      setNotice({
+        type: "success",
+        text: `Leave request for ${request.employee_name || request.employee_id} was ${nextStatus}.`,
+      });
+    } catch (cause) {
+      setNotice({
+        type: "error",
+        text: cause instanceof ApiError ? cause.message : "Unable to update this leave request.",
+      });
     }
   }
 
-  function createRequest(draft: LeaveRequestDraft) {
-    const localRequest: LeaveRequest = {
-      id: `local-leave-${Date.now()}`,
-      employee_id: draft.employee_id,
-      employee_name: draft.employee_name ?? "HR User",
-      department_id: draft.department_id ?? null,
-      department_name: draft.department_name ?? null,
+  // Throws on failure so the modal stays open and shows the server's message.
+  async function createRequest(draft: LeaveRequestDraft) {
+    await leaveService.applyForSelf({
       leave_type: draft.leave_type,
       start_date: draft.start_date,
       end_date: draft.end_date,
-      total_days: countWorkingDays(draft.start_date, draft.end_date),
       reason: draft.reason,
-      attachment_name: draft.attachment_name ?? null,
-      attachment_size: draft.attachment_size ?? null,
-      status: "pending",
-      created_at: new Date().toISOString(),
-    };
+    });
 
-    setMyRequests(adminMyLeaveStore.add(localRequest));
-    setSummary((current) =>
-      current
-        ? {
-            ...current,
-            total_leave_requests: current.total_leave_requests + 1,
-            pending_requests: current.pending_requests + 1,
-          }
-        : current,
-    );
     setPage(1);
+    setRefreshKey((current) => current + 1);
     setNotice({ type: "success", text: "Your leave request was submitted and is pending approval." });
   }
 
@@ -999,23 +991,29 @@ function AdminLeave() {
               <Filter className="h-3.5 w-3.5" />
               Filters
             </button>
-            <button
-              type="button"
-              onClick={() => setOnlyMine((current) => !current)}
-              aria-pressed={onlyMine}
-              className={`flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm transition ${
-                onlyMine
-                  ? "border-[#2563eb] bg-blue-50 font-semibold text-[#2563eb]"
-                  : "border-gray-200 text-gray-700 hover:bg-gray-50"
-              }`}
-            >
-              <UserRound className="h-3.5 w-3.5" />
-              My Requests
-            </button>
-            <button type="button" onClick={() => setIsCreateOpen(true)} className="flex items-center gap-1.5 rounded-full bg-[#2563eb] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1d4ed8]">
-              <Plus className="h-3.5 w-3.5" />
-              Apply for Leave
-            </button>
+            {/* Only accounts tied to an employee record (HR, managers) can
+                file leave; the super admin never sees these two buttons. */}
+            {myEmployeeId && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setOnlyMine((current) => !current)}
+                  aria-pressed={onlyMine}
+                  className={`flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm transition ${
+                    onlyMine
+                      ? "border-[#2563eb] bg-blue-50 font-semibold text-[#2563eb]"
+                      : "border-gray-200 text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  <UserRound className="h-3.5 w-3.5" />
+                  My Requests
+                </button>
+                <button type="button" onClick={() => setIsCreateOpen(true)} className="flex items-center gap-1.5 rounded-full bg-[#2563eb] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1d4ed8]">
+                  <Plus className="h-3.5 w-3.5" />
+                  Apply for Leave
+                </button>
+              </>
+            )}
           </div>
         </div>
 
@@ -1054,7 +1052,15 @@ function AdminLeave() {
                         {name.split(" ").map((part) => part[0]).join("")}
                       </div>
                       <div>
-                        <div className="font-semibold text-gray-900">{name}</div>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="font-semibold text-gray-900">{name}</span>
+                          {/* Role badge for HR and manager applicants only. */}
+                          {request.employee_role && request.employee_role !== "employee" && (
+                            <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-semibold text-violet-600">
+                              {roleLabel(request.employee_role)}
+                            </span>
+                          )}
+                        </div>
                         <div className="text-xs text-gray-400">{request.employee_id}</div>
                       </div>
                     </div>
@@ -1082,7 +1088,7 @@ function AdminLeave() {
                         className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50"
 >                       <Eye className="h-3.5 w-3.5" />
                       </button>
-                      {request.status === "pending" && (
+                      {request.status === "pending" && !isOwnRequest(request) && (
                         <>
                           <button type="button" onClick={() => updateRequestStatus(request, "approved")} className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500 text-white hover:bg-emerald-600">
                             <Check className="h-3.5 w-3.5" />
@@ -1409,7 +1415,14 @@ function AdminLeave() {
 
             {/* Footer actions */}
             <div className="border-t border-gray-100 px-6 py-5">
-              {selectedRequest.status === "pending" ? (
+              {/* Your own pending request shows a waiting note instead of
+                  approve/reject buttons. */}
+              {selectedRequest.status === "pending" && isOwnRequest(selectedRequest) ? (
+                <div className="flex items-center justify-center gap-2 rounded-lg bg-orange-50 px-4 py-2.5 text-sm font-semibold text-orange-600">
+                  <Clock className="h-4 w-4" />
+                  Awaiting approval from HR or the super admin
+                </div>
+              ) : selectedRequest.status === "pending" ? (
                 <div className="flex gap-3">
                   <button
                     type="button"

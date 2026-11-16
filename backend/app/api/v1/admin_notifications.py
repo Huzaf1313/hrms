@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.api.deps import get_current_user
-from app.core.roles import Permission, UserRole
+from app.core.roles import ADMIN_ROLES, Permission, UserRole, role_value
 from app.schemas.common import APIResponse
 from app.schemas.employee_notification import NotificationListResponse
 from app.services.admin_notification_service import AdminNotificationService
@@ -15,10 +15,9 @@ service = AdminNotificationService()
 # Admin accounts have no employee_id of their own, so they are addressed by the
 # notification service's "admin:<user id>" key instead of the employee code.
 def require_admin(current_user: dict = Depends(get_current_user)) -> dict:
-    if current_user.get("role") not in (
-        UserRole.HR_ADMIN.value,
-        UserRole.MANAGER.value,
-    ):
+    # ADMIN_ROLES covers HR, managers and the super admin. role_value accepts
+    # the role as either the enum or its stored string.
+    if role_value(current_user.get("role")) not in ADMIN_ROLES:
         raise HTTPException(
             status_code=403,
             detail="Admin access required",

@@ -9,6 +9,7 @@ import {
   X,
 } from "lucide-react";
 
+import { isHrAdmin } from "../../lib/access";
 import { api, downloadFile } from "../../services/api";
 
 interface EmployeeDocument {
@@ -33,6 +34,8 @@ export default function AdminEmployeeDocuments({
 }: {
   employeeId: string;
 }) {
+  // Only HR and the super admin may delete an employee's documents.
+  const canDelete = isHrAdmin();
   const [documents, setDocuments] = useState<EmployeeDocument[]>([]);
   const [name, setName] = useState("");
   const [type, setType] = useState("Employment");
@@ -259,6 +262,9 @@ export default function AdminEmployeeDocuments({
                             <Download className="h-4 w-4" />
                           </button>
 
+                          {/* Managers are view-only here; the server
+                              refuses their deletes as well. */}
+                          {canDelete && (
                           <button
                             type="button"
                             title="Delete document"
@@ -276,6 +282,7 @@ export default function AdminEmployeeDocuments({
                               <Trash2 className="h-4 w-4" />
                             )}
                           </button>
+                          )}
                         </div>
                       </div>
                     ))}

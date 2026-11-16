@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { ComponentProps } from "react";
 import {
   Users,
   UserCheck,
@@ -15,7 +16,6 @@ import {
   Users2,
   Timer,
   RotateCcw,
-  MoreVertical,
   SlidersHorizontal,
   X,
   CheckSquare,
@@ -23,7 +23,11 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { CardSkeleton, TableRowSkeleton } from "../../components/ui";
-import { ApiError } from "../../services/api";
+import { api, ApiError } from "../../services/api";
+import NoticePopup from "../../components/ui/NoticePopup";
+import { currentSessionUser } from "../../lib/session";
+import EmployeeAttendanceRegularizationModal from "../employee/EmployeeAttendanceRegularizationModal";
+import { isSuperAdmin } from "../../lib/access";
 import {
   attendanceService,
   type BulkAttendanceResponse,
@@ -321,6 +325,48 @@ function AdminAttendance() {
   const [myStatus, setMyStatus] = useState<MyAttendanceStatus | null>(null);
   const [isPunching, setIsPunching] = useState(false);
 
+  // The super admin is not an employee, so it has no attendance of its own
+  // to punch. Asking for it only produced a "No employee record" error.
+  const canSelfPunch = useMemo(() => !isSuperAdmin(), []);
+  const visibleQuickActions = canSelfPunch
+    ? quickActions
+    : quickActions.filter((action) => action.label !== "Mark My Attendance");
+
+  // HR and managers correct their own missed punches through the same
+  // request form employees use; someone else then reviews it.
+  type OwnAttendanceRecords = ComponentProps<
+    typeof EmployeeAttendanceRegularizationModal
+  >["attendanceRecords"];
+  const [isSelfRegularizationOpen, setIsSelfRegularizationOpen] = useState(false);
+  const [myAttendanceRecords, setMyAttendanceRecords] =
+    useState<OwnAttendanceRecords>([]);
+  const [regularizationListKey, setRegularizationListKey] = useState(0);
+
+  /**
+   * Opens the regularization form for the signed-in account. Its attendance
+   * history is loaded first because the form offers only the dates with an
+   * incomplete punch (plus today) and pre-fills the issue type from them.
+   */
+  async function openSelfRegularization() {
+    const employeeId = currentSessionUser()?.employee_id;
+
+    if (employeeId) {
+      try {
+        setMyAttendanceRecords(
+          await api.get<OwnAttendanceRecords>(
+            `/employee-attendance/employees/${employeeId}`,
+            { page: 1, limit: 100 },
+          ),
+        );
+      } catch {
+        // The form still works for today's missing check-in without history.
+        setMyAttendanceRecords([]);
+      }
+    }
+
+    setIsSelfRegularizationOpen(true);
+  }
+
   type PunchPopup =
     | { kind: "success"; title: string; fields: { label: string; value: string }[] }
     | { kind: "error"; message: string };
@@ -350,6 +396,9 @@ function AdminAttendance() {
   });
 
   useEffect(() => {
+    // No own attendance to look up for the super admin (see canSelfPunch).
+    if (!canSelfPunch) return;
+
     let isCurrent = true;
 
     attendanceService
@@ -372,7 +421,7 @@ function AdminAttendance() {
     return () => {
       isCurrent = false;
     };
-  }, []);
+  }, [canSelfPunch]);
 
   function clearSelection() {
     setIsAllMatchingSelected(false);
@@ -838,6 +887,17 @@ function AdminAttendance() {
             <Download className="h-4 w-4" />
             Export
           </button>
+          {canSelfPunch && (
+          <button
+            type="button"
+            onClick={() => void openSelfRegularization()}
+            className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+          >
+            <ClipboardEdit className="h-4 w-4" />
+            Regularize My Attendance
+          </button>
+          )}
+          {canSelfPunch && (
           <button
             type="button"
             className={`flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-white transition ${
@@ -868,6 +928,7 @@ function AdminAttendance() {
               ? "Mark Out"
               : "Mark In"}
           </button>
+          )}
         </div>
       </div>
 
@@ -1239,15 +1300,6 @@ function AdminAttendance() {
                         >
                           View
                         </button>
-
-                        <button
-                          type="button"
-                          onClick={() => setDetailRow(row)}
-                          aria-label={`More actions for ${row.employee.first_name} ${row.employee.last_name}`}
-                          className="flex h-7 w-7 items-center justify-center rounded-lg border border-gray-200 text-gray-400 transition hover:bg-gray-50 hover:text-gray-600"
-                        >
-                          <MoreVertical className="h-4 w-4" />
-                        </button>
                       </div>
                     </td>
                   </tr>
@@ -1439,7 +1491,7 @@ function AdminAttendance() {
             <h3 className="mb-3 shrink-0 font-bold text-gray-900">Quick Actions</h3>
 
             <div className="grid grid-cols-2 gap-2.5 flex-1 content-start">
-              {quickActions.map((action) => {
+              {visibleQuickActions.map((action) => {
                 const Icon = action.icon;
 
                 return (
@@ -1470,7 +1522,10 @@ function AdminAttendance() {
           </div>
 
           <div id="regularization-requests" className="scroll-mt-6 h-[340px]">
+            {/* The key remounts the card, so it refetches after the
+                self-regularization form closes. */}
             <RegularizationRequestsCard
+              key={regularizationListKey}
               onReviewed={() => setAttendanceRefreshKey((current) => current + 1)}
             />
           </div>
@@ -1913,61 +1968,36 @@ function AdminAttendance() {
         </div>
       )}
 
-      {punchPopup && (
-        <div
-          role={punchPopup.kind === "error" ? "alert" : "status"}
-          aria-live={punchPopup.kind === "error" ? "assertive" : "polite"}
-          className={`fixed bottom-5 left-5 z-50 w-[min(24rem,calc(100vw-2.5rem))] rounded-2xl border p-4 shadow-xl ${
-            punchPopup.kind === "error"
-              ? "border-rose-200 bg-white text-rose-700"
-              : "border-emerald-200 bg-white text-gray-800"
-          }`}
-        >
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="font-semibold">
-                {punchPopup.kind === "error" ? "Attendance error" : punchPopup.title}
-              </p>
-              {punchPopup.kind === "error" ? (
-                <p className="mt-1 text-sm">{punchPopup.message}</p>
-              ) : (
-                <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                  {punchPopup.fields.map((field) => (
-                    <div key={field.label}>
-                      <dt className="text-xs text-gray-400">{field.label}</dt>
-                      <dd className="font-medium">{field.value}</dd>
-                    </div>
-                  ))}
-                </dl>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={() => setPunchPopup(null)}
-              className="shrink-0 rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
-              aria-label="Dismiss attendance message"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Mark In / Mark Out result. A success carries its punch details as
+          children instead of text, and stays up a little longer than the
+          default so the times can be read. */}
+      <NoticePopup
+        notice={
+          punchPopup
+            ? punchPopup.kind === "error"
+              ? { type: "error", title: "Attendance error", text: punchPopup.message }
+              : { type: "success", title: punchPopup.title, text: "" }
+            : null
+        }
+        onDismiss={() => setPunchPopup(null)}
+        timeout={6000}
+      >
+        {punchPopup?.kind === "success" && (
+          <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-left text-sm">
+            {punchPopup.fields.map((field) => (
+              <div key={field.label}>
+                <dt className="text-xs text-gray-400">{field.label}</dt>
+                <dd className="font-medium text-gray-800">{field.value}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+      </NoticePopup>
 
-      {/* Success Notification Toast */}
-      {successToast && (
-        <div className="fixed bottom-5 right-5 z-50 flex items-center gap-2.5 rounded-2xl bg-gray-900 px-4 py-3 text-sm font-medium text-white shadow-xl">
-          <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0" />
-          <span>{successToast}</span>
-          <button
-            type="button"
-            onClick={() => setSuccessToast("")}
-            className="ml-2 rounded-lg p-1 text-gray-400 hover:text-white"
-            aria-label="Dismiss notification"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      )}
+      <NoticePopup
+        notice={successToast ? { type: "success", text: successToast } : null}
+        onDismiss={() => setSuccessToast("")}
+      />
 
       {/* Manage Shifts Modal */}
       {showShiftManager && (
@@ -1976,6 +2006,16 @@ function AdminAttendance() {
           onChanged={() => setAttendanceRefreshKey((current) => current + 1)}
         />
       )}
+
+      <EmployeeAttendanceRegularizationModal
+        isOpen={isSelfRegularizationOpen}
+        onClose={() => {
+          setIsSelfRegularizationOpen(false);
+          // Reload the requests card so a new request shows up straight away.
+          setRegularizationListKey((current) => current + 1);
+        }}
+        attendanceRecords={myAttendanceRecords}
+      />
     </div>
   );
 }

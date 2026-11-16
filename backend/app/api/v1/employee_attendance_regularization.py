@@ -12,6 +12,7 @@ from app.core.cache import (
 )
 from app.core.exceptions import AppException
 from app.core.roles import Permission
+from app.core.scope import scope_matches, visibility_scope, visible_employee_codes
 from app.repositories.employee_repository import EmployeeRepository
 from app.schemas.common import APIResponse
 from app.schemas.employee_attendance_regularization import (
@@ -296,7 +297,26 @@ async def get_regularization_requests(
     limit_val = limit if isinstance(limit, int) else 100
     status_val = status if isinstance(status, str) else None
     status_key = status_val or "all"
-    cache_key = f"attendance:regularization:list:{status_key}:{page_val}:{limit_val}"
+
+    # HR and the super admin see every request. A manager sees their team's
+    # requests plus their own, which they can track but not review.
+    employee_ids = await visible_employee_codes(employee_repository, current_user)
+    scope_key = "all"
+
+    if employee_ids is not None:
+        own_code = current_user.get("employee_id")
+
+        if own_code and own_code not in employee_ids:
+            employee_ids.append(own_code)
+
+        # The list differs per manager, so the cache key must too; otherwise
+        # one manager could be served another team's (or HR's) cached list.
+        scope_key = f"mgr_{current_user['_id']}"
+
+    cache_key = (
+        f"attendance:regularization:list:{scope_key}:"
+        f"{status_key}:{page_val}:{limit_val}"
+    )
     cached = await get_cache(cache_key)
     if cached is not None:
         try:
@@ -312,6 +332,7 @@ async def get_regularization_requests(
         status=status_val,
         skip=(page_val - 1) * limit_val,
         limit=limit_val,
+        employee_ids=employee_ids,
     )
 
     serialized = [
@@ -342,6 +363,33 @@ async def review_regularization_request(
     data: AttendanceRegularizationReview,
     current_user: dict = Depends(require_permission(Permission.ATTENDANCE_APPROVE)),
 ):
+    # Load the request first (404 if missing) so the access checks below know
+    # whose request it is. employee_id here is the business code (EMP001).
+    pending = await service.get_request(regularization_id)
+    requester_code = str(pending.get("employee_id") or "")
+
+    # Nobody signs off their own correction: a manager's request goes to HR,
+    # an HR admin's to another HR admin or the super admin.
+    if requester_code and requester_code == current_user.get("employee_id"):
+        raise AppException(
+            "You cannot review your own regularization request",
+            403,
+        )
+
+    # A manager may only review requests from their own team.
+    scope = visibility_scope(current_user)
+
+    if scope:
+        # An unknown requester resolves to None, which scope_matches rejects,
+        # so a manager is refused rather than let through.
+        requester = await employee_repository.get_by_employee_id(requester_code)
+
+        if not scope_matches(requester, scope):
+            raise AppException(
+                "You can only review requests from your own team",
+                403,
+            )
+
     regularization = await service.review_request(
         regularization_id=regularization_id,
         decision=data.status,

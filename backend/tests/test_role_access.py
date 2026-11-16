@@ -135,8 +135,109 @@ def test_resolve_manager_rejects_non_admin_account():
         raise AssertionError("an employee record must not be assignable as manager")
 
 
+def test_super_admin_holds_every_permission():
+    """Checked for the enum and for the raw string a user document stores."""
+    for permission in Permission:
+        assert has_permission(UserRole.SUPER_ADMIN, permission), permission
+        assert has_permission("super_admin", permission), permission
+
+
+def test_super_admin_counts_as_hr_level():
+    from app.core.roles import ADMIN_ROLES, HR_LEVEL_ROLES, MANAGED_ADMIN_ROLES
+
+    assert "super_admin" in HR_LEVEL_ROLES
+    assert "hr_admin" in HR_LEVEL_ROLES
+    assert "manager" not in HR_LEVEL_ROLES
+    assert {"super_admin", "hr_admin", "manager"} <= ADMIN_ROLES
+    assert "employee" not in ADMIN_ROLES
+
+    # The super admin manages HR and managers, never another super admin.
+    assert MANAGED_ADMIN_ROLES == {"hr_admin", "manager"}
+
+
+def test_super_admin_sees_whole_organisation():
+    """Like HR, no manager_id filter is applied."""
+    scope = EmployeeService._visibility_scope
+    assert scope(_user("super_admin", "sa1")) == {}
+
+
+def test_require_hr_admin_and_require_super_admin():
+    """The super admin passes HR-only checks; HR does not pass super-admin-only
+    ones."""
+    from app.api.deps import require_hr_admin, require_super_admin
+
+    def allowed(dependency, role):
+        # Calls the dependency directly with a ready user, skipping the token
+        # and session lookup in get_current_user.
+        try:
+            asyncio.run(dependency(current_user=_user(role, "u1")))
+        except AppException as exc:
+            assert exc.status_code == 403
+            return False
+        return True
+
+    assert allowed(require_hr_admin, "super_admin")
+    assert allowed(require_hr_admin, "hr_admin")
+    assert not allowed(require_hr_admin, "manager")
+    assert not allowed(require_hr_admin, "employee")
+
+    assert allowed(require_super_admin, "super_admin")
+    assert not allowed(require_super_admin, "hr_admin")
+    assert not allowed(require_super_admin, "manager")
+    assert not allowed(require_super_admin, "employee")
+
+
+def test_super_admin_is_never_minted_an_employee_id():
+    """An employee record would expose the super admin to HR's employee
+    update path, so ensure_employee_profile must return it untouched."""
+    from app.services.employee_identity import ensure_employee_profile
+
+    class NoWritesCollection:
+        """Any database call here would mean a mint was attempted."""
+
+        def __getattr__(self, name):
+            raise AssertionError(f"unexpected collection access: {name}")
+
+    user = {"_id": "sa1", "role": "super_admin", "full_name": "Super Admin"}
+    result = asyncio.run(ensure_employee_profile(NoWritesCollection(), user))
+
+    assert result is user
+    assert "employee_id" not in result
+
+
+def test_admin_account_create_rejects_super_admin_role():
+    """The schema's role Literal is what stops the super admin role (or a
+    plain employee) being handed out through the Admin Accounts API."""
+    from pydantic import ValidationError
+
+    from app.schemas.user import AdminAccountCreate
+
+    base = {
+        "full_name": "New Person",
+        "email": "new@example.com",
+        "password": "Str0ng!Pass",
+    }
+
+    assert AdminAccountCreate(**base, role="hr_admin").role == "hr_admin"
+    assert AdminAccountCreate(**base, role="manager").role == "manager"
+
+    for role in ("super_admin", "employee"):
+        try:
+            AdminAccountCreate(**base, role=role)
+        except ValidationError:
+            pass
+        else:
+            raise AssertionError(f"{role} must not be creatable as an admin account")
+
+
 if __name__ == "__main__":
     tests = [
+        test_super_admin_holds_every_permission,
+        test_super_admin_counts_as_hr_level,
+        test_super_admin_sees_whole_organisation,
+        test_require_hr_admin_and_require_super_admin,
+        test_super_admin_is_never_minted_an_employee_id,
+        test_admin_account_create_rejects_super_admin_role,
         test_manager_cannot_reach_hr_only_permissions,
         test_roles_come_from_mongo_as_plain_strings,
         test_manager_keeps_team_permissions,

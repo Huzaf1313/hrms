@@ -10,6 +10,7 @@ import {
   type ProfileFieldSpec,
 } from "./profileFields";
 import type { AdminProfile, ProfileTab } from "../../../types/adminProfile";
+import { isSuperAdmin } from "../../../lib/access";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -21,6 +22,12 @@ const REQUIRED_FIELDS: (keyof AdminProfile)[] = [
   "email",
   "phone",
 ];
+
+/**
+ * The super admin is not an employee, so it has no designation, department
+ * or phone on file and must still be able to save. It only needs a name.
+ */
+const SUPER_ADMIN_REQUIRED_FIELDS: (keyof AdminProfile)[] = ["full_name", "email"];
 
 const FIELD_LIMITS: Partial<Record<keyof AdminProfile, number>> = {
   full_name: 80,
@@ -39,10 +46,18 @@ interface ProfileEditFormProps {
   onSave: (profile: AdminProfile, avatarUrl: string | null) => Promise<void>;
 }
 
-function validateField(spec: ProfileFieldSpec, value: string): string {
+/**
+ * Error message for one field, or "" when it is valid. `required` is passed
+ * in because the list differs for the super admin.
+ */
+function validateField(
+  spec: ProfileFieldSpec,
+  value: string,
+  required: readonly (keyof AdminProfile)[],
+): string {
   const trimmed = value.trim();
 
-  if (REQUIRED_FIELDS.includes(spec.name) && trimmed.length === 0) {
+  if (required.includes(spec.name) && trimmed.length === 0) {
     return `${spec.label} is required.`;
   }
 
@@ -80,21 +95,33 @@ export default function ProfileEditForm({
   const [errors, setErrors] = useState<Partial<Record<keyof AdminProfile, string>>>({});
   const [error, setError] = useState("");
 
+  // Nobody sits above the super admin to manage its name, so it edits it here.
+  const superAdmin = useMemo(() => isSuperAdmin(), []);
+  const requiredFields = superAdmin ? SUPER_ADMIN_REQUIRED_FIELDS : REQUIRED_FIELDS;
+
   const fields = useMemo(
     () =>
-      PROFILE_FIELDS[tab].map((field) =>
-        field.name === "shift"
-          ? {
-              ...field,
-              options: shiftOptions.length > 0
-                ? shiftOptions
-                : profile.shift
-                  ? [profile.shift]
-                  : [],
-            }
-          : field,
-      ),
-    [profile.shift, shiftOptions, tab],
+      PROFILE_FIELDS[tab].map((field): ProfileFieldSpec => {
+        // Full Name is read-only ("Managed by your administrator") for HR and
+        // managers; unlock it and drop that hint for the super admin.
+        if (field.name === "full_name" && superAdmin) {
+          return { ...field, readOnly: false, hint: undefined };
+        }
+
+        if (field.name === "shift") {
+          return {
+            ...field,
+            options: shiftOptions.length > 0
+              ? shiftOptions
+              : profile.shift
+                ? [profile.shift]
+                : [],
+          };
+        }
+
+        return field;
+      }),
+    [profile.shift, shiftOptions, superAdmin, tab],
   );
 
   function update(name: keyof AdminProfile, value: string) {
@@ -110,7 +137,7 @@ export default function ProfileEditForm({
     const nextErrors: Partial<Record<keyof AdminProfile, string>> = {};
 
     for (const spec of fields) {
-      const message = validateField(spec, String(draft[spec.name] ?? ""));
+      const message = validateField(spec, String(draft[spec.name] ?? ""), requiredFields);
 
       if (message) nextErrors[spec.name] = message;
     }
@@ -131,7 +158,9 @@ export default function ProfileEditForm({
   }
 
   return (
-    <form onSubmit={handleSubmit}>
+    // The id is the scroll target AdminMyProfile uses when Edit is clicked;
+    // scroll-mt keeps the top of the form clear of the sticky header.
+    <form id="profile-edit-form" onSubmit={handleSubmit} className="scroll-mt-24">
       <div className="space-y-4 p-5">
         <div className="grid gap-4 sm:grid-cols-2">
           {fields.map((spec) => {

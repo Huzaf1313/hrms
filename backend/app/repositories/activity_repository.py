@@ -4,6 +4,9 @@ from pymongo import DESCENDING
 
 from app.db.database import database
 
+# The `target` every announcement activity is recorded with.
+ANNOUNCEMENT_TARGET = "/dashboard/announcements"
+
 
 class ActivityRepository:
     collection = database["activity_events"]
@@ -35,6 +38,10 @@ class ActivityRepository:
 
             if actor_id:
                 visibility.append({"actor_id": actor_id})
+
+            # Announcements are company news, not tied to any one employee,
+            # so a scoped viewer (a manager) gets them whoever posted them.
+            visibility.append({"target": ANNOUNCEMENT_TARGET})
 
             query["$or"] = visibility
 

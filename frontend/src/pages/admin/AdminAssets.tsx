@@ -37,7 +37,7 @@ import AssetDetailModal from "../../components/admin/assets/AssetDetailModal";
 import AssetFormModal from "../../components/admin/assets/AssetFormModal";
 import AssetReturnModal from "../../components/admin/assets/AssetReturnModal";
 import MarkReturnedModal from "../../components/admin/assets/MarkReturnedModal";
-import NoticePopup, { type Notice } from "../../components/admin/assets/NoticePopup";
+import NoticePopup, { type Notice } from "../../components/ui/NoticePopup";
 import { assetService } from "../../services/assetService";
 import {
   ASSET_STATUS_LABELS,

@@ -4,6 +4,7 @@ from bson import ObjectId
 
 from app.core.exceptions import AppException
 from app.core.leave_dates import day_covering_filters
+from app.core.roles import role_value
 from app.core.scope import scope_matches, visibility_scope
 from app.core.working_days import count_working_days
 from app.repositories.department_repository import DepartmentRepository
@@ -465,6 +466,17 @@ class AdminLeaveService:
 
         await self._assert_leave_access(leave, current_user)
 
+        # HR sees every request, its own included, and a manager's request is
+        # visible to HR. Nobody decides their own leave: an HR or manager
+        # request waits for another approver, such as the super admin.
+        reviewer_code = (current_user or {}).get("employee_id")
+
+        if reviewer_code and reviewer_code == leave.get("employee_id"):
+            raise AppException(
+                "You cannot approve or reject your own leave request",
+                403,
+            )
+
         current_status = str(leave.get("status", "")).lower()
         if current_status in ["approved", "rejected", "cancelled"]:
             raise AppException(
@@ -663,6 +675,9 @@ class AdminLeaveService:
                 if employee
                 else None
             ),
+            # Lets the approver tell HR and manager requests apart from
+            # ordinary employee ones.
+            "employee_role": role_value(employee.get("role")) if employee else None,
             "department_id": department_id,
             "department_name": department.get("name") if department else None,
             "leave_type": document["leave_type"],
