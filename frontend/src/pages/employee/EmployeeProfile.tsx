@@ -21,6 +21,7 @@ import {
   Plus,
   Save,
   ShieldCheck,
+  Trash2,
   User,
   UserRound,
   Users,
@@ -271,6 +272,7 @@ export default function EmployeeProfile() {
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [photoSuccess, setPhotoSuccess] = useState("");
   const [photoError, setPhotoError] = useState("");
+  const [showDeletePhotoModal, setShowDeletePhotoModal] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -429,6 +431,41 @@ export default function EmployeeProfile() {
         event.target.value = "";
       }
     };
+
+  const handleDeleteProfilePhoto = async () => {
+  if (!employee?.id || !profilePhotoUrl) return;
+
+  setPhotoSuccess("");
+  setPhotoError("");
+
+  try {
+    setIsUploadingPhoto(true);
+
+    await employeeService.removeMyProfilePhoto();
+
+    setEmployee((current) =>
+      current
+        ? { ...current, avatar_url: undefined }
+        : current,
+    );
+
+    setProfilePhotoUrl(null);
+    setShowDeletePhotoModal(false);
+
+    window.dispatchEvent(
+      new Event("employee-profile-photo-updated"),
+    );
+
+    setPhotoSuccess("Profile photo deleted successfully.");
+  } catch (error) {
+    console.error("Profile photo deletion failed:", error);
+    setPhotoError(
+      "Unable to delete profile photo. Please try again.",
+    );
+  } finally {
+    setIsUploadingPhoto(false);
+  }
+};
 
   const handleEditEmergencyContact = () => {
     setEmergencyContactForm({
@@ -685,6 +722,7 @@ const handleChangePassword = async (
           </div>
         )}
 
+        
         {/* Profile Hero */}
         <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
           {/* Cover */}
@@ -705,7 +743,7 @@ const handleChangePassword = async (
           <div className="relative px-6 pb-7 pt-16 sm:px-8 sm:pb-8 sm:pt-16">
             {/* Avatar */}
             <div className="absolute left-6 top-0 -translate-y-1/2 sm:left-8">
-              <div className="relative flex h-24 w-24 items-center justify-center rounded-2xl border-4 border-white bg-slate-100 text-2xl font-bold text-slate-600 shadow-lg">
+              <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl border-4 border-white bg-slate-100 text-2xl font-bold text-slate-600 shadow-lg">
                 {profilePhotoUrl ? (
                   <img
                     src={profilePhotoUrl}
@@ -715,31 +753,7 @@ const handleChangePassword = async (
                 ) : (
                   initials || <UserRound size={34} />
                 )}
-
-                {/* Upload Photo Button */}
-                <button
-                  type="button"
-                  onClick={() => profilePhotoInputRef.current?.click()}
-                  disabled={isUploadingPhoto}
-                  title="Change profile photo"
-                  className="absolute bottom-1 left-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-slate-800 text-white shadow-md transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {isUploadingPhoto ? (
-                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-                  ) : (
-                    <Camera size={14} />
-                  )}
-                </button>
               </div>
-
-              {/* Hidden File Input */}
-              <input
-                ref={profilePhotoInputRef}
-                type="file"
-                accept="image/jpeg,image/png"
-                className="hidden"
-                onChange={handleProfilePhotoChange}
-              />
 
               {/* Employee Status Indicator */}
               <span
@@ -748,6 +762,15 @@ const handleChangePassword = async (
                 }`}
               />
             </div>
+
+            {/* Hidden File Input */}
+            <input
+              ref={profilePhotoInputRef}
+              type="file"
+              accept="image/jpeg,image/png"
+              className="hidden"
+              onChange={handleProfilePhotoChange}
+            />
 
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
@@ -785,8 +808,50 @@ const handleChangePassword = async (
                 </div>
               </div>
 
-              {/* Completion */}
-              <div className="shrink-0">
+              {/* Profile Actions & Completion */}
+              <div className="flex shrink-0 flex-col gap-3">
+                {/* Profile Photo Actions */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => profilePhotoInputRef.current?.click()}
+                    disabled={isUploadingPhoto}
+                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-800 px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isUploadingPhoto ? (
+                      <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                    ) : (
+                      <Camera size={14} />
+                    )}
+                    {profilePhotoUrl ? "Upload" : "Upload Photo"}
+                  </button>
+
+                  {profilePhotoUrl && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => profilePhotoInputRef.current?.click()}
+                        disabled={isUploadingPhoto}
+                        className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <Edit3 size={14} />
+                        Edit
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setShowDeletePhotoModal(true)}
+                        disabled={isUploadingPhoto}
+                        className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-3.5 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <Trash2 size={14} />
+                        Delete
+                      </button>
+                    </>
+                  )}
+                </div>
+
+                {/* Profile Completion */}
                 <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
                     Profile completion
@@ -807,6 +872,7 @@ const handleChangePassword = async (
                 </div>
               </div>
             </div>
+
             {photoSuccess && (
               <p className="mt-3 text-sm font-medium text-emerald-600">
                 {photoSuccess}
@@ -1485,6 +1551,61 @@ const handleChangePassword = async (
         </div>
       )}
       </div>
+      
+    {/* Delete Profile Photo Confirmation Modal */}
+    {showDeletePhotoModal && (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+        <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+          {/* Icon */}
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
+            <Trash2 size={26} className="text-red-600" />
+          </div>
+
+          {/* Content */}
+          <div className="mt-4 text-center">
+            <h2 className="text-lg font-bold text-slate-900">
+              Delete Profile Photo?
+            </h2>
+
+            <p className="mt-2 text-sm leading-relaxed text-slate-500">
+              Are you sure you want to delete your profile photo?
+              This action cannot be undone.
+            </p>
+          </div>
+
+          {/* Actions */}
+          <div className="mt-6 flex justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => setShowDeletePhotoModal(false)}
+              disabled={isUploadingPhoto}
+              className="rounded-lg border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+            >
+              Cancel
+            </button>
+
+            <button
+              type="button"
+              onClick={handleDeleteProfilePhoto}
+              disabled={isUploadingPhoto}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-red-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isUploadingPhoto ? (
+                <>
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 size={15} />
+                  Delete Photo
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+  </div>
+)}
     </div>
   );
 }

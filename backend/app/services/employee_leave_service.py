@@ -7,7 +7,7 @@ from app.repositories.employee_leave_repository import (
 )
 from app.services.admin_notification_service import AdminNotificationService
 from app.services.activity_service import ActivityService
-
+from app.repositories.leave_balance_repository import LeaveBalanceRepository
 
 class EmployeeLeaveService:
 
@@ -270,46 +270,42 @@ class EmployeeLeaveService:
             employee_id=employee_id,
             status="Pending",
         )
-
+   
     async def get_leave_balance(
         self,
         employee_id: str,
     ):
+        # Fetch this employee's leave records.
         records = await self.repository.get_balance_records(
             employee_id=employee_id,
         )
 
-        # These are temporary policy values.
-        # Actual balances should eventually come
-        # from the employee/company leave policy.
-        allocations = {
-            "Casual Leave": 12,
-            "Sick Leave": 10,
-            "Earned Leave": 18,
-            "Comp Off": 5,
-        }
+        # Fetch leave allocations configured by HR/Admin.
+        configured_balances = await LeaveBalanceRepository().get_all()
 
-        used = {
-            "Casual Leave": 0,
-            "Sick Leave": 0,
-            "Earned Leave": 0,
-            "Comp Off": 0,
-        }
+        # Calculate used leave from approved requests only.
+        used = {}
 
         for record in records:
-            leave_type = record.get("leave_type")
-            total_days = record.get(
-                "total_days",
-                0,
-            )
+            if str(record.get("status", "")).lower() != "approved":
+                continue
 
-            if leave_type in used:
-                used[leave_type] += total_days
+            leave_type = record.get("leave_type")
+            total_days = record.get("total_days") or 0
+
+            if leave_type:
+                used[leave_type] = used.get(leave_type, 0) + total_days
 
         balances = []
 
-        for leave_type, allocated in self.LEAVE_ALLOCATIONS.items():
-            leave_used = used[leave_type]
+        for config in configured_balances:
+            leave_type = config.get("leave_type")
+
+            if not leave_type:
+                continue
+
+            allocated = config.get("total", 0) or 0
+            leave_used = used.get(leave_type, 0)
 
             balances.append(
                 {
@@ -324,6 +320,7 @@ class EmployeeLeaveService:
             )
 
         return balances
+
 
     async def cancel_request(
         self,
