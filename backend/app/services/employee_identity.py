@@ -22,6 +22,7 @@ from app.core.roles import UserRole
 # employee records (see ensure_employee_profile). Employee codes start at
 # AAR002 (see next_employee_code), so no real employee is issued this code.
 SUPER_ADMIN_EMPLOYEE_CODE = "AAR001"
+# Lowest sequence number that is turned into a real employee code.
 FIRST_EMPLOYEE_NUMBER = 2
 
 async def next_employee_code(collection) -> str:

@@ -136,6 +136,7 @@ def test_resolve_manager_rejects_non_admin_account():
 
 
 def test_super_admin_holds_every_permission():
+    """Checked for the enum and for the raw string a user document stores."""
     for permission in Permission:
         assert has_permission(UserRole.SUPER_ADMIN, permission), permission
         assert has_permission("super_admin", permission), permission
@@ -155,14 +156,19 @@ def test_super_admin_counts_as_hr_level():
 
 
 def test_super_admin_sees_whole_organisation():
+    """Like HR, no manager_id filter is applied."""
     scope = EmployeeService._visibility_scope
     assert scope(_user("super_admin", "sa1")) == {}
 
 
 def test_require_hr_admin_and_require_super_admin():
+    """The super admin passes HR-only checks; HR does not pass super-admin-only
+    ones."""
     from app.api.deps import require_hr_admin, require_super_admin
 
     def allowed(dependency, role):
+        # Calls the dependency directly with a ready user, skipping the token
+        # and session lookup in get_current_user.
         try:
             asyncio.run(dependency(current_user=_user(role, "u1")))
         except AppException as exc:
@@ -182,6 +188,8 @@ def test_require_hr_admin_and_require_super_admin():
 
 
 def test_super_admin_is_never_minted_an_employee_id():
+    """An employee record would expose the super admin to HR's employee
+    update path, so ensure_employee_profile must return it untouched."""
     from app.services.employee_identity import ensure_employee_profile
 
     class NoWritesCollection:
@@ -198,6 +206,8 @@ def test_super_admin_is_never_minted_an_employee_id():
 
 
 def test_admin_account_create_rejects_super_admin_role():
+    """The schema's role Literal is what stops the super admin role (or a
+    plain employee) being handed out through the Admin Accounts API."""
     from pydantic import ValidationError
 
     from app.schemas.user import AdminAccountCreate

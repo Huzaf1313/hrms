@@ -44,6 +44,8 @@ function EmployeeLayout({ onLogout }: { onLogout: () => void }) {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
+  // Close the profile menu on a click outside it or on Escape, as the admin
+  // Header does.
   useEffect(() => {
     function closeOnOutsideClick(event: MouseEvent) {
       if (

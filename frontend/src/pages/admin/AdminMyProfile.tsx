@@ -215,6 +215,8 @@ export default function AdminMyProfile() {
       const saved = await adminProfileService.saveProfile({ ...next, avatar_url: avatarUrl });
 
       setProfile(saved);
+      // Updates the cached login payload so the header shows a renamed
+      // super admin straight away.
       syncSessionName(saved.full_name);
       setIsEditing(false);
       setPendingAvatar(null);

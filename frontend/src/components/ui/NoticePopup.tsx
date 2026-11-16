@@ -1,6 +1,10 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 
+/**
+ * What the popup should say. `null` means nothing to show, so callers can hold
+ * a single piece of state and clear it to close the popup.
+ */
 export type Notice = {
   type: "success" | "error";
   text: string;
@@ -18,6 +22,7 @@ interface NoticePopupProps {
   children?: ReactNode;
 }
 
+/** Colours, icon and fallback heading for each notice type. */
 const TONES = {
   success: {
     iconWrap: "bg-emerald-50 text-emerald-600",
@@ -51,6 +56,9 @@ export default function NoticePopup({
     dismissRef.current = onDismiss;
   }, [onDismiss]);
 
+  // Keyed on the primitives rather than the notice object, which callers
+  // usually rebuild on every render. A new message (different text) still
+  // restarts the timer.
   const type = notice?.type;
   const text = notice?.text;
 
@@ -83,6 +91,8 @@ export default function NoticePopup({
   return (
     <div
       className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-900/40 p-6"
+      // A click on the backdrop dismisses; the dialog below stops its own
+      // clicks from reaching here.
       onClick={onDismiss}
     >
       <div

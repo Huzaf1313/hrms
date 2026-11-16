@@ -427,6 +427,11 @@ class EmployeeAttendanceRegularizationService:
         limit: int = 100,
         employee_ids: list[str] | None = None,
     ):
+        """Admin list of requests, newest first.
+
+        `employee_ids` limits it to those business codes (a manager's team
+        plus themselves); None means every request.
+        """
         return await self.regularization_repository.get_all(
             status=status,
             skip=skip,
@@ -441,6 +446,12 @@ class EmployeeAttendanceRegularizationService:
         reviewed_by: str,
         comment: str | None = None,
     ):
+        """Approve or reject a pending request and notify the employee.
+
+        Approval writes the requested time onto the attendance record,
+        creating the record for a Missing Check-In with none. Who may review
+        (team scope, no self-review) is checked by the route, not here.
+        """
         request = await self.regularization_repository.get_by_id(
             regularization_id
         )
@@ -649,6 +660,7 @@ class EmployeeAttendanceRegularizationService:
                         or attendance.get("out_time")
                     )
 
+                    # Same retry allowance as for check-in above.
                     if existing_check_out is not None and not same_moment(
                         existing_check_out,
                         request.get("requested_check_out"),

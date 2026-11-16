@@ -178,6 +178,7 @@ function Header({
     useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const notificationRef = useRef<HTMLDivElement>(null);
+  // Wraps the avatar button and its menu, so a click inside either keeps it open.
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
   // A newly created employee has no `created_by` on file yet, so notifications
@@ -224,6 +225,8 @@ function Header({
       }
     }
 
+    // Escape closes the profile menu only; the notification dropdown keeps
+    // its existing click-outside behaviour.
     function closeOnEscape(event: KeyboardEvent) {
       if (event.key === "Escape") setShowProfileMenu(false);
     }

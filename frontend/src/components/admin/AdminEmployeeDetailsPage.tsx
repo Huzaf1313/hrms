@@ -223,6 +223,7 @@ function AdminEmployeeDetailsPage({
         setLeaveLoading(true);
 
         // Through the shared client so the session cookie goes along.
+        // Every status comes back; only approved leave is counted below.
         const result = await api.get<{
           items?: Array<{
             status?: string;

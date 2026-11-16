@@ -38,6 +38,7 @@ const pagePaths: Record<string, string> = {
   "Support Tickets": "/dashboard/support-tickets",
   Settings: "/dashboard/settings",
   "My Profile": "/dashboard/profile",
+  // Super admin only: for anyone else canAccessPage falls back to Dashboard.
   "Admin Accounts": "/dashboard/admin-accounts",
 };
 

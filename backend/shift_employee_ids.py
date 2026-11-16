@@ -22,6 +22,7 @@ from datetime import datetime, timezone
 from app.db.database import close_database_connection, connect_to_database, database
 
 
+# An employee code anywhere in a string; group 1 is the number.
 CODE = re.compile(r"\bAAR(\d{3,})\b")
 
 # Every field that stores an employee code by value.
@@ -41,10 +42,12 @@ REFERENCE_FIELDS = (
 
 
 def shifted(code: str) -> str:
+    """The code one number higher, e.g. AAR001 -> AAR002."""
     return f"AAR{int(CODE.fullmatch(code).group(1)) + 1:03d}"
 
 
 async def main(apply: bool) -> None:
+    """Print the planned shift; with apply=True, also write it."""
     await connect_to_database()
 
     try:
@@ -65,6 +68,7 @@ async def main(apply: bool) -> None:
         ]
         old_to_new = {item["old_id"]: item["new_id"] for item in mapping}
 
+        # The run-once guard: after a full --apply, AAR001 is free.
         if "AAR001" not in old_to_new:
             print("AAR001 is not held by any employee - nothing to do.")
             return
@@ -86,6 +90,8 @@ async def main(apply: bool) -> None:
             print("\nDry run only. Re-run with --apply to make changes.")
             return
 
+        # Keep the full old -> new mapping first, so a bad run can be traced
+        # and reversed by hand.
         await database["employee_id_migrations"].insert_one(
             {
                 "_id": "shift_" + datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S"),
@@ -107,6 +113,8 @@ async def main(apply: bool) -> None:
                     {"$set": {field: item["new_id"]}},
                 )
 
+        # Announcement targets are a list of codes, which the per-field
+        # update_many above cannot rewrite.
         async for announcement in database["announcements"].find(
             {"target_employees": {"$exists": True}}
         ):
@@ -132,6 +140,8 @@ async def main(apply: bool) -> None:
                     {"$set": {"text": text}},
                 )
 
+        # Every code moved up by one, so the allocator must too, or the next
+        # new employee would be issued the code now held by the last one.
         await database["sequences"].update_one(
             {"_id": "employee_id"},
             {"$inc": {"value": 1}},

@@ -280,6 +280,8 @@ async def get_my_employee_profile(
         current_user,
     )
 
+    # ensure_employee_profile deliberately leaves the super admin without an
+    # employee_id, so it has no employee record to return.
     if not current_user.get("employee_id"):
         raise AppException("No employee record found for this account", 404)
 

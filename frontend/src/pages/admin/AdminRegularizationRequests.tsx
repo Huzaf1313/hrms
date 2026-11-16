@@ -106,6 +106,8 @@ function AdminRegularizationRequests() {
   const [selectedRequest, setSelectedRequest] = useState<RegularizationRequest | null>(null);
   const [comment, setComment] = useState("");
   const [isReviewing, setIsReviewing] = useState(false);
+  // Kept apart from `comment` so an error message never ends up in the
+  // comment box and gets sent as the review note on retry.
   const [reviewError, setReviewError] = useState("");
 
   const loadRequests = useCallback(() => {
@@ -181,6 +183,9 @@ function AdminRegularizationRequests() {
       );
       closeModal();
     } catch (cause) {
+      // Show the backend's reason (e.g. the 403 for another team's request);
+      // api.ts wraps HTTP and network failures in ApiError, so the generic
+      // line only covers unexpected errors.
       setReviewError(
         cause instanceof ApiError
           ? cause.message
@@ -353,6 +358,7 @@ function AdminRegularizationRequests() {
                         type="button"
                         onClick={() => {
                           setComment("");
+                          // Don't carry a failure from the last request into this one.
                           setReviewError("");
                           setSelectedRequest(request);
                         }}
@@ -527,6 +533,8 @@ function AdminRegularizationRequests() {
                 </p>
               )}
 
+              {/* The backend refuses self-review with a 403, so a reviewer's own
+                  pending request shows a notice instead of the action buttons. */}
               {selectedRequest.status === "Pending" &&
               selectedRequest.employeeCode === currentSessionUser()?.employee_id ? (
                 <div className="rounded-lg bg-amber-50 px-4 py-2.5 text-center text-sm font-semibold text-amber-700">

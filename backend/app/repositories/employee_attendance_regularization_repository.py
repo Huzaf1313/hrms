@@ -143,6 +143,7 @@ class EmployeeAttendanceRegularizationRepository:
     ):
         filters = {"status": status} if status else {}
 
+        # employee_ids are business codes (EMP001), as stored on each request.
         # None means unrestricted; an empty list matches nothing.
         if employee_ids is not None:
             filters["employee_id"] = {"$in": employee_ids}

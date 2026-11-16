@@ -241,6 +241,8 @@ HR_LEVEL_ROLES = frozenset({
 ADMIN_ROLES = HR_LEVEL_ROLES | {UserRole.MANAGER.value}
 
 # Accounts a super admin manages from the Admin Accounts page.
+# SUPER_ADMIN is left out so no super admin can be created, deactivated or
+# locked through that page.
 MANAGED_ADMIN_ROLES = frozenset({
     UserRole.HR_ADMIN.value,
     UserRole.MANAGER.value,

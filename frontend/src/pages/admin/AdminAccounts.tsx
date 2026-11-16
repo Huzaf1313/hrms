@@ -1,3 +1,11 @@
+/**
+ * Admin Accounts: the super admin's page for creating HR admin and manager
+ * accounts and for locking, unlocking, deactivating and reactivating them.
+ *
+ * Every call goes to /users/admin-accounts, which the backend guards with
+ * require_super_admin. Hiding the page from other roles (canAccessPage,
+ * Sidebar) is only a UI convenience.
+ */
 import {
   useEffect,
   useMemo,
@@ -35,8 +43,11 @@ import {
   type ManagedAdminRole,
 } from "../../services/userService";
 
+/** Value of the role dropdown above the accounts table. */
 type RoleFilter = "all" | ManagedAdminRole;
 
+// No email_verification_token here: it is only added at submit time, once
+// the address has been verified with an OTP.
 const EMPTY_FORM: AdminAccountCreate = {
   full_name: "",
   email: "",
@@ -44,11 +55,14 @@ const EMPTY_FORM: AdminAccountCreate = {
   role: "hr_admin",
 };
 
+// A loose shape check so an obvious typo does not use up an OTP request.
+// The server validates the address properly (EmailStr).
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const PASSWORD_HINT =
   "At least 8 characters, with an uppercase letter, a lowercase letter, a number and a symbol.";
 
+/** The server's message for an ApiError, otherwise a generic fallback. */
 function errorText(cause: unknown, fallback: string): string {
   return cause instanceof ApiError ? cause.message : fallback;
 }
@@ -64,6 +78,8 @@ function passwordProblem(value: string): string | null {
   return null;
 }
 
+/** One status per row. An account that is both inactive and locked shows
+ *  as Inactive. */
 function StatusBadge({ account }: { account: AdminAccount }) {
   if (!account.is_active) {
     return (
@@ -88,6 +104,7 @@ function StatusBadge({ account }: { account: AdminAccount }) {
   );
 }
 
+/** Coloured pill for the account's role: blue for HR admin, violet for manager. */
 function RoleBadge({ role }: { role: ManagedAdminRole }) {
   const tone =
     role === "hr_admin"
@@ -101,6 +118,7 @@ function RoleBadge({ role }: { role: ManagedAdminRole }) {
   );
 }
 
+/** One count in the KPI row above the table. */
 function StatCard({
   label,
   value,
@@ -127,6 +145,11 @@ function StatCard({
   );
 }
 
+/**
+ * A lock or deactivate waiting for the super admin to confirm. Both sign the
+ * person out everywhere, so they go through ConfirmDialog; unlock and
+ * activate only restore access and apply straight away.
+ */
 interface PendingAction {
   account: AdminAccount;
   change: { is_active?: boolean; is_locked?: boolean };
@@ -151,6 +174,8 @@ function ConfirmDialog({
 }) {
   const danger = pending.tone === "danger";
 
+  // Escape cancels, like the backdrop click below, but neither does while
+  // the request is in flight.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape" && !working) onCancel();
@@ -217,6 +242,14 @@ function ConfirmDialog({
   );
 }
 
+/**
+ * Create an HR admin or manager account.
+ *
+ * The email must be verified first: Send OTP emails a 6-digit code to the
+ * new address, Verify OTP trades it for a verification token, and the create
+ * request carries that token. The server rejects a create without one and
+ * consumes it on success, so each verification is good for one account.
+ */
 function CreateAccountForm({
   onCancel,
   onCreated,
@@ -240,6 +273,7 @@ function CreateAccountForm({
   const [otpInfo, setOtpInfo] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(0);
 
+  // Count down the resend cooldown the server reported, one tick a second.
   useEffect(() => {
     if (cooldown <= 0) return;
 
@@ -248,6 +282,7 @@ function CreateAccountForm({
   }, [cooldown]);
 
   const normalizedEmail = form.email.trim().toLowerCase();
+  // Only true while the field still holds the address that was verified.
   const emailVerified =
     Boolean(verificationToken) && verifiedEmail === normalizedEmail;
 
@@ -271,6 +306,9 @@ function CreateAccountForm({
     }
   };
 
+  /** Email a code to the new account's address. The server refuses an
+   *  address that already has an account and rate limits requests per
+   *  address; cooldown_seconds drives the Resend button. */
   const sendOtp = async () => {
     if (!EMAIL_PATTERN.test(normalizedEmail)) {
       setOtpError("Enter a valid email address before requesting an OTP.");
@@ -297,6 +335,7 @@ function CreateAccountForm({
     }
   };
 
+  /** Trade the code for the verification token the create call needs. */
   const verifyOtp = async () => {
     if (!/^\d{6}$/.test(otpValue)) {
       setOtpError("Enter the 6-digit code.");
@@ -309,9 +348,11 @@ function CreateAccountForm({
     try {
       const response = await userService.verifyAdminEmailOtp(normalizedEmail, otpValue);
 
+      // Remember which address the token is for; see emailVerified.
       setVerifiedEmail(response.email.toLowerCase());
       setVerificationToken(response.verification_token);
       setOtpInfo(null);
+      // Clears a "verify the email first" error left by an early submit.
       setError(null);
     } catch (cause: unknown) {
       setOtpError(errorText(cause, "Invalid or expired OTP. Try again."));
@@ -320,6 +361,8 @@ function CreateAccountForm({
     }
   };
 
+  /** Check the fields locally, then create the account with the
+   *  verification token attached. */
   const submit = async (event: FormEvent) => {
     event.preventDefault();
 
@@ -448,6 +491,7 @@ function CreateAccountForm({
           )}
         </div>
 
+        {/* OTP entry: shown once a code has been sent, gone once verified. */}
         {otpSent && !emailVerified && (
           <div className="rounded-xl border border-blue-100 bg-blue-50/40 p-3 sm:col-span-2">
             <label
@@ -504,7 +548,7 @@ function CreateAccountForm({
             value={form.role}
             onChange={(event) => update("role", event.target.value as ManagedAdminRole)}
           >
-            <option value="hr_admin">HR Admin: full access</option>
+            <option value="hr_admin">HR: full access</option>
             <option value="manager">Manager: own team, no payroll or recruitment</option>
           </select>
         </label>
@@ -551,6 +595,7 @@ function CreateAccountForm({
   );
 }
 
+/** Super admin page: KPI counts, the create form and the accounts table. */
 export default function AdminAccounts() {
   const [accounts, setAccounts] = useState<AdminAccount[]>([]);
   const [loading, setLoading] = useState(true);
@@ -562,6 +607,8 @@ export default function AdminAccounts() {
   const [search, setSearch] = useState("");
   const [pending, setPending] = useState<PendingAction | null>(null);
 
+  // Load once on mount. `active` stops a late response from updating the
+  // page after it has unmounted.
   useEffect(() => {
     let active = true;
 
@@ -584,11 +631,17 @@ export default function AdminAccounts() {
     };
   }, []);
 
+  /** Swap in the server's copy of one account, keeping the list order. */
   const replaceAccount = (updated: AdminAccount) =>
     setAccounts((current) =>
       current.map((account) => (account.id === updated.id ? updated : account)),
     );
 
+  /**
+   * Set is_active and/or is_locked. On deactivate or lock the server also
+   * revokes every session of that account, so it is signed out at once;
+   * unlocking resets its failed-login counter.
+   */
   const changeStatus = async (
     account: AdminAccount,
     change: { is_active?: boolean; is_locked?: boolean },
@@ -610,6 +663,8 @@ export default function AdminAccounts() {
     }
   };
 
+  // The dialog closes whether or not the change worked; the result shows in
+  // the notice banner.
   const confirmPending = async () => {
     if (!pending) return;
 
@@ -621,11 +676,13 @@ export default function AdminAccounts() {
     () => ({
       hr: accounts.filter((a) => a.role === "hr_admin").length,
       managers: accounts.filter((a) => a.role === "manager").length,
+      // Accounts that cannot sign in, for either reason.
       blocked: accounts.filter((a) => !a.is_active || a.is_locked).length,
     }),
     [accounts],
   );
 
+  // Role filter and name/email search, both applied in the browser.
   const visible = useMemo(() => {
     const query = search.trim().toLowerCase();
 
@@ -669,6 +726,8 @@ export default function AdminAccounts() {
         <CreateAccountForm
           onCancel={() => setCreating(false)}
           onCreated={(account) => {
+            // The server creates the account even when the welcome email
+            // fails, and reports that in welcome_email_sent.
             setAccounts((current) => [...current, account]);
             setCreating(false);
             setNotice({
@@ -686,7 +745,7 @@ export default function AdminAccounts() {
       {/* KPI row */}
       <div className="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard
-          label="HR Admins"
+          label="HR"
           value={counts.hr}
           icon={<ShieldCheck className="h-5 w-5 text-blue-600" />}
           iconBg="bg-blue-50"
@@ -725,7 +784,7 @@ export default function AdminAccounts() {
               aria-label="Filter by role"
             >
               <option value="all">All roles</option>
-              <option value="hr_admin">HR Admins</option>
+              <option value="hr_admin">HR</option>
               <option value="manager">Managers</option>
             </select>
           </div>
@@ -778,6 +837,7 @@ export default function AdminAccounts() {
                         <StatusBadge account={account} />
                       </td>
                       <td className="px-5 py-3">
+                        {/* Unlock / Activate apply at once; Lock / Deactivate ask first. */}
                         <div className="flex justify-end gap-2">
                           {account.is_locked ? (
                             <button

@@ -121,6 +121,8 @@ function Login() {
       // Clear any cached data from previous session
       clearAuthQueries();
 
+      // Tell the route guards the cookie session is live, so the redirect
+      // below does not trigger another server check.
       markSessionActive();
 
       const userResponse = await api.get("/users/me");

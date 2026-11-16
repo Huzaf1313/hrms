@@ -1171,7 +1171,7 @@ export default function AdminAnnouncements({
 
       if (requestError instanceof ApiError && requestError.status === 403) {
         setError(
-          "You do not have permission to publish announcements. Only HR Admin and Manager accounts can create them.",
+          "You do not have permission to publish announcements. Only HR and Manager accounts can create them.",
         );
         return;
       }
@@ -1874,6 +1874,7 @@ export default function AdminAnnouncements({
         </div>
       )}
 
+      {/* Closes itself after a few seconds, so no timer is needed here. */}
       <NoticePopup
         notice={successMessage ? { type: "success", text: successMessage } : null}
         onDismiss={() => setSuccessMessage("")}

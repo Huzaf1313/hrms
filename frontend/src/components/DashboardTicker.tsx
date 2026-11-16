@@ -4,6 +4,7 @@ import type { Announcement } from "../hooks/useEmployeeData";
 import type { Celebration } from "../types/celebration";
 import { getThoughtForDate } from "./celebrationThoughts";
 
+/** Badge emoji per celebration type: cake for birthdays, party popper for work anniversaries. */
 const ICONS: Record<Celebration["type"], string> = {
   birthday: "\u{1F382}",
   anniversary: "\u{1F389}",
@@ -17,6 +18,11 @@ const THOUGHT_ICON = "\u{1F4A1}";
 const PIXELS_PER_SECOND = 40;
 const MINIMUM_DURATION_SECONDS = 6;
 
+/**
+ * One entry in the scrolling strip. Celebrations and announcements are mapped
+ * into this shape up front so the marquee renders a single flat list; a
+ * "thought" only appears when there is nothing else to show.
+ */
 type TickerItem =
   | {
       kind: "celebration";
@@ -43,12 +49,17 @@ interface MarqueeProps {
   onSelectAnnouncement?: () => void;
 }
 
+/** Measured once per resize; drives how many copies render and how far the track slides. */
 interface MarqueeLayout {
+  /** How many times the item set is repeated along the track. */
   copies: number;
+  /** Pixels the track moves per loop (one set, plus the gap for a lone item). */
   distance: number;
+  /** Banner width, reused as the spacer width for a lone item. */
   viewportWidth: number;
 }
 
+/** Pill colours for an announcement's priority; anything unrecognised reads as Normal. */
 function priorityClasses(priority: string): string {
   if (priority === "Urgent") {
     return "bg-red-500/25 text-red-200 ring-1 ring-red-300/40";
@@ -61,6 +72,13 @@ function priorityClasses(priority: string): string {
   return "bg-white/15 text-blue-100 ring-1 ring-white/20";
 }
 
+/**
+ * Renders one ticker item. Announcements become a button when a click target
+ * is given; celebrations and the thought are display-only.
+ *
+ * `focusable` is true only for the first copy of the set: the repeats exist
+ * purely for the visual loop, so they are kept out of the tab order.
+ */
 function TickerEntry({
   item,
   focusable,
@@ -207,6 +225,8 @@ function Marquee({ items, onSelectAnnouncement }: MarqueeProps) {
 
       const viewportWidth = viewport.clientWidth;
 
+      // Enough copies to fill the viewport plus one spare that slides in as
+      // the first one leaves. A lone item only ever needs two (see above).
       const copies = isSingleItem
         ? 2
         : Math.max(2, Math.ceil(viewportWidth / contentWidth) + 1);
@@ -215,6 +235,8 @@ function Marquee({ items, onSelectAnnouncement }: MarqueeProps) {
         ? contentWidth + viewportWidth
         : contentWidth;
 
+      // Keep the previous object when nothing changed, so a ResizeObserver
+      // callback does not trigger a re-render loop.
       setLayout((previous) =>
         previous.copies === copies &&
         previous.distance === distance &&
@@ -235,6 +257,8 @@ function Marquee({ items, onSelectAnnouncement }: MarqueeProps) {
     };
   }, [items, isSingleItem]);
 
+  // Duration follows distance, so speed stays at PIXELS_PER_SECOND whatever
+  // the content; the floor stops a very short strip from flicking past.
   const durationSeconds = Math.max(
     MINIMUM_DURATION_SECONDS,
     Math.round(layout.distance / PIXELS_PER_SECOND)
@@ -246,6 +270,7 @@ function Marquee({ items, onSelectAnnouncement }: MarqueeProps) {
         className="celebration-marquee flex w-max items-center"
         style={
           {
+            // Read by the celebration-scroll keyframes in index.css.
             "--marquee-distance": `${layout.distance}px`,
             "--marquee-duration": `${durationSeconds}s`,
           } as React.CSSProperties
@@ -255,8 +280,10 @@ function Marquee({ items, onSelectAnnouncement }: MarqueeProps) {
           <div
             key={copyIndex}
             className="flex shrink-0 items-center"
+            // Screen readers hear the items once; the repeats are decoration.
             aria-hidden={copyIndex !== 0}
           >
+            {/* Only the first copy is measured; every copy is the same width. */}
             <div
               ref={copyIndex === 0 ? itemsRef : undefined}
               className="flex shrink-0 items-center"
@@ -315,6 +342,7 @@ function DashboardTicker({
   const hasCelebrations = celebrations.length > 0;
   const hasAnnouncements = announcements.length > 0;
 
+  // Celebrations lead, then announcements in the order the feed returns them.
   const items: TickerItem[] = [
     ...celebrations.map(
       (celebration): TickerItem => ({
@@ -344,6 +372,7 @@ function DashboardTicker({
     });
   }
 
+  // The fixed label on the left describes whatever mix is scrolling past.
   const heading =
     hasCelebrations && hasAnnouncements
       ? { icon: "\u{1F389}", title: "Today's Highlights", subtitle: "Celebrations & announcements" }

@@ -113,11 +113,17 @@ class AdminAccountCreate(BaseModel):
 
 
 class AdminAccountStatusUpdate(BaseModel):
+    """Partial status change for an HR or manager account; omitted fields are
+    left as they are. Deactivating or locking also revokes the account's
+    sessions (see UserService.update_admin_account_status)."""
+
     is_active: bool | None = None
     is_locked: bool | None = None
 
 
 class AdminAccountResponse(BaseModel):
+    """An HR or manager account as the Admin Accounts page lists it."""
+
     id: str
     employee_id: str | None = None
     full_name: str

@@ -4,6 +4,7 @@ import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { isAdminRole } from "../lib/access";
 import { hasSessionHint, isSessionConfirmed, restoreSession } from "../services/api";
 
+/** "checking" while restoreSession() asks the server after a reload. */
 type SessionState = "checking" | "signed-in" | "signed-out";
 
 /**
@@ -13,6 +14,8 @@ type SessionState = "checking" | "signed-in" | "signed-out";
  * access cookie if it expired) before deciding to send the user to login.
  */
 function useSession(): SessionState {
+  // Decided synchronously when possible, so in-app navigation renders at
+  // once and a browser that never signed in goes straight to /login.
   const [state, setState] = useState<SessionState>(() =>
     isSessionConfirmed() ? "signed-in" : hasSessionHint() ? "checking" : "signed-out",
   );
@@ -20,6 +23,7 @@ function useSession(): SessionState {
   useEffect(() => {
     if (state !== "checking") return;
 
+    // Ignore the answer if the route unmounted while it was pending.
     let active = true;
 
     void restoreSession().then((restored) => {
@@ -38,6 +42,7 @@ function useSession(): SessionState {
 function ProtectedRoute() {
   const session = useSession();
 
+  // Render nothing rather than flash the login page or a half-loaded one.
   if (session === "checking") return null;
 
   if (session === "signed-out") {

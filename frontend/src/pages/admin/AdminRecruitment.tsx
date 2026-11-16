@@ -555,6 +555,7 @@ function AdminRecruitment() {
         </button>
       </div>
 
+      {/* Successes close themselves; errors now stay until dismissed. */}
       <NoticePopup notice={notice} onDismiss={() => setNotice(null)} />
 
       {/* Top cards */}

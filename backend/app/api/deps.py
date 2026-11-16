@@ -21,6 +21,8 @@ security = HTTPBearer(auto_error=False)
 user_repository = UserRepository()
 session_repository = SessionRepository()
 
+# Methods that must not change state, so they are exempt from the CSRF
+# header check in access_credentials.
 SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
 
 
@@ -30,6 +32,8 @@ async def access_credentials(
 ) -> HTTPAuthorizationCredentials:
     """The access token from the Authorization header (API clients) or the
     HttpOnly access cookie (the web app)."""
+    # The header wins over the cookie. It needs no CSRF check: a browser never
+    # attaches an Authorization header to a cross-site request on its own.
     if bearer and bearer.credentials:
         return bearer
 
@@ -166,6 +170,7 @@ async def require_super_admin(
     """Super admin only - managing the HR and manager accounts themselves."""
     role = role_value(current_user.get("role"))
 
+    # An exact match, not HR_LEVEL_ROLES: HR must not manage its own peers.
     if role != UserRole.SUPER_ADMIN.value:
         raise AppException(
             "Only the super admin can perform this action",

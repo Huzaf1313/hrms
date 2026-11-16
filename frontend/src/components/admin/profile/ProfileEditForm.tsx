@@ -46,6 +46,10 @@ interface ProfileEditFormProps {
   onSave: (profile: AdminProfile, avatarUrl: string | null) => Promise<void>;
 }
 
+/**
+ * Error message for one field, or "" when it is valid. `required` is passed
+ * in because the list differs for the super admin.
+ */
 function validateField(
   spec: ProfileFieldSpec,
   value: string,
@@ -98,6 +102,8 @@ export default function ProfileEditForm({
   const fields = useMemo(
     () =>
       PROFILE_FIELDS[tab].map((field): ProfileFieldSpec => {
+        // Full Name is read-only ("Managed by your administrator") for HR and
+        // managers; unlock it and drop that hint for the super admin.
         if (field.name === "full_name" && superAdmin) {
           return { ...field, readOnly: false, hint: undefined };
         }
@@ -152,6 +158,8 @@ export default function ProfileEditForm({
   }
 
   return (
+    // The id is the scroll target AdminMyProfile uses when Edit is clicked;
+    // scroll-mt keeps the top of the form clear of the sticky header.
     <form id="profile-edit-form" onSubmit={handleSubmit} className="scroll-mt-24">
       <div className="space-y-4 p-5">
         <div className="grid gap-4 sm:grid-cols-2">

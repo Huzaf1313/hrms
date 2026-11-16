@@ -15,6 +15,8 @@ service = AdminNotificationService()
 # Admin accounts have no employee_id of their own, so they are addressed by the
 # notification service's "admin:<user id>" key instead of the employee code.
 def require_admin(current_user: dict = Depends(get_current_user)) -> dict:
+    # ADMIN_ROLES covers HR, managers and the super admin. role_value accepts
+    # the role as either the enum or its stored string.
     if role_value(current_user.get("role")) not in ADMIN_ROLES:
         raise HTTPException(
             status_code=403,

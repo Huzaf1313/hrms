@@ -789,6 +789,11 @@ function AdminLeave() {
     { label: "Upcoming Leaves", value: summary?.upcoming_leaves ?? "-", sub: "Next 7 Days", icon: CalendarClock, iconBg: "bg-teal-500" },
   ];
 
+  /**
+   * Approve or reject on the server, then reload the summary so the stat
+   * cards match. Errors surface the backend's message (e.g. a self-approval
+   * refusal) in the notice popup.
+   */
   async function updateRequestStatus(request: LeaveRequest, nextStatus: "approved" | "rejected") {
     try {
       await leaveService.updateStatus(request.id, nextStatus);
@@ -908,6 +913,8 @@ function AdminLeave() {
               <Filter className="h-3.5 w-3.5" />
               Filters
             </button>
+            {/* Only accounts tied to an employee record (HR, managers) can
+                file leave; the super admin never sees these two buttons. */}
             {myEmployeeId && (
               <>
                 <button
@@ -969,6 +976,7 @@ function AdminLeave() {
                       <div>
                         <div className="flex flex-wrap items-center gap-1.5">
                           <span className="font-semibold text-gray-900">{name}</span>
+                          {/* Role badge for HR and manager applicants only. */}
                           {request.employee_role && request.employee_role !== "employee" && (
                             <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-semibold text-violet-600">
                               {roleLabel(request.employee_role)}
@@ -1329,6 +1337,8 @@ function AdminLeave() {
 
             {/* Footer actions */}
             <div className="border-t border-gray-100 px-6 py-5">
+              {/* Your own pending request shows a waiting note instead of
+                  approve/reject buttons. */}
               {selectedRequest.status === "pending" && isOwnRequest(selectedRequest) ? (
                 <div className="flex items-center justify-center gap-2 rounded-lg bg-orange-50 px-4 py-2.5 text-sm font-semibold text-orange-600">
                   <Clock className="h-4 w-4" />

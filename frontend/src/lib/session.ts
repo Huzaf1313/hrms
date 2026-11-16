@@ -51,9 +51,12 @@ export function syncSessionName(fullName: string): void {
   try {
     localStorage.setItem(USER_KEY, JSON.stringify({ ...user, full_name: fullName }));
   } catch {
+    // Storage unavailable: nothing changed, so there is nothing to announce.
     return;
   }
 
+  // A plain window event: the browser's own `storage` event only reaches
+  // other tabs, not the one that wrote the value.
   window.dispatchEvent(new Event(SESSION_USER_UPDATED_EVENT));
 }
 

@@ -342,6 +342,11 @@ function AdminAttendance() {
     useState<OwnAttendanceRecords>([]);
   const [regularizationListKey, setRegularizationListKey] = useState(0);
 
+  /**
+   * Opens the regularization form for the signed-in account. Its attendance
+   * history is loaded first because the form offers only the dates with an
+   * incomplete punch (plus today) and pre-fills the issue type from them.
+   */
   async function openSelfRegularization() {
     const employeeId = currentSessionUser()?.employee_id;
 
@@ -391,6 +396,7 @@ function AdminAttendance() {
   });
 
   useEffect(() => {
+    // No own attendance to look up for the super admin (see canSelfPunch).
     if (!canSelfPunch) return;
 
     let isCurrent = true;
@@ -1516,6 +1522,8 @@ function AdminAttendance() {
           </div>
 
           <div id="regularization-requests" className="scroll-mt-6 h-[340px]">
+            {/* The key remounts the card, so it refetches after the
+                self-regularization form closes. */}
             <RegularizationRequestsCard
               key={regularizationListKey}
               onReviewed={() => setAttendanceRefreshKey((current) => current + 1)}
@@ -1960,6 +1968,9 @@ function AdminAttendance() {
         </div>
       )}
 
+      {/* Mark In / Mark Out result. A success carries its punch details as
+          children instead of text, and stays up a little longer than the
+          default so the times can be read. */}
       <NoticePopup
         notice={
           punchPopup

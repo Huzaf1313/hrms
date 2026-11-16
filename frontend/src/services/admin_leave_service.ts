@@ -100,6 +100,9 @@ export const leaveService = {
       }>;
     }>(`/employee-leave/employees/${encodeURIComponent(employeeId)}`, { limit: 100 });
 
+    // The employee endpoint returns its own shape: no employee name, statuses
+    // stored capitalised ("Pending"), and requested_at as the filing time.
+    // Normalise it to the admin LeaveRequest so both lists share one table.
     return response.items.map((item) => ({
       ...item,
       employee_name: item.employee_name ?? employeeName ?? null,

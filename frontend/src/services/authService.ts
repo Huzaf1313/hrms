@@ -5,6 +5,9 @@ export interface LoginPayload {
   password: string;
 }
 
+/** Body of POST /auth/login. The access token is echoed here for API
+ *  clients such as Swagger; the web app relies on the cookies instead, and
+ *  the refresh token is never in the body. */
 export interface TokenResponse {
   access_token: string;
   token_type: string;

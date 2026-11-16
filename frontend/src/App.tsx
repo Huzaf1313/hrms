@@ -49,6 +49,8 @@ setOnSessionClear(() => {
 
 function App() {
   async function handleLogout() {
+    // Only the server can clear the HttpOnly session cookies, so logout is
+    // always a request; it reads the refresh cookie itself.
     await authService.logout();
     clearSession();
     clearAuthQueries();

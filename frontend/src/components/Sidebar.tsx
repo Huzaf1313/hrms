@@ -49,6 +49,8 @@ const sections: NavSection[] = [
     title: "Main",
     items: [{ label: "Dashboard", icon: LayoutDashboard, page: "Dashboard" }],
   },
+  // Only the super admin sees this section; for anyone else it filters to
+  // nothing and is not rendered.
   {
     title: "Super Admin",
     items: [
@@ -152,6 +154,8 @@ function Sidebar({ activePage, onNavigate, collapsed, open, onClose }: SidebarPr
       {/* Navigation */}
       <nav className="sidebar-scrollbar min-h-0 flex-1 overflow-y-auto">
         {sections.map((section) => {
+          // Unrestricted items always show; restricted ones ask canAccessPage,
+          // which knows the HR-only and super-admin-only page lists.
           const items = section.items.filter(
             (item) =>
               (!item.hrOnly && !item.superAdminOnly) ||

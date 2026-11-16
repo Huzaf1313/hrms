@@ -309,6 +309,8 @@ async def get_regularization_requests(
         if own_code and own_code not in employee_ids:
             employee_ids.append(own_code)
 
+        # The list differs per manager, so the cache key must too; otherwise
+        # one manager could be served another team's (or HR's) cached list.
         scope_key = f"mgr_{current_user['_id']}"
 
     cache_key = (
@@ -361,6 +363,8 @@ async def review_regularization_request(
     data: AttendanceRegularizationReview,
     current_user: dict = Depends(require_permission(Permission.ATTENDANCE_APPROVE)),
 ):
+    # Load the request first (404 if missing) so the access checks below know
+    # whose request it is. employee_id here is the business code (EMP001).
     pending = await service.get_request(regularization_id)
     requester_code = str(pending.get("employee_id") or "")
 
@@ -376,6 +380,8 @@ async def review_regularization_request(
     scope = visibility_scope(current_user)
 
     if scope:
+        # An unknown requester resolves to None, which scope_matches rejects,
+        # so a manager is refused rather than let through.
         requester = await employee_repository.get_by_employee_id(requester_code)
 
         if not scope_matches(requester, scope):

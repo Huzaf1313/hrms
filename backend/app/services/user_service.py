@@ -88,6 +88,10 @@ class UserService:
         password: str,
         role: UserRole,
     ) -> dict:
+        """Base users document for a fresh, active, unlocked login account.
+
+        The caller normalises the email; the password is stored hashed only.
+        """
         now = datetime.utcnow()
 
         return {
@@ -146,12 +150,20 @@ class UserService:
         password: str,
         role: UserRole,
     ):
+        """Create an HR admin or manager account for the super admin.
+
+        The email OTP is checked by the API route before this is called.
+        """
+        # Defence in depth behind the schema's Literal: this path must never
+        # create another super admin.
         if role.value not in MANAGED_ADMIN_ROLES:
             raise AppException(
                 "Only HR admin or manager accounts can be created here",
                 400,
             )
 
+        # Managers go through the same path HR uses to create them, so both
+        # routes produce identical manager documents.
         if role == UserRole.MANAGER:
             return await self.create_manager_account(
                 full_name=full_name,
@@ -189,6 +201,8 @@ class UserService:
         """
         user = await self.repository.get_by_id(user_id)
 
+        # Employees and the super admin itself are reported as "not found"
+        # rather than forbidden, so this route cannot be used to touch them.
         if not user or role_value(user.get("role")) not in MANAGED_ADMIN_ROLES:
             raise AppException("Admin account not found", 404)
 
@@ -200,6 +214,8 @@ class UserService:
         if is_locked is not None:
             updates["is_locked"] = is_locked
 
+            # Login auto-locks at 5 failed attempts. Without a reset, the
+            # next wrong password after an unlock would lock it again.
             if not is_locked:
                 updates["failed_login_attempts"] = 0
 
@@ -633,6 +649,8 @@ class UserService:
 
         employee_id = user.get("employee_id")
 
+        # Display-only code for the super admin, which never stores an
+        # employee_id (see SUPER_ADMIN_EMPLOYEE_CODE).
         if not employee_id and role_value(user.get("role")) == UserRole.SUPER_ADMIN.value:
             employee_id = SUPER_ADMIN_EMPLOYEE_CODE
 

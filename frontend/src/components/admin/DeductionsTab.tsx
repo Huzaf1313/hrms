@@ -811,6 +811,7 @@ export default function DeductionsTab() {
         </div>
       )}
 
+      {/* Closes itself after a few seconds, so no timer is needed here. */}
       <NoticePopup
         notice={successToast ? { type: "success", text: successToast } : null}
         onDismiss={() => setSuccessToast(null)}

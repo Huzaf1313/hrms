@@ -121,6 +121,8 @@ async def lifespan(app: FastAPI):
                 f"Bootstrapped HR account: {settings.BOOTSTRAP_HR_EMAIL}"
             )
 
+    # Idempotent like the HR bootstrap: an existing email is left untouched,
+    # so changing the password here later does not reset the account.
     if (
         settings.BOOTSTRAP_SUPER_ADMIN_EMAIL
         and settings.BOOTSTRAP_SUPER_ADMIN_PASSWORD

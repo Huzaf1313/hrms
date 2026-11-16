@@ -1013,6 +1013,8 @@ export default function AdminSettings() {
           </p>
         </div>
 
+        {/* Fixed-position, so where it sits in the header does not matter.
+            It closes itself; showNotice no longer needs a timer. */}
         <NoticePopup
           notice={notice ? { type: "success", text: notice } : null}
           onDismiss={() => setNotice("")}

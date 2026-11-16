@@ -658,6 +658,8 @@ function AdminEmployeeForm({
 
             <input
               readOnly
+              // Create mode shows the server's preview. Nothing is reserved,
+              // so the saved ID can differ if another employee is added first.
               value={isEditMode ? form.employee_id : nextEmployeeId}
               placeholder={isEditMode ? "AAR001" : "Generated on save"}
               title="Employee IDs are assigned automatically and cannot be changed."

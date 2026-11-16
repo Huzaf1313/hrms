@@ -15,9 +15,12 @@ from app.services.employee_attendance_regularization_service import (
     EmployeeAttendanceRegularizationService,
 )
 
+# Callers: a manager (user id m1, employee code AAR008) and an HR admin.
 MANAGER = {"_id": "m1", "role": "manager", "employee_id": "AAR008"}
 HR = {"_id": "h1", "role": "hr_admin", "employee_id": "AAR003"}
 
+# Stand-in employee directory keyed by business code. AAR002 is on m1's
+# team, AAR004 on someone else's; AAR008 and AAR003 are the callers.
 EMPLOYEES = {
     "AAR002": {"employee_id": "AAR002", "manager_id": "m1"},
     "AAR004": {"employee_id": "AAR004", "manager_id": "other"},
@@ -27,6 +30,11 @@ EMPLOYEES = {
 
 
 def review(user, requester_code):
+    """Run the review route as `user` on a request filed by `requester_code`.
+
+    Returns how many times the service review ran (1 = allowed). A refused
+    review raises AppException before the service is reached.
+    """
     service = SimpleNamespace(
         get_request=AsyncMock(return_value={"employee_id": requester_code}),
         review_request=AsyncMock(return_value={"reviewed": True}),
@@ -55,6 +63,8 @@ def review(user, requester_code):
 
 
 def test_review_request_is_a_service_method():
+    # review_request was once a module-level function by mistake, so
+    # service.review_request did not exist and every review failed.
     assert hasattr(EmployeeAttendanceRegularizationService, "review_request")
 
 
@@ -80,7 +90,11 @@ def test_hr_reviews_a_manager_request():
 
 
 def listed_employee_ids(user):
+    """Run the list route as `user` and return the employee_ids filter it
+    passed to the service (None means unrestricted). The cache is stubbed
+    out so the route always reaches the service."""
     service = SimpleNamespace(get_all_requests=AsyncMock(return_value=[]))
+    # visible_employee_codes reads the manager's team from get_all.
     repository = SimpleNamespace(
         get_all=AsyncMock(return_value=[EMPLOYEES["AAR002"]]),
     )

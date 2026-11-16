@@ -18,6 +18,7 @@ const BASE_HEADERS: Record<string, string> = {
 /** Set once the cookie session is known to work in this tab, so moving
  *  between protected pages does not ask the server again each time. */
 let sessionConfirmed = false;
+// The refresh in flight, if any; see refreshAccessToken.
 let refreshPromise: Promise<void> | null = null;
 
 // Tokens used to be stored here; remove any left behind by an older build.
@@ -29,6 +30,7 @@ try {
   // Storage can be unavailable (private mode); nothing to clean up then.
 }
 
+/** Lets route guards skip the server check once this tab has a live session. */
 export function isSessionConfirmed(): boolean {
   return sessionConfirmed;
 }
@@ -113,6 +115,8 @@ interface FormRequestOptions {
   body: FormData;
 }
 
+/** Return `data` from a {success, message, data} envelope, or the payload
+ *  as is when the route answers without one. */
 function unwrapEnvelope<T>(payload: unknown): T {
   if (payload !== null && typeof payload === "object" && "data" in payload && "success" in payload) {
     return (payload as { data: T }).data;
@@ -121,6 +125,8 @@ function unwrapEnvelope<T>(payload: unknown): T {
   return payload as T;
 }
 
+/** The most useful message in an error body: FastAPI's `detail`, or the
+ *  envelope's `message`. */
 function errorMessage(payload: unknown, status: number): string {
   if (payload !== null && typeof payload === "object") {
     const record = payload as { detail?: unknown; message?: unknown };
@@ -145,6 +151,7 @@ async function send(url: string, init: RequestInit): Promise<Response> {
   try {
     return await fetch(url, {
       ...init,
+      // BASE_HEADERS carries the CSRF header; callers only add Content-Type.
       headers: { ...BASE_HEADERS, ...(init.headers as Record<string, string> | undefined) },
       credentials: "include",
     });
@@ -160,11 +167,15 @@ async function send(url: string, init: RequestInit): Promise<Response> {
  *  one refresh. */
 function refreshAccessToken(): Promise<void> {
   if (!refreshPromise) {
+    // No body: the server reads the refresh cookie and sets fresh cookies.
     refreshPromise = requestRaw<unknown>("/auth/refresh", { method: "POST" })
       .then(() => {
         sessionConfirmed = true;
       })
       .catch((error: unknown) => {
+        // A rejected refresh cookie is cleared by the server on this same
+        // response. clearSession() fires the onSessionClear callbacks (App.tsx sends
+        // the browser to /login).
         clearSession();
         throw error;
       })
@@ -191,6 +202,8 @@ async function sendWithRefresh(url: string, init: RequestInit): Promise<Response
   return send(url, init);
 }
 
+/** JSON request to the API, with refresh-on-401. Returns the envelope's
+ *  `data`. */
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { method = "GET", body, params } = options;
 
@@ -296,6 +309,7 @@ export const apiRaw = {
     requestRaw<T>(path, { method: "POST", body }),
 };
 
+/** GET a file as a Blob. Same cookie auth and refresh-on-401 as `request`. */
 export async function downloadFile(path: string): Promise<Blob> {
   const response = await sendWithRefresh(`${API_BASE_URL}${path}`, {
     method: "GET",

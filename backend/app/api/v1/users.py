@@ -135,6 +135,8 @@ def serialize_admin_account(
     user: dict,
     welcome_email_sent: bool | None = None,
 ) -> AdminAccountResponse:
+    """Row for the super admin's Admin Accounts page. welcome_email_sent is
+    passed only by the create route; list and status responses leave it None."""
     return AdminAccountResponse(
         welcome_email_sent=welcome_email_sent,
         id=str(user["_id"]),
@@ -175,6 +177,8 @@ async def request_admin_account_email_otp(
     current_user: dict = Depends(require_super_admin),
 ):
     """Email a one-time code to the address of the account being created."""
+    # Reuses the employee-verification OTP flow; account_label only swaps the
+    # "employee" wording in the email for "admin".
     result = await otp_service.create_employee_verification_otp(
         email=data.email,
         admin_id=str(current_user["_id"]),
@@ -196,6 +200,11 @@ async def verify_admin_account_email_otp(
     data: EmployeeOTPVerifyRequest,
     current_user: dict = Depends(require_super_admin),
 ):
+    """Check the emailed code and return a short-lived verification token.
+
+    The token is bound to this email and to the super admin who verified it,
+    and create_admin_account must present it.
+    """
     result = await otp_service.verify_employee_verification_otp(
         email=data.email,
         otp=data.otp,
@@ -218,6 +227,13 @@ async def create_admin_account(
     data: AdminAccountCreate,
     current_user: dict = Depends(require_super_admin),
 ):
+    """Create an HR admin or manager account with an OTP-verified email.
+
+    The password is set by the super admin and shared out of band; the
+    welcome email only carries the sign-in link.
+    """
+    # The schema defaults the token to "", so check it here. The OTP service
+    # would also reject it, but with employee-specific wording.
     if not data.email_verification_token.strip():
         raise AppException(
             "Verify the email address with an OTP before creating the account.",
@@ -242,6 +258,8 @@ async def create_admin_account(
         role=UserRole(data.role),
     )
 
+    # A new HR admin or manager is immediately pickable as a reporting
+    # manager. A cache failure is logged only: the account already exists.
     try:
         await invalidate_managers_cache()
     except Exception as exc:

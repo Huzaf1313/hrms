@@ -10,6 +10,7 @@ from app.api.v1 import auth
 from app.core.exceptions import AppException
 from app.main import app_exception_handler
 
+# What the mocked UserService login / refresh calls return.
 TOKENS = {"access_token": "access-1", "refresh_token": "refresh-1", "token_type": "bearer"}
 
 
@@ -75,6 +76,7 @@ def test_refresh_with_dead_session_clears_the_cookie():
 
     assert response.status_code == 401
     assert response.json()["message"] == "Session has been revoked"
+    # delete_cookie writes an empty value with Max-Age=0.
     assert 'hrms_refresh_token=""' in response.headers["set-cookie"]
     assert 'hrms_access_token=""' in response.headers["set-cookie"]
 
@@ -90,6 +92,7 @@ def test_logout_revokes_and_clears_even_when_already_revoked():
     assert 'hrms_refresh_token=""' in response.headers["set-cookie"]
     assert 'hrms_access_token=""' in response.headers["set-cookie"]
 
+    # No cookie at all is still a successful logout.
     assert post("/logout").status_code == 200
 
 
@@ -126,6 +129,7 @@ def test_access_token_is_read_from_the_cookie():
 
 
 def test_bearer_header_wins_over_the_cookie():
+    # A POST with no CSRF header: header tokens are exempt from that check.
     response = call_protected(
         "POST", headers={"Authorization": "Bearer header-1"}, cookie="access-1"
     )
@@ -141,6 +145,7 @@ def test_no_token_is_401():
 def test_cookie_write_without_csrf_header_is_rejected():
     assert call_protected("POST", cookie="access-1").status_code == 403
 
+    # Only the header's presence is checked; any value passes.
     response = call_protected(
         "POST", headers={"X-Requested-With": "fetch"}, cookie="access-1"
     )

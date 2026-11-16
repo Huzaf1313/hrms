@@ -651,6 +651,7 @@ function SalaryStructureTab() {
         </button>
       </div>
 
+      {/* Closes itself after a few seconds, so no timer is needed here. */}
       <NoticePopup
         notice={successMessage ? { type: "success", text: successMessage } : null}
         onDismiss={() => setSuccessMessage(null)}

@@ -16,9 +16,11 @@ from fastapi import Response
 from app.core.config import settings
 
 ACCESS_COOKIE = "hrms_access_token"
+# Every API route sits under /api/v1, so the access cookie reaches all of them.
 ACCESS_COOKIE_PATH = "/api/v1"
 
 REFRESH_COOKIE = "hrms_refresh_token"
+# Narrow path: the long-lived refresh token stays off every other request.
 REFRESH_COOKIE_PATH = "/api/v1/auth"
 
 # Cookie-authenticated requests that change state must carry this header.
@@ -28,6 +30,7 @@ CSRF_HEADER = "X-Requested-With"
 
 
 def _set(response: Response, key: str, value: str, max_age: int, path: str) -> None:
+    """Set a session cookie: always HttpOnly, Secure and SameSite from settings."""
     response.set_cookie(
         key=key,
         value=value,
@@ -40,6 +43,9 @@ def _set(response: Response, key: str, value: str, max_age: int, path: str) -> N
 
 
 def _clear(response: Response, key: str, path: str) -> None:
+    """Expire a session cookie. The attributes mirror _set: a browser only
+    replaces a cookie with the same name and path, and rejects SameSite=None
+    without Secure."""
     response.delete_cookie(
         key=key,
         path=path,

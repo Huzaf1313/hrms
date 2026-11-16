@@ -87,6 +87,8 @@ async def reset_password(
     response_model=AccessTokenResponse,
 )
 async def login(login_data: LoginRequest, response: Response):
+    """Sign in. Sets both session cookies; the body carries only the access
+    token, never the refresh token."""
     service = UserService()
 
     tokens = await service.login_user(
@@ -121,6 +123,12 @@ async def refresh_token(
     response: Response,
     refresh_token: str | None = Cookie(default=None, alias=REFRESH_COOKIE),
 ):
+    """New access token from the refresh cookie.
+
+    The refresh token is not rotated: the service hands back the same one,
+    and re-setting it only renews the cookie's max-age. The JWT's own expiry,
+    fixed at login, still ends the session.
+    """
     if not refresh_token:
         raise AppException("Session expired. Please log in again.", 401)
 
@@ -155,6 +163,8 @@ async def logout(
     response: Response,
     refresh_token: str | None = Cookie(default=None, alias=REFRESH_COOKIE),
 ):
+    """Revoke the session behind the refresh cookie and clear both cookies.
+    Needs no access token, so an expired session can still log out."""
     clear_access_cookie(response)
     clear_refresh_cookie(response)
 
