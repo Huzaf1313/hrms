@@ -16,6 +16,7 @@ import {
   type SalaryStructure,
 } from "../../services/admin_salary_structure_service";
 import { useQueryClient } from "@tanstack/react-query";
+import NoticePopup from "../ui/NoticePopup";
 import { useSalaryStructures } from "../../hooks/useSalaryStructures";
 import { queryKeys } from "../../lib/queryKeys";
 
@@ -545,14 +546,6 @@ function SalaryStructureTab() {
     }
   }, [queryError]);
 
-  // Auto-hide success message after 4s
-  useEffect(() => {
-    if (successMessage) {
-      const timer = setTimeout(() => setSuccessMessage(null), 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [successMessage]);
-
   async function handleSave(updated: SalaryStructure) {
     const payload = {
       name: updated.name.trim(),
@@ -658,12 +651,11 @@ function SalaryStructureTab() {
         </button>
       </div>
 
-      {successMessage && (
-        <div className="mb-4 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800 shadow-xs">
-          <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-          <span>{successMessage}</span>
-        </div>
-      )}
+      {/* Closes itself after a few seconds, so no timer is needed here. */}
+      <NoticePopup
+        notice={successMessage ? { type: "success", text: successMessage } : null}
+        onDismiss={() => setSuccessMessage(null)}
+      />
 
       {error && (
         <div className="mb-4 flex items-center justify-between rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-xs">

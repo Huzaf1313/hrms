@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException, status
@@ -22,6 +23,23 @@ from app.services.attendance_calculation import (
 from app.services.attendance_service import AttendanceService
 
 IST = timezone(timedelta(hours=5, minutes=30))
+
+logger = logging.getLogger(__name__)
+
+
+def same_moment(left: datetime | None, right: datetime | None) -> bool:
+    """True when both are the same instant. Naive values are read as UTC,
+    which is how Mongo hands them back."""
+    if left is None or right is None:
+        return False
+
+    if left.tzinfo is None:
+        left = left.replace(tzinfo=timezone.utc)
+
+    if right.tzinfo is None:
+        right = right.replace(tzinfo=timezone.utc)
+
+    return left == right
 
 
 def normalize_requested_time(value: datetime | None) -> datetime | None:
@@ -407,153 +425,127 @@ class EmployeeAttendanceRegularizationService:
         status: str | None = None,
         skip: int = 0,
         limit: int = 100,
+        employee_ids: list[str] | None = None,
     ):
+        """Admin list of requests, newest first.
+
+        `employee_ids` limits it to those business codes (a manager's team
+        plus themselves); None means every request.
+        """
         return await self.regularization_repository.get_all(
             status=status,
             skip=skip,
             limit=limit,
+            employee_ids=employee_ids,
         )
 
-async def review_request(
-    self,
-    regularization_id: str,
-    decision: str,
-    reviewed_by: str,
-    comment: str | None = None,
-):
-    request = await self.regularization_repository.get_by_id(
-        regularization_id
-    )
+    async def review_request(
+        self,
+        regularization_id: str,
+        decision: str,
+        reviewed_by: str,
+        comment: str | None = None,
+    ):
+        """Approve or reject a pending request and notify the employee.
 
-    if not request:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Regularization request not found",
+        Approval writes the requested time onto the attendance record,
+        creating the record for a Missing Check-In with none. Who may review
+        (team scope, no self-review) is checked by the route, not here.
+        """
+        request = await self.regularization_repository.get_by_id(
+            regularization_id
         )
 
-    normalized_status = decision.strip().capitalize()
-
-    if normalized_status not in {"Approved", "Rejected"}:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Status must be Approved or Rejected",
-        )
-
-    if request.get("status") != "Pending":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only pending requests can be reviewed",
-        )
-
-    now = datetime.utcnow()
-
-    update_data = {
-        "status": normalized_status,
-        "reviewed_at": now,
-        "reviewed_by": reviewed_by,
-        "updated_at": now,
-    }
-
-    if comment is not None:
-        update_data["review_comment"] = comment
-
-    # 1. Process attendance only when the request is approved.
-    # Rejected requests must not create or modify attendance.
-    if normalized_status == "Approved":
-
-        attendance_id = request.get("attendance_id")
-        attendance = None
-        attendance_created = False
-
-        # 2. Retrieve an existing linked attendance record.
-        if attendance_id:
-            attendance = await self.attendance_repository.get_by_id(
-                attendance_id
+        if not request:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Regularization request not found",
             )
 
-            if not attendance:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="Linked attendance record not found",
-                )
-            if not attendance:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="Linked attendance record not found",
-                )
+        normalized_status = decision.strip().capitalize()
 
-        else:
-            # 3. No attendance ID exists.
-            # This is expected for a Missing Check-In request.
-            if request.get("issue_type") != "Missing Check-In":
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=(
-                        "An attendance record is required "
-                        "for this regularization request"
-                    ),
-                )
-
-            # Find the employee.
-            employee_id = str(request["employee_id"])
-
-            employee = await self.employee_repository.get_by_id(
-                employee_id
+        if normalized_status not in {"Approved", "Rejected"}:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Status must be Approved or Rejected",
             )
 
-            if not employee:
-                employee = (
-                    await self.employee_repository.get_by_employee_id(
-                        employee_id
+        # Older rows carry a lowercase status; the list shows them as Pending,
+        # so they must be reviewable too.
+        if str(request.get("status") or "").strip().lower() != "pending":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Only pending requests can be reviewed",
+            )
+
+        now = datetime.utcnow()
+
+        update_data = {
+            "status": normalized_status,
+            "reviewed_at": now,
+            "reviewed_by": reviewed_by,
+            "updated_at": now,
+        }
+
+        if comment is not None:
+            update_data["review_comment"] = comment
+
+        # 1. Process attendance only when the request is approved.
+        # Rejected requests must not create or modify attendance.
+        if normalized_status == "Approved":
+
+            attendance_id = request.get("attendance_id")
+            attendance = None
+            attendance_created = False
+
+            # 2. Retrieve an existing linked attendance record.
+            if attendance_id:
+                attendance = await self.attendance_repository.get_by_id(
+                    attendance_id
+                )
+
+                if not attendance:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail="Linked attendance record not found",
                     )
-                )
 
-            if not employee:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="Employee not found",
-                )
-
-            # Check whether attendance was created after the request
-            # was submitted.
-            attendance_date = request["date"]
-
-            attendance = (
-                await self.attendance_service.repository
-                .get_by_employee_and_date(
-                    employee_id=employee["employee_id"],
-                    attendance_date=attendance_date,
-                )
-            )
-
-            # Support attendance records stored using MongoDB employee ID.
-            if not attendance and "_id" in employee:
-                attendance = (
-                    await self.attendance_service.repository
-                    .get_by_employee_and_date(
-                        employee_id=str(employee["_id"]),
-                        attendance_date=attendance_date,
+            else:
+                # 3. No attendance ID exists.
+                # This is expected for a Missing Check-In request.
+                if request.get("issue_type") != "Missing Check-In":
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=(
+                            "An attendance record is required "
+                            "for this regularization request"
+                        ),
                     )
+
+                # Find the employee.
+                employee_id = str(request["employee_id"])
+
+                employee = await self.employee_repository.get_by_id(
+                    employee_id
                 )
 
-            # 4. If attendance does not exist, create it using
-            # the existing attendance creation logic.
-            if not attendance:
-                await self.attendance_service._mark_single_employee(
-                    employee=employee,
-                    data={
-                        "employee_id": employee["employee_id"],
-                        "date": attendance_date,
-                        "in_time": request.get("requested_check_in"),
-                        "out_time": None,
-                        "status": "present",
-                        "notes": "Attendance regularized after approval",
-                    },
-                    marked_by=reviewed_by,
-                    regularize=True,
-                )
+                if not employee:
+                    employee = (
+                        await self.employee_repository.get_by_employee_id(
+                            employee_id
+                        )
+                    )
 
-                # Retrieve the newly created attendance document.
+                if not employee:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail="Employee not found",
+                    )
+
+                # Check whether attendance was created after the request
+                # was submitted.
+                attendance_date = request["date"]
+
                 attendance = (
                     await self.attendance_service.repository
                     .get_by_employee_and_date(
@@ -562,6 +554,7 @@ async def review_request(
                     )
                 )
 
+                # Support attendance records stored using MongoDB employee ID.
                 if not attendance and "_id" in employee:
                     attendance = (
                         await self.attendance_service.repository
@@ -571,137 +564,191 @@ async def review_request(
                         )
                     )
 
+                # 4. If attendance does not exist, create it using
+                # the existing attendance creation logic.
                 if not attendance:
-                    raise HTTPException(
-                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                        detail="Failed to create attendance record",
+                    await self.attendance_service._mark_single_employee(
+                        employee=employee,
+                        data={
+                            "employee_id": employee["employee_id"],
+                            "date": attendance_date,
+                            "in_time": request.get("requested_check_in"),
+                            "out_time": None,
+                            "status": "present",
+                            "notes": "Attendance regularized after approval",
+                        },
+                        marked_by=reviewed_by,
+                        regularize=True,
                     )
 
-                attendance_created = True
+                    # Retrieve the newly created attendance document.
+                    attendance = (
+                        await self.attendance_service.repository
+                        .get_by_employee_and_date(
+                            employee_id=employee["employee_id"],
+                            attendance_date=attendance_date,
+                        )
+                    )
 
-                # New attendance records are initially marked
-                # is_regularized=False by _mark_single_employee().
-                await self.attendance_service.repository.update(
+                    if not attendance and "_id" in employee:
+                        attendance = (
+                            await self.attendance_service.repository
+                            .get_by_employee_and_date(
+                                employee_id=str(employee["_id"]),
+                                attendance_date=attendance_date,
+                            )
+                        )
+
+                    if not attendance:
+                        raise HTTPException(
+                            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail="Failed to create attendance record",
+                        )
+
+                    attendance_created = True
+
+                    # New attendance records are initially marked
+                    # is_regularized=False by _mark_single_employee().
+                    await self.attendance_service.repository.update(
+                        str(attendance["_id"]),
+                        {
+                            "is_regularized": True,
+                            "updated_at": now,
+                        },
+                    )
+
+                update_data["attendance_id"] = str(attendance["_id"])
+
+            # 5. If attendance already existed, apply the correction.
+            if not attendance_created:
+
+                attendance_update = {}
+
+                if request.get("issue_type") == "Missing Check-In":
+
+                    existing_check_in = (
+                        attendance.get("check_in")
+                        or attendance.get("in_time")
+                    )
+
+                    # An earlier approval that failed part-way has already
+                    # written this exact time: let the retry finish the job
+                    # instead of leaving the request pending for good.
+                    if existing_check_in is not None and not same_moment(
+                        existing_check_in,
+                        request.get("requested_check_in"),
+                    ):
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            detail=(
+                                "Check-in has already been recorded. "
+                                "This request can no longer be approved."
+                            ),
+                        )
+
+                    attendance_update["check_in"] = (
+                        request["requested_check_in"]
+                    )
+                    attendance_update["in_time"] = (
+                        request["requested_check_in"]
+                    )
+
+                elif request.get("issue_type") == "Missing Check-Out":
+
+                    existing_check_out = (
+                        attendance.get("check_out")
+                        or attendance.get("out_time")
+                    )
+
+                    # Same retry allowance as for check-in above.
+                    if existing_check_out is not None and not same_moment(
+                        existing_check_out,
+                        request.get("requested_check_out"),
+                    ):
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            detail=(
+                                "Check-out has already been recorded. "
+                                "This request can no longer be approved."
+                            ),
+                        )
+
+                    attendance_update["check_out"] = (
+                        request["requested_check_out"]
+                    )
+                    attendance_update["out_time"] = (
+                        request["requested_check_out"]
+                    )
+
+                else:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Invalid regularization issue type",
+                    )
+
+                # Recalculate all attendance metrics.
+                attendance_update.update(
+                    await self._recompute_metrics(
+                        attendance,
+                        attendance_update,
+                    )
+                )
+
+                attendance_update["is_regularized"] = True
+                attendance_update["updated_at"] = now
+
+                await self.attendance_repository.update(
                     str(attendance["_id"]),
-                    {
-                        "is_regularized": True,
-                        "updated_at": now,
-                    },
-                )
-
-            update_data["attendance_id"] = str(attendance["_id"])
-
-        # 5. If attendance already existed, apply the correction.
-        if not attendance_created:
-
-            attendance_update = {}
-
-            if request.get("issue_type") == "Missing Check-In":
-
-                existing_check_in = (
-                    attendance.get("check_in")
-                    or attendance.get("in_time")
-                )
-
-                if existing_check_in is not None:
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail=(
-                            "Check-in has already been recorded. "
-                            "This request can no longer be approved."
-                        ),
-                    )
-
-                attendance_update["check_in"] = (
-                    request["requested_check_in"]
-                )
-                attendance_update["in_time"] = (
-                    request["requested_check_in"]
-                )
-
-            elif request.get("issue_type") == "Missing Check-Out":
-
-                existing_check_out = (
-                    attendance.get("check_out")
-                    or attendance.get("out_time")
-                )
-
-                if existing_check_out is not None:
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail=(
-                            "Check-out has already been recorded. "
-                            "This request can no longer be approved."
-                        ),
-                    )
-
-                attendance_update["check_out"] = (
-                    request["requested_check_out"]
-                )
-                attendance_update["out_time"] = (
-                    request["requested_check_out"]
-                )
-
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Invalid regularization issue type",
-                )
-
-            # Recalculate all attendance metrics.
-            attendance_update.update(
-                await self._recompute_metrics(
-                    attendance,
                     attendance_update,
                 )
+
+        # 6. Update the regularization request.
+        updated_request = await self.regularization_repository.update(
+            regularization_id,
+            update_data,
+        )
+
+        # 7. Notify the employee after review.
+        notification_type = (
+            "regularization_approved"
+            if normalized_status == "Approved"
+            else "regularization_rejected"
+        )
+
+        attendance_date = request.get("date")
+
+        if hasattr(attendance_date, "strftime"):
+            formatted_attendance_date = attendance_date.strftime("%d/%m/%Y")
+        else:
+            formatted_attendance_date = str(attendance_date)
+
+        message = (
+            f"Your attendance regularization request for "
+            f"{formatted_attendance_date} has been "
+            f"{normalized_status.lower()}."
+        )
+
+        if comment:
+            message += f" Note: {comment}"
+
+        # The decision is already saved. A notification that fails to send
+        # must not turn it into an error the reviewer then retries.
+        try:
+            await self.notification_service.create(
+                employee_id=str(request["employee_id"]),
+                notification_type=notification_type,
+                title=f"Attendance Regularization {normalized_status}",
+                message=message,
+                target="/employee/attendance",
+                target_id=str(
+                    request.get("_id", regularization_id)
+                ),
+            )
+        except Exception:
+            logger.exception(
+                "Could not notify %s about regularization %s",
+                request.get("employee_id"),
+                regularization_id,
             )
 
-            attendance_update["is_regularized"] = True
-            attendance_update["updated_at"] = now
-
-            await self.attendance_repository.update(
-                str(attendance["_id"]),
-                attendance_update,
-            )
-
-    # 6. Update the regularization request.
-    updated_request = await self.regularization_repository.update(
-        regularization_id,
-        update_data,
-    )
-
-    # 7. Notify the employee after review.
-    notification_type = (
-        "regularization_approved"
-        if normalized_status == "Approved"
-        else "regularization_rejected"
-    )
-
-    attendance_date = request.get("date")
-
-    if hasattr(attendance_date, "strftime"):
-        formatted_attendance_date = attendance_date.strftime("%d/%m/%Y")
-    else:
-        formatted_attendance_date = str(attendance_date)
-
-    message = (
-        f"Your attendance regularization request for "
-        f"{formatted_attendance_date} has been "
-        f"{normalized_status.lower()}."
-    )
-
-    if comment:
-        message += f" Note: {comment}"
-
-    await self.notification_service.create(
-        employee_id=str(request["employee_id"]),
-        notification_type=notification_type,
-        title=f"Attendance Regularization {normalized_status}",
-        message=message,
-        target="/employee/attendance",
-        target_id=str(
-            request.get("_id", regularization_id)
-        ),
-    )
-
-    return updated_request
+        return updated_request

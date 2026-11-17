@@ -70,6 +70,12 @@ class LeaveRepository:
 
         return result.deleted_count > 0
 
+    async def rename_leave_type(self, old_name: str, new_name: str):
+        await self.collection.update_many(
+            {"leave_type": old_name},
+            {"$set": {"leave_type": new_name}},
+        )
+
     async def find_overlap(
         self,
         employee_id: str,

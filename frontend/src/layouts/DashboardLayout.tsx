@@ -19,6 +19,7 @@ import AdminRegularizationRequests from "../pages/admin/AdminRegularizationReque
 import { canAccessPage } from "../lib/access";
 import AdminSupportTickets from "../pages/admin/AdminSupportTickets";
 import AdminMyProfile from "../pages/admin/AdminMyProfile";
+import AdminAccounts from "../pages/admin/AdminAccounts";
 
 interface DashboardLayoutProps {
   onLogout: () => void;
@@ -37,6 +38,8 @@ const pagePaths: Record<string, string> = {
   "Support Tickets": "/dashboard/support-tickets",
   Settings: "/dashboard/settings",
   "My Profile": "/dashboard/profile",
+  // Super admin only: for anyone else canAccessPage falls back to Dashboard.
+  "Admin Accounts": "/dashboard/admin-accounts",
 };
 
 function pageFromPath(pathname: string): string {
@@ -205,6 +208,8 @@ function DashboardLayout({
           <AdminSettings />
         ) : activePage === "My Profile" ? (
           <AdminMyProfile />
+        ) : activePage === "Admin Accounts" ? (
+          <AdminAccounts />
         ) : (
           <AdminDashboard
             totalHeadcount={dashboardData?.total_headcount ?? null}

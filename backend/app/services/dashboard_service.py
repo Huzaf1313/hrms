@@ -8,6 +8,7 @@ except Exception:
 from app.core.roles import Permission, has_permission
 from app.core.scope import visible_employee_codes
 from app.repositories.admin_payslip_repository import AdminPayslipRepository
+from app.repositories.admin_announcement_repository import AdminAnnouncementRepository
 from app.repositories.employee_repository import EmployeeRepository
 from app.services.activity_service import ActivityService
 from app.services.employee_service import EmployeeService
@@ -36,12 +37,16 @@ class DashboardService:
         self.activity_service = ActivityService()
         self.storage_service = ObjectStorageService()
         self.payslip_repository = AdminPayslipRepository()
+        self.announcement_repository = AdminAnnouncementRepository()
 
     async def get_dashboard_data(self, current_user: dict | None = None):
         scope = self.employee_service._visibility_scope(current_user)
 
         total_headcount = await self.employee_repository.count_employees(scope)
         celebrations = await self.get_celebrations(scope=scope)
+        announcement_titles = await self.announcement_repository.get_titles_published_on(
+            date.today().isoformat()
+        )
         recent_activities = await self.activity_service.recent_for(current_user)
         payroll_summary = await self.get_payroll_summary(current_user=current_user)
 
@@ -50,6 +55,7 @@ class DashboardService:
             "attendance_rate": None,
             "on_leave_today": 0,
             "celebrations": celebrations,
+            "announcement_titles": announcement_titles,
             "recent_activities": recent_activities,
             "hiring_pipeline": {
                 "applied": 0,

@@ -44,6 +44,7 @@ class DashboardResponse(BaseModel):
     attendance_rate: float | None = None
     on_leave_today: int = 0
     celebrations: list[Celebration] = []
+    announcement_titles: list[str] = []
     hiring_pipeline: HiringPipeline = HiringPipeline()
     recent_activities: list[RecentActivity] = []
     payroll_summary: DashboardPayrollSummary | None = None

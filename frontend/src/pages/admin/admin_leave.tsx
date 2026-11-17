@@ -22,10 +22,19 @@ import {
   ChevronRight,
   ChevronDown,
   Pencil,
+  Trash2,
 } from "lucide-react";
 import { departmentService } from "../../services/departmentService";
-import { leaveService, type LeaveRequest, type LeaveStatus, type LeaveSummary } from "../../services/admin_leave_service";
-import { adminMyLeaveStore } from "../../services/adminMyLeaveStore";
+import {
+  leaveService,
+  type LeaveBalance,
+  type LeaveRequest,
+  type LeaveStatus,
+  type LeaveSummary,
+} from "../../services/admin_leave_service";
+import { ApiError } from "../../services/api";
+import { currentSessionUser } from "../../lib/session";
+import { isSuperAdmin, roleLabel } from "../../lib/access";
 import { useGlobalDate } from "../../context/globalDateContext";
 import { GlobalDateBadge } from "../../components/GlobalDateBadge";
 import NewLeaveRequestModal from "../../components/admin/NewLeaveRequestModal";
@@ -74,6 +83,26 @@ const leaveTypeColors: Record<string, string> = {
   "Earned Leave": "bg-orange-50 text-orange-500",
   "Comp Off": "bg-violet-50 text-violet-600",
 };
+
+function decorateLeaveBalance(balance: LeaveBalance) {
+  const style = {
+    "Casual Leave": { icon: Palmtree, iconBg: "bg-teal-50", iconColor: "text-teal-600" },
+    "Sick Leave": { icon: Stethoscope, iconBg: "bg-blue-50", iconColor: "text-blue-600" },
+    "Earned Leave": { icon: Gift, iconBg: "bg-orange-50", iconColor: "text-orange-500" },
+    "Comp Off": { icon: Timer, iconBg: "bg-violet-50", iconColor: "text-violet-600" },
+  }[balance.leave_type] ?? {
+    icon: CalendarDays,
+    iconBg: "bg-slate-50",
+    iconColor: "text-slate-600",
+  };
+
+  return {
+    label: balance.leave_type,
+    used: balance.used,
+    total: balance.total,
+    ...style,
+  };
+}
 
 const statusStyles: Record<LeaveStatus, string> = {
   pending: "bg-orange-50 text-orange-500",
@@ -561,30 +590,70 @@ function AdminLeave() {
     text: string;
   } | null>(null);
 
-  // Leave the admin files for themselves. The admin portal has no create
-  // endpoint of its own yet, so these are kept in the browser.
-  const [myRequests, setMyRequests] = useState<LeaveRequest[]>(() =>
-    adminMyLeaveStore.list(),
-  );
+  // Leave the signed-in HR or manager files for themselves. It is stored on
+  // the server like any employee request, so the approvers above them see it.
+  // The super admin is not an employee and files no leave of its own.
+  const session = useMemo(() => currentSessionUser(), []);
+  const superAdmin = useMemo(() => isSuperAdmin(), []);
+  const myEmployeeId = superAdmin ? "" : session?.employee_id?.trim() ?? "";
+  const [myRequests, setMyRequests] = useState<LeaveRequest[]>([]);
   const [onlyMine, setOnlyMine] = useState(false);
+  /** Bumped after a submission so every list reloads from the server. */
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    if (!myEmployeeId) return;
+
+    let cancelled = false;
+
+    leaveService
+      .listMine(myEmployeeId, session?.full_name)
+      .then((rows) => {
+        if (!cancelled) setMyRequests(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setMyRequests([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [myEmployeeId, session?.full_name, refreshKey]);
+
+  /** Nobody approves or rejects their own leave; the backend enforces it too. */
+  const isOwnRequest = (request: LeaveRequest) =>
+    Boolean(myEmployeeId) && request.employee_id === myEmployeeId;
 
   // Editable leave-balance quotas (days per leave type). The numbers live in
   // the database and are synced below, so edits survive reloads across every
   // admin session.
-  const [leaveBalancesState, setLeaveBalancesState] = useState(leaveBalances);
+  const [leaveBalancesState, setLeaveBalancesState] = useState(
+    leaveBalances.map((balance) => decorateLeaveBalance({
+      leave_type: balance.label,
+      used: balance.used,
+      total: balance.total,
+    })),
+  );
   const [isBalanceEditOpen, setIsBalanceEditOpen] = useState(false);
   /** Per-type working copy of the numbers shown in the edit modal. */
   const [balanceDraft, setBalanceDraft] = useState<
-    Record<string, { used: string; total: string }>
+    Record<string, { name: string; used: string; total: string }>
   >({});
   const [isBalanceSaving, setIsBalanceSaving] = useState(false);
+  const [newLeaveName, setNewLeaveName] = useState("");
+  const [newLeaveTotal, setNewLeaveTotal] = useState("0");
+  const [isAddingLeaveType, setIsAddingLeaveType] = useState(false);
 
   function openBalanceEdit() {
     setBalanceDraft(
       Object.fromEntries(
         leaveBalancesState.map((balance) => [
           balance.label,
-          { used: String(balance.used), total: String(balance.total) },
+          {
+            name: balance.label,
+            used: String(balance.used),
+            total: String(balance.total),
+          },
         ]),
       ),
     );
@@ -598,36 +667,45 @@ function AdminLeave() {
 
     const next = leaveBalancesState.map((balance) => {
       const draft = balanceDraft[balance.label] ?? {
+        name: balance.label,
         used: String(balance.used),
         total: String(balance.total),
       };
 
       return {
         ...balance,
+        label: draft.name.trim() || balance.label,
         used: Math.max(0, Math.round(Number(draft.used) || 0)),
         total: Math.max(0, Math.round(Number(draft.total) || 0)),
       };
     });
 
-    const payload = next.map((balance) => ({
-      leave_type: balance.label,
-      used: balance.used,
-      total: balance.total,
-    }));
+    const renamed = next
+      .map((balance, index) => ({
+        balance,
+        previous: leaveBalancesState[index],
+      }))
+      .filter(({ balance, previous }) => balance.label !== previous.label);
 
     try {
-      const savedBalances = await leaveService.updateBalances(payload);
+      for (const { balance, previous } of renamed) {
+        await leaveService.updateType(
+          previous.label,
+          balance.label,
+          balance.total,
+        );
+      }
+
+      const savedBalances = await leaveService.updateBalances(
+        next.map((balance) => ({
+          leave_type: balance.label,
+          used: balance.used,
+          total: balance.total,
+        })),
+      );
 
       setLeaveBalancesState(
-        next.map((balance) => {
-          const saved = savedBalances.find(
-            (item) => item.leave_type === balance.label,
-          );
-
-          return saved
-            ? { ...balance, used: saved.used, total: saved.total }
-            : balance;
-        }),
+        savedBalances.map(decorateLeaveBalance),
       );
       setIsBalanceEditOpen(false);
       setNotice({ type: "success", text: "Leave balances saved." });
@@ -635,6 +713,45 @@ function AdminLeave() {
       setNotice({ type: "error", text: "Unable to save leave balances. Please try again." });
     } finally {
       setIsBalanceSaving(false);
+    }
+  }
+
+  async function reloadLeaveBalances() {
+    const balances = await leaveService.balances();
+    setLeaveBalancesState(balances.map(decorateLeaveBalance));
+  }
+
+  async function addLeaveType() {
+    const name = newLeaveName.trim();
+    const allocatedDays = Math.max(0, Math.round(Number(newLeaveTotal) || 0));
+
+    if (!name || isAddingLeaveType) return;
+
+    try {
+      setIsAddingLeaveType(true);
+      await leaveService.createType(name, allocatedDays);
+      await reloadLeaveBalances();
+      setNewLeaveName("");
+      setNewLeaveTotal("0");
+      setNotice({ type: "success", text: "Leave type added." });
+    } catch {
+      setNotice({ type: "error", text: "Unable to add leave type." });
+    } finally {
+      setIsAddingLeaveType(false);
+    }
+  }
+
+  async function deleteLeaveType(name: string) {
+    if (!window.confirm(`Deactivate ${name}? Existing leave records will be kept.`)) {
+      return;
+    }
+
+    try {
+      await leaveService.deleteType(name);
+      await reloadLeaveBalances();
+      setNotice({ type: "success", text: "Leave type deactivated." });
+    } catch {
+      setNotice({ type: "error", text: "Unable to deactivate leave type." });
     }
   }
 
@@ -659,17 +776,7 @@ function AdminLeave() {
       .then((savedBalances) => {
         if (cancelled) return;
 
-        setLeaveBalancesState((current) =>
-          current.map((balance) => {
-            const saved = savedBalances.find(
-              (item) => item.leave_type === balance.label,
-            );
-
-            return saved
-              ? { ...balance, used: saved.used, total: saved.total }
-              : balance;
-          }),
-        );
+        setLeaveBalancesState(savedBalances.map(decorateLeaveBalance));
       })
       .catch(() => {
         /* The static defaults stay on screen if the request fails. */
@@ -678,10 +785,9 @@ function AdminLeave() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [refreshKey]);
 
-  // The rows the table and the widgets below show: the admin's own requests
-  // from this browser, plus the page the API returned.
+  // "My Requests" narrows the table to the signed-in account's own leave.
   const filteredMyRequests = useMemo(
     () =>
       myRequests.filter((request) => {
@@ -696,8 +802,8 @@ function AdminLeave() {
           return false;
         }
 
-        // A department filter is about the organisation, and a request the
-        // admin filed for themselves carries no department of its own.
+        // A department filter is about the organisation; the employee
+        // endpoint does not return a department to match against.
         if (departmentFilter) {
           return false;
         }
@@ -707,21 +813,15 @@ function AdminLeave() {
     [myRequests, statusFilter, leaveTypeFilter, departmentFilter],
   );
 
-  const tableRequests = useMemo(
-    () => (onlyMine ? filteredMyRequests : [...filteredMyRequests, ...requests]),
-    [filteredMyRequests, requests, onlyMine],
-  );
+  // Everyone the signed-in account may review comes from the server already:
+  // employees, managers and HR for HR and the super admin, the team for a
+  // manager. A manager's own leave is not in that list, so it lives under
+  // "My Requests".
+  const tableRequests = onlyMine ? filteredMyRequests : requests;
 
-  const chartRows = useMemo(
-    () => [...myRequests, ...chartRequests],
-    [myRequests, chartRequests],
-  );
+  const displayTotal = onlyMine ? filteredMyRequests.length : total;
 
-  const displayTotal = onlyMine
-    ? filteredMyRequests.length
-    : total + filteredMyRequests.length;
-
-  const leaveChartSeries = useMemo(() => buildMonthlySeries(chartRows), [chartRows]);
+  const leaveChartSeries = useMemo(() => buildMonthlySeries(chartRequests), [chartRequests]);
 
   useEffect(() => {
     let cancelled = false;
@@ -756,7 +856,7 @@ function AdminLeave() {
       if (!cancelled) setIsLoading(false);
     });
     return () => { cancelled = true; };
-  }, [departmentFilter, globalDate, isGlobalDateDefault, leaveTypeFilter, page, pageSize, statusFilter]);
+  }, [departmentFilter, globalDate, isGlobalDateDefault, leaveTypeFilter, page, pageSize, statusFilter, refreshKey]);
 
   const statCards = [
     { label: "Total Leave Requests", value: summary?.total_leave_requests ?? "-", sub: "This Month", icon: CalendarDays, iconBg: "bg-blue-500" },
@@ -767,69 +867,39 @@ function AdminLeave() {
     { label: "Upcoming Leaves", value: summary?.upcoming_leaves ?? "-", sub: "Next 7 Days", icon: CalendarClock, iconBg: "bg-teal-500" },
   ];
 
+  /**
+   * Approve or reject on the server, then reload the summary so the stat
+   * cards match. Errors surface the backend's message (e.g. a self-approval
+   * refusal) in the notice popup.
+   */
   async function updateRequestStatus(request: LeaveRequest, nextStatus: "approved" | "rejected") {
-    // A request the admin filed for themselves lives in the browser, so it is
-    // updated there instead of on the server.
-    if (request.id.startsWith("local-leave-")) {
-      setMyRequests(adminMyLeaveStore.update(request.id, { status: nextStatus }));
-      setSummary((current) =>
-        current
-          ? {
-              ...current,
-              pending_requests: Math.max(0, current.pending_requests - 1),
-              approved_requests:
-                nextStatus === "approved"
-                  ? current.approved_requests + 1
-                  : current.approved_requests,
-              rejected_requests:
-                nextStatus === "rejected"
-                  ? current.rejected_requests + 1
-                  : current.rejected_requests,
-            }
-          : current,
-      );
-      setNotice({ type: "success", text: `Your leave request was marked as ${nextStatus}.` });
-      return;
-    }
-
     try {
       await leaveService.updateStatus(request.id, nextStatus);
       setRequests((current) => current.map((item) => item.id === request.id ? { ...item, status: nextStatus } : item));
       setSummary(await leaveService.summary());
-    } catch {
-      setError("Unable to update this leave request.");
+      setNotice({
+        type: "success",
+        text: `Leave request for ${request.employee_name || request.employee_id} was ${nextStatus}.`,
+      });
+    } catch (cause) {
+      setNotice({
+        type: "error",
+        text: cause instanceof ApiError ? cause.message : "Unable to update this leave request.",
+      });
     }
   }
 
-  function createRequest(draft: LeaveRequestDraft) {
-    const localRequest: LeaveRequest = {
-      id: `local-leave-${Date.now()}`,
-      employee_id: draft.employee_id,
-      employee_name: draft.employee_name ?? "HR User",
-      department_id: draft.department_id ?? null,
-      department_name: draft.department_name ?? null,
+  // Throws on failure so the modal stays open and shows the server's message.
+  async function createRequest(draft: LeaveRequestDraft) {
+    await leaveService.applyForSelf({
       leave_type: draft.leave_type,
       start_date: draft.start_date,
       end_date: draft.end_date,
-      total_days: countWorkingDays(draft.start_date, draft.end_date),
       reason: draft.reason,
-      attachment_name: draft.attachment_name ?? null,
-      attachment_size: draft.attachment_size ?? null,
-      status: "pending",
-      created_at: new Date().toISOString(),
-    };
+    });
 
-    setMyRequests(adminMyLeaveStore.add(localRequest));
-    setSummary((current) =>
-      current
-        ? {
-            ...current,
-            total_leave_requests: current.total_leave_requests + 1,
-            pending_requests: current.pending_requests + 1,
-          }
-        : current,
-    );
     setPage(1);
+    setRefreshKey((current) => current + 1);
     setNotice({ type: "success", text: "Your leave request was submitted and is pending approval." });
   }
 
@@ -921,23 +991,29 @@ function AdminLeave() {
               <Filter className="h-3.5 w-3.5" />
               Filters
             </button>
-            <button
-              type="button"
-              onClick={() => setOnlyMine((current) => !current)}
-              aria-pressed={onlyMine}
-              className={`flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm transition ${
-                onlyMine
-                  ? "border-[#2563eb] bg-blue-50 font-semibold text-[#2563eb]"
-                  : "border-gray-200 text-gray-700 hover:bg-gray-50"
-              }`}
-            >
-              <UserRound className="h-3.5 w-3.5" />
-              My Requests
-            </button>
-            <button type="button" onClick={() => setIsCreateOpen(true)} className="flex items-center gap-1.5 rounded-full bg-[#2563eb] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1d4ed8]">
-              <Plus className="h-3.5 w-3.5" />
-              Apply for Leave
-            </button>
+            {/* Only accounts tied to an employee record (HR, managers) can
+                file leave; the super admin never sees these two buttons. */}
+            {myEmployeeId && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setOnlyMine((current) => !current)}
+                  aria-pressed={onlyMine}
+                  className={`flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm transition ${
+                    onlyMine
+                      ? "border-[#2563eb] bg-blue-50 font-semibold text-[#2563eb]"
+                      : "border-gray-200 text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  <UserRound className="h-3.5 w-3.5" />
+                  My Requests
+                </button>
+                <button type="button" onClick={() => setIsCreateOpen(true)} className="flex items-center gap-1.5 rounded-full bg-[#2563eb] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1d4ed8]">
+                  <Plus className="h-3.5 w-3.5" />
+                  Apply for Leave
+                </button>
+              </>
+            )}
           </div>
         </div>
 
@@ -976,7 +1052,15 @@ function AdminLeave() {
                         {name.split(" ").map((part) => part[0]).join("")}
                       </div>
                       <div>
-                        <div className="font-semibold text-gray-900">{name}</div>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="font-semibold text-gray-900">{name}</span>
+                          {/* Role badge for HR and manager applicants only. */}
+                          {request.employee_role && request.employee_role !== "employee" && (
+                            <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-semibold text-violet-600">
+                              {roleLabel(request.employee_role)}
+                            </span>
+                          )}
+                        </div>
                         <div className="text-xs text-gray-400">{request.employee_id}</div>
                       </div>
                     </div>
@@ -1004,7 +1088,7 @@ function AdminLeave() {
                         className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50"
 >                       <Eye className="h-3.5 w-3.5" />
                       </button>
-                      {request.status === "pending" && (
+                      {request.status === "pending" && !isOwnRequest(request) && (
                         <>
                           <button type="button" onClick={() => updateRequestStatus(request, "approved")} className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500 text-white hover:bg-emerald-600">
                             <Check className="h-3.5 w-3.5" />
@@ -1331,7 +1415,14 @@ function AdminLeave() {
 
             {/* Footer actions */}
             <div className="border-t border-gray-100 px-6 py-5">
-              {selectedRequest.status === "pending" ? (
+              {/* Your own pending request shows a waiting note instead of
+                  approve/reject buttons. */}
+              {selectedRequest.status === "pending" && isOwnRequest(selectedRequest) ? (
+                <div className="flex items-center justify-center gap-2 rounded-lg bg-orange-50 px-4 py-2.5 text-sm font-semibold text-orange-600">
+                  <Clock className="h-4 w-4" />
+                  Awaiting approval from HR or the super admin
+                </div>
+              ) : selectedRequest.status === "pending" ? (
                 <div className="flex gap-3">
                   <button
                     type="button"
@@ -1382,8 +1473,8 @@ function AdminLeave() {
 
       {isBalanceEditOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-            <div className="mb-4 flex items-center justify-between">
+          <div className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-xl">
+            <div className="flex shrink-0 items-start justify-between border-b border-gray-100 p-6">
               <div>
                 <h3 className="text-lg font-bold text-gray-900">
                   Edit Leave Balances
@@ -1404,12 +1495,39 @@ function AdminLeave() {
               </button>
             </div>
 
-            <div className="space-y-4">
-              {leaveBalancesState.map((balance) => (
-                <div key={balance.label} className="rounded-xl border border-gray-100 p-3">
-                  <p className="mb-2 text-sm font-semibold text-gray-800">
-                    {balance.label}
-                  </p>
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-6">
+               {leaveBalancesState.map((balance) => (
+                 <div key={balance.label} className="rounded-xl border border-gray-100 p-3">
+                   <div className="mb-2 flex items-center justify-between gap-2">
+                     <label className="text-xs font-medium text-gray-500">
+                       Leave name
+                     </label>
+                     <button
+                       type="button"
+                       onClick={() => void deleteLeaveType(balance.label)}
+                       aria-label={`Delete ${balance.label}`}
+                       title={`Delete ${balance.label}`}
+                       className="rounded-lg p-1.5 text-rose-600 transition hover:bg-rose-50"
+                     >
+                       <Trash2 className="h-4 w-4" />
+                     </button>
+                   </div>
+
+                   <input
+                     type="text"
+                     value={balanceDraft[balance.label]?.name ?? balance.label}
+                     onChange={(event) =>
+                       setBalanceDraft((current) => ({
+                         ...current,
+                         [balance.label]: {
+                           name: event.target.value,
+                           used: current[balance.label]?.used ?? String(balance.used),
+                           total: current[balance.label]?.total ?? String(balance.total),
+                         },
+                       }))
+                     }
+                     className="mb-3 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#2563eb] focus:outline-none"
+                   />
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
@@ -1424,9 +1542,10 @@ function AdminLeave() {
                         onChange={(event) =>
                           setBalanceDraft((current) => ({
                             ...current,
-                            [balance.label]: {
-                              total: current[balance.label]?.total ?? "",
-                              used: event.target.value,
+                             [balance.label]: {
+                               name: current[balance.label]?.name ?? balance.label,
+                               total: current[balance.label]?.total ?? "",
+                               used: event.target.value,
                             },
                           }))
                         }
@@ -1446,9 +1565,10 @@ function AdminLeave() {
                         onChange={(event) =>
                           setBalanceDraft((current) => ({
                             ...current,
-                            [balance.label]: {
-                              used: current[balance.label]?.used ?? "",
-                              total: event.target.value,
+                             [balance.label]: {
+                               name: current[balance.label]?.name ?? balance.label,
+                               used: current[balance.label]?.used ?? "",
+                               total: event.target.value,
                             },
                           }))
                         }
@@ -1457,10 +1577,41 @@ function AdminLeave() {
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
+               ))}
+             </div>
 
-            <div className="mt-5 flex justify-end gap-3">
+             <div className="mt-4 rounded-xl border border-dashed border-gray-300 p-3">
+               <p className="mb-2 text-sm font-semibold text-gray-800">
+                 Add leave type
+               </p>
+               <div className="grid grid-cols-2 gap-3">
+                 <input
+                   type="text"
+                   value={newLeaveName}
+                   onChange={(event) => setNewLeaveName(event.target.value)}
+                   placeholder="Leave name"
+                   className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#2563eb] focus:outline-none"
+                 />
+                 <input
+                   type="number"
+                   min={0}
+                   value={newLeaveTotal}
+                   onChange={(event) => setNewLeaveTotal(event.target.value)}
+                   placeholder="Allocated days"
+                   className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#2563eb] focus:outline-none"
+                 />
+               </div>
+               <button
+                 type="button"
+                 onClick={() => void addLeaveType()}
+                 disabled={isAddingLeaveType || !newLeaveName.trim()}
+                 className="mt-3 rounded-lg border border-[#2563eb] px-3 py-2 text-xs font-semibold text-[#2563eb] hover:bg-blue-50 disabled:opacity-50"
+               >
+                 {isAddingLeaveType ? "Adding..." : "Add Leave Type"}
+               </button>
+             </div>
+
+            <div className="flex shrink-0 justify-end gap-3 border-t border-gray-100 bg-white p-6">
               <button
                 type="button"
                 onClick={() => setIsBalanceEditOpen(false)}

@@ -36,6 +36,30 @@ export function currentSessionUser(): SessionUser | null {
   }
 }
 
+/** Fired on window after the cached session user changes in this tab. */
+export const SESSION_USER_UPDATED_EVENT = "hrms:session-user-updated";
+
+/**
+ * Keep the cached login payload's name in step with a profile save, so the
+ * header shows the new name without signing in again.
+ */
+export function syncSessionName(fullName: string): void {
+  const user = currentSessionUser();
+
+  if (!user || !fullName || user.full_name === fullName) return;
+
+  try {
+    localStorage.setItem(USER_KEY, JSON.stringify({ ...user, full_name: fullName }));
+  } catch {
+    // Storage unavailable: nothing changed, so there is nothing to announce.
+    return;
+  }
+
+  // A plain window event: the browser's own `storage` event only reaches
+  // other tabs, not the one that wrote the value.
+  window.dispatchEvent(new Event(SESSION_USER_UPDATED_EVENT));
+}
+
 /**
  * One-shot flag telling login.tsx to greet the user with a specific notice
  * after a redirect, e.g. "your password was changed, please log in again".

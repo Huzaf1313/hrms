@@ -39,6 +39,7 @@ import {
   Lightbulb,
 } from "lucide-react";
 import { api, ApiError } from "../../services/api";
+import NoticePopup from "../../components/ui/NoticePopup";
 import { departmentService } from "../../services/departmentService";
 import { employeeService } from "../../services/employeeService";
 import type { Department } from "../../types/department";
@@ -1165,14 +1166,12 @@ export default function AdminAnnouncements({
       setSuccessMessage(
         `"${publishedTitle}" was ${wasEditing ? "updated" : "published"} successfully.`,
       );
-
-      window.setTimeout(() => setSuccessMessage(""), 6000);
     } catch (requestError: unknown) {
       setIsConfirmingPublish(false);
 
       if (requestError instanceof ApiError && requestError.status === 403) {
         setError(
-          "You do not have permission to publish announcements. Only HR Admin and Manager accounts can create them.",
+          "You do not have permission to publish announcements. Only HR and Manager accounts can create them.",
         );
         return;
       }
@@ -1875,12 +1874,11 @@ export default function AdminAnnouncements({
         </div>
       )}
 
-      {successMessage && (
-        <div className="mb-4 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
-          <Check className="h-4 w-4 shrink-0" />
-          {successMessage}
-        </div>
-      )}
+      {/* Closes itself after a few seconds, so no timer is needed here. */}
+      <NoticePopup
+        notice={successMessage ? { type: "success", text: successMessage } : null}
+        onDismiss={() => setSuccessMessage("")}
+      />
 
       {restoredDraftAvailable && !showCreateForm && (
         <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">

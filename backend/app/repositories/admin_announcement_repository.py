@@ -39,6 +39,20 @@ class AdminAnnouncementRepository:
 
         return await cursor.to_list(length=limit)
 
+    async def get_titles_published_on(self, publish_date: str) -> list[str]:
+        cursor = self.collection.find(
+            {"publish_date": publish_date},
+            {"title": 1, "_id": 0},
+        ).sort([("created_at", 1), ("title", 1)])
+
+        announcements = await cursor.to_list(length=None)
+
+        return [
+            title
+            for announcement in announcements
+            if (title := str(announcement.get("title") or "").strip())
+        ]
+
     async def count(self, filters: dict):
         return await self.collection.count_documents(filters)
 

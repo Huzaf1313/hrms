@@ -66,6 +66,12 @@ export const employeeService = {
     );
   },
 
+  removeMyProfilePhoto() {
+    return api.delete<{ avatar_url: null }>(
+      "/employee-profile-photo/me",
+    );
+  },
+
   getProfilePhoto(employeeId: string) {
     return downloadFile(
       `/employee-profile-photo/${employeeId}/image`,
@@ -74,6 +80,11 @@ export const employeeService = {
 
   create(data: EmployeeCreate) {
     return api.post<Employee>("/employees", data);
+  },
+
+  // Preview only: the ID is allocated when the employee is saved.
+  getNextEmployeeId() {
+    return api.get<{ employee_id: string }>("/employees/next-id");
   },
 
   requestEmailOtp(email: string) {

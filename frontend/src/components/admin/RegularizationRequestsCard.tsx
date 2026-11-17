@@ -1,3 +1,4 @@
+import { currentSessionUser } from "../../lib/session";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { X, FileText, Check } from "lucide-react";
@@ -149,6 +150,12 @@ function RegularizationRequestsCard({
   const [requests, setRequests] = useState<RegularizationRequest[]>(mockRequests);
   const [selectedRequest, setSelectedRequest] = useState<RegularizationRequest | null>(null);
   const [comment, setComment] = useState("");
+  // Disables both buttons while the PATCH is in flight so a double click
+  // cannot submit the decision twice.
+  const [isReviewing, setIsReviewing] = useState(false);
+  // Kept apart from `comment` so an error message never ends up in the
+  // comment box and gets sent as the review note on retry.
+  const [reviewError, setReviewError] = useState("");
 
   useEffect(() => {
     api.get<BackendRequest[]>("/employee-attendance/regularization")
@@ -158,6 +165,9 @@ function RegularizationRequestsCard({
 
   async function reviewRequest(status: "Approved" | "Rejected") {
     if (!selectedRequest) return;
+
+    setIsReviewing(true);
+    setReviewError("");
 
     try {
       await api.patch(`/employee-attendance/regularization/${selectedRequest.id}/review`, {
@@ -169,14 +179,24 @@ function RegularizationRequestsCard({
       ));
       onReviewed?.();
       closeModal();
-    } catch (error) {
-      if (error instanceof ApiError) setComment(error.message);
+    } catch (cause) {
+      // Show the backend's reason (e.g. the 403 for another team's request);
+      // api.ts wraps HTTP and network failures in ApiError, so the generic
+      // line only covers unexpected errors.
+      setReviewError(
+        cause instanceof ApiError
+          ? cause.message
+          : `Could not ${status === "Approved" ? "approve" : "reject"} the request. Try again.`,
+      );
+    } finally {
+      setIsReviewing(false);
     }
   }
 
   function closeModal() {
     setSelectedRequest(null);
     setComment("");
+    setReviewError("");
   }
 
   return (
@@ -346,23 +366,41 @@ function RegularizationRequestsCard({
 
                     {/* Footer actions */}
             <div className="border-t border-gray-100 p-5">
-              {selectedRequest.status === "Pending" ? (
+              {reviewError && (
+                <p
+                  role="alert"
+                  className="mb-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700"
+                >
+                  {reviewError}
+                </p>
+              )}
+
+              {/* The backend refuses self-review with a 403, so a reviewer's own
+                  pending request shows a notice instead of the action buttons. */}
+              {selectedRequest.status === "Pending" &&
+              selectedRequest.employeeCode === currentSessionUser()?.employee_id ? (
+                <div className="rounded-lg bg-amber-50 px-4 py-2.5 text-center text-sm font-semibold text-amber-700">
+                  This is your own request. It is waiting for another approver.
+                </div>
+              ) : selectedRequest.status === "Pending" ? (
                 <div className="flex gap-3">
                   <button
                     type="button"
-                    onClick={() => reviewRequest("Rejected")}
-                    className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-rose-200 px-4 py-2.5 text-sm font-semibold text-rose-600 hover:bg-rose-50"
+                    onClick={() => void reviewRequest("Rejected")}
+                    disabled={isReviewing}
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-rose-200 px-4 py-2.5 text-sm font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-50"
                   >
                     <X className="h-4 w-4" />
                     Reject
                   </button>
                   <button
                     type="button"
-                    onClick={() => reviewRequest("Approved")}
-                    className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-600"
+                    onClick={() => void reviewRequest("Approved")}
+                    disabled={isReviewing}
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-600 disabled:opacity-50"
                   >
                     <Check className="h-4 w-4" />
-                    Approve
+                    {isReviewing ? "Saving..." : "Approve"}
                   </button>
                 </div>
               ) : (

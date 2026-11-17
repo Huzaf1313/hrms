@@ -11,6 +11,11 @@ class LeaveBalanceRepository:
 
         return await cursor.to_list(length=100)
 
+    async def get_active(self):
+        cursor = self.collection.find({"active": {"$ne": False}}).sort("leave_type", 1)
+
+        return await cursor.to_list(length=100)
+
     async def find_by_type(self, leave_type: str):
         return await self.collection.find_one(
             {"leave_type": leave_type}
@@ -30,3 +35,22 @@ class LeaveBalanceRepository:
         )
 
         return await self.find_by_type(leave_type)
+
+    async def deactivate(self, leave_type: str):
+        result = await self.collection.update_one(
+            {"leave_type": leave_type},
+            {
+                "$set": {
+                    "active": False,
+                    "updated_at": datetime.now(timezone.utc),
+                },
+                "$setOnInsert": {
+                    "leave_type": leave_type,
+                    "used": 0,
+                    "total": 0,
+                },
+            },
+            upsert=True,
+        )
+
+        return result.modified_count > 0 or result.upserted_id is not None

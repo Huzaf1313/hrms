@@ -208,6 +208,74 @@ async def upload_my_profile_photo(
             detail="Failed to upload profile photo.",
         ) from exc
 
+@router.delete("/me")
+async def delete_my_profile_photo(
+    current_user: dict = Depends(get_current_user),
+):
+    if current_user.get("role") != UserRole.EMPLOYEE:
+        raise HTTPException(
+            status_code=403,
+            detail="Only employees can delete their own profile photo.",
+        )
+
+    if not current_user.get("employee_id"):
+        raise HTTPException(
+            status_code=403,
+            detail="Employee account not found.",
+        )
+
+    employee_id = str(current_user["_id"])
+    old_key = current_user.get("profile_photo_key")
+
+    if not old_key:
+        raise HTTPException(
+            status_code=404,
+            detail="No profile photo found to delete.",
+        )
+
+    repository = EmployeeRepository()
+
+    # Clear the photo references in MongoDB first.
+    updated_employee = await repository.update(
+        employee_id,
+        {
+            "profile_photo_key": None,
+            "profile_photo_content_type": None,
+            "avatar_url": None,
+            "updated_at": datetime.utcnow(),
+        },
+        scope=None,
+    )
+
+    if not updated_employee:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to update employee profile.",
+        )
+
+    await invalidate_employees_cache(employee_id=employee_id)
+
+    # Delete the old photo from Cloudflare R2.
+    try:
+        storage = get_r2_service()
+
+        await run_in_threadpool(
+            storage.delete_file,
+            old_key,
+        )
+    except Exception:
+        logger.exception(
+            "Profile photo reference removed, but R2 cleanup failed."
+        )
+
+    return {
+        "success": True,
+        "message": "Profile photo deleted successfully.",
+        "data": {
+            "avatar_url": None,
+        },
+    }
+
 
 @router.get("/{employee_id}/image")
 async def get_employee_profile_photo(

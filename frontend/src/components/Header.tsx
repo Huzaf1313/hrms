@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Bell, ChevronDown, ChevronRight, LogOut, Menu, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -8,6 +8,7 @@ import { employeeService } from "../services/employeeService";
 import type { Employee } from "../types/employee";
 import { adminNotificationService } from "../services/adminNotificationService";
 import { adminProfileService } from "../services/adminProfileService";
+import { SESSION_USER_UPDATED_EVENT } from "../lib/session";
 
 interface HeaderProps {
   onLogout: () => void;
@@ -41,6 +42,8 @@ function readUser() {
 
 function roleDisplay(role?: string): string {
   switch (role) {
+    case "super_admin":
+      return "Super Admin";
     case "hr_admin":
       return "HR";
     case "manager":
@@ -58,7 +61,7 @@ function employeeFullName(employee: Employee) {
 
 /** Only admin-level roles may create or edit holidays. */
 function isAdminRole(role?: string): boolean {
-  return role === "hr_admin" || role === "manager";
+  return role === "super_admin" || role === "hr_admin" || role === "manager";
 }
 
 function Header({
@@ -78,7 +81,16 @@ function Header({
     useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
-  const user = useMemo(() => readUser(), []);
+  const [user, setUser] = useState(() => readUser());
+
+  // A profile save renames the cached session user; pick that up live.
+  useEffect(() => {
+    const refresh = () => setUser(readUser());
+
+    window.addEventListener(SESSION_USER_UPDATED_EVENT, refresh);
+
+    return () => window.removeEventListener(SESSION_USER_UPDATED_EVENT, refresh);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -166,6 +178,8 @@ function Header({
     useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const notificationRef = useRef<HTMLDivElement>(null);
+  // Wraps the avatar button and its menu, so a click inside either keeps it open.
+  const profileMenuRef = useRef<HTMLDivElement>(null);
 
   // A newly created employee has no `created_by` on file yet, so notifications
   // route to every active admin until their creator is known.
@@ -202,10 +216,27 @@ function Header({
       ) {
         setShowNotificationDropdown(false);
       }
+
+      if (
+        profileMenuRef.current &&
+        !profileMenuRef.current.contains(event.target as Node)
+      ) {
+        setShowProfileMenu(false);
+      }
+    }
+
+    // Escape closes the profile menu only; the notification dropdown keeps
+    // its existing click-outside behaviour.
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setShowProfileMenu(false);
     }
 
     document.addEventListener("mousedown", closeOnOutsideClick);
-    return () => document.removeEventListener("mousedown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("mousedown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
   }, []);
 
   const fullName = user?.full_name ?? "Admin";
@@ -349,7 +380,7 @@ function Header({
 
         <DatePicker canManageHolidays={isAdminRole(user?.role)} />
 
-        <div className="relative">
+        <div className="relative" ref={profileMenuRef}>
           <button
             type="button"
             onClick={() => setShowProfileMenu((previous) => !previous)}

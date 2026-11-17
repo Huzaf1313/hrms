@@ -204,13 +204,6 @@ class EmployeeService:
                 400,
             )
 
-        # 3. Atomically validate and consume verification token
-        await self.otp_service.consume_employee_email_verification(
-            token=str(verification_token),
-            submitted_email=employee_data["email"],
-            admin_id=admin_id,
-        )
-
         department = await self.department_repository.get_by_id(
             employee_data["department_id"]
         )
@@ -227,6 +220,16 @@ class EmployeeService:
         )
 
         await self._validate_shift(employee_data.get("shift_id"))
+
+        # Consume the one-time verification token only after every other
+        # check has passed. Consuming it first meant a fixable mistake (a bad
+        # salary, a removed shift) burnt the token, and the retry failed with
+        # "already been used" until the email was verified all over again.
+        await self.otp_service.consume_employee_email_verification(
+            token=str(verification_token),
+            submitted_email=employee_data["email"],
+            admin_id=admin_id,
+        )
 
         employee_data["employee_id"] = await next_employee_code(
             self.repository.collection

@@ -1,7 +1,8 @@
 import { useMemo } from "react";
 import { Hand } from "lucide-react";
 
-import CelebrationTicker from "../../components/CelebrationTicker";
+import DashboardTicker from "../../components/DashboardTicker";
+import { useEmployeeAnnouncements } from "../../hooks/useEmployeeData";
 import type { Celebration } from "../../types/celebration";
 import type { RecentActivity } from "../../services/dashboardService";
 
@@ -50,6 +51,9 @@ export default function AdminDashboard({
   onCreateAnnouncement,
 }: AdminDashboardProps) {
   const firstName = useMemo(() => readUserFirstName(), []);
+  // If the feed fails to load the banner just shows celebrations (or the
+  // daily thought); announcements have their own page with error handling.
+  const { data: announcementFeed } = useEmployeeAnnouncements(1, 5);
 
   // Hiring, payroll and interview widgets are HR-only and the manager has no
   // permission behind them, so they are not rendered at all.
@@ -70,9 +74,15 @@ export default function AdminDashboard({
         </p>
       </div>
 
-      {/* Birthdays, anniversaries and daily thought banner */}
+      {/* One banner: birthdays, anniversaries and the announcements this
+          account can see (same feed as the employee portal). Falls back to
+          a daily thought when there is nothing to show. */}
       <div className="mb-4">
-        <CelebrationTicker celebrations={celebrations} />
+        <DashboardTicker
+          celebrations={celebrations}
+          announcements={announcementFeed?.announcements ?? []}
+          onSelectAnnouncement={() => onNavigate("Announcement")}
+        />
       </div>
 
       <div className="space-y-4">

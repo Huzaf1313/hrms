@@ -157,7 +157,9 @@ It serves on `http://localhost:5173`.
 
 ### 3. Sign in
 
-Register an account at `/register`, then use `/login`. Admin roles (`hr_admin`, `manager`) land on `/dashboard`; employees land on `/employee`.
+Register an account at `/register`, then use `/login`. Admin roles (`super_admin`, `hr_admin`, `manager`) land on `/dashboard`; employees land on `/employee`.
+
+The super admin is created on backend startup from `BOOTSTRAP_SUPER_ADMIN_EMAIL` / `BOOTSTRAP_SUPER_ADMIN_PASSWORD` in `backend/.env`. It has every HR permission, and is the only account that can create, deactivate, lock or unlock HR admin and manager accounts (sidebar → **Admin Accounts**). It is not an employee record, so it never appears in the Employees list.
 
 ---
 

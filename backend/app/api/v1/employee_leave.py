@@ -321,3 +321,14 @@ async def cancel_leave_request(
         "message": "Leave request cancelled successfully",
         "data": data,
     }
+
+
+@router.get("/types")
+async def get_employee_leave_types(
+    current_user: dict = Depends(get_current_user),
+):
+    return {
+        "success": True,
+        "message": "Leave types fetched successfully",
+        "data": await service.get_leave_types(),
+    }

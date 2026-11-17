@@ -31,38 +31,17 @@ import {
   LEGACY_SALARY_STRUCTURE_LABELS,
   type SalaryStructure,
 } from "../../services/admin_salary_structure_service";
-import { countWorkingDays } from "../../utils/workingDays";
+import {
+  leaveService,
+  type EmployeeLeaveBalance,
+} from "../../services/admin_leave_service";
 
-const leaveBalanceConfig = [
-  {
-    label: "Casual Leave",
-    type: "casualleave",
-    total: 6,
-    icon: Palmtree,
-    iconBg: "bg-teal-50",
-    iconColor: "text-teal-600",
-  },
-  {
-    label: "Earned Leave",
-    type: "earnedleave",
-    total: 12,
-    icon: Gift,
-    iconBg: "bg-orange-50",
-    iconColor: "text-orange-500",
-  },
-  {
-    label: "Comp Off",
-    type: "compoff",
-    total: 1,
-    icon: Timer,
-    iconBg: "bg-violet-50",
-    iconColor: "text-violet-600",
-  },
-];
-
-function leaveTypeKey(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]/g, "");
-}
+const leaveBalanceStyles: Record<string, { icon: typeof Palmtree; iconBg: string; iconColor: string }> = {
+  "Casual Leave": { icon: Palmtree, iconBg: "bg-teal-50", iconColor: "text-teal-600" },
+  "Sick Leave": { icon: Palmtree, iconBg: "bg-blue-50", iconColor: "text-blue-600" },
+  "Earned Leave": { icon: Gift, iconBg: "bg-orange-50", iconColor: "text-orange-500" },
+  "Comp Off": { icon: Timer, iconBg: "bg-violet-50", iconColor: "text-violet-600" },
+};
 
 interface AdminEmployeeDetailsPageProps {
   employee: Employee;
@@ -213,7 +192,7 @@ function AdminEmployeeDetailsPage({
     ifsc_code: employee.bank_information?.ifsc_code ?? "",
   });
 
-  const [leaveUsed, setLeaveUsed] = useState<Record<string, number>>({});
+  const [leaveBalances, setLeaveBalances] = useState<EmployeeLeaveBalance[]>([]);
   const [leaveLoading, setLeaveLoading] = useState(true);
 
   useEffect(() => {
@@ -221,51 +200,12 @@ function AdminEmployeeDetailsPage({
       try {
         setLeaveLoading(true);
 
-        const response = await fetch(
-          `http://localhost:8000/api/v1/admin/leaves?employee_id=${employee.employee_id}&limit=100`,
+        setLeaveBalances(
+          await leaveService.employeeBalance(employee.employee_id),
         );
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch leave requests");
-        }
-
-        const result = await response.json();
-
-        const approvedLeaves = result?.data?.items ?? [];
-
-        const used: Record<string, number> = {};
-
-        approvedLeaves
-          .filter(
-            (leave: { status?: string }) =>
-              leave.status?.toLowerCase() === "approved",
-          )
-          .forEach(
-            (leave: {
-              leave_type: string;
-              start_date: string;
-              end_date: string;
-              total_days?: number | null;
-            }) => {
-              // Working days only. Saturdays and Sundays are predefined
-              // weekly offs, so they never consume leave balance.
-              const days =
-                leave.total_days ??
-                countWorkingDays(
-                  leave.start_date,
-                  leave.end_date,
-                );
-
-              const type = leaveTypeKey(leave.leave_type);
-
-              used[type] = (used[type] || 0) + days;
-            },
-          );
-
-        setLeaveUsed(used);
       } catch (error) {
         console.error("Failed to fetch leave balance:", error);
-        setLeaveUsed({});
+        setLeaveBalances([]);
       } finally {
         setLeaveLoading(false);
       }
@@ -768,31 +708,29 @@ function AdminEmployeeDetailsPage({
             </h3>
 
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {leaveBalanceConfig.map((balance) => {
-                const Icon = balance.icon;
-
-                const used = leaveUsed[balance.type] ?? 0;
-
-                const available = Math.max(
-                  balance.total - used,
-                  0,
-                );
+              {leaveBalances.map((balance) => {
+                const style = leaveBalanceStyles[balance.leave_type] ?? {
+                  icon: Gift,
+                  iconBg: "bg-slate-50",
+                  iconColor: "text-slate-600",
+                };
+                const Icon = style.icon;
 
                 return (
                   <div
-                    key={balance.label}
+                    key={balance.leave_type}
                     className="rounded-2xl border border-gray-100 p-4"
                   >
                     <div
-                      className={`mb-3 flex h-8 w-8 items-center justify-center rounded-lg ${balance.iconBg}`}
+                      className={`mb-3 flex h-8 w-8 items-center justify-center rounded-lg ${style.iconBg}`}
                     >
                       <Icon
-                        className={`h-4 w-4 ${balance.iconColor}`}
+                        className={`h-4 w-4 ${style.iconColor}`}
                       />
                     </div>
 
                     <p className="text-xs text-gray-500">
-                      {balance.label}
+                      {balance.leave_type}
                     </p>
 
                     {leaveLoading ? (
@@ -802,16 +740,16 @@ function AdminEmployeeDetailsPage({
                     ) : (
                       <>
                         <p className="mt-1 text-xl font-bold text-gray-900">
-                          {used}
+                          {balance.used}
 
-                          <span className="text-sm font-medium text-gray-400">
-                            {" "}
-                            / {balance.total} Days
+                           <span className="text-sm font-medium text-gray-400">
+                             {" "}
+                             / {balance.allocated} Days
                           </span>
                         </p>
 
                         <p className="text-xs text-gray-400">
-                          {available} Available
+                          {balance.available} Available
                         </p>
                       </>
                     )}

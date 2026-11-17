@@ -5,10 +5,24 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, File, UploadFile, status
 from pydantic import BaseModel, EmailStr
 
-from app.api.deps import get_current_user, require_hr_admin, require_permission
+from app.api.deps import (
+    get_current_user,
+    require_hr_admin,
+    require_permission,
+    require_super_admin,
+)
 from app.core.roles import Permission, UserRole
 from app.schemas.common import APIResponse
+from app.schemas.employee import (
+    EmployeeOTPRequest,
+    EmployeeOTPRequestResponse,
+    EmployeeOTPVerifyRequest,
+    EmployeeOTPVerifyResponse,
+)
 from app.schemas.user import (
+    AdminAccountCreate,
+    AdminAccountResponse,
+    AdminAccountStatusUpdate,
     AdminProfileResponse,
     AdminProfileUpdate,
     ManagerCreate,
@@ -18,11 +32,15 @@ from app.services.user_service import UserService, resolve_full_name
 from app.core.cache import (
     get_cache,
     set_cache,
+    invalidate_employees_cache,
     invalidate_managers_cache,
 )
 from app.services.employee_identity import ensure_employee_profile
 from app.services.object_storage_service import ObjectStorageService
+from app.services.email_service import EmailService
+from app.services.otp_service import OTPService
 from app.utils.employee_storage import employee_profile_key
+from app.core.config import settings
 from app.core.exceptions import AppException
 
 logger = logging.getLogger(__name__)
@@ -34,6 +52,8 @@ router = APIRouter(
 
 user_service = UserService()
 storage_service = ObjectStorageService()
+email_service = EmailService()
+otp_service = OTPService()
 
 MAX_PROFILE_PHOTO_SIZE = 5 * 1024 * 1024
 PROFILE_PHOTO_EXTENSIONS = {".jpg", ".jpeg", ".png"}
@@ -81,6 +101,234 @@ async def list_manager_accounts(
         success=True,
         message="Reporting managers retrieved successfully",
         data=managers,
+    )
+
+
+async def send_admin_welcome_email(account: dict, creator: dict) -> bool:
+    """Welcome email for a new HR admin / manager. Never raises: the account
+    already exists, so an SMTP problem must not fail the request. The email
+    carries the sign-in link only - the password is shared by the creator."""
+    company_name = creator.get("company_name") or "HRMS"
+
+    try:
+        await email_service.send_html_email_async(
+            to_email=account["email"],
+            subject=f"Welcome to {company_name}!",
+            template_name="emails/welcome_email.html",
+            template_data={
+                "company_name": company_name,
+                "employee_name": resolve_full_name(account),
+                "hr_team": "HR Team",
+                "login_url": settings.login_url,
+            },
+        )
+        return True
+    except Exception as exc:
+        logger.warning(
+            "Welcome email could not be delivered to %s: %s",
+            account.get("email"),
+            type(exc).__name__,
+        )
+        return False
+
+
+def serialize_admin_account(
+    user: dict,
+    welcome_email_sent: bool | None = None,
+) -> AdminAccountResponse:
+    """Row for the super admin's Admin Accounts page. welcome_email_sent is
+    passed only by the create route; list and status responses leave it None."""
+    return AdminAccountResponse(
+        welcome_email_sent=welcome_email_sent,
+        id=str(user["_id"]),
+        employee_id=user.get("employee_id"),
+        full_name=resolve_full_name(user),
+        email=user["email"],
+        role=user["role"],
+        is_active=user.get("is_active", True),
+        is_locked=user.get("is_locked", False),
+        created_at=user.get("created_at"),
+        updated_at=user.get("updated_at"),
+    )
+
+
+@router.get(
+    "/admin-accounts",
+    response_model=APIResponse[list[AdminAccountResponse]],
+)
+async def list_admin_accounts(
+    current_user: dict = Depends(require_super_admin),
+):
+    """Every HR admin and manager account, for the super admin."""
+    accounts = await user_service.list_admin_accounts()
+
+    return APIResponse(
+        success=True,
+        message="Admin accounts retrieved successfully",
+        data=[serialize_admin_account(account) for account in accounts],
+    )
+
+
+@router.post(
+    "/admin-accounts/request-email-otp",
+    response_model=APIResponse[EmployeeOTPRequestResponse],
+)
+async def request_admin_account_email_otp(
+    data: EmployeeOTPRequest,
+    current_user: dict = Depends(require_super_admin),
+):
+    """Email a one-time code to the address of the account being created."""
+    # Reuses the employee-verification OTP flow; account_label only swaps the
+    # "employee" wording in the email for "admin".
+    result = await otp_service.create_employee_verification_otp(
+        email=data.email,
+        admin_id=str(current_user["_id"]),
+        account_label="admin",
+    )
+
+    return APIResponse(
+        success=True,
+        message=result["message"],
+        data=EmployeeOTPRequestResponse(**result),
+    )
+
+
+@router.post(
+    "/admin-accounts/verify-email-otp",
+    response_model=APIResponse[EmployeeOTPVerifyResponse],
+)
+async def verify_admin_account_email_otp(
+    data: EmployeeOTPVerifyRequest,
+    current_user: dict = Depends(require_super_admin),
+):
+    """Check the emailed code and return a short-lived verification token.
+
+    The token is bound to this email and to the super admin who verified it,
+    and create_admin_account must present it.
+    """
+    result = await otp_service.verify_employee_verification_otp(
+        email=data.email,
+        otp=data.otp,
+        admin_id=str(current_user["_id"]),
+    )
+
+    return APIResponse(
+        success=True,
+        message=result["message"],
+        data=EmployeeOTPVerifyResponse(**result),
+    )
+
+
+@router.post(
+    "/admin-accounts",
+    response_model=APIResponse[AdminAccountResponse],
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_admin_account(
+    data: AdminAccountCreate,
+    current_user: dict = Depends(require_super_admin),
+):
+    """Create an HR admin or manager account with an OTP-verified email.
+
+    The password is set by the super admin and shared out of band; the
+    welcome email only carries the sign-in link.
+    """
+    # The schema defaults the token to "", so check it here. The OTP service
+    # would also reject it, but with employee-specific wording.
+    if not data.email_verification_token.strip():
+        raise AppException(
+            "Verify the email address with an OTP before creating the account.",
+            400,
+        )
+
+    # Checked before the one-time token is consumed, so a duplicate email
+    # does not burn a verification that could not have been used anyway.
+    if await user_service.repository.get_by_email(data.email.lower().strip()):
+        raise AppException("User with this email already exists", 409)
+
+    await otp_service.consume_employee_email_verification(
+        token=data.email_verification_token,
+        submitted_email=data.email,
+        admin_id=str(current_user["_id"]),
+    )
+
+    account = await user_service.create_admin_account(
+        full_name=data.full_name,
+        email=data.email,
+        password=data.password,
+        role=UserRole(data.role),
+    )
+
+    # A new HR admin or manager is immediately pickable as a reporting
+    # manager. A cache failure is logged only: the account already exists.
+    try:
+        await invalidate_managers_cache()
+    except Exception as exc:
+        logger.error("Failed to invalidate manager cache after create: %s", exc)
+
+    welcome_email_sent = await send_admin_welcome_email(account, current_user)
+
+    return APIResponse(
+        success=True,
+        message="Admin account created successfully",
+        data=serialize_admin_account(account, welcome_email_sent),
+    )
+
+
+@router.patch(
+    "/admin-accounts/{user_id}/status",
+    response_model=APIResponse[AdminAccountResponse],
+)
+async def update_admin_account_status(
+    user_id: str,
+    data: AdminAccountStatusUpdate,
+    current_user: dict = Depends(require_super_admin),
+):
+    """Activate / deactivate or lock / unlock an HR admin or manager."""
+    account = await user_service.update_admin_account_status(
+        user_id=user_id,
+        is_active=data.is_active,
+        is_locked=data.is_locked,
+    )
+
+    # Inactive or locked accounts drop out of the reporting-manager list.
+    try:
+        await invalidate_managers_cache()
+    except Exception as exc:
+        logger.error("Failed to invalidate manager cache after status change: %s", exc)
+
+    return APIResponse(
+        success=True,
+        message="Admin account updated successfully",
+        data=serialize_admin_account(account),
+    )
+
+
+@router.delete(
+    "/admin-accounts/{user_id}",
+    response_model=APIResponse[None],
+)
+async def delete_admin_account(
+    user_id: str,
+    current_user: dict = Depends(require_super_admin),
+):
+    """Permanently delete an HR admin or manager account (super admin only).
+
+    Refused with 409 while a manager still has employees assigned.
+    """
+    account = await user_service.delete_admin_account(user_id)
+
+    # The account was also a reporting-manager option and an Employees row.
+    try:
+        await invalidate_managers_cache()
+        await invalidate_employees_cache(user_id=user_id)
+    except Exception as exc:
+        logger.error("Failed to invalidate caches after deleting admin account: %s", exc)
+
+    return APIResponse(
+        success=True,
+        message=f"{resolve_full_name(account)}'s account was deleted",
+        data=None,
     )
 
 

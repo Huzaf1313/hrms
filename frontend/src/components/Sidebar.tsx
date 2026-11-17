@@ -8,6 +8,7 @@ import {
   Megaphone,
   Package,
   Settings,
+  ShieldCheck,
   Users,
   Wallet,
   PanelLeftClose,
@@ -31,6 +32,8 @@ interface NavItem {
   page?: string;
   /** Pages only HR may open. Hidden from a manager's menu. */
   hrOnly?: boolean;
+  /** Pages only the super admin may open. */
+  superAdminOnly?: boolean;
 }
 
 interface NavSection {
@@ -45,6 +48,19 @@ const sections: NavSection[] = [
   {
     title: "Main",
     items: [{ label: "Dashboard", icon: LayoutDashboard, page: "Dashboard" }],
+  },
+  // Only the super admin sees this section; for anyone else it filters to
+  // nothing and is not rendered.
+  {
+    title: "Super Admin",
+    items: [
+      {
+        label: "Admin Accounts",
+        icon: ShieldCheck,
+        page: "Admin Accounts",
+        superAdminOnly: true,
+      },
+    ],
   },
   {
     title: "Organization",
@@ -138,8 +154,12 @@ function Sidebar({ activePage, onNavigate, collapsed, open, onClose }: SidebarPr
       {/* Navigation */}
       <nav className="sidebar-scrollbar min-h-0 flex-1 overflow-y-auto">
         {sections.map((section) => {
+          // Unrestricted items always show; restricted ones ask canAccessPage,
+          // which knows the HR-only and super-admin-only page lists.
           const items = section.items.filter(
-            (item) => !item.hrOnly || canAccessPage(item.page ?? ""),
+            (item) =>
+              (!item.hrOnly && !item.superAdminOnly) ||
+              canAccessPage(item.page ?? ""),
           );
 
           if (items.length === 0) return null;

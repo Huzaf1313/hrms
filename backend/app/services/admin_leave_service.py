@@ -4,12 +4,14 @@ from bson import ObjectId
 
 from app.core.exceptions import AppException
 from app.core.leave_dates import day_covering_filters
+from app.core.roles import role_value
 from app.core.scope import scope_matches, visibility_scope
 from app.core.working_days import count_working_days
 from app.repositories.department_repository import DepartmentRepository
 from app.repositories.employee_repository import EmployeeRepository
 from app.repositories.leave_balance_repository import LeaveBalanceRepository
 from app.repositories.leave_repository import LeaveRepository
+from app.repositories.employee_leave_repository import EmployeeLeaveRepository
 from app.services.employee_notification_service import (
     EmployeeNotificationService,
 )
@@ -39,42 +41,96 @@ class AdminLeaveService:
         self.employee_repository = EmployeeRepository()
         self.department_repository = DepartmentRepository()
         self.balance_repository = LeaveBalanceRepository()
+        self.employee_leave_repository = EmployeeLeaveRepository()
         self.notification_service = EmployeeNotificationService()
         self.activity_service = ActivityService()
 
     async def get_balances(self):
-        docs = await self.balance_repository.get_all()
-        by_type = {
-            doc["leave_type"]: doc
+        all_docs = await self.balance_repository.get_all()
+        docs = [doc for doc in all_docs if doc.get("active") is not False]
+        known = {doc.get("leave_type") for doc in all_docs}
+        balances = [
+            {
+                "leave_type": doc["leave_type"],
+                "used": int(doc.get("used", 0)),
+                "total": int(doc.get("total", 0)),
+            }
             for doc in docs
             if doc.get("leave_type")
-        }
-
-        balances = []
+        ]
 
         for leave_type in LEAVE_BALANCE_TYPES:
-            defaults = LEAVE_BALANCE_DEFAULTS[leave_type]
-            doc = by_type.get(leave_type, {})
-
-            balances.append(
-                {
-                    "leave_type": leave_type,
-                    "used": int(doc.get("used", defaults["used"])),
-                    "total": int(doc.get("total", defaults["total"])),
-                }
-            )
+            if leave_type not in known:
+                defaults = LEAVE_BALANCE_DEFAULTS[leave_type]
+                balances.append({"leave_type": leave_type, **defaults})
 
         return balances
+
+    async def get_leave_types(self):
+        balances = await self.get_balances()
+
+        return [
+            {
+                "name": item["leave_type"],
+                "allocated_days": item["total"],
+                "active": True,
+            }
+            for item in balances
+        ]
+
+    async def create_leave_type(self, name: str, allocated_days: int):
+        clean_name = " ".join(name.split())
+        existing = await self.balance_repository.get_all()
+        if any(
+            item.get("leave_type", "").casefold() == clean_name.casefold()
+            for item in existing
+        ):
+            raise AppException("A leave type with this name already exists", 409)
+
+        await self.balance_repository.upsert(
+            clean_name,
+            {"used": 0, "total": allocated_days, "active": True},
+        )
+        return {"name": clean_name, "allocated_days": allocated_days, "active": True}
+
+    async def update_leave_type(
+        self,
+        old_name: str,
+        name: str,
+        allocated_days: int,
+    ):
+        clean_name = " ".join(name.split())
+        existing = await self.balance_repository.find_by_type(old_name)
+        if not existing or existing.get("active") is False:
+            raise AppException("Leave type not found", 404)
+
+        other = await self.balance_repository.find_by_type(clean_name)
+        if other and clean_name.casefold() != old_name.casefold():
+            raise AppException("A leave type with this name already exists", 409)
+
+        if clean_name != old_name:
+            await self.repository.rename_leave_type(old_name, clean_name)
+
+        await self.balance_repository.upsert(
+            clean_name,
+            {
+                "used": int(existing.get("used", 0)),
+                "total": allocated_days,
+                "active": True,
+            },
+        )
+        return {"name": clean_name, "allocated_days": allocated_days, "active": True}
+
+    async def delete_leave_type(self, name: str):
+        if not await self.balance_repository.deactivate(name):
+            raise AppException("Leave type not found", 404)
 
     async def update_balances(self, entries: list[dict]):
         for entry in entries:
             leave_type = entry.get("leave_type")
 
-            if leave_type not in LEAVE_BALANCE_DEFAULTS:
-                raise AppException(
-                    f"Unknown leave type: {leave_type}",
-                    400,
-                )
+            if not leave_type or int(entry.get("total", 0)) < 0:
+                raise AppException("Invalid leave balance", 400)
 
         for entry in entries:
             await self.balance_repository.upsert(
@@ -86,6 +142,67 @@ class AdminLeaveService:
             )
 
         return await self.get_balances()
+
+    async def get_employee_balance(
+        self,
+        employee_id: str,
+        current_user: dict | None = None,
+    ):
+        await self._assert_employee_access(employee_id, current_user)
+
+        all_policy = await self.balance_repository.get_all()
+        policy = [
+            record for record in all_policy if record.get("active") is not False
+        ]
+        configured = {
+            record.get("leave_type"): int(record.get("total", 0))
+            for record in policy
+            if record.get("leave_type")
+        }
+        defaults = {
+            "Casual Leave": 12,
+            "Sick Leave": 10,
+            "Earned Leave": 18,
+            "Comp Off": 5,
+        }
+        records = await self.employee_leave_repository.get_balance_records(employee_id)
+        used_by_type: dict[str, int] = {}
+
+        for record in records:
+            leave_type = record.get("leave_type")
+            if leave_type:
+                used_by_type[leave_type] = used_by_type.get(leave_type, 0) + int(
+                    record.get("total_days", 0) or 0
+                )
+
+        available_types = set(configured)
+        available_types.update(
+            leave_type
+            for leave_type in defaults
+            if not any(
+                record.get("leave_type") == leave_type for record in all_policy
+            )
+        )
+
+        return [
+            {
+                "leave_type": leave_type,
+                "allocated": configured.get(
+                    leave_type,
+                    defaults.get(leave_type, 0),
+                ),
+                "used": used_by_type.get(leave_type, 0),
+                "available": max(
+                    configured.get(
+                        leave_type,
+                        defaults.get(leave_type, 0),
+                    )
+                    - used_by_type.get(leave_type, 0),
+                    0,
+                ),
+            }
+            for leave_type in sorted(available_types)
+        ]
 
     
     @staticmethod
@@ -349,6 +466,17 @@ class AdminLeaveService:
 
         await self._assert_leave_access(leave, current_user)
 
+        # HR sees every request, its own included, and a manager's request is
+        # visible to HR. Nobody decides their own leave: an HR or manager
+        # request waits for another approver, such as the super admin.
+        reviewer_code = (current_user or {}).get("employee_id")
+
+        if reviewer_code and reviewer_code == leave.get("employee_id"):
+            raise AppException(
+                "You cannot approve or reject your own leave request",
+                403,
+            )
+
         current_status = str(leave.get("status", "")).lower()
         if current_status in ["approved", "rejected", "cancelled"]:
             raise AppException(
@@ -428,6 +556,8 @@ class AdminLeaveService:
                 target="/employee/leave",
                 target_id=str(leave.get("_id", leave_id)),
             )
+
+        return await self._serialize(updated) if updated else None
 
     async def delete_leave(
         self,
@@ -545,6 +675,9 @@ class AdminLeaveService:
                 if employee
                 else None
             ),
+            # Lets the approver tell HR and manager requests apart from
+            # ordinary employee ones.
+            "employee_role": role_value(employee.get("role")) if employee else None,
             "department_id": department_id,
             "department_name": department.get("name") if department else None,
             "leave_type": document["leave_type"],

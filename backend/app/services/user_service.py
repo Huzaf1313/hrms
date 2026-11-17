@@ -7,13 +7,16 @@ from app.core.jwt import (
     create_refresh_token,
     decode_token,
 )
-from app.core.roles import UserRole
+from app.core.roles import MANAGED_ADMIN_ROLES, UserRole, role_value
 from app.core.security import hash_password, verify_password
 from app.repositories.user_repository import UserRepository
 from app.repositories.otp_repository import OTPRepository
 from app.repositories.department_repository import DepartmentRepository
 from app.repositories.shift_repository import ShiftRepository
-from app.services.employee_identity import ensure_employee_profile
+from app.services.employee_identity import (
+    SUPER_ADMIN_EMPLOYEE_CODE,
+    ensure_employee_profile,
+)
 from app.services.session_service import SessionService
 from app.services.object_storage_service import ObjectStorageService
 from datetime import date as date_type
@@ -75,6 +78,196 @@ class UserService:
         # at creation so self-attendance and every employee list see it from
         # day one instead of failing with "No employee record found".
         user = await ensure_employee_profile(self.repository.collection, user)
+
+        return user
+
+    @staticmethod
+    def _new_login_document(
+        full_name: str,
+        email: str,
+        password: str,
+        role: UserRole,
+    ) -> dict:
+        """Base users document for a fresh, active, unlocked login account.
+
+        The caller normalises the email; the password is stored hashed only.
+        """
+        now = datetime.utcnow()
+
+        return {
+            "full_name": full_name.strip(),
+            "email": email,
+            "phone_number": "",
+            "password_hash": hash_password(password),
+            "company_name": "",
+            "company_address": "",
+            "reference": "",
+            "role": role.value,
+            "is_active": True,
+            "is_locked": False,
+            "failed_login_attempts": 0,
+            "created_at": now,
+            "updated_at": now,
+        }
+
+    async def bootstrap_super_admin(
+        self,
+        email: str,
+        password: str,
+        full_name: str,
+    ):
+        """Create the super admin from settings on startup.
+
+        Idempotent like bootstrap_hr_admin. Unlike HR, no employee identity is
+        minted - see ensure_employee_profile for why.
+        """
+        email = email.lower().strip()
+
+        if await self.repository.get_by_email(email):
+            return None
+
+        return await self.repository.create(
+            self._new_login_document(
+                full_name,
+                email,
+                password,
+                UserRole.SUPER_ADMIN,
+            )
+        )
+
+    # ------------------------------------------------------------------ #
+    # Admin account management (super admin only)                        #
+    # ------------------------------------------------------------------ #
+
+    async def list_admin_accounts(self) -> list[dict]:
+        """HR and manager accounts, including deactivated and locked ones."""
+        return await self.repository.list_by_roles(MANAGED_ADMIN_ROLES)
+
+    async def create_admin_account(
+        self,
+        full_name: str,
+        email: str,
+        password: str,
+        role: UserRole,
+    ):
+        """Create an HR admin or manager account for the super admin.
+
+        The email OTP is checked by the API route before this is called.
+        """
+        # Defence in depth behind the schema's Literal: this path must never
+        # create another super admin.
+        if role.value not in MANAGED_ADMIN_ROLES:
+            raise AppException(
+                "Only HR admin or manager accounts can be created here",
+                400,
+            )
+
+        # Managers go through the same path HR uses to create them, so both
+        # routes produce identical manager documents.
+        if role == UserRole.MANAGER:
+            return await self.create_manager_account(
+                full_name=full_name,
+                email=email,
+                password=password,
+            )
+
+        email = email.lower().strip()
+
+        if await self.repository.get_by_email(email):
+            raise AppException(
+                "User with this email already exists",
+                409,
+            )
+
+        user = await self.repository.create(
+            self._new_login_document(full_name, email, password, role)
+        )
+
+        # Same as the bootstrapped HR: an HR account is also a working
+        # employee, so it gets its employee code up front.
+        return await ensure_employee_profile(self.repository.collection, user)
+
+    async def update_admin_account_status(
+        self,
+        user_id: str,
+        is_active: bool | None = None,
+        is_locked: bool | None = None,
+    ):
+        """Activate / deactivate and lock / unlock an HR or manager account.
+
+        Deactivating or locking also revokes every session of that account,
+        so the change takes effect immediately rather than when the current
+        access token expires.
+        """
+        user = await self.repository.get_by_id(user_id)
+
+        # Employees and the super admin itself are reported as "not found"
+        # rather than forbidden, so this route cannot be used to touch them.
+        if not user or role_value(user.get("role")) not in MANAGED_ADMIN_ROLES:
+            raise AppException("Admin account not found", 404)
+
+        updates: dict = {}
+
+        if is_active is not None:
+            updates["is_active"] = is_active
+
+        if is_locked is not None:
+            updates["is_locked"] = is_locked
+
+            # Login auto-locks at 5 failed attempts. Without a reset, the
+            # next wrong password after an unlock would lock it again.
+            if not is_locked:
+                updates["failed_login_attempts"] = 0
+
+        if not updates:
+            raise AppException("Nothing to update", 400)
+
+        updates["updated_at"] = datetime.utcnow()
+
+        updated = await self.repository.update(user_id, updates)
+
+        if is_active is False or is_locked is True:
+            await self.session_service.revoke_all_sessions_for_user(user_id)
+
+        return updated
+
+    async def delete_admin_account(self, user_id: str) -> dict:
+        """Permanently delete an HR or manager account.
+
+        Mirrors employee deletion: the account document goes, while records
+        keyed on its employee code (attendance, leave, payslips) stay as
+        history. Every session is revoked first so it is signed out at once.
+        Returns the deleted document for the caller's cache invalidation.
+        """
+        user = await self.repository.get_by_id(user_id)
+
+        # Employees and the super admin are "not found" here, as in
+        # update_admin_account_status.
+        if not user or role_value(user.get("role")) not in MANAGED_ADMIN_ROLES:
+            raise AppException("Admin account not found", 404)
+
+        # A manager's team is linked by manager_id. Deleting the manager
+        # would leave those employees reporting to nobody, so the super admin
+        # has to reassign them first.
+        team_size = await self.repository.collection.count_documents(
+            {
+                "employee_id": {"$exists": True},
+                "manager_id": str(user["_id"]),
+            }
+        )
+
+        if team_size:
+            raise AppException(
+                f"{resolve_full_name(user)} still manages {team_size} "
+                f"employee{'s' if team_size != 1 else ''}. Reassign them to "
+                "another manager before deleting this account.",
+                409,
+            )
+
+        await self.session_service.revoke_all_sessions_for_user(user_id)
+
+        if not await self.repository.delete(user_id):
+            raise AppException("Admin account not found", 404)
 
         return user
 
@@ -494,9 +687,16 @@ class UserService:
         if user.get("avatar_key"):
             avatar_url = await ObjectStorageService().signed_url(user["avatar_key"])
 
+        employee_id = user.get("employee_id")
+
+        # Display-only code for the super admin, which never stores an
+        # employee_id (see SUPER_ADMIN_EMPLOYEE_CODE).
+        if not employee_id and role_value(user.get("role")) == UserRole.SUPER_ADMIN.value:
+            employee_id = SUPER_ADMIN_EMPLOYEE_CODE
+
         return {
             "id": str(user["_id"]),
-            "employee_id": user.get("employee_id"),
+            "employee_id": employee_id,
             "full_name": resolve_full_name(user),
             "role": user.get("role"),
             "avatar_url": avatar_url,
@@ -536,6 +736,19 @@ class UserService:
         record the id is linked, otherwise the name is stored as-is so a
         save never fails just because the picklist differs from master data."""
         updates: dict = {}
+
+        # Names are normally set by whoever manages the account. The super
+        # admin has no one above it, so it renames itself here.
+        if (
+            "full_name" in data
+            and role_value(user.get("role")) == UserRole.SUPER_ADMIN.value
+        ):
+            full_name = " ".join((data["full_name"] or "").split())
+
+            if not full_name:
+                raise AppException("Full name is required", 400)
+
+            updates["full_name"] = full_name
 
         simple_fields = (
             "phone",

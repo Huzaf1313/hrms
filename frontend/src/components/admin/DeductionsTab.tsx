@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Calculator, CheckCircle2, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Calculator, Pencil, Plus, Trash2, X } from "lucide-react";
 import ApplyDeductionModal from "./ApplyDeductionModal";
 
 import {
@@ -9,6 +9,7 @@ import {
   type DeductionCalculationResponse,
 } from "../../services/admin_deduction_service";
 import { useQueryClient } from "@tanstack/react-query";
+import NoticePopup from "../ui/NoticePopup";
 import { queryKeys } from "../../lib/queryKeys";
 
 type ComponentType = "Deduction" | "Contribution";
@@ -810,22 +811,11 @@ export default function DeductionsTab() {
         </div>
       )}
 
-      {successToast && (
-        <div className="mb-4 flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800 shadow-xs">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
-            <span>{successToast}</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setSuccessToast(null)}
-            className="rounded-lg p-1 text-emerald-700 transition hover:bg-emerald-100"
-            aria-label="Dismiss notification"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      )}
+      {/* Closes itself after a few seconds, so no timer is needed here. */}
+      <NoticePopup
+        notice={successToast ? { type: "success", text: successToast } : null}
+        onDismiss={() => setSuccessToast(null)}
+      />
 
       {/* Header */}
       <div className="mb-5 flex items-center justify-between">
