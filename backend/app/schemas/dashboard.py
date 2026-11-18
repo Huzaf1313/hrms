@@ -39,6 +39,15 @@ class DashboardPayrollSummary(BaseModel):
     currency: str = "INR"
 
 
+class DashboardPerformanceSummary(BaseModel):
+    total_reviews: int = 0
+    completed_reviews: int = 0
+    pending_reviews: int = 0
+    average_rating: float = 0.0
+    goals_met_pct: float = 0.0
+    active_cycle: str = "Annual Review 2026"
+
+
 class DashboardResponse(BaseModel):
     total_headcount: int = 0
     attendance_rate: float | None = None
@@ -48,3 +57,4 @@ class DashboardResponse(BaseModel):
     hiring_pipeline: HiringPipeline = HiringPipeline()
     recent_activities: list[RecentActivity] = []
     payroll_summary: DashboardPayrollSummary | None = None
+    performance_summary: DashboardPerformanceSummary | None = None

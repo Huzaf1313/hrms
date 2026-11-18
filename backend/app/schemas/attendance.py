@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 
 
 # Allowed values (kept as plain str, same convention as Employee.status):
-# "present" | "late" | "absent" | "on_leave" | "working" | "overtime" | "missing_punch"
+# "present" | "late" | "absent" | "half_day" | "on_leave" | "working" | "overtime" | "missing_punch"
 
 
 class AttendanceMark(BaseModel):

@@ -142,7 +142,7 @@ async def get_my_attendance_status(
     response_model=APIResponse[MyAttendanceStatus],
 )
 async def punch_my_attendance(
-    current_user: dict = Depends(require_hr_admin),
+    current_user: dict = Depends(require_permission(Permission.ATTENDANCE_CREATE)),
 ):
     """HR self-punch: marks the signed-in user's OWN attendance for today
     with the server clock. First call of the day records the in-time, the
@@ -331,7 +331,10 @@ async def get_attendance_summary(
     is_historical = attendance_date < today
     ttl = ATTENDANCE_HISTORICAL_CACHE_TTL if is_historical else ATTENDANCE_TODAY_CACHE_TTL
     dept_str = dept_val or "all"
-    cache_key = f"attendance:summary:{attendance_date}:{dept_str}"
+
+    role = getattr(current_user.get("role"), "value", current_user.get("role")) if current_user else None
+    scope = f"mgr_{current_user.get('_id')}" if role == UserRole.MANAGER.value else "hr"
+    cache_key = f"attendance:summary:{scope}:{attendance_date}:{dept_str}"
 
     cached = await get_cache(cache_key)
     if cached is not None:
@@ -347,6 +350,7 @@ async def get_attendance_summary(
     summary = await service.get_summary(
         attendance_date=attendance_date,
         department_id=dept_val,
+        current_user=current_user,
     )
 
     await set_cache(cache_key, summary.model_dump(), ttl=ttl)

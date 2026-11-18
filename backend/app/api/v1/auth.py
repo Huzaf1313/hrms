@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Cookie, Depends, Response
+from fastapi import APIRouter, Cookie, Depends, Request, Response, status
 from fastapi.responses import JSONResponse
 
 from app.core.cookies import (
@@ -14,6 +14,7 @@ from app.schemas.user import (
     ForgotPasswordRequest,
     LoginRequest,
     ResetPasswordRequest,
+    UserCreate,
     VerifyPasswordResetOTPRequest,
 )
 from app.services.user_service import UserService
@@ -27,11 +28,6 @@ router = APIRouter(
     prefix="/auth",
     tags=["Authentication"],
 )
-
-# There is no public sign-up. The first HR account is bootstrapped from
-# BOOTSTRAP_HR_* on startup, managers are created by HR through
-# POST /api/v1/users, and employees are created through POST /api/v1/employees
-# with shared credentials. Nothing here can mint an account.
 
 # Both tokens are HttpOnly cookies (see app/core/cookies.py). The refresh
 # cookie is scoped to these auth routes; the access cookie goes to the whole
@@ -83,23 +79,136 @@ async def reset_password(
 
 
 @router.post(
+    "/register",
+    response_model=AccessTokenResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def register(
+    request: Request,
+    response: Response,
+    data: UserCreate,
+):
+    """Register a new user account. Issues session cookies and returns an access token."""
+    ip = request.client.host if request.client else None
+    ua = request.headers.get("user-agent")
+    service = UserService()
+
+    result = await service.register_user(
+        data=data,
+        ip_address=ip,
+        user_agent=ua,
+    )
+
+    set_access_cookie(response, result["access_token"])
+    set_refresh_cookie(response, result["refresh_token"])
+
+    return AccessTokenResponse(access_token=result["access_token"])
+
+
+@router.post(
     "/login",
     response_model=AccessTokenResponse,
 )
-async def login(login_data: LoginRequest, response: Response):
+async def login(
+    request: Request,
+    response: Response,
+    login_data: LoginRequest,
+):
     """Sign in. Sets both session cookies; the body carries only the access
     token, never the refresh token."""
+    ip = request.client.host if request.client else None
+    ua = request.headers.get("user-agent")
     service = UserService()
 
     tokens = await service.login_user(
         email=login_data.email,
         password=login_data.password,
+        ip_address=ip,
+        user_agent=ua,
     )
 
     set_access_cookie(response, tokens["access_token"])
     set_refresh_cookie(response, tokens["refresh_token"])
 
     return AccessTokenResponse(access_token=tokens["access_token"])
+
+
+@router.get(
+    "/sessions",
+)
+async def get_active_sessions(
+    current_user: dict = Depends(get_current_user),
+):
+    """Get active sessions for the current user."""
+    service = UserService()
+    user_id = str(current_user["_id"])
+    current_session_id = current_user.get("current_session_id")
+    sessions = await service.get_user_sessions(user_id, current_session_id)
+
+    return {
+        "success": True,
+        "message": "Active sessions retrieved successfully",
+        "data": sessions,
+    }
+
+
+@router.delete(
+    "/sessions/{session_id}",
+)
+async def revoke_session(
+    session_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """Revoke a specific active session."""
+    service = UserService()
+    user_id = str(current_user["_id"])
+    revoked = await service.revoke_user_session(user_id, session_id)
+    if not revoked:
+        raise AppException("Session not found or already revoked", 404)
+
+    return {
+        "success": True,
+        "message": "Session revoked successfully",
+    }
+
+
+@router.post(
+    "/sessions/revoke-others",
+)
+async def revoke_other_sessions(
+    current_user: dict = Depends(get_current_user),
+):
+    """Revoke all active sessions except the current one."""
+    service = UserService()
+    user_id = str(current_user["_id"])
+    current_session_id = current_user.get("current_session_id")
+    if not current_session_id:
+        raise AppException("Current session not found", 400)
+
+    count = await service.revoke_other_user_sessions(user_id, current_session_id)
+
+    return {
+        "success": True,
+        "message": f"Successfully revoked {count} other session(s)",
+    }
+
+
+@router.get(
+    "/login-history",
+)
+async def get_login_history(
+    current_user: dict = Depends(get_current_user),
+):
+    """Get recent login attempts for the current user."""
+    service = UserService()
+    user_id = str(current_user["_id"])
+    history = await service.get_user_login_history(user_id, limit=20)
+
+    return {
+        "success": True,
+        "message": "Login history retrieved successfully",
+        "data": history,
+    }
 
 @router.post("/change-password")
 async def change_password(

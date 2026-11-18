@@ -13,14 +13,8 @@ import type {
 /**
  * Data source for the admin profile page.
  *
- * Profile read/write hits the backend (`GET`/`PATCH /users/me/profile`). The
- * remaining panels (session info, activities, notification preferences, support
- * contact) are still served from placeholder seeds. Documents use the shared
- * employee document storage so HR files are not disconnected from the profile.
- * Each remaining panel swaps for an api call without
- * touching the page. TODO: replace those storage reads/seeds with
- * GET /admin/profile/session, GET /admin/profile/activities,
- * GET /admin/profile/documents and a notification-preferences endpoint.
+ * Profile read/write hits the backend (`GET`/`PATCH /users/me/profile`).
+ * Documents use the shared employee document storage.
  */
 
 const NOTIFICATIONS_KEY = "hrms_admin_profile_notifications";
@@ -112,45 +106,18 @@ function normalizeProfile(raw: BackendProfile): AdminProfile {
   };
 }
 
-const SEED_SESSION: SessionInfo = {
+const DEFAULT_SESSION: SessionInfo = {
   login_status: "Active",
-  last_login: "2025-10-12T10:24:00",
-  device: "Windows (Chrome)",
-  ip_address: "103.87.65.21",
+  last_login: new Date().toISOString(),
+  device: typeof navigator !== "undefined" && navigator.userAgent.includes("Windows")
+    ? "Windows"
+    : typeof navigator !== "undefined" && navigator.userAgent.includes("Mac")
+      ? "macOS"
+      : "Desktop",
+  ip_address: "-",
 };
 
-const SEED_ACTIVITIES: ProfileActivity[] = [
-  {
-    id: "act-1",
-    occurred_at: "2025-10-12T10:24:00",
-    activity: "Login",
-    module: "System",
-    details: "Logged in from Windows (Chrome)",
-  },
-  {
-    id: "act-2",
-    occurred_at: "2025-10-11T18:42:00",
-    activity: "Profile Updated",
-    module: "Profile",
-    details: "Contact details updated",
-  },
-  {
-    id: "act-3",
-    occurred_at: "2025-10-09T09:15:00",
-    activity: "Leave Approved",
-    module: "Leave",
-    details: "Approved a request for 2 employees",
-  },
-  {
-    id: "act-4",
-    occurred_at: "2025-10-07T16:03:00",
-    activity: "Login",
-    module: "System",
-    details: "Logged in from Windows (Edge)",
-  },
-];
-
-const SEED_NOTIFICATIONS: NotificationPreferences = {
+const DEFAULT_NOTIFICATIONS: NotificationPreferences = {
   email_notifications: true,
   push_notifications: true,
   leave_updates: true,
@@ -203,11 +170,11 @@ export const adminProfileService = {
   },
 
   async getSession(): Promise<SessionInfo> {
-    return readJson<SessionInfo>("hrms_admin_profile_session") ?? SEED_SESSION;
+    return readJson<SessionInfo>("hrms_admin_profile_session") ?? DEFAULT_SESSION;
   },
 
   async listActivities(limit = 4): Promise<ProfileActivity[]> {
-    const rows = readJson<ProfileActivity[]>("hrms_admin_profile_activities") ?? SEED_ACTIVITIES;
+    const rows = readJson<ProfileActivity[]>("hrms_admin_profile_activities") ?? [];
 
     return rows.slice(0, limit);
   },
@@ -233,7 +200,7 @@ export const adminProfileService = {
   },
 
   async getNotificationPreferences(): Promise<NotificationPreferences> {
-    return readJson<NotificationPreferences>(NOTIFICATIONS_KEY) ?? SEED_NOTIFICATIONS;
+    return readJson<NotificationPreferences>(NOTIFICATIONS_KEY) ?? DEFAULT_NOTIFICATIONS;
   },
 
   async saveNotificationPreferences(preferences: NotificationPreferences): Promise<NotificationPreferences> {

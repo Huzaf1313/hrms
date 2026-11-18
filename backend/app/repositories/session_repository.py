@@ -82,17 +82,39 @@ class SessionRepository:
             },
         )
 
-    async def update_last_used(self, session_id: str):
+    async def revoke_others(self, user_id: str, current_session_id: str):
+        if not ObjectId.is_valid(current_session_id):
+            return 0
+
+        now = datetime.utcnow()
+
+        result = await self.collection.update_many(
+            {
+                "user_id": user_id,
+                "is_active": True,
+                "_id": {"$ne": ObjectId(current_session_id)},
+            },
+            {
+                "$set": {
+                    "is_active": False,
+                    "revoked_at": now,
+                }
+            },
+        )
+
+        return result.modified_count
+
+    async def update_last_used(self, session_id: str, ip_address: str | None = None):
         if not ObjectId.is_valid(session_id):
             return None
 
+        update_fields: dict = {"last_used_at": datetime.utcnow()}
+        if ip_address:
+            update_fields["ip_address"] = ip_address
+
         await self.collection.update_one(
             {"_id": ObjectId(session_id)},
-            {
-                "$set": {
-                    "last_used_at": datetime.utcnow(),
-                }
-            },
+            {"$set": update_fields},
         )
 
         return await self.get_by_id(session_id)

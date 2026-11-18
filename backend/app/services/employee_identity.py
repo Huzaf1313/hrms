@@ -12,6 +12,7 @@ Codes use one atomic sequence and are formatted as AAR001, AAR002, and so on.
 
 from datetime import datetime
 
+from bson import ObjectId
 from pymongo import ReturnDocument
 
 from app.core.exceptions import AppException
@@ -125,7 +126,13 @@ async def ensure_employee_profile(collection, user: dict) -> dict:
     user_id = user.get("_id")
 
     if user_id is None:
-        raise AppException("No employee record found for this account", 404)
+        return user
+
+    if isinstance(user_id, str):
+        try:
+            user_id = ObjectId(user_id)
+        except Exception:
+            pass
 
     first_name, last_name = split_full_name(user.get("full_name", ""))
     now = datetime.utcnow()
@@ -146,7 +153,11 @@ async def ensure_employee_profile(collection, user: dict) -> dict:
         result = await collection.update_one(
             {
                 "_id": user_id,
-                "employee_id": {"$exists": False},
+                "$or": [
+                    {"employee_id": {"$exists": False}},
+                    {"employee_id": None},
+                    {"employee_id": ""},
+                ],
             },
             {
                 "$set": {
@@ -160,7 +171,9 @@ async def ensure_employee_profile(collection, user: dict) -> dict:
         )
 
         if result.matched_count:
-            return await collection.find_one({"_id": user_id})
+            updated = await collection.find_one({"_id": user_id})
+            if updated:
+                return updated
 
         # Lost the race - the account has a code now, use it.
         user = await collection.find_one({"_id": user_id})
@@ -168,4 +181,4 @@ async def ensure_employee_profile(collection, user: dict) -> dict:
         if user and user.get("employee_id"):
             return user
 
-    raise AppException("Could not allocate an employee code", 500)
+    return user

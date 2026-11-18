@@ -30,6 +30,7 @@ const tabs = [
   { label: "All Employees", status: undefined as string | undefined },
   { label: "Present", status: "present" },
   { label: "Late", status: "late" },
+  { label: "Half Day", status: "half_day" },
   { label: "On Leave", status: "on_leave" },
   { label: "Absent", status: "absent" },
   { label: "Missing Punch", status: "missing_punch" },
@@ -38,6 +39,7 @@ const tabs = [
 const statusStyles: Record<AttendanceStatus, string> = {
   present: "bg-emerald-50 text-emerald-600",
   late: "bg-orange-50 text-orange-500",
+  half_day: "bg-amber-50 text-amber-600",
   absent: "bg-rose-50 text-rose-600",
   on_leave: "bg-purple-50 text-purple-600",
   working: "bg-blue-50 text-blue-600",
@@ -48,6 +50,7 @@ const statusStyles: Record<AttendanceStatus, string> = {
 const statusDot: Record<AttendanceStatus, string> = {
   present: "bg-emerald-500",
   late: "bg-orange-500",
+  half_day: "bg-amber-500",
   absent: "bg-rose-500",
   on_leave: "bg-purple-500",
   working: "bg-blue-500",
@@ -305,7 +308,13 @@ function Attendance() {
     : [];
 
   const formatStatus = (value: AttendanceStatus) =>
-    value === "on_leave" ? "On Leave" : value === "missing_punch" ? "Missing Punch" : value.charAt(0).toUpperCase() + value.slice(1);
+    value === "on_leave"
+      ? "On Leave"
+      : value === "missing_punch"
+        ? "Missing Punch"
+        : value === "half_day"
+          ? "Half Day"
+          : value.charAt(0).toUpperCase() + value.slice(1);
 
   const initials = (record: AttendanceRecord) =>
     `${record.employee.first_name[0] ?? ""}${record.employee.last_name[0] ?? ""}`;

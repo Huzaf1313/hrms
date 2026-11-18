@@ -1,17 +1,6 @@
 /**
- * Admin dashboard view models.
- *
- * The dashboard is built frontend-only for now, so every value below is a
- * deterministic placeholder. Each shape maps 1:1 to the endpoint that will
- * eventually back it, so swapping a placeholder for a live fetch means
- * replacing the constant in `dashboardPlaceholders` and nothing else.
+ * Admin dashboard view models and utilities.
  */
-
-export interface RecruitmentStage {
-  label: string;
-  value: number;
-  color: string;
-}
 
 export interface DepartmentShare {
   label: string;
@@ -27,24 +16,7 @@ export interface QuickActionItem {
   chipClass: string;
 }
 
-export interface PayrollSummary {
-  payrollThisMonth: number;
-  payrollChangePercent: number;
-  totalExpenses: number;
-  expenseChangePercent: number;
-}
-
-export const recruitmentStages: RecruitmentStage[] = [
-  { label: "Applied", value: 82, color: "#2563eb" },
-  { label: "Screening", value: 56, color: "#22c55e" },
-  { label: "Shortlisted", value: 34, color: "#f0b429" },
-  { label: "Interview", value: 22, color: "#f97316" },
-  { label: "Selected", value: 12, color: "#ef4444" },
-  { label: "Offer", value: 8, color: "#8b5cf6" },
-  { label: "Hired", value: 5, color: "#4338ca" },
-];
-
-/** Donut palette, reused when real department counts arrive. */
+/** Donut palette, reused when department counts arrive. */
 export const DEPARTMENT_COLORS = [
   "#2563eb",
   "#22c55e",
@@ -53,16 +25,6 @@ export const DEPARTMENT_COLORS = [
   "#a855f7",
   "#06b6d4",
   "#cbd5e1",
-];
-
-export const departmentShares: DepartmentShare[] = [
-  { label: "Engineering", value: 82, color: DEPARTMENT_COLORS[0] },
-  { label: "Sales", value: 56, color: DEPARTMENT_COLORS[1] },
-  { label: "HR", value: 28, color: DEPARTMENT_COLORS[2] },
-  { label: "Finance", value: 24, color: DEPARTMENT_COLORS[3] },
-  { label: "Marketing", value: 20, color: DEPARTMENT_COLORS[4] },
-  { label: "Support", value: 15, color: DEPARTMENT_COLORS[5] },
-  { label: "Others", value: 20, color: DEPARTMENT_COLORS[6] },
 ];
 
 export const quickActions: QuickActionItem[] = [
@@ -75,24 +37,6 @@ export const quickActions: QuickActionItem[] = [
   { id: "qa-7", label: "Add Announcement", icon: "megaphone", iconClass: "text-[#2563eb]", chipClass: "bg-[#eff6ff]" },
   { id: "qa-8", label: "Generate Report", icon: "briefcase", iconClass: "text-[#059669]", chipClass: "bg-[#ecfdf5]" },
 ];
-
-export const payrollSummary: PayrollSummary = {
-  payrollThisMonth: 12475000,
-  payrollChangePercent: 6.2,
-  totalExpenses: 1845320,
-  expenseChangePercent: 3.4,
-};
-
-export const dashboardPlaceholders = {
-  totalEmployees: 245,
-  employeesAddedThisMonth: 12,
-  presentToday: 218,
-  presentPercent: 89,
-  onLeaveToday: 12,
-  onLeavePercent: 4.9,
-  openPositions: 5,
-  pendingLeaveRequests: 8,
-};
 
 export function initialsFor(name: string): string {
   return (

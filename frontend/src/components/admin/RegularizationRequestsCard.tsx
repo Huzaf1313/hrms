@@ -32,53 +32,6 @@ const statusStyles: Record<RegularizationStatus, string> = {
 };
 
 
-const mockRequests: RegularizationRequest[] = [
-  {
-    id: "1",
-    employeeName: "Sneha Patil",
-    employeeCode: "EMP004",
-    department: "Engineering",
-    date: "20 May 2024 (Mon)",
-    reason: "Missing Check-Out",
-    requestedOn: "Requested on 21 May 2024",
-    status: "Pending",
-    checkIn: "09:18 AM",
-    checkOut: "--:--",
-    requestedCheckOut: "06:30 PM",
-    attachmentName: "Screenshot_24May2024.png",
-    attachmentSize: "245 KB",
-    note: "Forgot to punch out while leaving office after completing work.",
-  },
-  {
-    id: "2",
-    employeeName: "Sneha Patil",
-    employeeCode: "EMP004",
-    department: "Engineering",
-    date: "14 May 2024 (Tue)",
-    reason: "Wrong Check-In Time",
-    requestedOn: "Requested on 15 May 2024",
-    status: "Approved",
-    checkIn: "11:45 AM",
-    checkOut: "06:30 PM",
-    requestedCheckOut: "09:20 AM",
-    note: "Entered late by mistake, actual arrival was earlier.",
-  },
-  {
-    id: "3",
-    employeeName: "Sneha Patil",
-    employeeCode: "EMP004",
-    department: "Engineering",
-    date: "8 May 2024 (Wed)",
-    reason: "Missing Check-Out",
-    requestedOn: "Requested on 9 May 2024",
-    status: "Rejected",
-    checkIn: "09:30 AM",
-    checkOut: "--:--",
-    requestedCheckOut: "06:45 PM",
-    note: "Forgot to punch out.",
-  },
-];
-
 interface BackendRequest {
   id: string;
   employee_name?: string;
@@ -147,7 +100,7 @@ function RegularizationRequestsCard({
   onReviewed?: () => void;
 }) {
   const navigate = useNavigate();
-  const [requests, setRequests] = useState<RegularizationRequest[]>(mockRequests);
+  const [requests, setRequests] = useState<RegularizationRequest[]>([]);
   const [selectedRequest, setSelectedRequest] = useState<RegularizationRequest | null>(null);
   const [comment, setComment] = useState("");
   // Disables both buttons while the PATCH is in flight so a double click

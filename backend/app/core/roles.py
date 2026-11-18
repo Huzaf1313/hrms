@@ -176,6 +176,9 @@ EMPLOYEE_PERMISSIONS = {
     Permission.ATTENDANCE_READ,
     Permission.ATTENDANCE_CREATE,
 
+    # Departments (view department list and information for profile display)
+    Permission.DEPARTMENT_READ,
+
     # Shifts (own shift only - routes scope this down to the caller)
     Permission.SHIFT_READ,
 

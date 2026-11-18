@@ -11,14 +11,13 @@ import {
 } from "lucide-react";
 
 import {
-  dashboardPlaceholders,
   formatIndianAmount,
 } from "./dashboardData";
 import type { DashboardMetrics } from "./useDashboardMetrics";
 import { useAnimationFrame, useCountUp } from "./useDashboardAnimation";
 
 interface DashboardKpiRowProps {
-  /** Live figures where the API provides them; null keeps the placeholder. */
+  /** Live figures where the API provides them; defaults to 0. */
   metrics: DashboardMetrics;
   onOpenLeave: () => void;
   onOpenPayroll: () => void;
@@ -87,15 +86,12 @@ export default function DashboardKpiRow({
   onOpenPayroll,
   showHrWidgets = true,
 }: DashboardKpiRowProps) {
-  const placeholders = dashboardPlaceholders;
-
-  const headcount = metrics.totalEmployees ?? placeholders.totalEmployees;
-  const presentToday = metrics.presentToday ?? placeholders.presentToday;
-  const presentPercent = metrics.presentPercent ?? placeholders.presentPercent;
-  const onLeaveToday = metrics.onLeaveToday ?? placeholders.onLeaveToday;
-  const onLeavePercent = metrics.onLeavePercent ?? placeholders.onLeavePercent;
-  const pendingLeave =
-    metrics.pendingLeaveRequests ?? placeholders.pendingLeaveRequests;
+  const headcount = metrics.totalEmployees ?? 0;
+  const presentToday = metrics.presentToday ?? 0;
+  const presentPercent = metrics.presentPercent ?? 0;
+  const onLeaveToday = metrics.onLeaveToday ?? 0;
+  const onLeavePercent = metrics.onLeavePercent ?? 0;
+  const pendingLeave = metrics.pendingLeaveRequests ?? 0;
 
   const cards: KpiCard[] = [
     {
@@ -107,8 +103,8 @@ export default function DashboardKpiRow({
       chipClass: "bg-[#eff6ff]",
       renderValue: (value) => Math.round(value).toLocaleString("en-IN"),
       detail: (
-        <span className="text-[11px] font-medium text-[#16a34a]">
-          ↗ +{placeholders.employeesAddedThisMonth} this month
+        <span className="text-[11px] font-medium text-gray-500">
+          Active in organization
         </span>
       ),
       delay: 0,
@@ -155,7 +151,7 @@ export default function DashboardKpiRow({
     {
       id: "kpi-openings",
       label: "Open Positions",
-      value: metrics.activeJobPositions ?? placeholders.openPositions,
+      value: metrics.activeJobPositions ?? 0,
       icon: Briefcase,
       iconClass: "text-[#ea580c]",
       chipClass: "bg-[#fff7ed]",

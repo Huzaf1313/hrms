@@ -388,13 +388,6 @@ export default function PayslipsTab({ initialStatusFilter = "" }: PayslipsTabPro
   const [monthValue, setMonthValue] = useState<string>("");
   const [search, setSearch] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>(initialStatusFilter);
-
-  useEffect(() => {
-    if (initialStatusFilter !== undefined) {
-      setStatusFilter(initialStatusFilter);
-      setPage(1);
-    }
-  }, [initialStatusFilter]);
   const [selectedPayslip, setSelectedPayslip] = useState<AdminPayslipItem | null>(null);
   const [payslips, setPayslips] = useState<AdminPayslipItem[]>([]);
   const [page, setPage] = useState<number>(1);
@@ -404,6 +397,13 @@ export default function PayslipsTab({ initialStatusFilter = "" }: PayslipsTabPro
   const [error, setError] = useState<string | null>(null);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [showGenerateModal, setShowGenerateModal] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (initialStatusFilter !== undefined) {
+      setStatusFilter(initialStatusFilter);
+      setPage(1);
+    }
+  }, [initialStatusFilter]);
 
   const fetchEmployees = async () => {
     try {

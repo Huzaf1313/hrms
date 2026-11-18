@@ -91,6 +91,12 @@ async def create_attendance(
         require_permission(Permission.ATTENDANCE_CREATE)
     ),
 ):
+    role = getattr(current_user.get("role"), "value", current_user.get("role")) if current_user else None
+    if role == "employee":
+        current_emp_id = current_user.get("employee_id")
+        if not current_emp_id or current_emp_id != data.employee_id:
+            raise AppException("You can only check in for your own account", 403)
+
     attendance_data = data.model_dump()
 
     attendance = await service.create_attendance(

@@ -8,6 +8,7 @@ import {
   useEmployeeLeaves,
   useEmployeeLeaveBalances,
   useEmployeeAnnouncements,
+  useEmployeeLatestPayroll,
 } from "../../hooks/useEmployeeData";
 import type {
   AttendanceRecord,
@@ -262,6 +263,8 @@ function EmployeeDashboard() {
     isLoading: loadingAnnouncements,
     isError: hasAnnouncementError,
   } = useEmployeeAnnouncements(1, 100);
+  const { data: latestPayroll, isLoading: loadingPayroll } =
+    useEmployeeLatestPayroll(user?.employee_id);
 
   const attendanceRecords = useMemo(() => {
     return (rawAttendanceRecords || []).map(normalizeAttendance);
@@ -584,7 +587,11 @@ const attendanceChart = useMemo(() => {
               </p>
 
               <p className="mt-3 text-2xl font-bold text-[#17213a]">
-                ₹48,750
+                {loadingPayroll
+                  ? "..."
+                  : latestPayroll
+                    ? `₹${latestPayroll.net_salary.toLocaleString("en-IN")}`
+                    : "No Payslip"}
               </p>
             </div>
 
@@ -594,7 +601,9 @@ const attendanceChart = useMemo(() => {
           </div>
 
           <p className="mt-4 text-sm text-gray-500">
-            July 2026 · Take-home salary
+            {latestPayroll
+              ? `${latestPayroll.month} · Take-home salary`
+              : "No payslip generated yet"}
           </p>
 
           <button
