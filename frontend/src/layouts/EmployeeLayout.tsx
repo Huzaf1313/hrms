@@ -118,29 +118,10 @@ function EmployeeLayout({ onLogout }: { onLogout: () => void }) {
 
         setDesignation(profile.designation ?? "");
 
-        try {
-          // Fetch the actual uploaded profile photo using authentication.
-          const photoBlob = await employeeService.getProfilePhoto(
-            profile.id,
-          );
-
-          const newObjectUrl = URL.createObjectURL(photoBlob);
-
-          if (cancelled) {
-            URL.revokeObjectURL(newObjectUrl);
-            return;
-          }
-
-          objectUrl = newObjectUrl;
-          setAvatarUrl(newObjectUrl);
-        } catch (error) {
-          if (!cancelled) {
-            setAvatarUrl(null);
-            console.error(
-              "Failed to load employee header photo:",
-              error,
-            );
-          }
+        if (profile.avatar_url) {
+          setAvatarUrl(profile.avatar_url);
+        } else {
+          setAvatarUrl(null);
         }
       } catch (error) {
         if (!cancelled) {

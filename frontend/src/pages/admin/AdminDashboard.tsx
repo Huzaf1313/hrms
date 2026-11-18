@@ -12,6 +12,7 @@ import DashboardKpiRow from "../../components/admin/DashboardKpiRow";
 import DepartmentDonut from "../../components/admin/DepartmentDonut";
 import PayrollExpenseSummaryCard from "../../components/admin/PayrollExpenseSummaryCard";
 import PendingLeaveRequestsCard from "../../components/admin/PendingLeaveRequestsCard";
+import PerformanceSummaryCard from "../../components/admin/PerformanceSummaryCard";
 import QuickActionsCard from "../../components/admin/QuickActionsCard";
 import RecentActivityCard from "../../components/admin/RecentActivityCard";
 import RecruitmentFunnel from "../../components/admin/RecruitmentFunnel";
@@ -96,7 +97,7 @@ export default function AdminDashboard({
         <div className="grid grid-cols-12 gap-4">
           <AttendanceTrendChart />
 
-          {showHrWidgets && (
+          {showHrWidgets ? (
             <>
               <RecruitmentFunnel
                 metrics={metrics}
@@ -111,6 +112,11 @@ export default function AdminDashboard({
                 isLoading={metrics.isPayrollLoading}
               />
             </>
+          ) : (
+            <>
+              <PerformanceSummaryCard summary={metrics.performanceSummary} />
+              <DepartmentDonut counts={metrics.departmentCounts} />
+            </>
           )}
         </div>
 
@@ -120,25 +126,43 @@ export default function AdminDashboard({
             onChanged={refresh}
           />
 
-          {showHrWidgets && (
+          {showHrWidgets ? (
             <UpcomingInterviewsCard
               metrics={metrics}
               onOpenRecruitment={() => onNavigate("Recruitment")}
             />
+          ) : (
+            <RecentActivityCard activities={recentActivities} />
           )}
 
           <BirthdaysAndAnniversariesCard />
         </div>
 
         <div className="grid grid-cols-12 gap-4">
-          <RecentActivityCard activities={recentActivities} />
-          <QuickActionsCard
-            onNavigate={onNavigate}
-            onCreateAnnouncement={onCreateAnnouncement}
-            showHrWidgets={showHrWidgets}
-          />
-          <DepartmentDonut counts={metrics.departmentCounts} />
+          {showHrWidgets ? (
+            <>
+              <PerformanceSummaryCard summary={metrics.performanceSummary} />
+              <RecentActivityCard activities={recentActivities} />
+              <DepartmentDonut counts={metrics.departmentCounts} />
+            </>
+          ) : (
+            <QuickActionsCard
+              onNavigate={onNavigate}
+              onCreateAnnouncement={onCreateAnnouncement}
+              showHrWidgets={showHrWidgets}
+            />
+          )}
         </div>
+
+        {showHrWidgets && (
+          <div className="grid grid-cols-12 gap-4">
+            <QuickActionsCard
+              onNavigate={onNavigate}
+              onCreateAnnouncement={onCreateAnnouncement}
+              showHrWidgets={showHrWidgets}
+            />
+          </div>
+        )}
       </div>
 
       <div className="mt-6 flex flex-col items-center justify-between gap-2 border-t border-gray-100 pt-4 text-[11px] text-gray-400 sm:flex-row">

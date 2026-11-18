@@ -27,6 +27,15 @@ export interface DashboardPayrollSummary {
   currency: string;
 }
 
+export interface DashboardPerformanceSummary {
+  total_reviews: number;
+  completed_reviews: number;
+  pending_reviews: number;
+  average_rating: number;
+  goals_met_pct: number;
+  active_cycle: string;
+}
+
 export interface DashboardData {
   total_headcount: number;
   attendance_rate: number | null;
@@ -36,6 +45,7 @@ export interface DashboardData {
   hiring_pipeline: HiringPipeline;
   recent_activities: RecentActivity[];
   payroll_summary?: DashboardPayrollSummary | null;
+  performance_summary?: DashboardPerformanceSummary | null;
 }
 
 export async function getDashboardData(): Promise<DashboardData> {

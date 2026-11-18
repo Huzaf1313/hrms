@@ -5,6 +5,8 @@ from pydantic import BaseModel, EmailStr, Field, field_validator
 
 NAME_DIGIT_PATTERN = re.compile(r"[0-9]")
 EMPLOYEE_PHONE_PATTERN = re.compile(r"^[0-9]{10}$")
+IFSC_PATTERN = re.compile(r"^[A-Z]{4}0[A-Z0-9]{6}$")
+BANK_ACCOUNT_PATTERN = re.compile(r"^\d{9,18}$")
 
 
 def validate_employee_name(value: str | None, field_label: str) -> str | None:
@@ -44,6 +46,34 @@ class EmergencyContact(BaseModel):
     alternate_phone: str | None = None
     address: str | None = None
 
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Contact name cannot be blank")
+        return value
+
+    @field_validator("relationship")
+    @classmethod
+    def validate_relationship(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Relationship cannot be blank")
+        return value
+
+    @field_validator("phone")
+    @classmethod
+    def validate_phone(cls, value: str) -> str:
+        return validate_employee_phone(value)
+
+    @field_validator("alternate_phone")
+    @classmethod
+    def validate_alternate_phone(cls, value: str | None) -> str | None:
+        if not value or not value.strip():
+            return None
+        return validate_employee_phone(value)
+
 
 class BankInformation(BaseModel):
     bank_name: str
@@ -51,6 +81,38 @@ class BankInformation(BaseModel):
     account_number: str
     ifsc_code: str
     branch: str | None = None
+
+    @field_validator("bank_name")
+    @classmethod
+    def validate_bank_name(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Bank name cannot be blank")
+        return value
+
+    @field_validator("account_holder_name")
+    @classmethod
+    def validate_holder_name(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Account holder name cannot be blank")
+        return value
+
+    @field_validator("account_number")
+    @classmethod
+    def validate_account_number(cls, value: str) -> str:
+        value = value.strip().replace(" ", "").replace("-", "")
+        if not BANK_ACCOUNT_PATTERN.match(value):
+            raise ValueError("Account number must be between 9 and 18 digits")
+        return value
+
+    @field_validator("ifsc_code")
+    @classmethod
+    def validate_ifsc(cls, value: str) -> str:
+        value = value.strip().upper()
+        if not IFSC_PATTERN.match(value):
+            raise ValueError("IFSC code must be 11 characters (e.g. SBIN0001234)")
+        return value
 
 
 class TransferHistory(BaseModel):
@@ -193,7 +255,7 @@ class EmployeeResponse(BaseModel):
     last_name: str
 
     email: EmailStr
-    phone: str
+    phone: str | None = None
 
     # Employee Avatar / Photo
     avatar_url: str | None = None
@@ -203,11 +265,11 @@ class EmployeeResponse(BaseModel):
     address: str | None = None
 
     # Employment
-    department_id: str
-    designation: str
+    department_id: str | None = None
+    designation: str | None = None
     joining_date: date | None = None
 
-    employment_type: str
+    employment_type: str | None = "Full-time"
     work_location: str | None = None
     reporting_manager: str | None = None
     # Account id of the reporting manager. This is what scopes a manager to
@@ -221,11 +283,11 @@ class EmployeeResponse(BaseModel):
 
 
     # Additional Information
-    emergency_contact: EmergencyContact | None = None
-    bank_information: BankInformation | None = None
+    emergency_contact: EmergencyContact | dict | None = None
+    bank_information: BankInformation | dict | None = None
 
     # Status
-    status: str
+    status: str | None = "active"
 
     # Admin user id (Mongo _id as str) who created this profile. Null on records
     # that predate the field.

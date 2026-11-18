@@ -27,10 +27,10 @@ LEAVE_BALANCE_TYPES = [
 ]
 
 LEAVE_BALANCE_DEFAULTS = {
-    "Casual Leave": {"used": 240, "total": 320},
-    "Sick Leave": {"used": 96, "total": 120},
-    "Earned Leave": {"used": 156, "total": 240},
-    "Comp Off": {"used": 32, "total": 48},
+    "Casual Leave": {"used": 0, "total": 12},
+    "Sick Leave": {"used": 0, "total": 10},
+    "Earned Leave": {"used": 0, "total": 18},
+    "Comp Off": {"used": 0, "total": 0},
 }
 
 

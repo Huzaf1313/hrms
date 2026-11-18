@@ -27,6 +27,7 @@ import {
   Users,
   X,
 } from "lucide-react";
+import SecuritySessionsSection from "../../components/auth/SecuritySessionsSection";
 
 import { employeeService } from "../../services/employeeService";
 import { departmentService } from "../../services/departmentService";
@@ -223,7 +224,9 @@ export default function EmployeeProfile() {
     null,
   );
   const [isEditingEmergencyContact, setIsEditingEmergencyContact] =
-  useState(false);
+    useState(false);
+  const [emergencyContactSuccess, setEmergencyContactSuccess] = useState("");
+  const [emergencyContactError, setEmergencyContactError] = useState("");
 
   const [emergencyContactForm, setEmergencyContactForm] = useState({
     name: "",
@@ -346,42 +349,12 @@ export default function EmployeeProfile() {
   }, []);
 
   useEffect(() => {
-  if (!employee?.id || !employee.avatar_url) {
-    setProfilePhotoUrl(null);
-    return;
-  }
-
-  let cancelled = false;
-  let objectUrl: string | null = null;
-
-  const loadProfilePhoto = async () => {
-    try {
-      const blob = await employeeService.getProfilePhoto(employee.id);
-
-      if (cancelled) return;
-
-      objectUrl = URL.createObjectURL(blob);
-      setProfilePhotoUrl(objectUrl);
-    } catch (error) {
-      console.error("Failed to load profile photo:", error);
-
-      if (!cancelled) {
-        setProfilePhotoUrl(null);
-      }
+    if (employee?.avatar_url) {
+      setProfilePhotoUrl(employee.avatar_url);
+    } else {
+      setProfilePhotoUrl(null);
     }
-  };
-
-  setProfilePhotoUrl(null);
-  loadProfilePhoto();
-
-  return () => {
-    cancelled = true;
-
-    if (objectUrl) {
-      URL.revokeObjectURL(objectUrl);
-    }
-  };
-}, [employee?.id, employee?.avatar_url]);
+  }, [employee?.avatar_url]);
 
   const handleProfilePhotoChange = async (
     event: React.ChangeEvent<HTMLInputElement>,
@@ -468,6 +441,8 @@ export default function EmployeeProfile() {
 };
 
   const handleEditEmergencyContact = () => {
+    setEmergencyContactError("");
+    setEmergencyContactSuccess("");
     setEmergencyContactForm({
       name: employee?.emergency_contact?.name || "",
       relationship: employee?.emergency_contact?.relationship || "",
@@ -482,32 +457,51 @@ export default function EmployeeProfile() {
   const handleSaveEmergencyContact = async () => {
     if (!employee?.id) return;
 
+    setEmergencyContactError("");
+    setEmergencyContactSuccess("");
+
     if (
       !emergencyContactForm.name.trim() ||
       !emergencyContactForm.relationship.trim() ||
       !emergencyContactForm.phone.trim()
     ) {
+      setEmergencyContactError("Please fill in all required fields (Name, Relationship, Phone).");
       return;
     }
 
     try {
       setIsSavingEmergencyContact(true);
 
-      await employeeService.update(employee.id, {
-        emergency_contact: {
-          name: emergencyContactForm.name.trim(),
-          relationship: emergencyContactForm.relationship.trim(),
-          phone: emergencyContactForm.phone.trim(),
-          alternate_phone:
-            emergencyContactForm.alternate_phone.trim() || undefined,
-          address: emergencyContactForm.address.trim() || undefined,
-        },
+      const contactPayload = {
+        name: emergencyContactForm.name.trim(),
+        relationship: emergencyContactForm.relationship.trim(),
+        phone: emergencyContactForm.phone.trim(),
+        alternate_phone:
+          emergencyContactForm.alternate_phone.trim() || undefined,
+        address: emergencyContactForm.address.trim() || undefined,
+      };
+
+      const updated = await employeeService.update(employee.id, {
+        emergency_contact: contactPayload,
       });
 
+      setEmployee((current) =>
+        current
+          ? {
+              ...current,
+              emergency_contact: updated.emergency_contact || contactPayload,
+            }
+          : current,
+      );
+
       setIsEditingEmergencyContact(false);
-      // Refresh the employee profile using your existing profile-loading logic.
+      setEmergencyContactSuccess("Emergency contact updated successfully.");
+      setTimeout(() => setEmergencyContactSuccess(""), 4000);
     } catch (error) {
       console.error("Failed to save emergency contact:", error);
+      const message =
+        error instanceof Error ? error.message : "Failed to save emergency contact. Please try again.";
+      setEmergencyContactError(message);
     } finally {
       setIsSavingEmergencyContact(false);
     }
@@ -1011,6 +1005,19 @@ const handleChangePassword = async (
             </div>
 
             <div className="p-6">
+              {emergencyContactSuccess && (
+                <div className="mb-4 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-medium text-emerald-800">
+                  <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+                  <span>{emergencyContactSuccess}</span>
+                </div>
+              )}
+
+              {emergencyContactError && (
+                <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-medium text-rose-800">
+                  {emergencyContactError}
+                </div>
+              )}
+
               {isEditingEmergencyContact ? (
                 /* Edit Form */
                 <div className="space-y-4">
@@ -1516,6 +1523,9 @@ const handleChangePassword = async (
           </div>
         </form>
       </section>
+
+      {/* Security Sessions & Login History */}
+      <SecuritySessionsSection />
 
       {passwordChangedConfirmation && (
         <div

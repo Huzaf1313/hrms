@@ -7,6 +7,7 @@ import { employeeService } from "../../services/employeeService";
 import { leaveService } from "../../services/admin_leave_service";
 import { recruitmentService } from "../../services/recruitmentService";
 import { getDashboardData } from "../../services/dashboardService";
+import type { DashboardPerformanceSummary } from "../../services/dashboardService";
 import type {
   CandidateStage,
   UpcomingInterview,
@@ -37,6 +38,7 @@ export interface DashboardMetrics {
   totalExpensesThisMonth: number | null;
   expenseChangePercent: number | null;
   isPayrollLoading: boolean;
+  performanceSummary: DashboardPerformanceSummary | null;
 }
 
 export interface DashboardMetricsState {
@@ -64,6 +66,7 @@ const EMPTY_METRICS: DashboardMetrics = {
   totalExpensesThisMonth: null,
   expenseChangePercent: null,
   isPayrollLoading: false,
+  performanceSummary: null,
 };
 
 /** Local calendar date, so the summary matches the server's IST day. */
@@ -185,6 +188,7 @@ export function useDashboardMetrics(
       next.expenseChangePercent = 0;
     }
     next.isPayrollLoading = dashboardQuery.isLoading;
+    next.performanceSummary = dashboardQuery.data?.performance_summary ?? null;
 
     // Department headcount: the attendance summary already reports total
     // employees per department, so one call covers the donut.

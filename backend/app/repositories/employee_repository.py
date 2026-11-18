@@ -25,21 +25,32 @@ class EmployeeRepository:
             {"_id": result.inserted_id}
         )
 
+    def _id_query(self, employee_id: str) -> dict | None:
+        if not employee_id:
+            return None
+        if ObjectId.is_valid(employee_id):
+            return {
+                "$or": [
+                    {"_id": ObjectId(employee_id)},
+                    {"employee_id": employee_id},
+                ],
+                "employee_id": {"$exists": True},
+            }
+        return {
+            "employee_id": str(employee_id).strip(),
+        }
+
     async def get_by_id(
         self,
         employee_id: str,
         scope: dict | None = None,
     ):
-        if not ObjectId.is_valid(employee_id):
+        query = self._id_query(employee_id)
+        if not query:
             return None
 
-        query = {
-            "_id": ObjectId(employee_id),
-            "employee_id": {"$exists": True},
-        }
-
         if scope:
-            query.update(scope)
+            query = {"$and": [query, scope]}
 
         return await self.collection.find_one(query)
 
@@ -170,16 +181,12 @@ class EmployeeRepository:
         update_data: dict,
         scope: dict | None = None,
     ):
-        if not ObjectId.is_valid(employee_id):
+        query = self._id_query(employee_id)
+        if not query:
             return None
 
-        query = {
-            "_id": ObjectId(employee_id),
-            "employee_id": {"$exists": True},
-        }
-
         if scope:
-            query.update(scope)
+            query = {"$and": [query, scope]}
 
         await self.collection.update_one(
             query,
@@ -195,19 +202,15 @@ class EmployeeRepository:
         update_data: dict | None = None,
         scope: dict | None = None,
     ):
-        if not ObjectId.is_valid(employee_id):
+        query = self._id_query(employee_id)
+        if not query:
             return None
 
         changes = dict(update_data or {})
         changes["status"] = status
 
-        query = {
-            "_id": ObjectId(employee_id),
-            "employee_id": {"$exists": True},
-        }
-
         if scope:
-            query.update(scope)
+            query = {"$and": [query, scope]}
 
         result = await self.collection.update_one(
             query,
@@ -224,16 +227,12 @@ class EmployeeRepository:
         employee_id: str,
         scope: dict | None = None,
     ):
-        if not ObjectId.is_valid(employee_id):
+        query = self._id_query(employee_id)
+        if not query:
             return False
 
-        query = {
-            "_id": ObjectId(employee_id),
-            "employee_id": {"$exists": True},
-        }
-
         if scope:
-            query.update(scope)
+            query = {"$and": [query, scope]}
 
         result = await self.collection.delete_one(query)
         return result.deleted_count > 0

@@ -4,7 +4,6 @@ import {
   STAGE_LABELS,
 } from "../../types/recruitment";
 import DashboardCard, { DashboardViewAllLink } from "./DashboardCard";
-import { recruitmentStages } from "./dashboardData";
 import { useAnimationFrame, useCountUp } from "./useDashboardAnimation";
 import type { DashboardMetrics } from "./useDashboardMetrics";
 
@@ -23,8 +22,7 @@ interface RecruitmentFunnelProps {
  * Candidate counts per pipeline stage.
  *
  * Reads the same stage counts the recruitment board is built from, so moving a
- * candidate between columns on that page is reflected here. The hardcoded rows
- * in `dashboardData` stand in until the stats call resolves or if it fails.
+ * candidate between columns on that page is reflected here.
  */
 export default function RecruitmentFunnel({
   metrics,
@@ -34,19 +32,10 @@ export default function RecruitmentFunnel({
 
   const counts = metrics.recruitmentStageCounts;
 
-  const stages = PIPELINE_STAGES.map((stage) => ({
+  const rows = PIPELINE_STAGES.map((stage) => ({
     label: STAGE_LABELS[stage],
-    value: counts ? (counts[stage] ?? 0) : null,
+    value: counts ? (counts[stage] ?? 0) : 0,
     color: STAGE_COLORS[stage],
-  }));
-
-  const placeholders = recruitmentStages;
-
-  // Without live counts the rows fall back to the placeholder sequence, matched
-  // by position because both lists walk the same seven stages.
-  const rows = stages.map((stage, index) => ({
-    ...stage,
-    value: stage.value ?? placeholders[index]?.value ?? 0,
   }));
 
   const total = rows.reduce((sum, stage) => sum + stage.value, 0);

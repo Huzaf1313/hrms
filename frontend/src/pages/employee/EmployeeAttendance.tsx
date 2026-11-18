@@ -12,7 +12,7 @@ import {
   formatHolidayDate,
   type Holiday,
 } from "../../types/holiday";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download } from "lucide-react";
 
 import EmployeeAttendanceRegularizationModal from "./EmployeeAttendanceRegularizationModal";
 
@@ -376,14 +376,6 @@ const [records, leaveList, requests, holidayList] = await Promise.all([
   holidayService.list().catch(() => [] as Holiday[]),
 ]);
 
-// console.log("ATTENDANCE RECORDS:", records);
-// console.log(
-//   "TODAY:",
-//   new Date().toString(),
-//   new Date().toISOString(),
-// );
-// console.log("LEAVE DATA:", leaveList.items);
-
 
 
 setAttendanceRecords(records);
@@ -551,7 +543,9 @@ const presentDays = currentMonthRecords.filter(
 
     return (
       status === "present" ||
-      status === "late"
+      status === "late" ||
+      status === "half_day" ||
+      status === "half-day"
     );
   },
 ).length;
@@ -693,6 +687,48 @@ if (
       month: "long",
       year: "numeric",
     });
+
+    const handleExportMonth = () => {
+      if (!currentMonthRecords || currentMonthRecords.length === 0) {
+        alert("No attendance records to export for this month.");
+        return;
+      }
+
+      const headers = [
+        "Date",
+        "Status",
+        "Shift",
+        "Check In",
+        "Check Out",
+        "Total Hours",
+        "Overtime (Hours)",
+        "Late (Minutes)",
+      ];
+
+      const rows = [...currentMonthRecords]
+        .sort((a, b) => a.date.localeCompare(b.date))
+        .map((r) => [
+          `"${r.date}"`,
+          `"${r.status}"`,
+          `"${r.shift ?? myShift?.name ?? "-"}"`,
+          `"${resolveCheckIn(r) ?? "-"}"`,
+          `"${resolveCheckOut(r) ?? "-"}"`,
+          `"${r.total_hours?.toFixed(2) ?? "0"}"`,
+          `"${((r.overtime_minutes ?? 0) / 60).toFixed(2)}"`,
+          `"${r.late_minutes ?? (r.is_late ? "Late" : "0")}"`,
+        ]);
+
+      const csvContent = [headers.join(","), ...rows.map((row) => row.join(","))].join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `attendance_${viewYear}_${String(viewMonthIndex + 1).padStart(2, "0")}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    };
 
     const firstDayOfMonth = new Date(
       calendarYear,
@@ -1686,32 +1722,44 @@ if (
                 {monthName}
               </h3>
 
-              <div className="flex items-center gap-1">
-                {isMonthLoading && (
-                  <span className="mr-1 text-xs text-gray-400">
-                    Loading...
-                  </span>
-                )}
-
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => shiftMonth(-1)}
-                  disabled={isMonthLoading}
-                  className="rounded-lg p-1.5 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 disabled:cursor-not-allowed disabled:text-gray-300 disabled:hover:bg-transparent"
-                  aria-label="Previous month"
+                  onClick={handleExportMonth}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
+                  title="Export monthly attendance as CSV"
                 >
-                  <ChevronLeft className="h-4 w-4" />
+                  <Download className="h-3.5 w-3.5 text-gray-500" />
+                  <span>Export</span>
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => shiftMonth(1)}
-                  disabled={isMonthLoading}
-                  className="rounded-lg p-1.5 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 disabled:cursor-not-allowed disabled:text-gray-300 disabled:hover:bg-transparent"
-                  aria-label="Next month"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
+                <div className="flex items-center gap-1">
+                  {isMonthLoading && (
+                    <span className="mr-1 text-xs text-gray-400">
+                      Loading...
+                    </span>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => shiftMonth(-1)}
+                    disabled={isMonthLoading}
+                    className="rounded-lg p-1.5 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 disabled:cursor-not-allowed disabled:text-gray-300 disabled:hover:bg-transparent"
+                    aria-label="Previous month"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => shiftMonth(1)}
+                    disabled={isMonthLoading}
+                    className="rounded-lg p-1.5 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 disabled:cursor-not-allowed disabled:text-gray-300 disabled:hover:bg-transparent"
+                    aria-label="Next month"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -1829,6 +1877,9 @@ if (
                     } else if (isOnLeave) {
                       statusClass =
                         "bg-purple-100 text-purple-700";
+                    } else if (status === "half_day" || status === "half-day") {
+                      statusClass =
+                        "bg-amber-100 text-amber-700";
                     } else if (isLate) {
                       statusClass =
                         "bg-orange-100 text-orange-700";
@@ -1916,6 +1967,13 @@ if (
                 <span className="h-3 w-3 rounded-full bg-orange-400" />
                 <span className="text-xs text-gray-500">
                   Late
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="h-3 w-3 rounded-full bg-amber-500" />
+                <span className="text-xs text-gray-500">
+                  Half Day
                 </span>
               </div>
 

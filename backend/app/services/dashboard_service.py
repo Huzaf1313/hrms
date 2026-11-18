@@ -10,6 +10,7 @@ from app.core.scope import visible_employee_codes
 from app.repositories.admin_payslip_repository import AdminPayslipRepository
 from app.repositories.admin_announcement_repository import AdminAnnouncementRepository
 from app.repositories.employee_repository import EmployeeRepository
+from app.repositories.performance_repository import PerformanceRepository
 from app.services.activity_service import ActivityService
 from app.services.employee_service import EmployeeService
 from app.services.object_storage_service import ObjectStorageService
@@ -38,6 +39,7 @@ class DashboardService:
         self.storage_service = ObjectStorageService()
         self.payslip_repository = AdminPayslipRepository()
         self.announcement_repository = AdminAnnouncementRepository()
+        self.performance_repository = PerformanceRepository()
 
     async def get_dashboard_data(self, current_user: dict | None = None):
         scope = self.employee_service._visibility_scope(current_user)
@@ -49,6 +51,7 @@ class DashboardService:
         )
         recent_activities = await self.activity_service.recent_for(current_user)
         payroll_summary = await self.get_payroll_summary(current_user=current_user)
+        performance_summary = await self.get_performance_summary(current_user=current_user)
 
         return {
             "total_headcount": total_headcount,
@@ -64,7 +67,21 @@ class DashboardService:
                 "offered": 0,
             },
             "payroll_summary": payroll_summary,
+            "performance_summary": performance_summary,
         }
+
+    async def get_performance_summary(self, current_user: dict | None = None) -> dict | None:
+        role = current_user.get("role") if current_user else None
+        role_value = getattr(role, "value", role)
+        if not role_value or not has_permission(role_value, Permission.PERFORMANCE_READ):
+            return None
+
+        visible_codes = None
+        scope = self.employee_service._visibility_scope(current_user)
+        if scope:
+            visible_codes = await visible_employee_codes(self.employee_repository, current_user)
+
+        return await self.performance_repository.get_summary(employee_codes=visible_codes)
 
     async def get_payroll_summary(self, current_user: dict | None = None) -> dict | None:
         role = current_user.get("role") if current_user else None

@@ -121,6 +121,8 @@ async def get_current_user(
             403,
         )
 
+    user["current_session_id"] = session_id
+
     return user
 
 

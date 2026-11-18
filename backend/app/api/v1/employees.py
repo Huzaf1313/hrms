@@ -2,6 +2,7 @@ from datetime import date, datetime
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Query, UploadFile
+from fastapi.responses import RedirectResponse
 
 from app.api.deps import get_current_user, require_permission
 from app.core.cache import (
@@ -10,7 +11,7 @@ from app.core.cache import (
     invalidate_payroll_analytics_cache,
     set_cache,
 )
-from app.core.roles import Permission, has_permission
+from app.core.roles import Permission, has_permission, UserRole
 from app.schemas.common import APIResponse
 from app.schemas.employee import (
     EmployeeCreate,
@@ -26,6 +27,7 @@ from app.services.employee_service import EmployeeService
 from app.services.employee_identity import (
     ensure_employee_profile,
     peek_next_employee_code,
+    SUPER_ADMIN_EMPLOYEE_CODE,
 )
 from app.services.otp_service import OTPService
 from app.services.object_storage_service import ObjectStorageService
@@ -62,9 +64,12 @@ async def serialize_employee(
     # Employee self-service uploads use profile_photo_key, while admin
     # uploads use avatar_key. Both point to the same private object storage and
     # must be exposed as signed URLs for <img> requests in the admin UI.
-    photo_key = employee.get("avatar_key") or employee.get("profile_photo_key")
-    if photo_key:
-        avatar_url = await storage_service.signed_url(photo_key)
+    try:
+        photo_key = employee.get("avatar_key") or employee.get("profile_photo_key")
+        if photo_key:
+            avatar_url = await storage_service.signed_url(photo_key)
+    except Exception:
+        avatar_url = employee.get("avatar_url")
 
     first_name = employee.get("first_name") or ""
     last_name = employee.get("last_name") or ""
@@ -78,16 +83,40 @@ async def serialize_employee(
         created_at = employee["created_at"]
         if hasattr(created_at, "date"):
             joining_date = created_at.date()
+        elif isinstance(created_at, str):
+            try:
+                joining_date = date.fromisoformat(created_at[:10])
+            except Exception:
+                joining_date = None
+
+    date_of_birth = employee.get("date_of_birth")
+    if date_of_birth and hasattr(date_of_birth, "date"):
+        date_of_birth = date_of_birth.date()
+    elif isinstance(date_of_birth, str):
+        try:
+            date_of_birth = date.fromisoformat(date_of_birth[:10])
+        except Exception:
+            date_of_birth = None
+
+    emergency_contact = employee.get("emergency_contact")
+    if emergency_contact and not isinstance(emergency_contact, dict):
+        emergency_contact = None
+
+    bank_information = employee.get("bank_information")
+    if bank_information and not isinstance(bank_information, dict):
+        bank_information = None
+
+    email = employee.get("email") or "user@hrms.com"
 
     return EmployeeResponse(
         id=str(employee["_id"]),
-        employee_id=employee.get("employee_id", ""),
+        employee_id=employee.get("employee_id") or "",
         first_name=first_name,
         last_name=last_name,
-        email=employee.get("email"),
+        email=email,
         phone=employee.get("phone") or employee.get("phone_number") or "",
         avatar_url=avatar_url,
-        date_of_birth=employee.get("date_of_birth"),
+        date_of_birth=date_of_birth,
         gender=employee.get("gender"),
         address=employee.get("address"),
         department_id=employee.get("department_id") or "",
@@ -100,8 +129,8 @@ async def serialize_employee(
         salary_structure=employee.get("salary_structure"),
         salary=employee.get("salary"),
         shift_id=employee.get("shift_id"),
-        emergency_contact=employee.get("emergency_contact"),
-        bank_information=employee.get("bank_information"),
+        emergency_contact=emergency_contact,
+        bank_information=bank_information,
         status=employee.get("status") or "active",
         created_by=employee.get("created_by"),
         welcome_email_sent=welcome_email_sent,
@@ -272,18 +301,29 @@ async def get_employees(
 async def get_my_employee_profile(
     current_user: dict = Depends(get_current_user),
 ):
-    # Older accounts were created before employee identities were minted at
-    # login. Provision the identity here so the employee portal can recover
-    # without requiring a manual database migration.
-    current_user = await ensure_employee_profile(
-        service.user_repository.collection,
-        current_user,
-    )
+    try:
+        current_user = await ensure_employee_profile(
+            service.user_repository.collection,
+            current_user,
+        )
+    except Exception as e:
+        print(f"[employees/me] ensure_employee_profile warning: {e}")
 
-    # ensure_employee_profile deliberately leaves the super admin without an
-    # employee_id, so it has no employee record to return.
     if not current_user.get("employee_id"):
-        raise AppException("No employee record found for this account", 404)
+        role = getattr(current_user.get("role"), "value", current_user.get("role"))
+        emp_code = (
+            SUPER_ADMIN_EMPLOYEE_CODE
+            if role == UserRole.SUPER_ADMIN.value
+            else f"EMP_{str(current_user.get('_id'))[-4:]}"
+        )
+        current_user = dict(current_user)
+        current_user["employee_id"] = emp_code
+        if not current_user.get("designation"):
+            current_user["designation"] = (
+                role.replace("_", " ").title()
+                if isinstance(role, str)
+                else "Employee"
+            )
 
     user_id = str(current_user["_id"])
     cache_key = f"employees:me:{user_id}"
@@ -299,7 +339,10 @@ async def get_my_employee_profile(
             pass
 
     response_data = await serialize_employee(current_user)
-    await set_cache(cache_key, response_data.model_dump(mode="json"), ttl=EMPLOYEE_PROFILE_CACHE_TTL)
+    try:
+        await set_cache(cache_key, response_data.model_dump(mode="json"), ttl=EMPLOYEE_PROFILE_CACHE_TTL)
+    except Exception:
+        pass
 
     return APIResponse(
         success=True,
@@ -351,11 +394,25 @@ async def get_employee(
 async def upload_employee_avatar(
     employee_id: str,
     file: UploadFile = File(...),
-    current_user: dict = Depends(
-        require_permission(Permission.EMPLOYEES_UPDATE)
-    ),
+    current_user: dict = Depends(get_current_user),
 ):
-    employee = await service.get_employee(employee_id, current_user=current_user)
+    role = getattr(current_user.get("role"), "value", current_user.get("role"))
+    current_user_id = str(current_user.get("_id") or "")
+    current_emp_code = str(current_user.get("employee_id") or "")
+
+    is_self = (
+        employee_id in (current_user_id, current_emp_code)
+        or employee_id == "me"
+    )
+
+    if not is_self and not has_permission(role, Permission.EMPLOYEES_UPDATE):
+        raise AppException(
+            "You do not have permission to perform this action",
+            403,
+        )
+
+    target_id = current_user_id if employee_id == "me" else employee_id
+    employee = await service.get_employee(target_id, current_user=current_user)
     filename = Path(file.filename or "").name
     extension = Path(filename).suffix.lower()
 
@@ -387,23 +444,67 @@ async def upload_employee_avatar(
         content_length=len(contents),
     )
 
-    old_key = employee.get("avatar_key")
+    old_key = employee.get("avatar_key") or employee.get("profile_photo_key")
     updated = await service.repository.update(
-        employee_id,
-        {"avatar_key": key, "avatar_url": None, "updated_at": datetime.utcnow()},
+        target_id,
+        {"avatar_key": key, "profile_photo_key": key, "avatar_url": None, "updated_at": datetime.utcnow()},
         scope=service._visibility_scope(current_user),
     )
 
     if old_key and old_key != key:
         await storage_service.delete(old_key)
 
-    await invalidate_employees_cache(employee_id=employee_id)
+    await invalidate_employees_cache(employee_id=target_id)
 
     return APIResponse(
         success=True,
         message="Profile photo uploaded successfully",
         data=await serialize_employee(updated),
     )
+
+
+@router.post(
+    "/employee-profile-photo/me",
+    response_model=APIResponse[EmployeeResponse],
+)
+async def upload_my_employee_profile_photo(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user),
+):
+    return await upload_employee_avatar(
+        employee_id="me",
+        file=file,
+        current_user=current_user,
+    )
+
+
+@router.delete(
+    "/employee-profile-photo/me",
+    response_model=APIResponse[EmployeeResponse],
+)
+async def delete_my_employee_profile_photo(
+    current_user: dict = Depends(get_current_user),
+):
+    return await delete_employee_avatar(
+        employee_id="me",
+        current_user=current_user,
+    )
+
+
+@router.get(
+    "/employee-profile-photo/{employee_id}/image",
+)
+async def get_employee_profile_photo_image(
+    employee_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    target_id = str(current_user["_id"]) if employee_id == "me" else employee_id
+    employee = await service.get_employee(target_id, current_user=current_user)
+    photo_key = employee.get("avatar_key") or employee.get("profile_photo_key")
+    if not photo_key:
+        raise AppException("No profile photo found", 404)
+    url = await storage_service.signed_url(photo_key)
+    return RedirectResponse(url=url, status_code=307)
 
 
 @router.put(
@@ -415,21 +516,25 @@ async def update_employee(
     data: EmployeeUpdate,
     current_user: dict = Depends(get_current_user),
 ):
-   
-    role = current_user.get("role")
+    role = getattr(current_user.get("role"), "value", current_user.get("role"))
     current_user_id = current_user.get("_id")
+    current_emp_code = current_user.get("employee_id")
 
     # Employee users can only update their own emergency contact
     if role == "employee":
-        current_user_id = current_user.get("_id")
-
         if not current_user_id:
             raise AppException(
                 "Employee profile not found",
                 404,
             )
 
-        if str(current_user_id) != str(employee_id):
+        is_own_profile = (
+            str(current_user_id) == str(employee_id)
+            or (current_emp_code and str(current_emp_code) == str(employee_id))
+            or employee_id == "me"
+        )
+
+        if not is_own_profile:
             raise AppException(
                 "You can only update your own employee profile",
                 403,
@@ -453,23 +558,27 @@ async def update_employee(
                 403,
             )
 
-        update_data = data.model_dump()
+        update_data = data.model_dump(exclude_unset=True)
 
-        update_data["date_of_birth"] = to_datetime(
-            update_data.get("date_of_birth")
-        )
+        if "date_of_birth" in update_data:
+            update_data["date_of_birth"] = to_datetime(
+                update_data.get("date_of_birth")
+            )
 
-        update_data["joining_date"] = to_datetime(
-            update_data.get("joining_date")
-        )
+        if "joining_date" in update_data:
+            update_data["joining_date"] = to_datetime(
+                update_data.get("joining_date")
+            )
+
+    target_id = str(current_user_id) if employee_id == "me" else employee_id
 
     employee = await service.update_employee(
-        employee_id=employee_id,
+        employee_id=target_id,
         update_data=update_data,
         current_user=current_user,
     )
 
-    await invalidate_employees_cache(employee_id=employee_id, user_id=str(current_user_id))
+    await invalidate_employees_cache(employee_id=target_id, user_id=str(current_user_id))
     await invalidate_payroll_analytics_cache()
 
     return APIResponse(
@@ -485,23 +594,37 @@ async def update_employee(
 )
 async def delete_employee_avatar(
     employee_id: str,
-    current_user: dict = Depends(
-        require_permission(Permission.EMPLOYEES_UPDATE)
-    ),
+    current_user: dict = Depends(get_current_user),
 ):
-    employee = await service.get_employee(employee_id, current_user=current_user)
-    old_key = employee.get("avatar_key")
+    role = getattr(current_user.get("role"), "value", current_user.get("role"))
+    current_user_id = str(current_user.get("_id") or "")
+    current_emp_code = str(current_user.get("employee_id") or "")
+
+    is_self = (
+        employee_id in (current_user_id, current_emp_code)
+        or employee_id == "me"
+    )
+
+    if not is_self and not has_permission(role, Permission.EMPLOYEES_UPDATE):
+        raise AppException(
+            "You do not have permission to perform this action",
+            403,
+        )
+
+    target_id = current_user_id if employee_id == "me" else employee_id
+    employee = await service.get_employee(target_id, current_user=current_user)
+    old_key = employee.get("avatar_key") or employee.get("profile_photo_key")
 
     updated = await service.repository.update(
-        employee_id,
-        {"avatar_key": None, "avatar_url": None, "updated_at": datetime.utcnow()},
+        target_id,
+        {"avatar_key": None, "profile_photo_key": None, "avatar_url": None, "updated_at": datetime.utcnow()},
         scope=service._visibility_scope(current_user),
     )
 
     if old_key:
         await storage_service.delete(old_key)
 
-    await invalidate_employees_cache(employee_id=employee_id)
+    await invalidate_employees_cache(employee_id=target_id)
 
     return APIResponse(
         success=True,

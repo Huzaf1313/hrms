@@ -2,9 +2,11 @@ import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.api.v1.admin_payslip import router as admin_payslip_router
 from app.api.v1.admin_leaves import router as leaves_router
 from app.api.v1.admin_attendance import router as attendance_router
@@ -185,6 +187,24 @@ async def lifespan(app: FastAPI):
     await close_database_connection()
 
 
+def _cors_headers_for_request(request: Request) -> dict[str, str]:
+    origin = request.headers.get("origin")
+    headers: dict[str, str] = {}
+    if origin:
+        allowed = settings.cors_origins_list
+        if (
+            origin in allowed
+            or "*" in allowed
+            or origin.startswith("http://localhost:")
+            or origin.startswith("http://127.0.0.1:")
+        ):
+            headers["Access-Control-Allow-Origin"] = origin
+            headers["Access-Control-Allow-Credentials"] = "true"
+            headers["Access-Control-Allow-Methods"] = "*"
+            headers["Access-Control-Allow-Headers"] = "*"
+    return headers
+
+
 async def app_exception_handler(
     request: Request,
     exc: AppException,
@@ -196,6 +216,54 @@ async def app_exception_handler(
             "message": exc.message,
             "data": None,
         },
+        headers=_cors_headers_for_request(request),
+    )
+
+
+async def http_exception_handler(
+    request: Request,
+    exc: StarletteHTTPException,
+):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "success": False,
+            "message": str(exc.detail),
+            "data": None,
+        },
+        headers=_cors_headers_for_request(request),
+    )
+
+
+async def validation_exception_handler(
+    request: Request,
+    exc: RequestValidationError,
+):
+    return JSONResponse(
+        status_code=422,
+        content={
+            "success": False,
+            "message": "Validation error",
+            "data": exc.errors(),
+        },
+        headers=_cors_headers_for_request(request),
+    )
+
+
+async def unhandled_exception_handler(
+    request: Request,
+    exc: Exception,
+):
+    import traceback
+    traceback.print_exc()
+    return JSONResponse(
+        status_code=500,
+        content={
+            "success": False,
+            "message": str(exc),
+            "data": None,
+        },
+        headers=_cors_headers_for_request(request),
     )
 
 
@@ -208,6 +276,18 @@ app = FastAPI(
 app.add_exception_handler(
     AppException,
     app_exception_handler,
+)
+app.add_exception_handler(
+    StarletteHTTPException,
+    http_exception_handler,
+)
+app.add_exception_handler(
+    RequestValidationError,
+    validation_exception_handler,
+)
+app.add_exception_handler(
+    Exception,
+    unhandled_exception_handler,
 )
 
 

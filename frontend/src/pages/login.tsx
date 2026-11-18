@@ -53,6 +53,18 @@ function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
 
+  // Auth mode: login vs register
+  const [authMode, setAuthMode] = useState<"login" | "register">("login");
+
+  // Registration state
+  const [regFullName, setRegFullName] = useState("");
+  const [regEmail, setRegEmail] = useState("");
+  const [regPhone, setRegPhone] = useState("");
+  const [regCompany, setRegCompany] = useState("");
+  const [regPassword, setRegPassword] = useState("");
+  const [regConfirmPassword, setRegConfirmPassword] = useState("");
+  const [showRegPassword, setShowRegPassword] = useState(false);
+
   // Forgot password state
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [forgotStep, setForgotStep] = useState<ForgotPasswordStep>("email");
@@ -146,6 +158,71 @@ function Login() {
         err instanceof ApiError
           ? err.message
           : "Unable to sign in. Please check your email and password and try again."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRegister = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setError("");
+
+    const trimmedFullName = regFullName.trim();
+    const trimmedEmail = regEmail.trim();
+    const trimmedPhone = regPhone.trim();
+
+    if (!trimmedFullName || !trimmedEmail || !trimmedPhone || !regPassword) {
+      setError("Please fill in all required fields.");
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(trimmedEmail)) {
+      setError("Please enter a valid work email address.");
+      return;
+    }
+
+    if (regPassword.length < 8) {
+      setError("Password must be at least 8 characters long.");
+      return;
+    }
+
+    if (regPassword !== regConfirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      await apiRaw.post("/auth/register", {
+        full_name: trimmedFullName,
+        email: trimmedEmail,
+        phone_number: trimmedPhone,
+        company_name: regCompany.trim(),
+        password: regPassword,
+      });
+
+      clearAuthQueries();
+      markSessionActive();
+
+      const userResponse = await api.get("/users/me");
+      const user = userResponse as UserResponse;
+
+      try {
+        localStorage.setItem("user", JSON.stringify(user));
+      } catch {
+        // Ignore
+      }
+
+      navigate(
+        user.role === "employee" ? "/employee/dashboard" : "/dashboard",
+      );
+    } catch (err: unknown) {
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : "Registration failed. Please check your details and try again."
       );
     } finally {
       setIsLoading(false);
@@ -345,97 +422,284 @@ function Login() {
       ]}
     >
       {!isForgotPassword ? (
-        <form onSubmit={handleLogin} className="space-y-4">
-          {/* Header */}
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-ink-900">
-              Welcome Back
-            </h1>
-            <p className="mt-1 text-xs text-ink-400">
-              Sign in to access your HRMS portal
-            </p>
-          </div>
-
-          {/* Error Alert */}
-          {error && (
-            <div
-              role="alert"
-              aria-live="polite"
-              className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-medium text-red-700"
-            >
-              {error}
+        authMode === "login" ? (
+          <form onSubmit={handleLogin} className="space-y-4">
+            {/* Tab switch */}
+            <div className="flex rounded-xl bg-gray-100 p-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode("login");
+                  setError("");
+                }}
+                className="flex-1 rounded-lg bg-white py-1.5 text-xs font-semibold text-gray-900 shadow-sm transition"
+              >
+                Sign In
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode("register");
+                  setError("");
+                }}
+                className="flex-1 rounded-lg py-1.5 text-xs font-semibold text-gray-500 transition hover:text-gray-900"
+              >
+                Register
+              </button>
             </div>
-          )}
 
-          {/* Input Fields */}
-          <div className="space-y-3">
-            <AuthField
-              id="login-email"
-              label="Work Email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="name@company.com"
-              autoComplete="email"
-              disabled={isLoading}
-            />
+            {/* Header */}
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-ink-900">
+                Welcome Back
+              </h1>
+              <p className="mt-1 text-xs text-ink-400">
+                Sign in to access your HRMS portal
+              </p>
+            </div>
 
-            <AuthField
-              id="login-password"
-              label="Password"
-              type={showPassword ? "text" : "password"}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter password"
-              autoComplete="current-password"
-              disabled={isLoading}
-              icon={
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((prev) => !prev)}
-                  className="p-1 text-ink-400 transition-colors hover:text-ink-800"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              }
-            />
-          </div>
+            {/* Error Alert */}
+            {error && (
+              <div
+                role="alert"
+                aria-live="polite"
+                className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-medium text-red-700"
+              >
+                {error}
+              </div>
+            )}
 
-          {/* Remember Me & Forgot Password */}
-          <div className="flex items-center justify-between text-xs">
-            <label className="flex cursor-pointer select-none items-center gap-2 text-ink-600">
-              <input
-                type="checkbox"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                className="h-4 w-4 rounded border-line text-brand-600 accent-brand-600 focus:ring-brand-500"
+            {/* Input Fields */}
+            <div className="space-y-3">
+              <AuthField
+                id="login-email"
+                label="Work Email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="name@company.com"
+                autoComplete="email"
+                disabled={isLoading}
               />
-              Remember me
-            </label>
 
+              <AuthField
+                id="login-password"
+                label="Password"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter password"
+                autoComplete="current-password"
+                disabled={isLoading}
+                icon={
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="p-1 text-ink-400 transition-colors hover:text-ink-800"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                }
+              />
+            </div>
+
+            {/* Remember Me & Forgot Password */}
+            <div className="flex items-center justify-between text-xs">
+              <label className="flex cursor-pointer select-none items-center gap-2 text-ink-600">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="h-4 w-4 rounded border-line text-brand-600 accent-brand-600 focus:ring-brand-500"
+                />
+                Remember me
+              </label>
+
+              <button
+                type="button"
+                onClick={handleForgotPasswordStart}
+                className="font-semibold text-brand-600 transition-colors hover:text-brand-700 hover:underline"
+              >
+                Forgot Password?
+              </button>
+            </div>
+
+            {/* Submit Button */}
             <button
-              type="button"
-              onClick={handleForgotPasswordStart}
-              className="font-semibold text-brand-600 transition-colors hover:text-brand-700 hover:underline"
+              type="submit"
+              disabled={isLoading}
+              className="w-full rounded-xl bg-brand-600 py-3.5 text-sm font-semibold text-white shadow-md shadow-brand-600/20 transition-all hover:bg-brand-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Forgot Password?
+              {isLoading ? "Signing In..." : "Sign In"}
             </button>
-          </div>
 
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full rounded-xl bg-brand-600 py-3.5 text-sm font-semibold text-white shadow-md shadow-brand-600/20 transition-all hover:bg-brand-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isLoading ? "Signing In..." : "Sign In"}
-          </button>
+            <p className="text-center text-xs text-ink-500">
+              Don't have an account?{" "}
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode("register");
+                  setError("");
+                }}
+                className="font-semibold text-brand-600 hover:underline"
+              >
+                Register here
+              </button>
+            </p>
+          </form>
+        ) : (
+          <form onSubmit={handleRegister} className="space-y-4">
+            {/* Tab switch */}
+            <div className="flex rounded-xl bg-gray-100 p-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode("login");
+                  setError("");
+                }}
+                className="flex-1 rounded-lg py-1.5 text-xs font-semibold text-gray-500 transition hover:text-gray-900"
+              >
+                Sign In
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode("register");
+                  setError("");
+                }}
+                className="flex-1 rounded-lg bg-white py-1.5 text-xs font-semibold text-gray-900 shadow-sm transition"
+              >
+                Register
+              </button>
+            </div>
 
-          <p className="text-center text-[11px] text-ink-400">
-            Accounts are created by HR. Contact your HR admin for access.
-          </p>
-        </form>
+            {/* Header */}
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-ink-900">
+                Create Account
+              </h1>
+              <p className="mt-1 text-xs text-ink-400">
+                Register a new user account for HRMS
+              </p>
+            </div>
+
+            {/* Error Alert */}
+            {error && (
+              <div
+                role="alert"
+                aria-live="polite"
+                className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-medium text-red-700"
+              >
+                {error}
+              </div>
+            )}
+
+            {/* Input Fields */}
+            <div className="space-y-3">
+              <AuthField
+                id="reg-full-name"
+                label="Full Name *"
+                type="text"
+                value={regFullName}
+                onChange={(e) => setRegFullName(e.target.value)}
+                placeholder="John Doe"
+                autoComplete="name"
+                disabled={isLoading}
+              />
+
+              <AuthField
+                id="reg-email"
+                label="Work Email *"
+                type="email"
+                value={regEmail}
+                onChange={(e) => setRegEmail(e.target.value)}
+                placeholder="name@company.com"
+                autoComplete="email"
+                disabled={isLoading}
+              />
+
+              <AuthField
+                id="reg-phone"
+                label="Phone Number *"
+                type="tel"
+                value={regPhone}
+                onChange={(e) => setRegPhone(e.target.value)}
+                placeholder="+91 9876543210"
+                autoComplete="tel"
+                disabled={isLoading}
+              />
+
+              <AuthField
+                id="reg-company"
+                label="Company Name"
+                type="text"
+                value={regCompany}
+                onChange={(e) => setRegCompany(e.target.value)}
+                placeholder="Acme Corp"
+                disabled={isLoading}
+              />
+
+              <div>
+                <AuthField
+                  id="reg-password"
+                  label="Password *"
+                  type={showRegPassword ? "text" : "password"}
+                  value={regPassword}
+                  onChange={(e) => setRegPassword(e.target.value)}
+                  placeholder="At least 8 characters"
+                  autoComplete="new-password"
+                  disabled={isLoading}
+                  icon={
+                    <button
+                      type="button"
+                      onClick={() => setShowRegPassword((prev) => !prev)}
+                      className="p-1 text-ink-400 transition-colors hover:text-ink-800"
+                      aria-label={showRegPassword ? "Hide password" : "Show password"}
+                    >
+                      {showRegPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  }
+                />
+                {regPassword && <PasswordStrength value={regPassword} />}
+              </div>
+
+              <AuthField
+                id="reg-confirm-password"
+                label="Confirm Password *"
+                type={showRegPassword ? "text" : "password"}
+                value={regConfirmPassword}
+                onChange={(e) => setRegConfirmPassword(e.target.value)}
+                placeholder="Re-enter password"
+                autoComplete="new-password"
+                disabled={isLoading}
+              />
+            </div>
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full rounded-xl bg-brand-600 py-3.5 text-sm font-semibold text-white shadow-md shadow-brand-600/20 transition-all hover:bg-brand-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isLoading ? "Creating Account..." : "Create Account"}
+            </button>
+
+            <p className="text-center text-xs text-ink-500">
+              Already have an account?{" "}
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode("login");
+                  setError("");
+                }}
+                className="font-semibold text-brand-600 hover:underline"
+              >
+                Sign in here
+              </button>
+            </p>
+          </form>
+        )
       ) : (
         <div className="space-y-4">
           {/* Step 1: Send OTP to Email */}

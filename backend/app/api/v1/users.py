@@ -520,3 +520,22 @@ async def create_manager_account(
         created_at=user["created_at"],
         updated_at=user["updated_at"],
     )
+
+
+@router.get(
+    "/{user_id}/login-history",
+    response_model=APIResponse[list[dict]],
+)
+async def get_user_login_history_admin(
+    user_id: str,
+    current_user: dict = Depends(require_permission(Permission.USERS_READ)),
+):
+    """Admin endpoint to inspect login history of a specific user."""
+    history = await user_service.get_user_login_history(user_id, limit=50)
+
+    return APIResponse(
+        success=True,
+        message="User login history retrieved successfully",
+        data=history,
+    )
+

@@ -120,3 +120,32 @@ export function useEmployeeAnnouncements(
     refetchOnWindowFocus: true,
   });
 }
+
+export interface EmployeeLatestPayroll {
+  id: string;
+  employee_id: string;
+  month: string;
+  net_salary: number;
+  salary?: Record<string, unknown>;
+  payment?: {
+    status?: string;
+    paid_on?: string;
+  };
+}
+
+export function useEmployeeLatestPayroll(employeeId?: string | null) {
+  return useQuery<EmployeeLatestPayroll | null>({
+    queryKey: queryKeys.employee.payrollLatest(employeeId || ""),
+    queryFn: async () => {
+      try {
+        return await api.get<EmployeeLatestPayroll>(
+          `/employee-payroll/employees/${employeeId}/latest`,
+        );
+      } catch {
+        return null;
+      }
+    },
+    enabled: Boolean(employeeId),
+    staleTime: 5 * 60 * 1000,
+  });
+}

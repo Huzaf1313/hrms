@@ -9,7 +9,9 @@ from app.core.jwt import (
 )
 from app.core.roles import MANAGED_ADMIN_ROLES, UserRole, role_value
 from app.core.security import hash_password, verify_password
+from app.schemas.user import UserCreate
 from app.repositories.user_repository import UserRepository
+from app.repositories.login_history_repository import LoginHistoryRepository
 from app.repositories.otp_repository import OTPRepository
 from app.repositories.department_repository import DepartmentRepository
 from app.repositories.shift_repository import ShiftRepository
@@ -42,6 +44,7 @@ class UserService:
     def __init__(self):
         self.repository = UserRepository()
         self.session_service = SessionService()
+        self.login_history_repository = LoginHistoryRepository()
 
     async def bootstrap_hr_admin(self, email: str, password: str, full_name: str):
         """Create the one HR account the whole hierarchy hangs off.
@@ -403,24 +406,52 @@ class UserService:
         self,
         email: str,
         password: str,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
     ):
         email = email.lower().strip()
 
         user = await self.repository.get_by_email(email)
 
         if not user:
+            await self.login_history_repository.record_attempt(
+                email=email,
+                user_id=None,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                status="failed",
+                failure_reason="Invalid email or password",
+            )
             raise AppException(
                 "Invalid email or password",
                 401,
             )
 
+        user_id = str(user["_id"])
+
         if user.get("is_locked"):
+            await self.login_history_repository.record_attempt(
+                email=email,
+                user_id=user_id,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                status="blocked",
+                failure_reason="Account is locked",
+            )
             raise AppException(
                 "Account is locked",
                 403,
             )
 
         if not user.get("is_active"):
+            await self.login_history_repository.record_attempt(
+                email=email,
+                user_id=user_id,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                status="blocked",
+                failure_reason="Account is inactive",
+            )
             raise AppException(
                 "Account is inactive",
                 403,
@@ -431,11 +462,18 @@ class UserService:
             user["password_hash"],
         )
 
-        
         if not password_valid:
+            await self.login_history_repository.record_attempt(
+                email=email,
+                user_id=user_id,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                status="failed",
+                failure_reason="Invalid email or password",
+            )
             updated_user = (
                 await self.repository.increment_failed_login_attempts(
-                    str(user["_id"])
+                    user_id
                 )
             )
 
@@ -444,7 +482,7 @@ class UserService:
                 and updated_user.get("failed_login_attempts", 0) >= 5
             ):
                 await self.repository.update(
-                    str(user["_id"]),
+                    user_id,
                     {"is_locked": True},
                 )
 
@@ -453,10 +491,9 @@ class UserService:
                 401,
             )
 
-        user_id = str(user["_id"])
         role = user["role"]
 
-                # Reset failed-login count after successful authentication.
+        # Reset failed-login count after successful authentication.
         if user.get("failed_login_attempts", 0) > 0:
             await self.repository.update(
                 user_id,
@@ -470,6 +507,16 @@ class UserService:
         session = await self.session_service.create_session(
             user_id=user_id,
             refresh_token=refresh_token,
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
+
+        await self.login_history_repository.record_attempt(
+            email=email,
+            user_id=user_id,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            status="success",
         )
 
         access_token = create_access_token(
@@ -483,6 +530,121 @@ class UserService:
             "refresh_token": refresh_token,
             "token_type": "bearer",
         }
+
+    async def register_user(
+        self,
+        data: UserCreate,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+    ):
+        email = data.email.lower().strip()
+        existing = await self.repository.get_by_email(email)
+        if existing:
+            raise AppException("An account with this email already exists", 409)
+
+        now = datetime.now(timezone.utc)
+        user_data = {
+            "full_name": data.full_name.strip(),
+            "email": email,
+            "phone_number": data.phone_number.strip(),
+            "password_hash": hash_password(data.password),
+            "company_name": data.company_name.strip(),
+            "company_address": data.company_address.strip(),
+            "reference": data.reference.strip(),
+            "role": UserRole.EMPLOYEE.value,
+            "is_active": True,
+            "is_locked": False,
+            "failed_login_attempts": 0,
+            "created_at": now,
+            "updated_at": now,
+        }
+        user = await self.repository.create(user_data)
+        user_id = str(user["_id"])
+
+        refresh_token = create_refresh_token(subject=user_id)
+        session = await self.session_service.create_session(
+            user_id=user_id,
+            refresh_token=refresh_token,
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
+        access_token = create_access_token(
+            subject=user_id,
+            role=UserRole.EMPLOYEE.value,
+            session_id=str(session["_id"]),
+        )
+
+        await self.login_history_repository.record_attempt(
+            email=email,
+            user_id=user_id,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            status="success",
+        )
+
+        return {
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": "bearer",
+            "user": {
+                "id": user_id,
+                "full_name": user["full_name"],
+                "email": user["email"],
+                "role": user["role"],
+            },
+        }
+
+    async def get_user_sessions(
+        self,
+        user_id: str,
+        current_session_id: str | None = None,
+    ):
+        sessions = await self.session_service.get_active_sessions_for_user(user_id)
+        results = []
+        for s in sessions:
+            s_id = str(s["_id"])
+            results.append({
+                "id": s_id,
+                "ip_address": s.get("ip_address"),
+                "user_agent": s.get("user_agent"),
+                "created_at": s.get("created_at"),
+                "last_used_at": s.get("last_used_at"),
+                "is_current": s_id == current_session_id if current_session_id else False,
+            })
+        return results
+
+    async def revoke_user_session(
+        self,
+        user_id: str,
+        session_id: str,
+    ):
+        return await self.session_service.revoke_session_by_id(session_id, user_id)
+
+    async def revoke_other_user_sessions(
+        self,
+        user_id: str,
+        current_session_id: str,
+    ):
+        return await self.session_service.revoke_other_sessions(user_id, current_session_id)
+
+    async def get_user_login_history(
+        self,
+        user_id: str,
+        limit: int = 20,
+    ):
+        records = await self.login_history_repository.get_by_user_id(user_id, limit=limit)
+        return [
+            {
+                "id": str(r["_id"]),
+                "email": r.get("email"),
+                "ip_address": r.get("ip_address"),
+                "user_agent": r.get("user_agent"),
+                "status": r.get("status"),
+                "failure_reason": r.get("failure_reason"),
+                "created_at": r.get("created_at"),
+            }
+            for r in records
+        ]
 
     async def refresh_access_token(
         self,

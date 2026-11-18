@@ -17,6 +17,7 @@ import {
 
 import ProfileEditForm from "../../components/admin/profile/ProfileEditForm";
 import AdminEmployeeDocuments from "../../components/admin/AdminEmployeeDocuments";
+import SecuritySessionsSection from "../../components/auth/SecuritySessionsSection";
 import {
   DetailCard,
   DetailRow,
@@ -801,6 +802,11 @@ export default function AdminMyProfile() {
           {/* Change Password sits under the tab content, so on the Documents
               tab it lands right below My Documents. */}
           <div className="mt-4 space-y-4">{renderChangePasswordSection()}</div>
+
+          {/* Active Sessions & Login History */}
+          <div className="mt-6">
+            <SecuritySessionsSection />
+          </div>
         </div>
 
         <aside className="space-y-4">

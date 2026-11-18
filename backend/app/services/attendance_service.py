@@ -41,6 +41,8 @@ from app.utils.pagination import PaginationParams
 MARKED_STATUSES = {
     "present",
     "late",
+    "half_day",
+    "half-day",
     "on_leave",
     "working",
     "overtime",
@@ -48,7 +50,7 @@ MARKED_STATUSES = {
 }
 
 # Statuses that count towards "present today" for department-wise presence.
-PRESENT_LIKE_STATUSES = {"present", "late", "working", "overtime"}
+PRESENT_LIKE_STATUSES = {"present", "late", "working", "overtime", "half_day", "half-day"}
 
 
 def to_datetime(value: date | None) -> datetime | None:
