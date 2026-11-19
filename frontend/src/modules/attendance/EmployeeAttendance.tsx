@@ -1297,30 +1297,36 @@ if (
                   </div>
         </div>
 
-        {/* Leave Balance */}
-        <div className="mt-6 grid grid-cols-2 gap-4">
-          {leaveBalances.map((balance) => (
-            <div
-              key={balance.type}
-              className="rounded-xl border border-gray-100 p-4"
-            >
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                {balance.type}
-              </p>
+        {/* Leave Balance Card */}
+        <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+          <h3 className="text-base font-bold text-[#17213a]">
+            Leave Balance
+          </h3>
 
-              <p className="mt-2 text-2xl font-bold text-[#17213a]">
-                {balance.available}
-              </p>
+          <div className="mt-4 grid grid-cols-2 gap-4">
+            {leaveBalances.map((balance) => (
+              <div
+                key={balance.type}
+                className="rounded-xl border border-gray-100 bg-gray-50 p-4"
+              >
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                  {balance.type}
+                </p>
 
-              <p className="mt-1 text-xs text-gray-400">
-                Days available
-              </p>
+                <p className="mt-2 text-2xl font-bold text-[#17213a]">
+                  {balance.available}
+                </p>
 
-              <p className="mt-2 text-xs text-gray-400">
-                {balance.allocated} Allocated · {balance.used} Used
-              </p>
-            </div>
-          ))}
+                <p className="mt-1 text-xs text-gray-400">
+                  Days available
+                </p>
+
+                <p className="mt-2 text-xs text-gray-400">
+                  {balance.allocated} Allocated · {balance.used} Used
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
         </section>
 

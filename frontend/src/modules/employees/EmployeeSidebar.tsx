@@ -175,7 +175,6 @@ function EmployeeSidebar({
 
         <span>
           <span className="brand-wordmark block text-xl font-bold text-white">HRMS</span>
-          <span className="block text-xs text-slate-400">Employee Portal</span>
         </span>
       </button>
 
