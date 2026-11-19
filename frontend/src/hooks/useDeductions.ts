@@ -3,7 +3,7 @@ import {
   adminDeductionService,
   type BackendDeduction,
   type DeductionCreatePayload,
-} from "../services/admin_deduction_service";
+} from "../modules/payroll/admin_deduction_service";
 import { queryKeys } from "../lib/queryKeys";
 
 export function useDeductions() {

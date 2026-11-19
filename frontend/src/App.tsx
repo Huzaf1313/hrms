@@ -5,26 +5,24 @@ import {
   Routes,
 } from "react-router-dom";
 
-import Login from "./pages/login";
+import { Login } from "./modules/auth";
 import ProtectedRoute, { AdminRoute } from "./components/ProtectedRoute";
 import DashboardLayout from "./layouts/DashboardLayout";
-import EmployeeDashboard from "./pages/employee/EmployeeDashboard";
-import EmployeeProfile from "./pages/employee/EmployeeProfile";
-import EmployeeAttendance from "./pages/employee/EmployeeAttendance";
-import EmployeeLeave from "./pages/employee/EmployeeLeave";
-import EmployeePayroll from "./pages/employee/EmployeePayroll";
-import EmployeeDocuments from "./pages/employee/EmployeeDocuments";
-import EmployeeAnnouncements from "./pages/employee/EmployeeAnnouncements";
-import EmployeeHelpSupport from "./pages/employee/EmployeeHelpSupport";
+import { EmployeeDashboard } from "./modules/dashboard";
+import { EmployeeProfile, EmployeeDocuments } from "./modules/employees";
+import { EmployeeAttendance } from "./modules/attendance";
+import { EmployeeLeave } from "./modules/leaves";
+import { EmployeePayroll } from "./modules/payroll";
+import { EmployeeAnnouncements } from "./modules/announcements";
+import { EmployeeHelpSupport } from "./modules/support";
 import { clearSession, setOnSessionClear } from "./services/api";
 import { clearPendingPasswordRedirect } from "./lib/session";
-import { authService } from "./services/authService";
+import { authService } from "./modules/auth";
 import EmployeeLayout from "./layouts/EmployeeLayout";
-import EmployeeExit from "./pages/employee/EmployeeExit";
-import EmployeeResignation from "./pages/employee/EmployeeResignation";
+import { EmployeeExit, EmployeeResignation } from "./modules/exit";
 import { clearAuthQueries } from "./lib/queryClient";
 import { GlobalDateProvider } from "./context/GlobalDateProvider";
-import EmployeeAssets from "./pages/employee/EmployeeAssets";
+import { EmployeeAssets } from "./modules/assets";
 
 // Send the browser back to the login page whenever the session is cleared
 // from under it (e.g. the password was changed on another device and the

@@ -1,0 +1,454 @@
+import { useEffect, useRef, useState } from "react";
+import type { ChangeEvent, DragEvent } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { ChevronLeft, FileText, Send, UploadCloud, X } from "lucide-react";
+import { ApiError } from "../../services/api";
+import { exitRequestService, formatFileSize } from "./exitRequestService";
+import {
+  ALLOWED_ATTACHMENT_EXTENSIONS,
+  DEFAULT_HANDOVER_TASKS,
+  HANDOVER_STATUSES,
+  MAX_ATTACHMENTS,
+  MAX_ATTACHMENT_SIZE,
+  NOTICE_PERIODS,
+  RESIGNATION_REASONS,
+} from "./types";
+import type { HandoverStatus } from "./types";
+
+interface HandoverRow {
+  task: string;
+  placeholder: string;
+  checked: boolean;
+  remarks: string;
+  status: HandoverStatus;
+}
+
+// Local-time YYYY-MM-DD (toISOString would shift the date for UTC+ users).
+function toISODate(date: Date) {
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+function earliestLastDay(noticeDays: number) {
+  const date = new Date();
+  date.setDate(date.getDate() + noticeDays);
+  return toISODate(date);
+}
+
+const inputClass =
+  "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
+
+function EmployeeResignation() {
+  const navigate = useNavigate();
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  const [noticePeriod, setNoticePeriod] = useState<number>(30);
+  const [lastWorkingDay, setLastWorkingDay] = useState(earliestLastDay(30));
+  const [reason, setReason] = useState("");
+  const [remarks, setRemarks] = useState("");
+  const [tasks, setTasks] = useState<HandoverRow[]>(
+    DEFAULT_HANDOVER_TASKS.map((t) => ({
+      task: t.task,
+      placeholder: t.placeholder,
+      checked: false,
+      remarks: "",
+      status: "Pending",
+    })),
+  );
+  const [files, setFiles] = useState<File[]>([]);
+  const [confirmed, setConfirmed] = useState(false);
+
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const [hasActiveRequest, setHasActiveRequest] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    exitRequestService
+      .listMine({ page: 1, limit: 5 })
+      .then((data) => {
+        if (!cancelled) {
+          setHasActiveRequest(
+            data.items.some((r) => r.status === "Pending" || r.status === "In Progress"),
+          );
+        }
+      })
+      .catch(() => undefined); // the server re-checks on submit
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const minDay = earliestLastDay(noticePeriod);
+
+  const handleNoticeChange = (days: number) => {
+    setNoticePeriod(days);
+    const min = earliestLastDay(days);
+    if (lastWorkingDay < min) setLastWorkingDay(min);
+  };
+
+  const updateTask = (index: number, patch: Partial<HandoverRow>) => {
+    setTasks((rows) => rows.map((row, i) => (i === index ? { ...row, ...patch } : row)));
+  };
+
+  const addFiles = (incoming: File[]) => {
+    const next = [...files];
+
+    for (const file of incoming) {
+      const extension = `.${file.name.split(".").pop()?.toLowerCase() ?? ""}`;
+
+      if (!ALLOWED_ATTACHMENT_EXTENSIONS.includes(extension)) {
+        setError(`${file.name}: only PDF, DOC, DOCX, JPG and PNG files are allowed.`);
+        return;
+      }
+      if (file.size > MAX_ATTACHMENT_SIZE) {
+        setError(`${file.name} is larger than 10 MB.`);
+        return;
+      }
+      if (next.length >= MAX_ATTACHMENTS) {
+        setError(`You can attach at most ${MAX_ATTACHMENTS} files.`);
+        return;
+      }
+      next.push(file);
+    }
+
+    setError("");
+    setFiles(next);
+  };
+
+  const handleFileInput = (event: ChangeEvent<HTMLInputElement>) => {
+    addFiles(Array.from(event.target.files ?? []));
+    event.target.value = "";
+  };
+
+  const handleDrop = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    addFiles(Array.from(event.dataTransfer.files));
+  };
+
+  const handleSubmit = async () => {
+    setError("");
+
+    if (!lastWorkingDay || lastWorkingDay < minDay) {
+      setError("Last working day must be on or after the end of your notice period.");
+      return;
+    }
+    if (!reason) {
+      setError("Please select a resignation reason.");
+      return;
+    }
+    if (reason === "Other" && !remarks.trim()) {
+      setError("Please add remarks when the reason is 'Other'.");
+      return;
+    }
+    if (!confirmed) {
+      setError("Please confirm that the information provided is true and correct.");
+      return;
+    }
+
+    const form = new FormData();
+    form.append("last_working_day", lastWorkingDay);
+    form.append("notice_period_days", String(noticePeriod));
+    form.append("reason", reason);
+    form.append("remarks", remarks.trim());
+    form.append("confirmed", "true");
+    form.append(
+      "handover_tasks",
+      JSON.stringify(
+        tasks.map((t) => ({
+          task: t.task,
+          remarks: t.remarks.trim() || null,
+          status: t.status,
+          is_checked: t.checked,
+        })),
+      ),
+    );
+    files.forEach((file) => form.append("files", file));
+
+    setSubmitting(true);
+    try {
+      await exitRequestService.submit(form);
+      navigate("/employee/exit");
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : "Unable to submit your resignation. Please try again.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="grid gap-6 p-6 xl:grid-cols-[1fr_320px]">
+      <div className="space-y-6">
+        <div>
+          <Link
+            to="/employee/exit"
+            className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800"
+          >
+            <ChevronLeft className="h-4 w-4" /> Exit / Offboarding
+          </Link>
+          <h1 className="mt-2 text-2xl font-semibold text-slate-900">Resignation Request</h1>
+          <p className="text-sm text-slate-500">
+            Submit your resignation request and our HR team will review it.
+          </p>
+        </div>
+
+        {hasActiveRequest && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+            You already have an active resignation request, so a new one can&apos;t be submitted.
+          </div>
+        )}
+
+        <section className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6">
+          <h2 className="text-lg font-semibold text-slate-900">Resignation Details</h2>
+
+          <div className="grid gap-5 md:grid-cols-2">
+            <label className="block text-sm font-medium text-slate-700">
+              Notice Period <span className="text-red-500">*</span>
+              <select
+                className={`${inputClass} mt-1`}
+                value={noticePeriod}
+                onChange={(e) => handleNoticeChange(Number(e.target.value))}
+              >
+                {NOTICE_PERIODS.map((days) => (
+                  <option key={days} value={days}>{days} Days</option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block text-sm font-medium text-slate-700">
+              Last Working Day <span className="text-red-500">*</span>
+              <input
+                type="date"
+                className={`${inputClass} mt-1`}
+                value={lastWorkingDay}
+                min={minDay}
+                onChange={(e) => setLastWorkingDay(e.target.value)}
+              />
+            </label>
+
+            <label className="block text-sm font-medium text-slate-700">
+              Resignation Reason <span className="text-red-500">*</span>
+              <select
+                className={`${inputClass} mt-1`}
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+              >
+                <option value="">Select reason</option>
+                {RESIGNATION_REASONS.map((r) => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block text-sm font-medium text-slate-700">
+              Remarks <span className="font-normal text-slate-400">(Optional)</span>
+              <textarea
+                className={`${inputClass} mt-1 h-24 resize-none`}
+                maxLength={500}
+                placeholder="Add any additional comments..."
+                value={remarks}
+                onChange={(e) => setRemarks(e.target.value)}
+              />
+              <span className="block text-right text-xs text-slate-400">{remarks.length}/500</span>
+            </label>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-slate-900">Hand over / Important Tasks</h3>
+            <p className="text-sm text-slate-500">
+              Help us plan the transition by sharing your handover details and important tasks.
+            </p>
+
+            <div className="mt-3 overflow-x-auto rounded-xl border border-slate-200">
+              <table className="w-full min-w-[620px] text-sm">
+                <thead className="bg-slate-50 text-left text-xs font-semibold text-slate-600">
+                  <tr>
+                    <th className="px-4 py-3">Task / Handover Item</th>
+                    <th className="px-4 py-3">Remarks (Optional)</th>
+                    <th className="px-4 py-3">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {tasks.map((row, index) => (
+                    <tr key={row.task}>
+                      <td className="px-4 py-3">
+                        <label className="flex items-center gap-3 text-slate-800">
+                          <input
+                            type="checkbox"
+                            checked={row.checked}
+                            onChange={(e) => updateTask(index, { checked: e.target.checked })}
+                          />
+                          {row.task}
+                        </label>
+                      </td>
+                      <td className="px-4 py-3">
+                        <input
+                          className={inputClass}
+                          maxLength={300}
+                          placeholder={row.placeholder}
+                          value={row.remarks}
+                          onChange={(e) => updateTask(index, { remarks: e.target.value })}
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        <select
+                          className={inputClass}
+                          value={row.status}
+                          onChange={(e) => updateTask(index, { status: e.target.value as HandoverStatus })}
+                        >
+                          {HANDOVER_STATUSES.map((s) => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
+                        </select>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-slate-900">
+              Attachment <span className="text-sm font-normal text-slate-400">(Optional)</span>
+            </h3>
+
+            <div
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={handleDrop}
+              className="mt-3 flex flex-col items-center gap-1 rounded-xl border-2 border-dashed border-blue-200 bg-blue-50/30 px-4 py-6 text-center"
+            >
+              <UploadCloud className="h-6 w-6 text-blue-500" />
+              <p className="text-sm text-slate-700">
+                Drag and drop files here, or{" "}
+                <button
+                  type="button"
+                  className="font-medium text-blue-600 hover:underline"
+                  onClick={() => fileInput.current?.click()}
+                >
+                  click to browse
+                </button>
+              </p>
+              <p className="text-xs text-slate-500">
+                Allowed formats: PDF, DOC, DOCX, JPG, PNG (Max 10MB each, up to {MAX_ATTACHMENTS} files)
+              </p>
+              <input
+                ref={fileInput}
+                type="file"
+                multiple
+                hidden
+                accept={ALLOWED_ATTACHMENT_EXTENSIONS.join(",")}
+                onChange={handleFileInput}
+              />
+            </div>
+
+            {files.length > 0 && (
+              <ul className="mt-3 flex flex-wrap gap-2">
+                {files.map((file, index) => (
+                  <li
+                    key={`${file.name}-${index}`}
+                    className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-700"
+                  >
+                    <FileText className="h-4 w-4 text-blue-500" />
+                    {file.name}
+                    <span className="text-slate-400">({formatFileSize(file.size)})</span>
+                    <button
+                      type="button"
+                      aria-label={`Remove ${file.name}`}
+                      onClick={() => setFiles((list) => list.filter((_, i) => i !== index))}
+                    >
+                      <X className="h-3.5 w-3.5 text-slate-400 hover:text-red-500" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {error && (
+            <p className="rounded-lg border border-red-100 bg-red-50 px-4 py-2 text-sm text-red-700">{error}</p>
+          )}
+
+          <div className="flex flex-wrap items-center justify-between gap-4 border-t border-slate-100 pt-5">
+            <label className="flex items-center gap-2 text-sm text-slate-600">
+              <input
+                type="checkbox"
+                checked={confirmed}
+                onChange={(e) => setConfirmed(e.target.checked)}
+              />
+              I confirm that the information provided is true and correct.
+            </label>
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => navigate("/employee/exit")}
+                className="rounded-lg border border-blue-600 px-5 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={submitting || hasActiveRequest}
+                onClick={() => void handleSubmit()}
+                className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <Send className="h-4 w-4" />
+                {submitting ? "Submitting…" : "Submit Request"}
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <aside className="space-y-6">
+        <section className="rounded-2xl border border-slate-200 bg-white p-5">
+          <h2 className="font-semibold text-slate-900">Resignation Process</h2>
+          <ol className="mt-4 space-y-4 text-sm">
+            {[
+              ["Submit Request", "Fill in the resignation form and submit."],
+              ["HR Review", "HR will review your request and details."],
+              ["Clearance Process", "Complete pending tasks and handover."],
+              ["Final Settlement", "Get your dues and final documents."],
+            ].map(([title, text], i) => (
+              <li key={title} className="flex gap-3">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-semibold text-blue-700">
+                  {i + 1}
+                </span>
+                <span>
+                  <span className="block font-medium text-slate-900">{title}</span>
+                  <span className="text-slate-500">{text}</span>
+                </span>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 text-sm">
+          <h2 className="font-semibold text-slate-900">Key Information</h2>
+          <p className="mt-3 font-medium text-slate-900">Notice Period</p>
+          <p className="text-slate-500">
+            Your last working day must be at least your notice period from today.
+          </p>
+          <p className="mt-3 font-medium text-slate-900">Final Settlement</p>
+          <p className="text-slate-500">Processed after clearance and exit formalities.</p>
+          <p className="mt-3 font-medium text-slate-900">Documents Required</p>
+          <ul className="list-disc pl-5 text-slate-500">
+            <li>Resignation letter</li>
+            <li>Handover summary</li>
+            <li>ID card / Access return</li>
+          </ul>
+        </section>
+      </aside>
+    </div>
+  );
+}
+
+export default EmployeeResignation;

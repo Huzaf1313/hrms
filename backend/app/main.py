@@ -7,38 +7,38 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from app.api.v1.admin_payslip import router as admin_payslip_router
-from app.api.v1.admin_leaves import router as leaves_router
-from app.api.v1.admin_attendance import router as attendance_router
-from app.api.v1.shifts import router as shifts_router
-from app.api.v1.holidays import router as holidays_router
-from app.api.v1.admin_notifications import router as admin_notifications_router
-from app.api.v1.admin_support_tickets import router as admin_support_tickets_router
-from app.api.v1.auth import router as auth_router
-from app.api.v1.departments import router as departments_router
-from app.api.v1.employees import router as employees_router
-from app.api.v1.health import router as health_router
-from app.api.v1.dashboard import router as dashboard_router
-from app.api.v1.users import router as users_router
-from app.api.v1.employee_attendance import router as employee_attendance_router
-from app.api.v1.employee_attendance_regularization import (
+from app.modules.payroll.admin_payslip_router import router as admin_payslip_router
+from app.modules.leaves.admin_router import router as leaves_router
+from app.modules.attendance.admin_router import router as attendance_router
+from app.modules.shifts.router import router as shifts_router
+from app.modules.holidays.router import router as holidays_router
+from app.modules.dashboard.admin_notifications_router import router as admin_notifications_router
+from app.modules.support.admin_router import router as admin_support_tickets_router
+from app.modules.auth.router import router as auth_router
+from app.modules.departments.router import router as departments_router
+from app.modules.employees.router import router as employees_router
+from app.modules.dashboard.health_router import router as health_router
+from app.modules.dashboard.router import router as dashboard_router
+from app.modules.auth.users_router import router as users_router
+from app.modules.attendance.employee_router import router as employee_attendance_router
+from app.modules.attendance.regularization_router import (
     router as employee_attendance_regularization_router,
 )
 
-from app.api.v1.admin_salary_structures import (
+from app.modules.payroll.salary_structures_router import (
     router as admin_salary_structures_router,
 )
 
-from app.api.v1.admin_deductions import (
+from app.modules.payroll.deductions_router import (
     router as admin_deductions_router,
 )
 
-from app.api.v1.admin_announcements import (
+from app.modules.announcements.admin_router import (
     router as announcements_router,
 )
 
-from app.api.v1.employee_documents import router as employee_documents_router
-from app.api.v1.employee_announcement import (
+from app.modules.employees.documents_router import router as employee_documents_router
+from app.modules.announcements.employee_router import (
     router as employee_announcement_router,
 )
 
@@ -46,14 +46,14 @@ from app.core.config import settings
 from app.core.exceptions import AppException
 from app.core.cache import init_redis, close_redis
 from app.db.database import connect_to_database, close_database_connection
-from app.api.v1.employee_leave import (
+from app.modules.leaves.employee_router import (
     router as employee_leave_router,
 )
-from app.api.v1.employee_payroll import (
+from app.modules.payroll.employee_payroll_router import (
     router as employee_payroll_router,
 )
 
-from app.api.v1 import employee_payslip
+from app.modules.payroll import employee_payslip_router as employee_payslip
 
 from app.repositories.employee_attendance_repository import (
     EmployeeAttendanceRepository,
@@ -76,22 +76,22 @@ from app.repositories.employee_support_ticket_repository import (
     EmployeeSupportTicketRepository,
 )
 
-from app.api.v1.employee_notification import (
+from app.modules.dashboard.employee_notification_router import (
     router as employee_notification_router,
 )
 
 from app.repositories.employee_notification_repository import (
     EmployeeNotificationRepository,
 )
-from app.api.v1.employee_support_tickets import (
+from app.modules.support.employee_router import (
     router as employee_support_tickets_router,
 )
 
-from app.api.v1.employee_exit_requests import router as employee_exit_requests_router
-from app.api.v1.admin_exit_requests import router as admin_exit_requests_router
+from app.modules.exit.employee_router import router as employee_exit_requests_router
+from app.modules.exit.admin_router import router as admin_exit_requests_router
 from app.repositories.employee_exit_request_repository import ExitRequestRepository
-from app.api.v1.recruitment import router as recruitment_router
-from app.api.v1.assets import router as assets_router
+from app.modules.recruitment.router import router as recruitment_router
+from app.modules.assets.router import router as assets_router
 from app.repositories.asset_repository import AssetRepository
 from app.repositories.asset_request_repository import AssetRequestRepository
 from app.repositories.candidate_repository import CandidateRepository
@@ -99,9 +99,9 @@ from app.repositories.job_position_repository import JobPositionRepository
 from app.repositories.employee_repository import EmployeeRepository
 from app.repositories.activity_repository import ActivityRepository
 from app.repositories.user_repository import UserRepository
-from app.services.employee_identity import backfill_minted_profiles
-from app.services.user_service import UserService
-from app.api.v1.employee_profile_photo import router as employee_profile_photo_router
+from app.modules.employees.identity import backfill_minted_profiles
+from app.modules.auth.user_service import UserService
+from app.modules.employees.profile_photo_router import router as employee_profile_photo_router
 
 
 @asynccontextmanager
@@ -446,11 +446,6 @@ app.include_router(
 app.include_router(
     employee_profile_photo_router, 
     prefix="/api/v1"
-)
-
-app.include_router(
-    employee_profile_photo_router,
-    prefix="/api/v1",
 )
 
 app.include_router(

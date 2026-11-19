@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { departmentService, type DepartmentCreate } from "../services/departmentService";
-import type { Department } from "../types/department";
+import { departmentService, type DepartmentCreate } from "../modules/departments/departmentService";
+import type { Department } from "../modules/departments/types";
 import { queryKeys } from "../lib/queryKeys";
 
 export function useDepartments() {

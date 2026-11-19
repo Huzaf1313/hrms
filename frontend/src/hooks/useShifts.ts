@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { shiftService } from "../services/shiftService";
-import type { Shift, ShiftCreate, ShiftUpdate } from "../types/shift";
+import { shiftService } from "../modules/shifts/shiftService";
+import type { Shift, ShiftCreate, ShiftUpdate } from "../modules/shifts/types";
 import { queryKeys } from "../lib/queryKeys";
 
 export function useShifts(includeInactive: boolean = true) {

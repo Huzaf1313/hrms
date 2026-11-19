@@ -3,7 +3,7 @@ import {
   salaryStructureService,
   type SalaryStructure,
   type SalaryStructureInput,
-} from "../services/admin_salary_structure_service";
+} from "../modules/payroll/admin_salary_structure_service";
 import { queryKeys } from "../lib/queryKeys";
 
 export function useSalaryStructures() {

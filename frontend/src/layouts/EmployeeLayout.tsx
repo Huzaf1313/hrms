@@ -2,12 +2,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Bell, ChevronDown, LogOut, Menu } from "lucide-react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 
-import EmployeeSidebar from "../pages/employee/EmployeeSidebar";
-import EmployeeNotificationDropdown from "../components/employee/EmployeeNotificationDropdown";
+import EmployeeSidebar from "../modules/employees/EmployeeSidebar";
+import EmployeeNotificationDropdown from "../modules/dashboard/EmployeeNotificationDropdown";
 import ErrorBoundary from "../components/ErrorBoundary";
 import DatePicker from "../components/DatePicker";
-import { employeeNotificationService } from "../services/employeeNotificationService";
-import { employeeService } from "../services/employeeService";
+import { employeeNotificationService } from "../modules/dashboard/employeeNotificationService";
+import { employeeService } from "../modules/employees/employeeService";
 
 const pageTitles: Record<string, string> = {
   "/employee/dashboard": "Dashboard",

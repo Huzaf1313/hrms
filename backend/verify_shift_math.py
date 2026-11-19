@@ -97,6 +97,16 @@ m = compute_work_metrics(
 check("ISO to 5am next day = 10h30m", m.worked_minutes, 630)
 check("ISO 1h30m OT", m.overtime_minutes, 90)
 
+print("\n--- GRACE PERIOD ---")
+m = compute_work_metrics("09:10", "18:00", shift_duration=540, shift_start="09:00", grace_period_minutes=15)
+check("09:10 check-in within 15m grace is NOT late", m.late_minutes, 0)
+
+m = compute_work_metrics("09:15", "18:00", shift_duration=540, shift_start="09:00", grace_period_minutes=15)
+check("09:15 check-in at boundary of 15m grace is NOT late", m.late_minutes, 0)
+
+m = compute_work_metrics("09:20", "18:00", shift_duration=540, shift_start="09:00", grace_period_minutes=15)
+check("09:20 check-in beyond 15m grace is late by 20m", m.late_minutes, 20)
+
 print("\n--- edge cases ---")
 m = compute_work_metrics("09:00", None, shift_duration=540, shift_start="09:00")
 check("no punch-out -> no worked time", m.worked_minutes, None)

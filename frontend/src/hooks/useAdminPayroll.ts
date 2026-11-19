@@ -4,7 +4,7 @@ import {
   type PayrollAnalyticsData,
   type PayrollAnalyticsParams,
   type CreateAdminPayslipPayload,
-} from "../services/adminPayrollService";
+} from "../modules/payroll/adminPayrollService";
 import { queryKeys } from "../lib/queryKeys";
 
 export function usePayrollAnalytics(params?: PayrollAnalyticsParams) {
