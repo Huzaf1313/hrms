@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 
-import AddHolidayModal from "./AddHolidayModal";
-import { holidayService } from "../services/holidayService";
+import AddHolidayModal from "../modules/holidays/AddHolidayModal";
+import { holidayService } from "../modules/holidays/holidayService";
 import { useGlobalDate } from "../context/globalDateContext";
 import { toDateKey } from "../utils/dateKeys";
 import {
@@ -10,7 +10,7 @@ import {
   HOLIDAY_TYPE_LABELS,
   formatHolidayDate,
   type Holiday,
-} from "../types/holiday";
+} from "../modules/holidays/types";
 
 const weekdayLabels = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 

@@ -2,12 +2,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Bell, ChevronDown, ChevronRight, LogOut, Menu, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-import AdminNotificationDropdown from "./admin/AdminNotificationDropdown";
+import AdminNotificationDropdown from "../modules/dashboard/AdminNotificationDropdown";
 import DatePicker from "./DatePicker";
-import { employeeService } from "../services/employeeService";
-import type { Employee } from "../types/employee";
-import { adminNotificationService } from "../services/adminNotificationService";
-import { adminProfileService } from "../services/adminProfileService";
+import { employeeService } from "../modules/employees/employeeService";
+import type { Employee } from "../modules/employees/types";
+import { adminNotificationService } from "../modules/dashboard/adminNotificationService";
+import { adminProfileService } from "../modules/employees/adminProfileService";
 import { SESSION_USER_UPDATED_EVENT } from "../lib/session";
 
 interface HeaderProps {
