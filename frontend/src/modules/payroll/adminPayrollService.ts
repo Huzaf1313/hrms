@@ -135,6 +135,19 @@ export interface CreateAdminPayslipPayload {
   year: number;
 }
 
+export interface BulkGeneratePayslipsPayload {
+  month: string;
+  year: number;
+  department_id?: string;
+}
+
+export interface BulkGeneratePayslipsResult {
+  total_eligible: number;
+  created: number;
+  skipped: number;
+  errors: Array<{ employee_id: string; error: string }>;
+}
+
 export const adminPayrollService = {
   getAnalytics: (params?: PayrollAnalyticsParams) =>
     api.get<PayrollAnalyticsData>("/admin-payslip/analytics", params),
@@ -148,7 +161,28 @@ export const adminPayrollService = {
   createPayslip: (payload: CreateAdminPayslipPayload) =>
     api.post<AdminPayslipItem>("/admin-payslip", payload),
 
+  bulkGenerate: (payload: BulkGeneratePayslipsPayload) =>
+    api.post<BulkGeneratePayslipsResult>("/admin-payslip/bulk-generate", payload),
+
   updateStatus: (id: string, status: string) =>
     api.patch<AdminPayslipItem>(`/admin-payslip/${id}/status`, { status }),
+
+  bulkUpdateStatus: (payslip_ids: string[], status: string) =>
+    api.post<{ total: number; updated: number; status: string }>("/admin-payslip/bulk-status", {
+      payslip_ids,
+      status,
+    }),
+
+  sendEmail: (id: string) =>
+    api.post<{ success: boolean; message: string; recipient: string }>(
+      `/admin-payslip/${id}/send-email`,
+      {}
+    ),
+
+  bulkSendEmail: (payload: { month: string; year: number; status?: string }) =>
+    api.post<{ total: number; sent: number; failed: number }>(
+      "/admin-payslip/bulk-send-email",
+      payload
+    ),
 };
 

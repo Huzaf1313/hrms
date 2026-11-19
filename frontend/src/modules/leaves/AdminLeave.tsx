@@ -900,9 +900,9 @@ function LeaveCalendar({
 
 }
 
-const departmentColors = ["#2563eb", "#10b981", "#f59e0b", "#8b5cf6", "#f97316", "#94a3b8"];
+const departmentColors = ["#0066ff", "#10b981", "#f59e0b", "#8b5cf6", "#f97316", "#94a3b8"];
 
-const leaveTypeKpiColors = ["#10b981", "#2563eb", "#f59e0b", "#8b5cf6", "#f97316", "#94a3b8"];
+const leaveTypeKpiColors = ["#10b981", "#0066ff", "#f59e0b", "#8b5cf6", "#f97316", "#94a3b8"];
 
 
 
@@ -1861,122 +1861,77 @@ function AdminLeave() {
 
 
   return (
-
-    <div className="px-4 pb-10 pt-6 sm:px-6 lg:px-8 xl:px-10">
-
+    <div className="space-y-6 px-4 pb-12 pt-6 sm:px-6 lg:px-8">
       {/* Header */}
-
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-
-          <h1 className="text-4xl font-bold text-gray-900">Leave Management</h1>
-
-          <p className="mt-1 text-gray-500">
-
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 font-manrope">
+            Leave Management
+          </h1>
+          <p className="mt-1 text-sm font-medium text-slate-500">
             Track, review, and manage employee leave requests.
-
           </p>
-
         </div>
-
       </div>
 
-
-
       {notice && (
-
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-4">
-
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-xl">
-
+          <div className="w-full max-w-sm rounded-3xl bg-white p-6 text-center shadow-xl">
             <span
-
-              className={`mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full ${notice.type === "success" ? "bg-emerald-50" : "bg-rose-50"
-
-                }`}
-
+              className={`mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl ${
+                notice.type === "success" ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
+              }`}
             >
-
               {notice.type === "success" ? (
-
-                <CheckCircle2 className="h-6 w-6 text-emerald-600" />
-
+                <CheckCircle2 className="h-6 w-6" />
               ) : (
-
-                <AlertCircle className="h-6 w-6 text-rose-600" />
-
+                <AlertCircle className="h-6 w-6" />
               )}
-
             </span>
 
-            <h3 className="text-lg font-bold text-gray-900">
-
+            <h3 className="text-lg font-bold font-manrope text-slate-900">
               {notice.type === "success" ? "Success" : "Something went wrong"}
-
             </h3>
 
-            <p className="mt-2 text-sm text-gray-500">{notice.text}</p>
+            <p className="mt-2 text-sm text-slate-500">{notice.text}</p>
 
             <button
-
               type="button"
-
               onClick={() => setNotice(null)}
-
-              className="mt-5 rounded-lg bg-[#2563eb] px-6 py-2 text-sm font-semibold text-white hover:bg-[#1d4ed8]"
-
+              className="mt-5 rounded-xl bg-[#0066ff] px-6 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-500/20 hover:bg-[#0052cc]"
             >
-
               OK
-
             </button>
-
           </div>
-
         </div>
-
       )}
 
-
-
       {/* Stat cards */}
-
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {statCards.map((card) => {
-
           const Icon = card.icon;
 
           return (
-
-            <div key={card.label} className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-
-              <div className={`mb-4 flex h-10 w-10 items-center justify-center rounded-xl ${card.iconBg}`}>
-
+            <div
+              key={card.label}
+              className="group relative overflow-hidden rounded-3xl border border-slate-100 bg-white p-5 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <div className={`mb-3 flex h-11 w-11 items-center justify-center rounded-2xl ${card.iconBg}`}>
                 <Icon className="h-5 w-5 text-white" />
-
               </div>
 
-              <p className="text-sm font-bold text-black">{card.label}</p>
-
-              <div className="mt-1 text-2xl font-bold text-gray-900">{card.value}</div>
-
-              <p className="mt-1 text-xs text-gray-400">{card.sub}</p>
-
+              <div className="text-2xl font-bold font-manrope text-slate-900">{card.value}</div>
+              <p className="mt-0.5 text-xs font-semibold uppercase tracking-wider text-slate-400 font-manrope">
+                {card.label}
+              </p>
+              <p className="mt-1 text-[11px] text-slate-400">{card.sub}</p>
             </div>
-
           );
-
         })}
-
       </div>
 
-
-
       {/* Recent Leave Requests */}
-
-      <div className="mb-6 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+      <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-xs">
 
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
 
@@ -1992,7 +1947,7 @@ function AdminLeave() {
 
               onChange={(event) => { setPage(1); setDepartmentFilter(event.target.value); }}
 
-              className="rounded-full border border-gray-200 bg-white px-4 py-2 text-sm text-gray-600 focus:border-[#2563eb] focus:outline-none"
+              className="rounded-full border border-gray-200 bg-white px-4 py-2 text-sm text-gray-600 focus:border-[#0066ff] focus:outline-none"
 
             >
 
@@ -2006,7 +1961,7 @@ function AdminLeave() {
 
             </select>
 
-            <select value={statusFilter} onChange={(event) => { setPage(1); setStatusFilter(event.target.value as LeaveStatus | ""); }} className="rounded-full border border-gray-200 bg-white px-4 py-2 text-sm text-gray-600 focus:border-[#2563eb] focus:outline-none">
+            <select value={statusFilter} onChange={(event) => { setPage(1); setStatusFilter(event.target.value as LeaveStatus | ""); }} className="rounded-full border border-gray-200 bg-white px-4 py-2 text-sm text-gray-600 focus:border-[#0066ff] focus:outline-none">
 
               <option value="">All Statuses</option>
 
@@ -2018,7 +1973,7 @@ function AdminLeave() {
 
             </select>
 
-            <select value={leaveTypeFilter} onChange={(event) => { setPage(1); setLeaveTypeFilter(event.target.value); }} className="rounded-full border border-gray-200 bg-white px-4 py-2 text-sm text-gray-600 focus:border-[#2563eb] focus:outline-none">
+            <select value={leaveTypeFilter} onChange={(event) => { setPage(1); setLeaveTypeFilter(event.target.value); }} className="rounded-full border border-gray-200 bg-white px-4 py-2 text-sm text-gray-600 focus:border-[#0066ff] focus:outline-none">
 
               <option value="">All Leave Types</option>
 
@@ -2052,7 +2007,7 @@ function AdminLeave() {
 
                   className={`flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm transition ${onlyMine
 
-                      ? "border-[#2563eb] bg-blue-50 font-semibold text-[#2563eb]"
+                      ? "border-[#0066ff] bg-blue-50 font-semibold text-[#0066ff]"
 
                       : "border-gray-200 text-gray-700 hover:bg-gray-50"
 
@@ -2066,7 +2021,7 @@ function AdminLeave() {
 
                 </button>
 
-                <button type="button" onClick={() => setIsCreateOpen(true)} className="flex items-center gap-1.5 rounded-full bg-[#2563eb] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1d4ed8]">
+                <button type="button" onClick={() => setIsCreateOpen(true)} className="flex items-center gap-1.5 rounded-full bg-[#0066ff] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1d4ed8]">
 
                   <Plus className="h-3.5 w-3.5" />
 
@@ -2300,7 +2255,7 @@ function AdminLeave() {
 
                 }}
 
-                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-600 focus:border-[#2563eb] focus:outline-none"
+                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-600 focus:border-[#0066ff] focus:outline-none"
 
               >
 
@@ -2408,7 +2363,7 @@ function AdminLeave() {
 
               onClick={openBalanceEdit}
 
-              className="flex items-center gap-1 text-xs font-semibold text-[#2563eb] hover:underline"
+              className="flex items-center gap-1 text-xs font-semibold text-[#0066ff] hover:underline"
 
             >
 
@@ -2506,7 +2461,7 @@ function AdminLeave() {
 
             <h3 className="font-bold text-gray-900">Upcoming Leave </h3>
 
-            <button className="text-xs font-semibold text-[#2563eb] hover:underline">
+            <button className="text-xs font-semibold text-[#0066ff] hover:underline">
 
               View All
 
@@ -2794,7 +2749,7 @@ function AdminLeave() {
 
                 </div>
 
-                <span className="text-sm font-bold text-[#2563eb]">
+                <span className="text-sm font-bold text-[#0066ff]">
 
                   {
 
@@ -3122,7 +3077,7 @@ function AdminLeave() {
 
                     }
 
-                    className="mb-3 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#2563eb] focus:outline-none"
+                    className="mb-3 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#0066ff] focus:outline-none"
 
                   />
 
@@ -3172,7 +3127,7 @@ function AdminLeave() {
 
                         }
 
-                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#2563eb] focus:outline-none"
+                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#0066ff] focus:outline-none"
 
                       />
 
@@ -3222,7 +3177,7 @@ function AdminLeave() {
 
                         }
 
-                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#2563eb] focus:outline-none"
+                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#0066ff] focus:outline-none"
 
                       />
 
@@ -3272,7 +3227,7 @@ function AdminLeave() {
 
                         }
 
-                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#2563eb] focus:outline-none"
+                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#0066ff] focus:outline-none"
 
                       />
 
@@ -3322,7 +3277,7 @@ function AdminLeave() {
 
                         }
 
-                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#2563eb] focus:outline-none"
+                        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#0066ff] focus:outline-none"
 
                       />
 
@@ -3358,7 +3313,7 @@ function AdminLeave() {
 
                   placeholder="Leave name"
 
-                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#2563eb] focus:outline-none"
+                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#0066ff] focus:outline-none"
 
                 />
 
@@ -3374,7 +3329,7 @@ function AdminLeave() {
 
                   placeholder="Allocated days"
 
-                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#2563eb] focus:outline-none"
+                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#0066ff] focus:outline-none"
 
                 />
 
@@ -3392,7 +3347,7 @@ function AdminLeave() {
 
                   title="Max consecutive days allowed"
 
-                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#2563eb] focus:outline-none"
+                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#0066ff] focus:outline-none"
 
                 />
 
@@ -3410,7 +3365,7 @@ function AdminLeave() {
 
                   title="Carry forward / rollover days"
 
-                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#2563eb] focus:outline-none"
+                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#0066ff] focus:outline-none"
 
                 />
 
@@ -3424,7 +3379,7 @@ function AdminLeave() {
 
                 disabled={isAddingLeaveType || !newLeaveName.trim()}
 
-                className="mt-3 rounded-lg border border-[#2563eb] px-3 py-2 text-xs font-semibold text-[#2563eb] hover:bg-blue-50 disabled:opacity-50"
+                className="mt-3 rounded-lg border border-[#0066ff] px-3 py-2 text-xs font-semibold text-[#0066ff] hover:bg-blue-50 disabled:opacity-50"
 
               >
 
@@ -3466,7 +3421,7 @@ function AdminLeave() {
 
                 disabled={isBalanceSaving}
 
-                className="rounded-lg bg-[#2563eb] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1d4ed8] disabled:opacity-60"
+                className="rounded-lg bg-[#0066ff] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1d4ed8] disabled:opacity-60"
 
               >
 

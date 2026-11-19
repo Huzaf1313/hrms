@@ -1,255 +1,111 @@
-import type { CSSProperties, ReactNode } from "react";
-import type { LucideIcon } from "lucide-react";
 import {
   ArrowRight,
-  Briefcase,
-  ClipboardList,
-  IndianRupee,
+  CalendarCheck,
+  Clock,
   Umbrella,
-  UserCheck,
   Users,
 } from "lucide-react";
-
-import {
-  formatIndianAmount,
-} from "./dashboardData";
 import type { DashboardMetrics } from "./useDashboardMetrics";
-import { useAnimationFrame, useCountUp } from "./useDashboardAnimation";
 
 interface DashboardKpiRowProps {
-  /** Live figures where the API provides them; defaults to 0. */
   metrics: DashboardMetrics;
   onOpenLeave: () => void;
   onOpenPayroll: () => void;
-  /** Managers have no payroll or hiring permission, so those cards are hidden. */
+  onOpenEmployees?: () => void;
+  onOpenAttendance?: () => void;
   showHrWidgets?: boolean;
-}
-
-/** Cards that depend on a permission only HR holds. */
-const HR_ONLY_CARD_IDS = new Set(["kpi-openings", "kpi-payroll"]);
-
-interface KpiCard {
-  id: string;
-  label: string;
-  value: number;
-  icon: LucideIcon;
-  iconClass: string;
-  chipClass: string;
-  renderValue: (value: number) => string;
-  detail?: ReactNode;
-  progress?: {
-    percent: number;
-    barClass: string;
-  };
-  delay: number;
-}
-
-function KpiValue({
-  value,
-  render,
-}: {
-  value: number;
-  render: (value: number) => string;
-}) {
-  const animated = useCountUp(value);
-
-  return <>{render(animated)}</>;
-}
-
-function AnimatedBar({
-  percent,
-  barClass,
-  delay,
-}: {
-  percent: number;
-  barClass: string;
-  delay: number;
-}) {
-  const ready = useAnimationFrame();
-
-  return (
-    <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
-      <div
-        className={`h-full rounded-full transition-[width] duration-1000 ease-out ${barClass}`}
-        style={{
-          width: ready ? `${Math.min(Math.max(percent, 0), 100)}%` : "0%",
-          transitionDelay: `${delay}ms`,
-        }}
-      />
-    </div>
-  );
 }
 
 export default function DashboardKpiRow({
   metrics,
   onOpenLeave,
-  onOpenPayroll,
-  showHrWidgets = true,
+  onOpenEmployees,
+  onOpenAttendance,
 }: DashboardKpiRowProps) {
   const headcount = metrics.totalEmployees ?? 0;
   const presentToday = metrics.presentToday ?? 0;
-  const presentPercent = metrics.presentPercent ?? 0;
   const onLeaveToday = metrics.onLeaveToday ?? 0;
-  const onLeavePercent = metrics.onLeavePercent ?? 0;
   const pendingLeave = metrics.pendingLeaveRequests ?? 0;
 
-  const cards: KpiCard[] = [
+  const cards = [
     {
-      id: "kpi-employees",
+      id: "total-employees",
       label: "Total Employees",
       value: headcount,
       icon: Users,
-      iconClass: "text-[#2563eb]",
-      chipClass: "bg-[#eff6ff]",
-      renderValue: (value) => Math.round(value).toLocaleString("en-IN"),
-      detail: (
-        <span className="text-[11px] font-medium text-gray-500">
-          Active in organization
-        </span>
-      ),
-      delay: 0,
+      iconBg: "bg-[#e8f1ff]",
+      iconColor: "text-[#0066ff]",
+      arrowBg: "bg-blue-50/70 hover:bg-blue-100 text-[#0066ff]",
+      onClick: onOpenEmployees || (() => {}),
     },
     {
-      id: "kpi-present",
+      id: "present-today",
       label: "Present Today",
       value: presentToday,
-      icon: UserCheck,
-      iconClass: "text-[#16a34a]",
-      chipClass: "bg-[#ecfdf5]",
-      renderValue: (value) => Math.round(value).toLocaleString("en-IN"),
-      detail: (
-        <span className="text-[11px] font-medium text-[#16a34a]">
-          {presentPercent}% of total
-        </span>
-      ),
-      progress: {
-        percent: presentPercent,
-        barClass: "bg-[#22c55e]",
-      },
-      delay: 90,
+      icon: CalendarCheck,
+      iconBg: "bg-[#e2f7ec]",
+      iconColor: "text-[#16a34a]",
+      arrowBg: "bg-emerald-50/70 hover:bg-emerald-100 text-[#16a34a]",
+      onClick: onOpenAttendance || (() => {}),
     },
     {
-      id: "kpi-leave",
+      id: "on-leave",
       label: "On Leave",
       value: onLeaveToday,
       icon: Umbrella,
-      iconClass: "text-[#7c3aed]",
-      chipClass: "bg-[#f5f3ff]",
-      renderValue: (value) => Math.round(value).toLocaleString("en-IN"),
-      detail: (
-        <span className="text-[11px] font-medium text-[#16a34a]">
-          {onLeavePercent}% of total
-        </span>
-      ),
-      progress: {
-        // Leave is a small share, so scale it to a readable bar length.
-        percent: onLeavePercent * 10,
-        barClass: "bg-[#8b5cf6]",
-      },
-      delay: 180,
+      iconBg: "bg-[#fff2e2]",
+      iconColor: "text-[#ea580c]",
+      arrowBg: "bg-orange-50/70 hover:bg-orange-100 text-[#ea580c]",
+      onClick: onOpenLeave,
     },
     {
-      id: "kpi-openings",
-      label: "Open Positions",
-      value: metrics.activeJobPositions ?? 0,
-      icon: Briefcase,
-      iconClass: "text-[#ea580c]",
-      chipClass: "bg-[#fff7ed]",
-      renderValue: (value) => String(Math.round(value)),
-      detail: (
-        <span className="text-[11px] font-medium text-[#16a34a]">
-          Hiring in progress
-        </span>
-      ),
-      delay: 270,
-    },
-    {
-      id: "kpi-pending-leave",
+      id: "pending-leave-requests",
       label: "Pending Leave Requests",
       value: pendingLeave,
-      icon: ClipboardList,
-      iconClass: "text-[#dc2626]",
-      chipClass: "bg-[#fef2f2]",
-      renderValue: (value) => String(Math.round(value)),
-      detail: (
-        <button
-          type="button"
-          onClick={onOpenLeave}
-          className="text-[11px] font-semibold text-[#2563eb] hover:underline"
-        >
-          View details →
-        </button>
-      ),
-      delay: 360,
-    },
-    {
-      id: "kpi-payroll",
-      label: "Payroll This Month",
-      value: metrics.payrollThisMonth ?? 0,
-      icon: IndianRupee,
-      iconClass: "text-[#ca8a04]",
-      chipClass: "bg-[#fefce8]",
-      renderValue: (value) =>
-        metrics.isPayrollLoading
-          ? "..."
-          : `₹ ${formatIndianAmount(Math.round(value))}`,
-      detail: (
-        <button
-          type="button"
-          onClick={onOpenPayroll}
-          className="flex items-center gap-1 text-[11px] font-semibold text-[#2563eb] hover:underline"
-        >
-          View payroll <ArrowRight className="h-3 w-3" />
-        </button>
-      ),
-      delay: 450,
+      icon: Clock,
+      iconBg: "bg-[#f2edfe]",
+      iconColor: "text-[#7c3aed]",
+      arrowBg: "bg-purple-50/70 hover:bg-purple-100 text-[#7c3aed]",
+      onClick: onOpenLeave,
     },
   ];
 
-  const visibleCards = showHrWidgets
-    ? cards
-    : cards.filter((card) => !HR_ONLY_CARD_IDS.has(card.id));
-
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
-      {visibleCards.map((card) => {
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {cards.map((card) => {
         const Icon = card.icon;
 
         return (
           <div
             key={card.id}
-            className="dashboard-rise rounded-2xl border border-gray-100 bg-white p-4 shadow-sm"
-            style={
-              { "--dashboard-delay": `${card.delay}ms` } as CSSProperties
-            }
+            className="group relative rounded-3xl border border-slate-100 bg-white p-5 shadow-sm hover:shadow-md transition-all duration-200 flex items-center justify-between"
           >
-            <div className="flex items-start gap-3">
-              <span
-                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${card.chipClass}`}
+            <div className="flex items-center gap-4">
+              <div
+                className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${card.iconBg} ${card.iconColor}`}
               >
-                <Icon className={`h-5 w-5 ${card.iconClass}`} />
-              </span>
+                <Icon className="h-6 w-6" />
+              </div>
 
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-gray-900">
+              <div>
+                <p className="text-3xl font-extrabold tracking-tight text-[#0f172a] font-manrope">
+                  {card.value}
+                </p>
+                <p className="text-xs font-semibold text-slate-500 mt-0.5">
                   {card.label}
                 </p>
-
-                <p className="mt-1 text-xl font-extrabold tracking-tight text-black">
-                  <KpiValue value={card.value} render={card.renderValue} />
-                </p>
-
-                {card.detail}
-
-                {card.progress && (
-                  <AnimatedBar
-                    percent={card.progress.percent}
-                    barClass={card.progress.barClass}
-                    delay={card.delay}
-                  />
-                )}
               </div>
             </div>
+
+            <button
+              type="button"
+              onClick={card.onClick}
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all duration-150 group-hover:scale-105 ${card.arrowBg}`}
+              title={`View ${card.label}`}
+              aria-label={`View ${card.label}`}
+            >
+              <ArrowRight className="h-4 w-4" />
+            </button>
           </div>
         );
       })}

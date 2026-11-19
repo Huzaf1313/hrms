@@ -1,105 +1,82 @@
-import type { CSSProperties } from "react";
-import type { LucideIcon } from "lucide-react";
-import {
-  Briefcase,
-  CalendarCheck,
-  Clock,
-  Megaphone,
-  UserPlus,
-  Wallet,
-} from "lucide-react";
-
-import DashboardCard from "./DashboardCard";
-
-import { quickActions } from "./dashboardData";
-import { canAccessPage } from "../../lib/access";
-
-const ICONS: Record<string, LucideIcon> = {
-  "user-plus": UserPlus,
-  briefcase: Briefcase,
-  "calendar-check": CalendarCheck,
-  clock: Clock,
-  wallet: Wallet,
-  megaphone: Megaphone,
-};
-
-/** Actions that already have a destination in the admin shell. */
-function targetPageFor(action: (typeof quickActions)[number]): string | null {
-  switch (action.icon) {
-    case "user-plus":
-      return "Employees";
-
-    case "wallet":
-      return "Payroll";
-
-    case "clock":
-      return "Attendance";
-
-    default:
-      return action.label.startsWith("Apply") ? "Leave" : null;
-  }
-}
+import { Clock, Plane, Ticket, Users, Zap } from "lucide-react";
 
 interface QuickActionsCardProps {
   onNavigate?: (page: string) => void;
-  /** Sends the admin to the announcement form instead of the list. */
-  onCreateAnnouncement?: () => void;
-  /** Managers cannot open payroll, so that quick action is dropped. */
-  showHrWidgets?: boolean;
+  className?: string;
 }
 
 export default function QuickActionsCard({
   onNavigate,
-  onCreateAnnouncement,
-  showHrWidgets = true,
+  className = "col-span-12 md:col-span-6 xl:col-span-4",
 }: QuickActionsCardProps) {
-  const actions = showHrWidgets
-    ? quickActions
-    : quickActions.filter(
-        (action) =>
-          !targetPageFor(action) || canAccessPage(targetPageFor(action)!),
-      );
+  const actions = [
+    {
+      id: "add-employee",
+      label: "Add Employee",
+      icon: Users,
+      boxClass: "bg-blue-50/90 text-[#0066ff] border border-blue-100",
+      page: "Employees",
+    },
+    {
+      id: "mark-attendance",
+      label: "Mark Attendance",
+      icon: Clock,
+      boxClass: "bg-emerald-50/90 text-[#16a34a] border border-emerald-100",
+      page: "Attendance",
+    },
+    {
+      id: "apply-leave",
+      label: "Apply Leave",
+      icon: Plane,
+      boxClass: "bg-orange-50/90 text-[#ea580c] border border-orange-100",
+      page: "Leave",
+    },
+    {
+      id: "raise-ticket",
+      label: "Raise Ticket",
+      icon: Ticket,
+      boxClass: "bg-purple-50/90 text-[#7c3aed] border border-purple-100",
+      page: "Support Tickets",
+    },
+  ];
 
   return (
-    <DashboardCard
-      title="Quick Actions"
-      className="col-span-12 md:col-span-6 xl:col-span-4"
+    <div
+      className={`rounded-3xl border border-slate-100 bg-white p-6 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between ${className}`}
     >
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-        {actions.map((action, index) => {
-          const Icon = ICONS[action.icon] ?? Briefcase;
-          const targetPage = targetPageFor(action);
+      {/* Header */}
+      <div className="flex items-center gap-2 mb-6">
+        <Zap className="h-4.5 w-4.5 text-[#0066ff] fill-[#0066ff]" />
+        <h2 className="text-base font-bold text-[#0f172a] font-manrope">
+          Quick Actions
+        </h2>
+      </div>
 
-          const handleClick =
-            action.icon === "megaphone"
-              ? onCreateAnnouncement
-              : targetPage && onNavigate
-                ? () => onNavigate(targetPage)
-                : undefined;
+      {/* 4 Action Tiles Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {actions.map((action) => {
+          const Icon = action.icon;
 
           return (
             <button
               key={action.id}
               type="button"
-              onClick={handleClick}
-              className="dashboard-rise group flex flex-col items-center gap-2 rounded-xl border border-gray-100 px-2 py-3 text-center transition hover:border-[#bfdbfe] hover:shadow-sm"
-              style={
-                { "--dashboard-delay": `${index * 70}ms` } as CSSProperties
-              }
+              onClick={() => action.page && onNavigate?.(action.page)}
+              className="group flex flex-col items-center justify-center gap-2.5 rounded-2xl p-2.5 transition-all duration-150 hover:scale-[1.03]"
             >
-              <span
-                className={`flex h-9 w-9 items-center justify-center rounded-xl ${action.chipClass} transition group-hover:scale-105`}
+              <div
+                className={`flex h-12 w-12 items-center justify-center rounded-2xl shadow-sm transition-transform duration-200 group-hover:shadow ${action.boxClass}`}
               >
-                <Icon className={`h-4 w-4 ${action.iconClass}`} />
-              </span>
+                <Icon className="h-5 w-5" />
+              </div>
 
-              <span className="text-[10px] font-medium leading-tight text-gray-600">
+              <span className="text-[11px] font-semibold text-slate-700 text-center leading-tight">
                 {action.label}
               </span>
             </button>
           );
         })}
       </div>
-    </DashboardCard>
+    </div>
   );
 }

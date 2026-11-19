@@ -371,9 +371,8 @@ function EmployeeLeaveCalendar({ requests }: { requests: LeaveRequest[] }) {
             <div
               key={cell.key}
               title={tooltip}
-              className={`flex h-8 flex-col items-center justify-center rounded-lg text-xs transition cursor-default ${
-                cell.muted ? "text-slate-300" : "text-slate-700"
-              } ${bg}`}
+              className={`flex h-8 flex-col items-center justify-center rounded-lg text-xs transition cursor-default ${cell.muted ? "text-slate-300" : "text-slate-700"
+                } ${bg}`}
             >
               <span>{cell.day}</span>
               <div className="flex h-1 items-center gap-0.5">
@@ -506,7 +505,7 @@ function EmployeeLeave() {
             used: balance.used,
           })),
         );
-       
+
         setUpcomingLeaves(
           upcomingList
             .filter(
@@ -665,7 +664,7 @@ function EmployeeLeave() {
         );
       }
     } finally {
-          setActionLoading(false);
+      setActionLoading(false);
     }
   };
 
@@ -727,53 +726,48 @@ function EmployeeLeave() {
 
   return (
     <>
-      <div className="min-h-screen bg-[#f5f7fb]">
+      <div className="space-y-6 px-4 pb-12 pt-6 sm:px-6 lg:px-8">
         {/* Page Header */}
-        <div className="border-b border-slate-200 bg-white">
-          <div className="px-8 py-6">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-slate-900">
-                  My Leave
-                </h1>
-                <p className="mt-1 text-sm text-slate-500">
-                  Manage your leave balances and leave requests.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setError("");
-                  setActionError("");
-                  setIsApplyLeaveOpen(true);
-                }}
-                disabled={actionLoading}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#2563eb] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                <Plus className="h-4 w-4" />
-                Apply Leave
-              </button>
-            </div>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 font-manrope">
+              My Leave
+            </h1>
+            <p className="mt-1 text-sm font-medium text-slate-500">
+              Manage your leave quotas, view past requests, and submit new applications.
+            </p>
           </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setError("");
+              setActionError("");
+              setIsApplyLeaveOpen(true);
+            }}
+            disabled={actionLoading}
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#0066ff] px-5 py-3 text-sm font-bold text-white shadow-md shadow-blue-500/20 transition hover:bg-[#0052cc] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Plus className="h-4 w-4" />
+            Apply Leave
+          </button>
         </div>
 
-        <div className="px-8 py-7">
-
+        <div>
           <EmployeeUpcomingLeaveTicker
             leaves={upcomingLeaves}
             loading={loading}
           />
-          
+
           {/* Error */}
           {error && (
-            <div className="mb-6 flex items-center justify-between gap-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+            <div className="mb-6 flex items-center justify-between gap-4 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-600">
               <span>{error}</span>
 
               <button
                 type="button"
                 onClick={() => setError("")}
-                className="font-semibold text-red-700 hover:text-red-900"
+                className="font-semibold text-rose-700 hover:text-rose-900"
               >
                 Dismiss
               </button>
@@ -782,9 +776,9 @@ function EmployeeLeave() {
 
           {/* Loading */}
           {loading ? (
-            <div className="flex min-h-[400px] items-center justify-center rounded-2xl border border-gray-100 bg-white shadow-sm">
+            <div className="flex min-h-[400px] items-center justify-center rounded-3xl border border-slate-100 bg-white shadow-xs">
               <div className="text-center">
-                <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-[#2563eb]" />
+                <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-[#0066ff]" />
                 <p className="mt-4 text-sm font-medium text-slate-500">
                   Loading your leave information...
                 </p>
@@ -797,22 +791,22 @@ function EmployeeLeave() {
                 {leaveBalances.map((balance) => (
                   <div
                     key={balance.type}
-                    className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"
+                    className="group relative overflow-hidden rounded-3xl border border-slate-100 bg-white p-5.5 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
                   >
                     <div className="flex items-start justify-between">
                       <div>
-                        <p className="text-sm font-medium text-slate-500">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 font-manrope">
                           {balance.type}
                         </p>
 
-                        <p className="mt-2 text-2xl font-bold text-slate-900">
+                        <p className="mt-2 text-2xl font-bold font-manrope text-slate-900">
                           {balance.available}
                           <span className="ml-1 text-sm font-medium text-slate-400">
                             Days
                           </span>
                         </p>
 
-                        <p className="mt-1 text-xs text-slate-400">
+                        <p className="mt-2 border-t border-slate-100 pt-2 text-xs text-slate-400">
                           {balance.allocated} Allocated ·{" "}
                           {balance.used} Used
                         </p>
@@ -822,10 +816,10 @@ function EmployeeLeave() {
                 ))}
 
                 {/* Pending Requests */}
-                <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+                <div className="group relative overflow-hidden rounded-3xl border border-slate-100 bg-white p-5.5 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
                   <div className="flex items-start justify-between">
                     <div>
-                      <p className="text-sm font-medium text-slate-500">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 font-manrope">
                         Pending Requests
                       </p>
 
@@ -875,7 +869,7 @@ function EmployeeLeave() {
                           }
                           className={`relative whitespace-nowrap pb-3 text-sm font-medium transition ${
                             activeFilter === filter
-                              ? "text-[#2563eb]"
+                              ? "text-[#0066ff]"
                               : "text-slate-500 hover:text-slate-800"
                           }`}
                         >
@@ -883,18 +877,17 @@ function EmployeeLeave() {
 
                           {filter === "All" && (
                             <span
-                              className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] ${
-                                activeFilter === filter
-                                  ? "bg-blue-50 text-blue-600"
-                                  : "bg-slate-100 text-slate-500"
-                              }`}
+                              className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] ${activeFilter === filter
+                                ? "bg-blue-50 text-blue-600"
+                                : "bg-slate-100 text-slate-500"
+                                }`}
                             >
                               {leaveRequests.length}
                             </span>
                           )}
 
                           {activeFilter === filter && (
-                            <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-[#2563eb]" />
+                            <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-[#0066ff]" />
                           )}
                         </button>
                       ))}
@@ -950,7 +943,7 @@ function EmployeeLeave() {
                               <td className="px-6 py-4">
                                 <div className="flex items-center gap-2">
                                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50">
-                                    <CalendarDays className="h-4 w-4 text-[#2563eb]" />
+                                    <CalendarDays className="h-4 w-4 text-[#0066ff]" />
                                   </div>
 
                                   <span className="text-sm font-medium text-slate-800">
@@ -991,7 +984,7 @@ function EmployeeLeave() {
                                   onClick={() =>
                                     setSelectedRequest(request)
                                   }
-                                  className="text-sm font-medium text-[#2563eb] hover:text-blue-800"
+                                  className="text-sm font-medium text-[#0066ff] hover:text-blue-800"
                                 >
                                   View
                                 </button>
@@ -1054,7 +1047,7 @@ function EmployeeLeave() {
 
                       <button
                         type="button"
-                        className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#2563eb] text-sm font-semibold text-white"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#0066ff] text-sm font-semibold text-white"
                       >
                         {currentPage}
                       </button>
@@ -1100,7 +1093,7 @@ function EmployeeLeave() {
                             className="flex gap-4 px-5 py-5"
                           >
                             <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl bg-blue-50">
-                              <span className="text-lg font-bold leading-none text-[#2563eb]">
+                              <span className="text-lg font-bold leading-none text-[#0066ff]">
                                 {leave.day}
                               </span>
 
@@ -1189,7 +1182,7 @@ function EmployeeLeave() {
               <button
                 type="button"
                 onClick={() => setActionError("")}
-                className="rounded-xl bg-[#2563eb] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+                className="rounded-xl bg-[#0066ff] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
               >
                 OK
               </button>

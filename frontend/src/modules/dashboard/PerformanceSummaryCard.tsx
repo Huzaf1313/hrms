@@ -1,113 +1,131 @@
-import type { CSSProperties } from "react";
-import { Award, Clock, Star, Target } from "lucide-react";
-import DashboardCard from "./DashboardCard";
-import type { DashboardPerformanceSummary } from "./dashboardService";
+import { Calendar, ChevronRight, Settings, Star, User } from "lucide-react";
 
 interface PerformanceSummaryCardProps {
-  summary?: DashboardPerformanceSummary | null;
+  summary?: unknown;
   className?: string;
+  onViewDetails?: () => void;
 }
 
 export default function PerformanceSummaryCard({
-  summary,
-  className = "col-span-12 md:col-span-6 xl:col-span-4",
+  className = "col-span-12 lg:col-span-5",
+  onViewDetails,
 }: PerformanceSummaryCardProps) {
-  const activeCycle = summary?.active_cycle || "Annual Review 2026";
-  const totalReviews = summary?.total_reviews ?? 0;
-  const completedReviews = summary?.completed_reviews ?? 0;
-  const pendingReviews = summary?.pending_reviews ?? 0;
-  const avgRating = summary?.average_rating ?? 0;
-  const goalsMetPct = summary?.goals_met_pct ?? 0;
-
-  const completionPct =
-    totalReviews > 0 ? Math.round((completedReviews / totalReviews) * 100) : 0;
+  const percentage = 68;
+  const radius = 42;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
   return (
-    <DashboardCard
-      title="Performance & Appraisal"
-      eyebrow={activeCycle}
-      className={className}
+    <div
+      className={`rounded-3xl border border-slate-100 bg-white p-6 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between ${className}`}
     >
-      <div className="space-y-3">
-        {/* Appraisal Cycle Completion */}
-        <div
-          className="dashboard-rise rounded-xl border border-gray-100 bg-gray-50/60 p-3"
-          style={{ "--dashboard-delay": "100ms" } as CSSProperties}
-        >
-          <div className="flex items-center justify-between text-xs">
-            <span className="flex items-center gap-1.5 font-medium text-gray-700">
-              <Award className="h-4 w-4 text-[#2563eb]" />
-              Appraisal Cycle Completion
-            </span>
-            <span className="font-bold text-gray-900">
-              {totalReviews > 0 ? `${completionPct}%` : "No Active Cycle"}
-            </span>
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <Star className="h-4.5 w-4.5 text-[#0066ff] fill-[#0066ff]/20" />
+            <h2 className="text-base font-bold text-[#0f172a] font-manrope">
+              Performance &amp; Appraisal
+            </h2>
           </div>
-
-          <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-gray-200">
-            <div
-              className="h-full rounded-full bg-[#2563eb] transition-all duration-500"
-              style={{ width: `${completionPct}%` }}
-            />
-          </div>
-
-          <div className="mt-2 flex items-center justify-between text-[11px] text-gray-500">
-            <span>{completedReviews} Completed</span>
-            <span>{totalReviews} Total Reviews</span>
-          </div>
+          <p className="mt-0.5 text-xs text-slate-400 font-medium">
+            Annual Review 2026
+          </p>
         </div>
 
-        {/* 2-Column Metrics: Average Rating & Goals Met */}
-        <div className="grid grid-cols-2 gap-2.5">
-          <div
-            className="dashboard-rise flex items-center gap-2.5 rounded-xl border border-amber-100 bg-amber-50/50 p-2.5"
-            style={{ "--dashboard-delay": "180ms" } as CSSProperties}
-          >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
-              <Star className="h-4 w-4 fill-amber-500 text-amber-500" />
-            </span>
-            <div className="min-w-0">
-              <p className="text-[10px] font-semibold uppercase text-gray-500">
-                Avg Rating
-              </p>
-              <p className="text-[14px] font-bold text-gray-900">
-                {avgRating > 0 ? `${avgRating} / 5.0` : "--"}
-              </p>
-            </div>
-          </div>
+        <button
+          type="button"
+          onClick={onViewDetails}
+          className="inline-flex items-center gap-1 text-xs font-semibold text-[#0066ff] hover:underline"
+        >
+          View Details
+          <ChevronRight className="h-3.5 w-3.5" />
+        </button>
+      </div>
 
-          <div
-            className="dashboard-rise flex items-center gap-2.5 rounded-xl border border-emerald-100 bg-emerald-50/50 p-2.5"
-            style={{ "--dashboard-delay": "240ms" } as CSSProperties}
-          >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600">
-              <Target className="h-4 w-4 text-emerald-600" />
-            </span>
-            <div className="min-w-0">
-              <p className="text-[10px] font-semibold uppercase text-gray-500">
-                Goals Met
-              </p>
-              <p className="text-[14px] font-bold text-gray-900">
-                {completedReviews > 0 ? `${goalsMetPct}%` : "--"}
-              </p>
+      {/* Main Content: Donut + Side List */}
+      <div className="mt-6 grid grid-cols-1 sm:grid-cols-12 gap-6 items-center">
+        {/* Donut Gauge */}
+        <div className="sm:col-span-5 flex flex-col items-center justify-center">
+          <div className="relative flex items-center justify-center">
+            <svg className="h-28 w-28 -rotate-90 transform" viewBox="0 0 100 100">
+              {/* Background Track */}
+              <circle
+                cx="50"
+                cy="50"
+                r={radius}
+                className="text-slate-100"
+                strokeWidth="10"
+                stroke="currentColor"
+                fill="transparent"
+              />
+              {/* Progress Stroke */}
+              <circle
+                cx="50"
+                cy="50"
+                r={radius}
+                className="text-[#0066ff] transition-all duration-1000 ease-out"
+                strokeWidth="10"
+                strokeDasharray={circumference}
+                strokeDashoffset={strokeDashoffset}
+                strokeLinecap="round"
+                stroke="currentColor"
+                fill="transparent"
+              />
+            </svg>
+
+            <div className="absolute flex flex-col items-center justify-center">
+              <span className="text-2xl font-extrabold text-[#0f172a] font-manrope">
+                {percentage}%
+              </span>
             </div>
           </div>
+          <span className="mt-2 text-xs font-semibold text-slate-500 text-center">
+            Overall Progress
+          </span>
         </div>
 
-        {/* Pending Reviews Pill */}
-        <div
-          className="dashboard-rise flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50/60 px-3 py-2 text-xs"
-          style={{ "--dashboard-delay": "300ms" } as CSSProperties}
-        >
-          <span className="flex items-center gap-1.5 text-gray-600">
-            <Clock className="h-3.5 w-3.5 text-amber-500" />
-            Pending Reviews:
-          </span>
-          <span className="font-semibold text-gray-800">
-            {pendingReviews} pending
-          </span>
+        {/* Side Details List */}
+        <div className="sm:col-span-7 space-y-3">
+          {/* Appraisal Cycle */}
+          <div className="flex items-center justify-between rounded-xl bg-slate-50/70 p-2.5">
+            <div className="flex items-center gap-2">
+              <User className="h-4 w-4 text-slate-600" />
+              <span className="text-xs font-semibold text-slate-700">
+                Appraisal Cycle
+              </span>
+            </div>
+            <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700 border border-emerald-100">
+              Active
+            </span>
+          </div>
+
+          {/* No Active Cycle */}
+          <div className="flex items-center justify-between rounded-xl bg-slate-50/70 p-2.5">
+            <div className="flex items-center gap-2">
+              <Settings className="h-4 w-4 text-slate-600" />
+              <span className="text-xs font-semibold text-slate-700">
+                No Active Cycle
+              </span>
+            </div>
+            <span className="text-xs font-semibold text-slate-400">-</span>
+          </div>
+
+          {/* Next Review */}
+          <div className="flex items-center justify-between rounded-xl bg-slate-50/70 p-2.5">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-slate-600" />
+              <span className="text-xs font-semibold text-slate-700">
+                Next Review
+              </span>
+            </div>
+            <span className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-2 py-0.5 text-[11px] font-bold text-[#0066ff]">
+              <Calendar className="h-3 w-3" />
+              31 Dec 2026
+            </span>
+          </div>
         </div>
       </div>
-    </DashboardCard>
+    </div>
   );
 }

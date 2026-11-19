@@ -221,14 +221,14 @@ function DatePicker({ canManageHolidays = false }: DatePickerProps) {
             ? "Showing today"
             : "Filtering every page by this date"
         }
-        className={`flex items-center gap-2 rounded-full border px-3.5 py-2 text-sm font-medium transition ${
+        className={`flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs font-semibold shadow-sm transition ${
           isDefault
-            ? "border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50"
-            : "border-blue-200 bg-blue-50 text-blue-700 hover:border-blue-300 hover:bg-blue-100"
+            ? "border-slate-200/90 bg-white text-slate-700 hover:bg-slate-50"
+            : "border-blue-200 bg-blue-50/80 text-blue-700 hover:bg-blue-100"
         }`}
       >
-        <CalendarDays className="h-4 w-4 text-gray-500" />
-        <span className="hidden sm:inline">{formatDate(selectedDate)}</span>
+        <CalendarDays className="h-4 w-4 text-slate-500" />
+        <span className="hidden sm:inline font-sans">{formatDate(selectedDate)}</span>
         {!isDefault && (
           <span
             aria-hidden="true"

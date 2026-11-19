@@ -9,8 +9,32 @@ class AdminPayslipCreate(BaseModel):
     year: int = Field(ge=2000, le=2100)
 
 
+class AdminBulkPayslipCreate(BaseModel):
+    month: str = Field(min_length=1)
+    year: int = Field(ge=2000, le=2100)
+    department_id: str | None = None
+
+
+class AdminBulkPayslipResponse(BaseModel):
+    total_eligible: int
+    created: int
+    skipped: int
+    errors: list[dict] = Field(default_factory=list)
+
+
 class PayslipStatusUpdate(BaseModel):
     status: str = Field(min_length=1)
+
+
+class BulkStatusUpdate(BaseModel):
+    payslip_ids: list[str] = Field(min_length=1)
+    status: str = Field(min_length=1)
+
+
+class BulkEmailRequest(BaseModel):
+    month: str = Field(min_length=1)
+    year: int = Field(ge=2000, le=2100)
+    status: str | None = None
 
 
 class AdminPayslipResponse(BaseModel):

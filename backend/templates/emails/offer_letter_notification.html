@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Offer: {{ job_title }} - {{ company_name }}</title>
+</head>
+<body style="
+    margin: 0;
+    padding: 0;
+    background-color: #f4f6f8;
+    font-family: Arial, Helvetica, sans-serif;
+    color: #1f2937;
+">
+    <div style="width: 100%; padding: 40px 0;">
+        <div style="
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+        ">
+            <!-- Header -->
+            <div style="
+                background: linear-gradient(135deg, #2563eb, #1d4ed8);
+                padding: 28px 32px;
+                text-align: center;
+            ">
+                <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700;">
+                    {{ company_name }}
+                </h1>
+                <p style="margin: 6px 0 0; color: #dbeafe; font-size: 13px;">
+                    Talent Acquisition & Recruitment
+                </p>
+            </div>
+
+            <!-- Content -->
+            <div style="padding: 32px;">
+                <h2 style="margin: 0 0 12px; font-size: 20px; color: #111827;">
+                    Offer of Employment
+                </h2>
+                <p style="margin: 0 0 16px; font-size: 14px; line-height: 1.6; color: #4b5563;">
+                    Dear <strong>{{ candidate_name }}</strong>,
+                </p>
+                <p style="margin: 0 0 20px; font-size: 14px; line-height: 1.6; color: #4b5563;">
+                    We are pleased to extend an offer of employment for the position of <strong>{{ designation or job_title }}</strong> in our <strong>{{ department }}</strong> team at <strong>{{ company_name }}</strong>!
+                </p>
+
+                <!-- Highlight Card -->
+                <div style="
+                    background-color: #eff6ff;
+                    border: 1px solid #bfdbfe;
+                    border-radius: 10px;
+                    padding: 20px;
+                    margin-bottom: 24px;
+                    text-align: center;
+                ">
+                    <div style="font-size: 12px; font-weight: 600; color: #1d4ed8; text-transform: uppercase; letter-spacing: 0.5px;">
+                        Offered Compensation
+                    </div>
+                    <div style="font-size: 28px; font-weight: 800; color: #1e40af; margin: 6px 0;">
+                        ₹{{ "{:,.2f}".format(offered_salary) }}
+                    </div>
+                    <div style="font-size: 13px; color: #3b82f6;">
+                        Annual CTC
+                    </div>
+                </div>
+
+                <!-- Offer Details Table -->
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 13px;">
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 10px 0; color: #64748b; width: 40%;">Designation:</td>
+                        <td style="padding: 10px 0; font-weight: 600; color: #1e293b;">{{ designation or job_title }}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 10px 0; color: #64748b;">Department:</td>
+                        <td style="padding: 10px 0; font-weight: 600; color: #1e293b;">{{ department }}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 10px 0; color: #64748b;">Proposed Joining Date:</td>
+                        <td style="padding: 10px 0; font-weight: 600; color: #1e293b;">{{ joining_date }}</td>
+                    </tr>
+                    {% if work_location %}
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 10px 0; color: #64748b;">Work Location:</td>
+                        <td style="padding: 10px 0; font-weight: 600; color: #1e293b;">{{ work_location }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if expiry_date %}
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 10px 0; color: #64748b;">Offer Valid Until:</td>
+                        <td style="padding: 10px 0; font-weight: 600; color: #dc2626;">{{ expiry_date }}</td>
+                    </tr>
+                    {% endif %}
+                </table>
+
+                {% if notes %}
+                <div style="
+                    background-color: #f8fafc;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 8px;
+                    padding: 14px 16px;
+                    margin-bottom: 24px;
+                    font-size: 13px;
+                    color: #475569;
+                    line-height: 1.5;
+                ">
+                    <strong style="color: #334155;">Additional Information:</strong><br>
+                    {{ notes }}
+                </div>
+                {% endif %}
+
+                <p style="margin: 0 0 16px; font-size: 14px; line-height: 1.6; color: #4b5563;">
+                    Please review this offer and confirm your acceptance by replying to this email. We look forward to welcoming you to our team.
+                </p>
+
+                <!-- Signature -->
+                <p style="margin: 24px 0 0; font-size: 13px; line-height: 1.6; color: #6b7280;">
+                    Warm regards,<br>
+                    <strong>HR & Talent Team</strong><br>
+                    {{ company_name }}
+                </p>
+            </div>
+
+            <!-- Footer -->
+            <div style="
+                padding: 16px 32px;
+                background-color: #f9fafb;
+                border-top: 1px solid #e5e7eb;
+                text-align: center;
+                font-size: 12px;
+                color: #9ca3af;
+            ">
+                <p style="margin: 0;">This is an official communication from {{ company_name }}.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

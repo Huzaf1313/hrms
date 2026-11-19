@@ -165,7 +165,7 @@ function RegularizationRequestsCard({
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto min-h-0 divide-y divide-gray-100 pr-1 [scrollbar-width:thin]">
+      <div className="flex-1 overflow-y-auto min-h-0 divide-y divide-gray-100 pr-1">
         {requests.length === 0 ? (
           <div className="flex h-full items-center justify-center text-xs text-gray-400">
             No regularization requests

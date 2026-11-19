@@ -65,6 +65,16 @@ export interface JobPositionInput {
   openings: number;
 }
 
+export interface CandidateOfferDetails {
+  offered_salary: number;
+  joining_date: string;
+  designation?: string;
+  work_location?: string;
+  expiry_date?: string;
+  notes?: string;
+  issued_at?: string;
+}
+
 export interface Candidate {
   id: string;
   full_name: string;
@@ -82,8 +92,45 @@ export interface Candidate {
   stage_updated_at: string;
   /** ISO instant of the booked interview, or null when none is booked. */
   interview_scheduled_at: string | null;
+  meeting_link?: string | null;
   // Set only by the change-stage call: the job was closed because all its openings are filled.
   job_auto_closed?: boolean;
+  // Onboarding status into Employees
+  is_onboarded?: boolean;
+  employee_id?: string | null;
+  employee_code?: string | null;
+  onboarded_at?: string | null;
+  // Offer letter details
+  offer_details?: CandidateOfferDetails | null;
+}
+
+export interface CandidateOfferInput {
+  offered_salary: number;
+  joining_date: string;
+  designation?: string;
+  work_location?: string;
+  expiry_date?: string;
+  notes?: string;
+  send_email?: boolean;
+}
+
+export interface CandidateOnboardInput {
+  joining_date?: string;
+  work_location?: string;
+  employment_type?: string;
+  salary_structure?: string;
+  salary?: number;
+  manager_id?: string;
+  reporting_manager?: string;
+  temporary_password?: string;
+  send_welcome_email?: boolean;
+}
+
+export interface ScheduleInterviewInput {
+  interview_scheduled_at: string | null;
+  meeting_link?: string;
+  notes?: string;
+  send_email?: boolean;
 }
 
 export interface CandidateInput {
@@ -107,6 +154,9 @@ export interface PipelineCandidate {
   full_name: string;
   job_title: string;
   stage_updated_at: string;
+  is_onboarded?: boolean;
+  employee_code?: string | null;
+  offer_details?: CandidateOfferDetails | null;
 }
 
 export interface PipelineColumn {

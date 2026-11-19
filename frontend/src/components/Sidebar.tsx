@@ -1,9 +1,10 @@
+import React from "react";
 import {
   Briefcase,
   CalendarCheck,
   CalendarDays,
   DoorOpen,
-  LayoutDashboard,
+  LayoutGrid,
   LifeBuoy,
   Megaphone,
   Package,
@@ -19,20 +20,17 @@ import { canAccessPage } from "../lib/access";
 interface SidebarProps {
   activePage: string;
   onNavigate: (page: string) => void;
-  onLogout?: () => void; // Added optional onLogout prop just in case you want to use it here later
+  onLogout?: () => void;
   collapsed: boolean;
-  /** Mobile drawer state. Desktop ignores this and uses `collapsed`. */
   open?: boolean;
   onClose?: () => void;
 }
 
 interface NavItem {
   label: string;
-  icon: typeof LayoutDashboard;
+  icon: React.ComponentType<{ className?: string }>;
   page?: string;
-  /** Pages only HR may open. Hidden from a manager's menu. */
   hrOnly?: boolean;
-  /** Pages only the super admin may open. */
   superAdminOnly?: boolean;
 }
 
@@ -41,29 +39,13 @@ interface NavSection {
   items: NavItem[];
 }
 
-// Only sections this project actually has a page for. The reference design
-// showed more (Departments, Shifts, Holidays, Reports); those stay out rather
-// than becoming dead links.
 const sections: NavSection[] = [
   {
-    title: "Main",
-    items: [{ label: "Dashboard", icon: LayoutDashboard, page: "Dashboard" }],
-  },
-  // Only the super admin sees this section; for anyone else it filters to
-  // nothing and is not rendered.
-  {
-    title: "Super Admin",
-    items: [
-      {
-        label: "Admin Accounts",
-        icon: ShieldCheck,
-        page: "Admin Accounts",
-        superAdminOnly: true,
-      },
-    ],
+    title: "MAIN",
+    items: [{ label: "Dashboard", icon: LayoutGrid, page: "Dashboard" }],
   },
   {
-    title: "Organization",
+    title: "ORGANIZATION",
     items: [
       { label: "Employees", icon: Users, page: "Employees" },
       {
@@ -72,18 +54,17 @@ const sections: NavSection[] = [
         page: "Recruitment",
         hrOnly: true,
       },
-      /*{ label: "Departments", icon: Building2 },*/
     ],
   },
   {
-    title: "Attendance",
+    title: "ATTENDANCE",
     items: [
       { label: "Attendance", icon: CalendarCheck, page: "Attendance" },
       { label: "Leave", icon: CalendarDays, page: "Leave" },
     ],
   },
   {
-    title: "Management",
+    title: "MANAGEMENT",
     items: [
       {
         label: "Payroll",
@@ -93,20 +74,36 @@ const sections: NavSection[] = [
       },
       { label: "Assets", icon: Package, page: "Assets" },
       { label: "Announcement", icon: Megaphone, page: "Announcement" },
+      { label: "Support Tickets", icon: LifeBuoy, page: "Support Tickets" },
       {
         label: "Exit Requests",
         icon: DoorOpen,
         page: "Exit Requests",
         hrOnly: true,
       },
-      { label: "Support Tickets", icon: LifeBuoy, page: "Support Tickets" },
       { label: "Settings", icon: Settings, page: "Settings" },
+    ],
+  },
+  {
+    title: "SUPER ADMIN",
+    items: [
+      {
+        label: "Admin Accounts",
+        icon: ShieldCheck,
+        page: "Admin Accounts",
+        superAdminOnly: true,
+      },
     ],
   },
 ];
 
-function Sidebar({ activePage, onNavigate, collapsed, open, onClose }: SidebarProps) {
-
+export function Sidebar({
+  activePage,
+  onNavigate,
+  collapsed,
+  open,
+  onClose,
+}: SidebarProps) {
   function go(page: string) {
     onNavigate(page);
     onClose?.();
@@ -114,127 +111,198 @@ function Sidebar({ activePage, onNavigate, collapsed, open, onClose }: SidebarPr
 
   return (
     <>
-      {/* Tap-to-dismiss backdrop, mobile only. */}
+      {/* Tap-to-dismiss backdrop, mobile only */}
       {open && (
         <div
-          className="fixed inset-0 z-30 bg-black/40 lg:hidden"
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
           onClick={onClose}
           aria-hidden="true"
         />
       )}
 
       <aside
-        className={`app-sidebar fixed inset-y-0 left-0 z-40 flex h-screen shrink-0 flex-col overflow-hidden bg-[#0d1e3e] px-4 py-4 transition-[width,transform] duration-300 ease-in-out lg:sticky lg:top-0 lg:z-0 lg:translate-x-0 ${
-          open ? "translate-x-0" : "-translate-x-full"
-        } ${collapsed ? "w-[76px]" : "w-[250px]"}`}
+        className={`app-sidebar fixed inset-y-0 left-0 z-50 flex h-screen shrink-0 flex-col overflow-hidden bg-[#09142e] px-4 py-5 transition-[width,transform] duration-300 ease-in-out lg:static lg:h-full lg:z-auto lg:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"
+          } ${collapsed ? "w-[80px]" : "w-[260px]"}`}
       >
-      {/* Logo */}
-      <button
-        type="button"
-        onClick={() => go("Dashboard")}
-        title={collapsed ? "HRMS" : undefined}
-        className={`mb-5 flex items-center rounded-xl text-left transition-[justify-content] duration-300 ${collapsed ? "h-10 w-10 shrink-0 justify-center p-0" : "gap-3 px-2"
-          }`}
-      >
-        <span
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#2563eb] ${collapsed ? "mx-auto" : ""
-            }`}
-        >
-          <Users className="h-5 w-5 text-white" />
-        </span>
-
-        {!collapsed && (
-          <span>
-            <span className="brand-wordmark block text-xl font-bold text-white">HRMS</span>
-            <span className="block text-xs text-slate-400">Admin Portal</span>
-          </span>
-        )}
-      </button>
-
-      {/* Navigation */}
-      <nav className="sidebar-scrollbar min-h-0 flex-1 overflow-y-auto">
-        {sections.map((section) => {
-          // Unrestricted items always show; restricted ones ask canAccessPage,
-          // which knows the HR-only and super-admin-only page lists.
-          const items = section.items.filter(
-            (item) =>
-              (!item.hrOnly && !item.superAdminOnly) ||
-              canAccessPage(item.page ?? ""),
-          );
-
-          if (items.length === 0) return null;
-
-          return (
-          <div key={section.title} className="mb-3">
-            {!collapsed ? (
-              <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
-                {section.title}
-              </p>
-            ) : (
-              <div
-                className="mx-auto mb-2 h-px w-8 bg-white/10"
-                aria-hidden="true"
-              />
-            )}
-
-            <div className="flex flex-col gap-1">
-              {items.map((item) => {
-                const Icon = item.icon;
-                const isActive = Boolean(item.page) && activePage === item.page;
-                const isDisabled = !item.page;
-
-                return (
-                  <div key={item.label}>
-                    <button
-                      type="button"
-                      disabled={isDisabled}
-                      onClick={() => {
-                        if (!item.page) return;
-                        go(item.page);
-                      }}
-                      title={collapsed ? item.label : undefined}
-                      aria-label={collapsed ? item.label : undefined}
-                      className={`flex h-9 w-full shrink-0 items-center rounded-xl text-left transition-[justify-content,padding,color,background-color] duration-300 ${collapsed ? "justify-center px-0" : "gap-3 px-3"
-                        } text-[15px] ${isActive
-                          ? "bg-[#2563eb] font-semibold text-white shadow-lg shadow-blue-900/30"
-                          : isDisabled
-                            ? "cursor-not-allowed text-slate-600"
-                            : "text-slate-300 hover:bg-white/10 hover:text-white"
-                        }`}
-                    >
-                      <Icon
-                        className={`h-5 w-5 shrink-0 ${isActive
-                          ? "text-white"
-                          : isDisabled
-                            ? "text-slate-700"
-                            : "text-slate-400"
-                        }`}
-                      />
-
-                      {!collapsed && <span>{item.label}</span>}
-
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-          );
-        })}
-      </nav>
-
-      {/* Footer */}
-      {!collapsed && (
+        {/* Brand Header */}
         <button
           type="button"
-          onClick={() => onClose?.()}
-          className="flex items-center gap-3 px-3 pt-4 text-left text-[12px] text-slate-400 transition hover:text-white lg:hidden"
+          onClick={() => go("Dashboard")}
+          title={collapsed ? "PeopleSync" : undefined}
+          className={`mb-6 flex items-center text-left transition-all duration-200 ${collapsed ? "justify-center p-0" : "gap-3 px-1 py-1"
+            }`}
         >
-          <PanelLeftClose className="h-4 w-4" />
-          Close Menu
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white p-1.5 shadow-md shadow-black/30">
+            <img
+              src="/peoplesync-logo.png"
+              alt="PeopleSync"
+              className="h-full w-full object-contain"
+            />
+          </div>
+
+          {!collapsed && (
+            <div className="min-w-0">
+              <span className="brand-wordmark block text-xl font-extrabold tracking-tight text-white leading-tight font-manrope">
+                People<span className="text-[#3884ff]">Sync</span>
+              </span>
+              <span className="block text-[10px] font-normal text-slate-400 tracking-tight leading-tight mt-0.5 truncate">
+                Empowering People, Simplifying Work.
+              </span>
+            </div>
+          )}
         </button>
-      )}
-    </aside>
+
+        {/* Navigation Section */}
+        <nav className="sidebar-scrollbar min-h-0 flex-1 overflow-y-auto pr-0.5 space-y-4">
+          {sections.map((section) => {
+            const items = section.items.filter(
+              (item) =>
+                (!item.hrOnly && !item.superAdminOnly) ||
+                canAccessPage(item.page ?? ""),
+            );
+
+            if (items.length === 0) return null;
+
+            return (
+              <div key={section.title}>
+                {!collapsed ? (
+                  <p className="mb-2 px-3 text-[11px] font-bold uppercase tracking-wider text-slate-400/70">
+                    {section.title}
+                  </p>
+                ) : (
+                  <div
+                    className="mx-auto mb-2 h-px w-8 bg-white/10"
+                    aria-hidden="true"
+                  />
+                )}
+
+                <div className="flex flex-col gap-1">
+                  {items.map((item) => {
+                    const Icon = item.icon;
+                    const isActive =
+                      Boolean(item.page) && activePage === item.page;
+                    const isDisabled = !item.page;
+
+                    return (
+                      <button
+                        key={item.label}
+                        type="button"
+                        disabled={isDisabled}
+                        onClick={() => {
+                          if (!item.page) return;
+                          go(item.page);
+                        }}
+                        title={collapsed ? item.label : undefined}
+                        aria-label={collapsed ? item.label : undefined}
+                        className={`flex h-10 w-full shrink-0 items-center rounded-xl text-left transition-all duration-150 ${collapsed ? "justify-center px-0" : "gap-3 px-3.5"
+                          } text-sm ${isActive
+                            ? "bg-[#0066ff] font-semibold text-white shadow-lg shadow-blue-600/30"
+                            : isDisabled
+                              ? "cursor-not-allowed text-slate-600"
+                              : "font-medium text-slate-300 hover:bg-white/[0.08] hover:text-white"
+                          }`}
+                      >
+                        <Icon
+                          className={`h-4.5 w-4.5 shrink-0 ${isActive
+                            ? "text-white"
+                            : isDisabled
+                              ? "text-slate-600"
+                              : "text-slate-400"
+                            }`}
+                        />
+
+                        {!collapsed && <span>{item.label}</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </nav>
+
+        {/* Bottom "Together We Grow" Card */}
+        {!collapsed && (
+          <div className="mt-auto pt-3">
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#122452] via-[#142a66] to-[#1c3e8e] p-4 text-white shadow-lg border border-white/10">
+              <div className="relative z-10 max-w-[110px]">
+                <p className="text-sm font-extrabold leading-tight tracking-tight text-white font-manrope">
+                  Together
+                  <br />
+                  We Grow
+                </p>
+              </div>
+
+              {/* Team silhouette with warm orange & blue swoosh */}
+              <div className="pointer-events-none absolute -bottom-1 -right-1 h-20 w-28 opacity-90">
+                <svg viewBox="0 0 120 80" fill="none" className="h-full w-full">
+                  <circle
+                    cx="85"
+                    cy="35"
+                    r="10"
+                    fill="#3b82f6"
+                    fillOpacity="0.8"
+                  />
+                  <path
+                    d="M68 65 C68 50, 102 50, 102 65 Z"
+                    fill="#3b82f6"
+                    fillOpacity="0.8"
+                  />
+                  <circle
+                    cx="62"
+                    cy="42"
+                    r="8"
+                    fill="#60a5fa"
+                    fillOpacity="0.7"
+                  />
+                  <path
+                    d="M48 68 C48 56, 76 56, 76 68 Z"
+                    fill="#60a5fa"
+                    fillOpacity="0.7"
+                  />
+                  <circle
+                    cx="102"
+                    cy="44"
+                    r="7"
+                    fill="#60a5fa"
+                    fillOpacity="0.6"
+                  />
+                  <path
+                    d="M90 68 C90 58, 114 58, 114 68 Z"
+                    fill="#60a5fa"
+                    fillOpacity="0.6"
+                  />
+                  <path
+                    d="M10 75 Q60 55 120 70"
+                    stroke="#f97316"
+                    strokeWidth="4"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M20 78 Q70 62 120 74"
+                    stroke="#ffedd5"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    opacity="0.6"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Mobile Close Button */}
+        {!collapsed && (
+          <button
+            type="button"
+            onClick={() => onClose?.()}
+            className="mt-2 flex items-center gap-2 px-3 py-2 text-xs text-slate-400 transition hover:text-white lg:hidden"
+          >
+            <PanelLeftClose className="h-4 w-4" />
+            Close Menu
+          </button>
+        )}
+      </aside>
     </>
   );
 }

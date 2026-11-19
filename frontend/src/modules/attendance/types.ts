@@ -14,8 +14,9 @@ export interface AttendanceEmployee {
   first_name: string;
   last_name: string;
   avatar_url?: string | null;
-  department_id: string;
+  department_id?: string;
   department_name?: string | null;
+  designation?: string | null;
 }
 
 export interface AttendanceRecord {
@@ -23,7 +24,7 @@ export interface AttendanceRecord {
   employee: AttendanceEmployee;
   date: string;
   shift_id?: string | null;
-  shift: string;
+  shift?: string;
   shift_start?: string | null;
   shift_end?: string | null;
   shift_duration_minutes?: number | null;
@@ -44,8 +45,9 @@ export interface AttendanceRecord {
   is_late?: boolean;
   is_overnight?: boolean;
   status: AttendanceStatus;
-  is_regularized: boolean;
+  is_regularized?: boolean;
   notes?: string | null;
+  employee_id?: string;
 }
 
 export interface AttendanceListResponse {
