@@ -1,15 +1,20 @@
 import React, { type ReactNode } from "react";
 import { WorkstationIllustration } from "./WorkstationIllustration";
+import { CheckCircle2 } from "lucide-react";
 
 interface AuthShellProps {
   headline?: string;
+  accent?: string;
   subcopy?: string;
+  features?: string[];
   children: ReactNode;
 }
 
 export const AuthShell: React.FC<AuthShellProps> = ({
   headline = "Simplify\nmanagement with\nour dashboard",
+  accent,
   subcopy = "Simplify your workforce & talent operations with our user-friendly admin dashboard",
+  features = [],
   children,
 }) => {
   return (
@@ -50,16 +55,30 @@ export const AuthShell: React.FC<AuthShellProps> = ({
             {/* Top Text */}
             <div className="relative z-10">
               <h2 className="text-3xl lg:text-[34px] font-extrabold tracking-tight text-white leading-[1.22]">
-                {headline.split("\n").map((line, idx) => (
-                  <React.Fragment key={idx}>
-                    {line}
+                {headline}
+                {accent && (
+                  <>
                     <br />
-                  </React.Fragment>
-                ))}
+                    <span className="text-blue-200">{accent}</span>
+                  </>
+                )}
               </h2>
               <p className="mt-3.5 max-w-[320px] text-xs sm:text-sm font-normal text-blue-100/90 leading-relaxed">
                 {subcopy}
               </p>
+
+              {features.length > 0 && (
+              <ul className="mt-5 space-y-3">
+                {features.map((feature) => (
+                  <li key={feature} className="flex items-center gap-2.5 text-sm text-blue-50">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/20">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                    </span>
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+                )}
             </div>
 
             {/* Workstation 3D Character Illustration */}
