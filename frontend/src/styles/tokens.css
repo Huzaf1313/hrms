@@ -1,0 +1,95 @@
+/**
+ * Design Tokens — single source of truth.
+ * All module CSS and Tailwind utility overrides reference these vars.
+ *
+ * Color palette: slate-gray scale + ONE blue brand + semantic status colors.
+ * Spacing: 4/8px grid. Radius: 6-8px. Border: 1px subtle.
+ */
+
+:root {
+  /* ── Brand ─────────────────────────────────────────────── */
+  --color-brand:        #2563eb; /* blue-600 */
+  --color-brand-hover:  #1d4ed8; /* blue-700 */
+  --color-brand-light:  #eff6ff; /* blue-50  */
+  --color-brand-border: #bfdbfe; /* blue-200 */
+
+  /* ── Neutral (slate) ────────────────────────────────────── */
+  --color-bg:           #f8fafc; /* slate-50  — page background */
+  --color-surface:      #ffffff; /* white     — card/panel bg   */
+  --color-surface-2:    #f1f5f9; /* slate-100 — inset/striped   */
+  --color-border:       #e2e8f0; /* slate-200 */
+  --color-border-focus: #93c5fd; /* blue-300  */
+
+  --color-text:         #0f172a; /* slate-900 */
+  --color-text-2:       #475569; /* slate-600 */
+  --color-text-3:       #94a3b8; /* slate-400 */
+  --color-text-inv:     #ffffff;
+
+  /* ── Semantic — status colors (8 total) ─────────────────── */
+  --color-green:        #16a34a; /* present / approved */
+  --color-green-bg:     #f0fdf4;
+  --color-green-border: #bbf7d0;
+
+  --color-amber:        #d97706; /* late / pending */
+  --color-amber-bg:     #fffbeb;
+  --color-amber-border: #fde68a;
+
+  --color-red:          #dc2626; /* absent / rejected */
+  --color-red-bg:       #fef2f2;
+  --color-red-border:   #fecaca;
+
+  --color-blue:         #2563eb; /* leave / info */
+  --color-blue-bg:      #eff6ff;
+  --color-blue-border:  #bfdbfe;
+
+  --color-gray:         #64748b; /* holiday / weekend / neutral */
+  --color-gray-bg:      #f1f5f9;
+  --color-gray-border:  #e2e8f0;
+
+  --color-violet:       #7c3aed; /* on_leave override / special */
+  --color-violet-bg:    #f5f3ff;
+  --color-violet-border:#ddd6fe;
+
+  --color-orange:       #ea580c; /* missing punch / warning */
+  --color-orange-bg:    #fff7ed;
+  --color-orange-border:#fed7aa;
+
+  --color-teal:         #0d9488; /* WFH / overtime */
+  --color-teal-bg:      #f0fdfa;
+  --color-teal-border:  #99f6e4;
+
+  /* ── Spacing ─────────────────────────────────────────────── */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* ── Radius ─────────────────────────────────────────────── */
+  --radius-sm: 4px;
+  --radius:    6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  /* ── Typography ─────────────────────────────────────────── */
+  --font-body:   "Inter", ui-sans-serif, system-ui, sans-serif;
+  --text-xs:     11px;
+  --text-sm:     13px;
+  --text-base:   14px;
+  --text-md:     15px;
+  --text-lg:     17px;
+  --text-xl:     20px;
+  --text-2xl:    24px;
+
+  /* ── Shadow — minimal, prefer 1px borders ───────────────── */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+  --shadow:    0 1px 4px 0 rgb(0 0 0 / 0.07);
+
+  /* ── Z-index layers ─────────────────────────────────────── */
+  --z-dropdown: 50;
+  --z-drawer:   100;
+  --z-dialog:   200;
+  --z-toast:    300;
+}

@@ -23,6 +23,7 @@ import { EmployeeExit, EmployeeResignation } from "./modules/exit";
 import { clearAuthQueries } from "./lib/queryClient";
 import { GlobalDateProvider } from "./context/GlobalDateProvider";
 import { EmployeeAssets } from "./modules/assets";
+import { ToastProvider } from "./components/ui/Toast";
 
 // Send the browser back to the login page whenever the session is cleared
 // from under it (e.g. the password was changed on another device and the
@@ -61,46 +62,48 @@ function App() {
       {/* Above the routes so one header date serves the admin and employee
           shells, and survives navigating between them. */}
       <GlobalDateProvider>
-        <Routes>
-          <Route path="/login" element={<Login />} />
+        <ToastProvider>
+          <Routes>
+            <Route path="/login" element={<Login />} />
 
-          <Route element={<AdminRoute />}>
-            <Route
-              path="/dashboard/*"
-              element={<DashboardLayout onLogout={handleLogout} />}
-            />
-          </Route>
-
-          <Route element={<ProtectedRoute />}>
-            <Route
-              path="/employee"
-              element={<EmployeeLayout onLogout={handleLogout} />}
-            >
-              <Route index element={<EmployeeDashboard />} />
-              <Route path="dashboard" element={<EmployeeDashboard />} />
-              <Route path="profile" element={<EmployeeProfile />} />
-              <Route path="attendance" element={<EmployeeAttendance />} />
-              <Route path="leave" element={<EmployeeLeave />} />
-              <Route path="payroll" element={<EmployeePayroll />} />
-              <Route path="documents" element={<EmployeeDocuments />} />
-              <Route path="assets" element={<EmployeeAssets />} />
+            <Route element={<AdminRoute />}>
               <Route
-                path="announcements"
-                element={<EmployeeAnnouncements />}
-              />
-              <Route path="help" element={<EmployeeHelpSupport />} />
-              <Route path="exit" element={<EmployeeExit />} />
-              <Route
-                path="exit/resignation"
-                element={<EmployeeResignation />}
+                path="/dashboard/*"
+                element={<DashboardLayout onLogout={handleLogout} />}
               />
             </Route>
-          </Route>
 
-          <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route element={<ProtectedRoute />}>
+              <Route
+                path="/employee"
+                element={<EmployeeLayout onLogout={handleLogout} />}
+              >
+                <Route index element={<EmployeeDashboard />} />
+                <Route path="dashboard" element={<EmployeeDashboard />} />
+                <Route path="profile" element={<EmployeeProfile />} />
+                <Route path="attendance" element={<EmployeeAttendance />} />
+                <Route path="leave" element={<EmployeeLeave />} />
+                <Route path="payroll" element={<EmployeePayroll />} />
+                <Route path="documents" element={<EmployeeDocuments />} />
+                <Route path="assets" element={<EmployeeAssets />} />
+                <Route
+                  path="announcements"
+                  element={<EmployeeAnnouncements />}
+                />
+                <Route path="help" element={<EmployeeHelpSupport />} />
+                <Route path="exit" element={<EmployeeExit />} />
+                <Route
+                  path="exit/resignation"
+                  element={<EmployeeResignation />}
+                />
+              </Route>
+            </Route>
 
-          <Route path="*" element={<Navigate to="/login" replace />} />
-        </Routes>
+            <Route path="/" element={<Navigate to="/login" replace />} />
+
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </Routes>
+        </ToastProvider>
       </GlobalDateProvider>
     </BrowserRouter>
   );

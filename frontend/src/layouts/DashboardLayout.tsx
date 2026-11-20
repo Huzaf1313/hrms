@@ -150,7 +150,7 @@ function DashboardLayout({
   }, []);
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-[#f5f7fb]">
+    <div className="flex h-screen w-full overflow-hidden bg-[#f8fafc]">
       <Sidebar
         activePage={activePage}
         onNavigate={handleNavigate}
@@ -172,7 +172,7 @@ function DashboardLayout({
 
         {/* Scoped so a crash in one admin page leaves the sidebar and header
             usable, instead of blanking the whole screen. */}
-        <main className="flex-1 overflow-y-auto min-w-0">
+        <main id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto min-w-0 outline-none">
           <ErrorBoundary label={isRegularizationPage ? "Regularization Requests" : activePage}>
             {isRegularizationPage ? (
               <AdminRegularizationRequests />

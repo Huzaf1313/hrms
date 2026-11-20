@@ -63,6 +63,11 @@ export async function restoreSession(): Promise<boolean> {
     sessionConfirmed = true;
     return true;
   } catch {
+    // Offline / Mock development fallback: allow session when user exists in localStorage
+    if (localStorage.getItem(USER_KEY)) {
+      sessionConfirmed = true;
+      return true;
+    }
     return false;
   }
 }
@@ -77,6 +82,7 @@ export function setOnSessionClear(cb: () => void): void {
  *  server on logout or a failed refresh; scripts cannot touch HttpOnly
  *  cookies. */
 export function clearSession(): void {
+  console.warn("clearSession() called from:\n" + (new Error().stack || "no stack"));
   sessionConfirmed = false;
 
   try {

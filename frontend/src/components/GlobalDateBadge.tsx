@@ -1,6 +1,7 @@
 import { CalendarDays, RotateCcw } from "lucide-react";
 
 import { useGlobalDate } from "../context/globalDateContext";
+import { formatDisplayDate } from "../utils/dateKeys";
 
 /**
  * The read-only badge pages show in place of their own date control, so it is
@@ -17,16 +18,11 @@ export function GlobalDateBadge({
 
   if (isDefault) return null;
 
-  const label = new Date(`${date}T00:00:00`).toLocaleDateString("en-GB", {
-    weekday: "short",
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+  const label = formatDisplayDate(date);
 
   return (
-    <div className="flex h-10 items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-4 text-sm font-medium text-blue-700">
-      <CalendarDays className="h-4 w-4 shrink-0 text-blue-500" />
+    <div className="flex h-8 items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 text-xs font-medium text-blue-700">
+      <CalendarDays className="h-3.5 w-3.5 shrink-0 text-blue-500" />
 
       <span className="truncate">
         {prefix ? `${prefix} ` : ""}
@@ -37,7 +33,7 @@ export function GlobalDateBadge({
         type="button"
         onClick={resetDate}
         title="Clear the date filter"
-        className="ml-1 flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-xs font-semibold text-blue-600 transition hover:bg-blue-100"
+        className="ml-1 flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-semibold text-blue-600 transition hover:bg-blue-100"
       >
         <RotateCcw className="h-3 w-3" />
         Clear

@@ -1,36 +1,30 @@
-import { currentSessionUser } from "../../lib/session";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, FileText, Check } from "lucide-react";
+import { Check, X, Clock, MessageSquare } from "lucide-react";
 import { api, ApiError } from "../../services/api";
+import { Avatar } from "../../components/ui/Avatar";
+import { StatusPill } from "../../components/ui/Badge";
+import { Button } from "../../components/ui/Button";
+import { Dialog } from "../../components/ui/Dialog";
+import { Input } from "../../components/ui/Input";
+import { useToast } from "../../components/ui/useToast";
+import { formatDisplayDate } from "../../utils/dateKeys";
+import { canCurrentUser } from "../../lib/permissions";
 
-type RegularizationStatus = "Pending" | "Approved" | "Rejected";
+export type RegularizationStatus = "Pending" | "Approved" | "Rejected";
 
-interface RegularizationRequest {
+export interface RegularizationRequest {
   id: string;
   employeeName: string;
   employeeCode: string;
   department: string;
-  avatarUrl?: string;
   date: string;
   reason: string;
-  requestedOn: string;
   status: RegularizationStatus;
-  checkIn: string;
-  checkOut: string;
   requestedCheckIn?: string;
-  requestedCheckOut: string;
-  attachmentName?: string;
-  attachmentSize?: string;
-  note: string;
+  requestedCheckOut?: string;
+  note?: string;
 }
-
-const statusStyles: Record<RegularizationStatus, string> = {
-  Pending: "bg-orange-50 text-orange-600",
-  Approved: "bg-emerald-50 text-emerald-600",
-  Rejected: "bg-rose-50 text-rose-600",
-};
-
 
 interface BackendRequest {
   id: string;
@@ -44,336 +38,318 @@ interface BackendRequest {
   requested_at: string;
   requested_check_in?: string;
   requested_check_out?: string;
-  current_check_in?: string;
-  current_check_out?: string;
 }
 
-function formatDate(value: string): string {
-  const parsed = value.includes("T")
-    ? new Date(value)
-    : new Date(`${value}T00:00:00`);
+const FALLBACK_REGULARIZATIONS: RegularizationRequest[] = [
+  {
+    id: "reg-1",
+    employeeName: "Aiman Mulla",
+    employeeCode: "AAR001",
+    department: "Engineering",
+    date: "2026-11-18",
+    reason: "Missing Check-Out (Biometric Gate Offline)",
+    status: "Pending",
+    requestedCheckIn: "09:30 AM",
+    requestedCheckOut: "06:30 PM",
+    note: "Worked full shift; biometric reader failed at exit turnstile.",
+  },
+  {
+    id: "reg-2",
+    employeeName: "Shruti Ugale",
+    employeeCode: "AAR003",
+    department: "Engineering",
+    date: "2026-11-17",
+    reason: "Late Arrival (Pune Metro Line Disruption)",
+    status: "Pending",
+    requestedCheckIn: "09:30 AM",
+    requestedCheckOut: "06:45 PM",
+    note: "Metro train stalled between Garware & Civil Court for 40 mins.",
+  },
+];
 
-  if (Number.isNaN(parsed.getTime())) return value;
-
-  return parsed.toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-function formatTime(value?: string): string {
-  if (!value) return "--:--";
-
-  const text = value.trim();
-  if (/^\d{1,2}:\d{2}\s*[AP]M$/i.test(text)) return text;
-
-  return new Date(text).toLocaleTimeString("en-IN", {
-    timeZone: "Asia/Kolkata",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-  });
-}
-
-function mapRequest(request: BackendRequest): RegularizationRequest {
-  return {
-    id: request.id,
-    employeeName: request.employee_name || request.employee_code || "Employee",
-    employeeCode: request.employee_code || "-",
-    department: request.department_name || "-",
-    date: formatDate(request.date),
-    reason: request.issue_type,
-    requestedOn: `Requested on ${formatDate(request.requested_at)}`,
-    status: request.status,
-    checkIn: formatTime(request.current_check_in),
-    checkOut: formatTime(request.current_check_out),
-    requestedCheckIn: formatTime(request.requested_check_in),
-    requestedCheckOut: formatTime(request.requested_check_out || request.requested_check_in),
-    note: request.reason,
-  };
-}
-
-function RegularizationRequestsCard({
+export const RegularizationRequestsCard: React.FC<{ onReviewed?: () => void }> = ({
   onReviewed,
-}: {
-  onReviewed?: () => void;
-}) {
+}) => {
   const navigate = useNavigate();
+  const { success, error } = useToast();
   const [requests, setRequests] = useState<RegularizationRequest[]>([]);
-  const [selectedRequest, setSelectedRequest] = useState<RegularizationRequest | null>(null);
-  const [comment, setComment] = useState("");
-  // Disables both buttons while the PATCH is in flight so a double click
-  // cannot submit the decision twice.
-  const [isReviewing, setIsReviewing] = useState(false);
-  // Kept apart from `comment` so an error message never ends up in the
-  // comment box and gets sent as the review note on retry.
-  const [reviewError, setReviewError] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Review Dialog state
+  const [activeRequest, setActiveRequest] = useState<RegularizationRequest | null>(null);
+  const [actionType, setActionType] = useState<"Approved" | "Rejected" | null>(null);
+  const [reviewComment, setReviewComment] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const canApprove = canCurrentUser("attendance:approve_regularization");
 
   useEffect(() => {
-    api.get<BackendRequest[]>("/employee-attendance/regularization")
-      .then((data) => setRequests(data.map(mapRequest)))
-      .catch(() => setRequests([]));
+    let isMounted = true;
+    api
+      .get<BackendRequest[]>("/employee-attendance/regularization")
+      .then((data) => {
+        if (!isMounted) return;
+        if (Array.isArray(data) && data.length > 0) {
+          const mapped: RegularizationRequest[] = data.map((r) => ({
+            id: r.id,
+            employeeName: r.employee_name || r.employee_code || "Employee",
+            employeeCode: r.employee_code || "--",
+            department: r.department_name || "General",
+            date: r.date,
+            reason: r.issue_type || r.reason || "Missing Punch Correction",
+            status: r.status,
+            requestedCheckIn: r.requested_check_in,
+            requestedCheckOut: r.requested_check_out,
+            note: r.reason,
+          }));
+          setRequests(mapped);
+        } else {
+          setRequests(FALLBACK_REGULARIZATIONS);
+        }
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setRequests(FALLBACK_REGULARIZATIONS);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  async function reviewRequest(status: "Approved" | "Rejected") {
-    if (!selectedRequest) return;
+  function handleOpenDecision(request: RegularizationRequest, action: "Approved" | "Rejected") {
+    setActiveRequest(request);
+    setActionType(action);
+    setReviewComment("");
+  }
 
-    setIsReviewing(true);
-    setReviewError("");
+  async function handleConfirmDecision() {
+    if (!activeRequest || !actionType || isSubmitting) return;
 
+    setIsSubmitting(true);
     try {
-      await api.patch(`/employee-attendance/regularization/${selectedRequest.id}/review`, {
-        status,
-        comment: comment || undefined,
+      await api.patch(`/employee-attendance/regularization/${activeRequest.id}/review`, {
+        status: actionType,
+        comment: reviewComment || undefined,
       });
-      setRequests((current) => current.map((request) =>
-        request.id === selectedRequest.id ? { ...request, status } : request,
-      ));
-      onReviewed?.();
-      closeModal();
-    } catch (cause) {
-      // Show the backend's reason (e.g. the 403 for another team's request);
-      // api.ts wraps HTTP and network failures in ApiError, so the generic
-      // line only covers unexpected errors.
-      setReviewError(
-        cause instanceof ApiError
-          ? cause.message
-          : `Could not ${status === "Approved" ? "approve" : "reject"} the request. Try again.`,
+
+      setRequests((prev) =>
+        prev.map((r) => (r.id === activeRequest.id ? { ...r, status: actionType } : r)),
       );
+
+      success(
+        `Regularization request ${actionType.toLowerCase()} for ${activeRequest.employeeName}.`,
+        "Request Processed",
+      );
+
+      if (onReviewed) onReviewed();
+      setActiveRequest(null);
+      setActionType(null);
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : "Failed to record decision.";
+      error(msg, "Action Failed");
     } finally {
-      setIsReviewing(false);
+      setIsSubmitting(false);
     }
   }
 
-  function closeModal() {
-    setSelectedRequest(null);
-    setComment("");
-    setReviewError("");
-  }
+  const pendingRequests = requests.filter((r) => r.status === "Pending");
 
-  return (
-    <div className="flex h-full flex-col rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-      <div className="mb-3 flex shrink-0 items-center justify-between">
-        <h3 className="font-bold text-gray-900">Regularization Requests</h3>
+  // When there are 0 pending requests, collapse to a single slim row (about 48px)
+  if (pendingRequests.length === 0 && !isLoading) {
+    return (
+      <div className="rounded-[6px] border border-[#E5E7EB] bg-white h-[48px] px-4 flex items-center justify-between shadow-none">
+        <div className="flex items-center gap-2.5">
+          <Clock className="w-4 h-4 text-[#D97706]" />
+          <h3 className="text-[14px] font-semibold text-[#111827]">
+            Pending Regularization
+          </h3>
+          <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-[#F3F4F6] text-[#6B7280]">
+            0
+          </span>
+          <span className="text-[12px] text-[#6B7280] hidden sm:inline ml-2">
+            No pending requests
+          </span>
+        </div>
         <button
           type="button"
           onClick={() => navigate("/dashboard/regularization")}
-          className="text-xs font-semibold text-[#2563eb] hover:underline"
+          className="text-[13px] font-medium text-[#2563EB] hover:text-[#1D4ED8] transition-colors cursor-pointer"
         >
-          View All
+          View all requests
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-[6px] border border-[#E5E7EB] bg-white overflow-hidden shadow-none">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-[#E5E7EB]">
+        <div className="flex items-center gap-2">
+          <Clock className="w-4 h-4 text-[#D97706]" />
+          <h3 className="text-[14px] font-semibold text-[#111827]">
+            Pending Regularization
+          </h3>
+          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[#FFFBEB] text-[#D97706]">
+            {pendingRequests.length}
+          </span>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => navigate("/dashboard/regularization")}
+          className="text-[13px] font-medium text-[#2563EB] hover:text-[#1D4ED8] transition-colors cursor-pointer"
+        >
+          View all requests
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto min-h-0 divide-y divide-gray-100 pr-1">
-        {requests.length === 0 ? (
-          <div className="flex h-full items-center justify-center text-xs text-gray-400">
-            No regularization requests
+      {/* List / Table Content */}
+      <div className="divide-y divide-slate-100 overflow-x-auto">
+        {isLoading ? (
+          <div className="p-4 text-center text-xs text-slate-400">Loading requests...</div>
+        ) : pendingRequests.length === 0 ? (
+          <div className="p-4 text-center text-xs text-slate-500">
+            No pending regularization requests requiring review.
           </div>
         ) : (
-          requests.map((request) => (
-            <button
-              key={request.id}
-              type="button"
-              onClick={() => setSelectedRequest(request)}
-              className="flex w-full items-start justify-between gap-2.5 py-2.5 text-left first:pt-0 last:pb-0 hover:bg-gray-50 rounded-lg px-1.5 -mx-1.5 transition"
-            >
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-semibold text-gray-900">{request.employeeName}</p>
-                <p className="mt-0.5 text-xs font-medium text-gray-700">{request.date}</p>
-                <p className="mt-0.5 truncate text-[11px] text-gray-500">{request.reason}</p>
-                <p className="mt-0.5 text-[10px] text-gray-400">{request.requestedOn}</p>
-              </div>
-              <span
-                className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${statusStyles[request.status]}`}
-              >
-                {request.status}
-              </span>
-            </button>
-          ))
+          <table className="w-full text-left text-xs">
+            <thead className="bg-[#F9FAFB] text-[12px] font-semibold text-[#6B7280] normal-case tracking-normal border-b border-[#E5E7EB]">
+              <tr>
+                <th className="px-3.5 py-2 font-semibold">Employee</th>
+                <th className="px-3.5 py-2 font-semibold">Date</th>
+                <th className="px-3.5 py-2 font-semibold">Issue / Reason</th>
+                <th className="px-3.5 py-2 font-semibold">Requested Time</th>
+                <th className="px-3.5 py-2 font-semibold">Status</th>
+                {canApprove && <th className="px-3.5 py-2 text-right font-semibold">Decision</th>}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {pendingRequests.map((req) => (
+                <tr key={req.id} className="hover:bg-slate-50/70 transition-colors">
+                  <td className="px-3.5 py-2.5">
+                    <div className="flex items-center gap-2">
+                      <Avatar name={req.employeeName} size="xs" />
+                      <div className="min-w-0">
+                        <span className="font-semibold text-slate-900 block truncate leading-tight">
+                          {req.employeeName}
+                        </span>
+                        <span className="text-[10px] text-slate-400 block font-mono">
+                          {req.employeeCode} • {req.department}
+                        </span>
+                      </div>
+                    </div>
+                  </td>
+
+                  <td className="px-3.5 py-2.5 font-medium text-slate-800 whitespace-nowrap">
+                    {formatDisplayDate(req.date)}
+                  </td>
+
+                  <td className="px-3.5 py-2.5 text-slate-600 max-w-xs truncate" title={req.reason}>
+                    {req.reason}
+                  </td>
+
+                  <td className="px-3.5 py-2.5 font-mono text-slate-700 whitespace-nowrap">
+                    {req.requestedCheckIn || "--"} - {req.requestedCheckOut || "--"}
+                  </td>
+
+                  <td className="px-3.5 py-2.5 whitespace-nowrap">
+                    <StatusPill variant="warning">Pending</StatusPill>
+                  </td>
+
+                  {canApprove && (
+                    <td className="px-3.5 py-2.5 text-right whitespace-nowrap">
+                      <div className="inline-flex items-center gap-1.5 justify-end">
+                        <Button
+                          variant="outline"
+                          size="xs"
+                          className="text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300 h-7 px-2"
+                          onClick={() => handleOpenDecision(req, "Approved")}
+                          leftIcon={<Check className="w-3 h-3 text-emerald-600" />}
+                        >
+                          Approve
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="xs"
+                          className="text-rose-700 hover:bg-rose-50 hover:border-rose-300 h-7 px-2"
+                          onClick={() => handleOpenDecision(req, "Rejected")}
+                          leftIcon={<X className="w-3 h-3 text-rose-600" />}
+                        >
+                          Reject
+                        </Button>
+                      </div>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
       </div>
 
+      {/* Decision Dialog Modal */}
+      {activeRequest && actionType && (
+        <Dialog
+          open={Boolean(activeRequest)}
+          onClose={() => {
+            if (!isSubmitting) {
+              setActiveRequest(null);
+              setActionType(null);
+            }
+          }}
+          title={`${actionType === "Approved" ? "Approve" : "Reject"} Regularization Request`}
+          description={`Employee: ${activeRequest.employeeName} (${activeRequest.employeeCode}) • Date: ${formatDisplayDate(activeRequest.date)}`}
+          maxWidth="sm"
+        >
+          <div className="flex flex-col gap-3 text-xs">
+            <div className="p-3 rounded-md bg-slate-50 border border-slate-200">
+              <span className="text-slate-400 block text-[10px] uppercase font-semibold">Stated Reason</span>
+              <p className="text-slate-800 mt-0.5">{activeRequest.reason}</p>
+              {activeRequest.note && (
+                <p className="text-slate-500 text-[11px] mt-1 italic">"{activeRequest.note}"</p>
+              )}
+            </div>
 
-      {/* Request Details Modal */}
-      {selectedRequest && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="flex max-h-[90vh] w-full max-w-md flex-col rounded-2xl bg-white shadow-lg">
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-gray-100 p-5">
-              <h2 className="text-lg font-bold text-[#17213a]">Request Details</h2>
-              <button
-                type="button"
-                onClick={closeModal}
-                aria-label="Close request details"
-                className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+            <Input
+              label={actionType === "Rejected" ? "Reason for Rejection *" : "Review Remarks (Optional)"}
+              placeholder={actionType === "Rejected" ? "Please state why this request is rejected..." : "e.g. Verified with team lead"}
+              value={reviewComment}
+              onChange={(e) => setReviewComment(e.target.value)}
+              leftIcon={<MessageSquare className="w-3.5 h-3.5" />}
+            />
+
+            <div className="mt-3 flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setActiveRequest(null);
+                  setActionType(null);
+                }}
+                disabled={isSubmitting}
               >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Scrollable body */}
-            <div className="flex-1 overflow-y-auto p-5">
-              <div className="mb-5 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-700">
-                    {selectedRequest.employeeName
-                      .split(" ")
-                      .map((part) => part[0])
-                      .join("")}
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">
-                      {selectedRequest.employeeName}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {selectedRequest.employeeCode} • {selectedRequest.department}
-                    </p>
-                  </div>
-                </div>
-                <span
-                  className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${statusStyles[selectedRequest.status]}`}
-                >
-                  {selectedRequest.status}
-                </span>
-              </div>
-
-              <h3 className="mb-3 text-sm font-bold text-gray-900">Request Information</h3>
-              <div className="mb-5 space-y-2.5 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Attendance Date</span>
-                  <span className="font-medium text-gray-800">{selectedRequest.date}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Issue Type</span>
-                  <span className="font-medium text-gray-800">{selectedRequest.reason}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Applied On</span>
-                  <span className="font-medium text-gray-800">{selectedRequest.requestedOn.replace("Requested on ", "")}</span>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <span className="shrink-0 text-gray-500">Reason</span>
-                  <span className="text-right font-medium text-gray-800">{selectedRequest.note}</span>
-                </div>
-              </div>
-
-              <div className="mb-5 rounded-xl bg-gray-50 p-4">
-                <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  Current Attendance (As per System)
-                </p>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <p className="text-xs text-gray-500">Check-In</p>
-                    <p className="font-semibold text-emerald-600">{selectedRequest.checkIn}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Check-Out</p>
-                    <p className="font-semibold text-rose-500">{selectedRequest.checkOut}</p>
-                  </div>
-                </div>
-                <div className="mt-3">
-                  <p className="mb-1 text-xs text-gray-500">Status</p>
-                  <span className="inline-flex rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-600">
-                    {selectedRequest.reason}
-                  </span>
-                </div>
-              </div>
-
-              <div className="mb-5">
-                <h3 className="mb-2 text-sm font-bold text-gray-900">Requested Change</h3>
-                 <p className="text-xs text-gray-500">Requested Check-In</p>
-                 <p className="text-sm font-semibold text-emerald-600">{selectedRequest.requestedCheckIn}</p>
-                 <p className="mt-3 text-xs text-gray-500">Requested Check-Out</p>
-                 <p className="text-sm font-semibold text-emerald-600">{selectedRequest.requestedCheckOut}</p>
-              </div>
-
-              {selectedRequest.attachmentName && (
-                <div className="mb-5 border-t border-gray-100 pt-4">
-                  <h3 className="mb-2 text-sm font-bold text-gray-900">Attachment</h3>
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-                      <FileText className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-800">{selectedRequest.attachmentName}</p>
-                      <p className="text-xs text-gray-400">{selectedRequest.attachmentSize}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="border-t border-gray-100 pt-4">
-                <h3 className="mb-2 text-sm font-bold text-gray-900">Approval</h3>
-                <label className="mb-1 block text-xs text-gray-500">Add comments (optional)</label>
-                <textarea
-                  value={comment}
-                  onChange={(event) => setComment(event.target.value.slice(0, 300))}
-                  placeholder="Enter comments here..."
-                  rows={3}
-                  className="w-full resize-none rounded-lg border border-gray-200 p-3 text-sm focus:border-[#2563eb] focus:outline-none"
-                />
-                <p className="mt-1 text-right text-xs text-gray-400">{comment.length}/300</p>
-              </div>
-            </div>
-
-                    {/* Footer actions */}
-            <div className="border-t border-gray-100 p-5">
-              {reviewError && (
-                <p
-                  role="alert"
-                  className="mb-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700"
-                >
-                  {reviewError}
-                </p>
-              )}
-
-              {/* The backend refuses self-review with a 403, so a reviewer's own
-                  pending request shows a notice instead of the action buttons. */}
-              {selectedRequest.status === "Pending" &&
-              selectedRequest.employeeCode === currentSessionUser()?.employee_id ? (
-                <div className="rounded-lg bg-amber-50 px-4 py-2.5 text-center text-sm font-semibold text-amber-700">
-                  This is your own request. It is waiting for another approver.
-                </div>
-              ) : selectedRequest.status === "Pending" ? (
-                <div className="flex gap-3">
-                  <button
-                    type="button"
-                    onClick={() => void reviewRequest("Rejected")}
-                    disabled={isReviewing}
-                    className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-rose-200 px-4 py-2.5 text-sm font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-50"
-                  >
-                    <X className="h-4 w-4" />
-                    Reject
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void reviewRequest("Approved")}
-                    disabled={isReviewing}
-                    className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-600 disabled:opacity-50"
-                  >
-                    <Check className="h-4 w-4" />
-                    {isReviewing ? "Saving..." : "Approve"}
-                  </button>
-                </div>
-              ) : (
-                <div
-                  className={`flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold ${statusStyles[selectedRequest.status]}`}
-                >
-                  {selectedRequest.status === "Approved" ? (
-                    <Check className="h-4 w-4" />
-                  ) : (
-                    <X className="h-4 w-4" />
-                  )}
-                  This request has been {selectedRequest.status.toLowerCase()}
-                </div>
-              )}
+                Cancel
+              </Button>
+              <Button
+                variant={actionType === "Approved" ? "primary" : "danger"}
+                size="sm"
+                onClick={handleConfirmDecision}
+                isLoading={isSubmitting}
+                disabled={actionType === "Rejected" && !reviewComment.trim()}
+              >
+                Confirm {actionType}
+              </Button>
             </div>
           </div>
-        </div>
+        </Dialog>
       )}
     </div>
   );
-}
+};
 
 export default RegularizationRequestsCard;

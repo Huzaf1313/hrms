@@ -8,6 +8,7 @@ import ErrorBoundary from "../components/ErrorBoundary";
 import DatePicker from "../components/DatePicker";
 import { employeeNotificationService } from "../modules/dashboard/employeeNotificationService";
 import { employeeService } from "../modules/employees/employeeService";
+import { Avatar } from "../components/ui/Avatar";
 
 const pageTitles: Record<string, string> = {
   "/employee/dashboard": "Dashboard",
@@ -25,27 +26,33 @@ const pageTitles: Record<string, string> = {
 function readUser() {
   try {
     const raw = localStorage.getItem("user");
-
     return raw
       ? (JSON.parse(raw) as {
-        full_name?: string;
-        employee_id?: string | null;
-      })
+          full_name?: string;
+          employee_id?: string | null;
+        })
       : null;
   } catch {
     return null;
   }
 }
 
-function EmployeeLayout({ onLogout }: { onLogout: () => void }) {
+export function EmployeeLayout({ onLogout }: { onLogout: () => void }) {
   const navigate = useNavigate();
   const location = useLocation();
 
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
+  const notificationContainerRef = useRef<HTMLDivElement | null>(null);
 
-  // Close the profile menu on a click outside it or on Escape, as the admin
-  // Header does.
+  const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [designation, setDesignation] = useState("");
+
+  const user = useMemo(() => readUser(), []);
+
   useEffect(() => {
     function closeOnOutsideClick(event: MouseEvent) {
       if (
@@ -54,10 +61,19 @@ function EmployeeLayout({ onLogout }: { onLogout: () => void }) {
       ) {
         setShowProfileMenu(false);
       }
+      if (
+        notificationContainerRef.current &&
+        !notificationContainerRef.current.contains(event.target as Node)
+      ) {
+        setShowNotificationDropdown(false);
+      }
     }
 
     function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") setShowProfileMenu(false);
+      if (event.key === "Escape") {
+        setShowProfileMenu(false);
+        setShowNotificationDropdown(false);
+      }
     }
 
     document.addEventListener("mousedown", closeOnOutsideClick);
@@ -67,278 +83,162 @@ function EmployeeLayout({ onLogout }: { onLogout: () => void }) {
       document.removeEventListener("keydown", closeOnEscape);
     };
   }, []);
-  const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [designation, setDesignation] = useState("");
-  const [avatarRefreshKey, setAvatarRefreshKey] = useState(0);
-  const notificationContainerRef = useRef<HTMLDivElement | null>(null);
-
-  const user = useMemo(() => readUser(), []);
 
   useEffect(() => {
-    const fetchUnreadNotificationCount = async () => {
-      try {
-        const count =
-          await employeeNotificationService.getUnreadCount();
-
-        setUnreadNotificationCount(count);
-      } catch (error) {
-        console.error(
-          "Failed to fetch notification count:",
-          error,
-        );
-      }
-    };
-
-    fetchUnreadNotificationCount();
-
-    const interval = window.setInterval(
-      fetchUnreadNotificationCount,
-      30000,
-    );
+    let cancelled = false;
+    employeeNotificationService
+      .getUnreadCount()
+      .then((count) => {
+        if (!cancelled) setUnreadNotificationCount(count);
+      })
+      .catch(() => {});
 
     return () => {
-      window.clearInterval(interval);
+      cancelled = true;
     };
   }, []);
 
   useEffect(() => {
     let cancelled = false;
-    let objectUrl: string | null = null;
-
-    setAvatarUrl(null);
-
-    const loadEmployeeHeader = async () => {
-      try {
-        const profile = await employeeService.getMyProfile();
-
-        if (cancelled) return;
-
-        setDesignation(profile.designation ?? "");
-
-        if (profile.avatar_url) {
-          setAvatarUrl(profile.avatar_url);
-        } else {
-          setAvatarUrl(null);
-        }
-      } catch (error) {
+    employeeService
+      .getMyProfile()
+      .then((profile) => {
         if (!cancelled) {
-          console.error(
-            "Failed to load employee header profile:",
-            error,
-          );
+          setDesignation(profile.designation ?? "");
+          if (profile.avatar_url) setAvatarUrl(profile.avatar_url);
         }
-      }
-    };
-
-    void loadEmployeeHeader();
+      })
+      .catch(() => {});
 
     return () => {
       cancelled = true;
-
-      if (objectUrl) {
-        URL.revokeObjectURL(objectUrl);
-      }
     };
-  }, [location.pathname, avatarRefreshKey]);
-
-  useEffect(() => {
-    const handleProfilePhotoUpdate = () => {
-      setAvatarRefreshKey((previous) => previous + 1);
-    };
-
-    window.addEventListener(
-      "employee-profile-photo-updated",
-      handleProfilePhotoUpdate,
-    );
-
-    return () => {
-      window.removeEventListener(
-        "employee-profile-photo-updated",
-        handleProfilePhotoUpdate,
-      );
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!showNotificationDropdown) {
-      return;
-    }
-
-    const handleOutsideClick = (event: MouseEvent) => {
-      const target = event.target as Node;
-
-      if (
-        notificationContainerRef.current &&
-        !notificationContainerRef.current.contains(target)
-      ) {
-        setShowNotificationDropdown(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleOutsideClick);
-
-    return () => {
-      document.removeEventListener("mousedown", handleOutsideClick);
-    };
-  }, [showNotificationDropdown]);
-
-  useEffect(() => {
-    setShowProfileMenu(false);
-    setShowNotificationDropdown(false);
-    setSidebarOpen(false);
   }, [location.pathname]);
 
   const fullName = user?.full_name ?? "Employee";
-
-  const initials = fullName
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-
-  const pageTitle = pageTitles[location.pathname] ?? "Dashboard";
+  const pageTitle = pageTitles[location.pathname] ?? "Portal";
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-[#f5f7fb]">
+    <div className="flex h-screen w-full overflow-hidden bg-[#f8fafc]">
+      {/* Skip link for keyboard accessibility */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-2 focus:bg-white focus:text-blue-600 focus:ring-2 focus:ring-blue-500 rounded"
+      >
+        Skip to main content
+      </a>
+
       <EmployeeSidebar
-        onLogout={onLogout}
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />
 
       <div className="flex flex-1 flex-col h-full min-w-0 overflow-hidden">
-        <header className="shrink-0 z-30 flex h-[72px] items-center justify-between gap-4 border-b border-slate-200/80 bg-white/80 px-6 backdrop-blur-md">
-          <div className="flex min-w-0 items-center gap-4">
+        {/* Topbar: slim 56px, 1px bottom border, no shadow */}
+        <header className="shrink-0 z-30 flex h-14 items-center justify-between gap-4 border-b border-slate-200 bg-white px-5">
+          <div className="flex min-w-0 items-center gap-3">
             <button
               type="button"
-              onClick={() => setSidebarOpen((previous) => !previous)}
-              className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-600 transition hover:bg-slate-100 lg:hidden"
-              aria-label="Open menu"
+              onClick={() => setSidebarOpen((prev) => !prev)}
+              className="flex h-8 w-8 items-center justify-center rounded-md text-slate-600 hover:bg-slate-100 lg:hidden focus:outline-none focus:ring-2 focus:ring-blue-500"
+              aria-label="Open navigation menu"
               aria-expanded={sidebarOpen}
             >
-              <Menu className="h-5 w-5" />
+              <Menu className="h-4 w-4" />
             </button>
 
-            <h1 className="truncate text-xl font-bold font-manrope text-slate-800">
-              {pageTitle}
-            </h1>
+            {/* Sole page title */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-400 font-medium hidden sm:inline">Self Service /</span>
+              <h1 className="text-sm font-semibold text-slate-900 truncate">
+                {pageTitle}
+              </h1>
+            </div>
           </div>
 
-          <div className="flex items-center gap-3 sm:gap-4">
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            {/* Global DatePicker */}
+            <DatePicker />
+
             {/* Notifications */}
-            <div
-              ref={notificationContainerRef}
-              className="relative"
-            >
+            <div ref={notificationContainerRef} className="relative">
               <button
                 type="button"
-                onClick={() =>
-                  setShowNotificationDropdown(
-                    (previous) => !previous,
-                  )
-                }
-                className={`relative flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/80 bg-white text-slate-600 transition hover:bg-slate-50 ${showNotificationDropdown
-                  ? "border-blue-300 bg-blue-50/50 text-[#0066ff]"
-                  : ""
-                  }`}
+                onClick={() => setShowNotificationDropdown((prev) => !prev)}
+                className={`relative flex h-8 w-8 items-center justify-center rounded-md text-slate-600 hover:bg-slate-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  showNotificationDropdown ? "bg-slate-100 text-slate-900" : ""
+                }`}
                 aria-label="Notifications"
                 aria-expanded={showNotificationDropdown}
               >
-                <Bell className="h-4.5 w-4.5" />
-
+                <Bell className="h-4 w-4" />
                 {unreadNotificationCount > 0 && (
-                  <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold text-white shadow-sm">
-                    {unreadNotificationCount > 99
-                      ? "99+"
-                      : unreadNotificationCount}
+                  <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold text-white">
+                    {unreadNotificationCount > 99 ? "99+" : unreadNotificationCount}
                   </span>
                 )}
               </button>
 
               {showNotificationDropdown && (
                 <EmployeeNotificationDropdown
-                  onClose={() =>
-                    setShowNotificationDropdown(false)
-                  }
-                  onUnreadCountChange={
-                    setUnreadNotificationCount
-                  }
+                  onClose={() => setShowNotificationDropdown(false)}
+                  onUnreadCountChange={setUnreadNotificationCount}
                 />
               )}
             </div>
 
-            <DatePicker />
-
-            {/* Profile */}
+            {/* Profile Dropdown */}
             <div className="relative" ref={profileMenuRef}>
               <button
                 type="button"
-                onClick={() =>
-                  setShowProfileMenu((previous) => !previous)
-                }
-                className="flex items-center gap-2.5 rounded-full p-1 transition hover:bg-slate-100"
+                onClick={() => setShowProfileMenu((prev) => !prev)}
+                className="flex items-center gap-2 p-1 rounded-md hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-[#0066ff] text-xs font-bold text-white shadow-sm shadow-blue-500/20">
-                  {avatarUrl ? (
-                    <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
-                  ) : (
-                    initials
-                  )}
-                </div>
-
-                <div className="hidden text-left sm:block">
-                  <span className="block text-xs font-bold font-manrope text-slate-800 uppercase tracking-tight">
+                <Avatar name={fullName} src={avatarUrl} size="sm" />
+                <div className="hidden sm:block text-left min-w-0">
+                  <span className="block truncate text-xs font-semibold text-slate-800 leading-tight">
                     {fullName}
                   </span>
-
-                  <span className="block text-[11px] font-semibold text-slate-400">
+                  <span className="block truncate text-[10px] text-slate-400 leading-tight">
                     {designation || "Employee"}
                   </span>
                 </div>
-
-                <ChevronDown className="h-4 w-4 text-slate-400" />
+                <ChevronDown className="h-3 w-3 text-slate-400" />
               </button>
 
               {showProfileMenu && (
-                <div className="absolute right-0 top-12 z-50 w-48 overflow-hidden rounded-2xl border border-slate-150 bg-white py-1.5 shadow-xl shadow-slate-900/10">
+                <div className="absolute right-0 top-11 z-50 w-44 rounded-md border border-slate-200 bg-white py-1 shadow-md text-xs">
                   <button
                     type="button"
                     onClick={() => {
                       setShowProfileMenu(false);
                       navigate("/employee/profile");
                     }}
-                    className="w-full px-4 py-2.5 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                    className="w-full px-3 py-2 text-left font-medium text-slate-700 hover:bg-slate-50 transition-colors"
                   >
                     My Profile
                   </button>
-
                   <button
                     type="button"
                     onClick={() => {
                       setShowProfileMenu(false);
                       navigate("/employee/help");
                     }}
-                    className="w-full px-4 py-2.5 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                    className="w-full px-3 py-2 text-left font-medium text-slate-700 hover:bg-slate-50 transition-colors"
                   >
                     Help & Support
                   </button>
-
                   <div className="my-1 border-t border-slate-100" />
-
                   <button
                     type="button"
                     onClick={() => {
                       setShowProfileMenu(false);
                       onLogout();
                     }}
-                    className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-semibold text-rose-600 transition hover:bg-rose-50"
+                    className="w-full px-3 py-2 text-left font-medium text-rose-600 hover:bg-rose-50 flex items-center gap-1.5 transition-colors"
                   >
-                    <LogOut className="h-4 w-4" />
-                    Log out
+                    <LogOut className="h-3.5 w-3.5" />
+                    Sign Out
                   </button>
                 </div>
               )}
@@ -346,9 +246,8 @@ function EmployeeLayout({ onLogout }: { onLogout: () => void }) {
           </div>
         </header>
 
-        {/* Scoped so a crash in one employee page leaves the header and
-            sidebar usable. */}
-        <main className="flex-1 overflow-y-auto min-w-0">
+        {/* Main Content Area */}
+        <main id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto min-w-0 outline-none">
           <ErrorBoundary label={pageTitle}>
             <Outlet />
           </ErrorBoundary>

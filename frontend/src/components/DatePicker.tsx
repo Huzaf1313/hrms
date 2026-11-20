@@ -4,7 +4,7 @@ import { CalendarDays, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import AddHolidayModal from "../modules/holidays/AddHolidayModal";
 import { holidayService } from "../modules/holidays/holidayService";
 import { useGlobalDate } from "../context/globalDateContext";
-import { toDateKey } from "../utils/dateKeys";
+import { toDateKey, formatDisplayDate } from "../utils/dateKeys";
 import {
   HOLIDAY_DOT_STYLE,
   HOLIDAY_TYPE_LABELS,
@@ -20,12 +20,7 @@ interface DatePickerProps {
 }
 
 function formatDate(date: Date): string {
-  return date.toLocaleDateString("en-GB", {
-    weekday: "short",
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+  return formatDisplayDate(date);
 }
 
 function sameDate(first: Date, second: Date): boolean {
