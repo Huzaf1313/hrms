@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Application Status: {{ job_title }} - {{ company_name }}</title>
+</head>
+<body style="
+    margin: 0;
+    padding: 0;
+    background-color: #f4f6f8;
+    font-family: Arial, Helvetica, sans-serif;
+    color: #1f2937;
+">
+    <div style="width: 100%; padding: 40px 0;">
+        <div style="
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+        ">
+            <!-- Header -->
+            <div style="
+                background: linear-gradient(135deg, #475569, #334155);
+                padding: 28px 32px;
+                text-align: center;
+            ">
+                <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700;">
+                    {{ company_name }}
+                </h1>
+                <p style="margin: 6px 0 0; color: #cbd5e1; font-size: 13px;">
+                    Talent Acquisition
+                </p>
+            </div>
+
+            <!-- Content -->
+            <div style="padding: 32px;">
+                <h2 style="margin: 0 0 12px; font-size: 20px; color: #111827;">
+                    Update Regarding Your Application
+                </h2>
+                <p style="margin: 0 0 16px; font-size: 14px; line-height: 1.6; color: #4b5563;">
+                    Dear <strong>{{ candidate_name }}</strong>,
+                </p>
+                <p style="margin: 0 0 16px; font-size: 14px; line-height: 1.6; color: #4b5563;">
+                    Thank you for taking the time to apply for the position of <strong>{{ job_title }}</strong> at <strong>{{ company_name }}</strong>.
+                </p>
+                <p style="margin: 0 0 16px; font-size: 14px; line-height: 1.6; color: #4b5563;">
+                    We carefully evaluated your profile and qualifications alongside many competitive applications. At this time, we have decided to proceed with other candidates whose experience more closely matches our immediate technical and role requirements.
+                </p>
+
+                {% if rejection_reason %}
+                <div style="
+                    background-color: #f8fafc;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 8px;
+                    padding: 14px 16px;
+                    margin: 20px 0;
+                    font-size: 13px;
+                    color: #475569;
+                    line-height: 1.5;
+                ">
+                    <strong style="color: #334155;">Feedback from Reviewer:</strong><br>
+                    {{ rejection_reason }}
+                </div>
+                {% endif %}
+
+                <p style="margin: 0 0 16px; font-size: 14px; line-height: 1.6; color: #4b5563;">
+                    We will keep your resume in our talent pool for future openings that may be a strong fit for your background. We sincerely appreciate your interest in <strong>{{ company_name }}</strong> and wish you all the best in your career pursuits.
+                </p>
+
+                <!-- Signature -->
+                <p style="margin: 24px 0 0; font-size: 13px; line-height: 1.6; color: #6b7280;">
+                    Sincerely,<br>
+                    <strong>The Talent Acquisition Team</strong><br>
+                    {{ company_name }}
+                </p>
+            </div>
+
+            <!-- Footer -->
+            <div style="
+                padding: 16px 32px;
+                background-color: #f9fafb;
+                border-top: 1px solid #e5e7eb;
+                text-align: center;
+                font-size: 12px;
+                color: #9ca3af;
+            ">
+                <p style="margin: 0;">This is an automated recruitment message from {{ company_name }}.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

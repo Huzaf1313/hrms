@@ -1,11 +1,27 @@
 import { useEffect, useState, useCallback } from "react";
-import { Eye, Search, Plus, RefreshCw, CheckCircle2, AlertCircle, X, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import {
+  Eye,
+  Search,
+  Plus,
+  RefreshCw,
+  CheckCircle2,
+  AlertCircle,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  Printer,
+  Mail,
+  Users,
+  Send,
+} from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "../../lib/queryKeys";
 import {
   adminPayrollService,
   type AdminPayslipItem,
   type SalaryBreakdownItem,
+  type BulkGeneratePayslipsResult,
 } from "./adminPayrollService";
 import { employeeService } from "../employees/employeeService";
 import type { Employee } from "../employees/types";
@@ -31,6 +47,8 @@ interface PayslipDetailModalProps {
 function PayslipDetailModal({ payslip, onClose, onStatusUpdated }: PayslipDetailModalProps) {
   const [updating, setUpdating] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailStatus, setEmailStatus] = useState<string | null>(null);
 
   const earningsList: SalaryBreakdownItem[] = payslip.salary?.earnings && payslip.salary.earnings.length > 0
     ? payslip.salary.earnings
@@ -82,10 +100,53 @@ function PayslipDetailModal({ payslip, onClose, onStatusUpdated }: PayslipDetail
     }
   };
 
+  const handleSendEmail = async () => {
+    setSendingEmail(true);
+    setEmailStatus(null);
+    setUpdateError(null);
+    try {
+      const res = await adminPayrollService.sendEmail(payslip.id);
+      setEmailStatus(res.message || "Payslip email dispatched successfully");
+    } catch (err: any) {
+      setUpdateError(err?.message || "Failed to send email");
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+      <style>{`
+        @media print {
+          body * {
+            visibility: hidden !important;
+          }
+          .payslip-printable, .payslip-printable * {
+            visibility: visible !important;
+          }
+          .payslip-printable {
+            position: fixed !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            background: white !important;
+            padding: 24px !important;
+            margin: 0 !important;
+            box-shadow: none !important;
+            border: none !important;
+          }
+          .no-print {
+            display: none !important;
+          }
+        }
+      `}</style>
       <div className="max-h-[94vh] w-full max-w-3xl overflow-y-auto rounded-xl bg-white shadow-2xl">
-        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+        <div className="no-print flex items-center justify-between border-b border-slate-100 px-6 py-4">
           <div className="flex items-center gap-3">
             <h3 className="text-base font-bold text-slate-900">Payslip Details</h3>
             <span
@@ -96,6 +157,29 @@ function PayslipDetailModal({ payslip, onClose, onStatusUpdated }: PayslipDetail
             </span>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+              title="Print or Save as PDF"
+            >
+              <Printer className="h-3.5 w-3.5 text-slate-500" />
+              Print / PDF
+            </button>
+            <button
+              type="button"
+              onClick={handleSendEmail}
+              disabled={sendingEmail}
+              className="flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 shadow-sm hover:bg-blue-100 disabled:opacity-50"
+              title="Email Payslip to Employee"
+            >
+              {sendingEmail ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Mail className="h-3.5 w-3.5 text-blue-600" />
+              )}
+              Email
+            </button>
             {!isPaid && (
               <button
                 type="button"
@@ -122,30 +206,37 @@ function PayslipDetailModal({ payslip, onClose, onStatusUpdated }: PayslipDetail
         </div>
 
         {updateError && (
-          <div className="mx-6 mt-4 flex items-center gap-2 rounded-lg bg-rose-50 p-3 text-xs text-rose-700">
+          <div className="no-print mx-6 mt-4 flex items-center gap-2 rounded-lg bg-rose-50 p-3 text-xs text-rose-700">
             <AlertCircle className="h-4 w-4 shrink-0" />
             <span>{updateError}</span>
           </div>
         )}
 
-        <div className="relative p-6 sm:p-8">
+        {emailStatus && (
+          <div className="no-print mx-6 mt-4 flex items-center gap-2 rounded-lg bg-emerald-50 p-3 text-xs text-emerald-700">
+            <CheckCircle2 className="h-4 w-4 shrink-0" />
+            <span>{emailStatus}</span>
+          </div>
+        )}
+
+        <div className="payslip-printable relative p-6 sm:p-8">
           <header className="flex flex-col gap-4 border-b-2 border-slate-700 pb-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
               <img
-                src="/aarmarks-logo.png.png"
-                alt="AarMarks Media logo"
+                src="/peoplesync-logo.png"
+                alt="PeopleSync logo"
                 className="h-14 w-14 object-contain"
               />
               <div>
-                <div className="font-sans text-xl font-bold tracking-tight text-[#079bb0]">
-                  AarMarks Media Pvt. Ltd
+                <div className="font-sans text-xl font-bold tracking-tight text-[#0066ff]">
+                  PeopleSync Technologies Pvt. Ltd.
                 </div>
-                <div className="text-xs text-slate-500">Human Resources & Payroll</div>
+                <div className="text-xs text-slate-500">Human Resources &amp; Payroll</div>
               </div>
             </div>
             <div className="text-left text-xs leading-5 text-slate-600 sm:text-right">
-              <div>Website: <span className="text-blue-600 font-medium">www.aarmarksmedia.com</span></div>
-              <div>Email: hr@aarmarksmedia.com</div>
+              <div>Website: <span className="text-[#0066ff] font-medium">www.peoplesync.io</span></div>
+              <div>Email: hr@peoplesync.io</div>
               <div>Month: <span className="font-semibold text-slate-900">{payslip.month}</span></div>
             </div>
           </header>
@@ -181,6 +272,37 @@ function PayslipDetailModal({ payslip, onClose, onStatusUpdated }: PayslipDetail
               </div>
             </div>
           </section>
+
+          {(payslip as any).attendance_summary && ((payslip as any).attendance_summary.total_days || 0) > 0 && (
+            <section className="mt-4">
+              <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">
+                Attendance & Leave Summary
+              </h4>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-2 rounded-lg bg-slate-50 p-3 text-xs sm:grid-cols-4">
+                <div>
+                  <span className="text-slate-400">Working Days:</span>{" "}
+                  <span className="font-semibold text-slate-800">{(payslip as any).attendance_summary.total_days}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400">Present Days:</span>{" "}
+                  <span className="font-semibold text-emerald-700">{(payslip as any).attendance_summary.present_days}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400">Paid Leaves:</span>{" "}
+                  <span className="font-semibold text-blue-700">{(payslip as any).attendance_summary.paid_leave_days || 0}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400">Loss of Pay (LOP):</span>{" "}
+                  <span className={`font-semibold ${((payslip as any).attendance_summary.lop_days || 0) > 0 ? "text-rose-600 font-bold" : "text-slate-700"}`}>
+                    {((payslip as any).attendance_summary.lop_days || 0)} days
+                    {((payslip as any).attendance_summary.lop_deduction || 0) > 0 && (
+                      <span className="ml-1 text-[11px] text-rose-600">(-₹{((payslip as any).attendance_summary.lop_deduction).toLocaleString("en-IN")})</span>
+                    )}
+                  </span>
+                </div>
+              </div>
+            </section>
+          )}
 
           <section className="mt-6">
             <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">
@@ -380,6 +502,270 @@ function GeneratePayslipModal({ onClose, onGenerated, employees }: GenerateModal
   );
 }
 
+interface BulkGenerateModalProps {
+  onClose: () => void;
+  onCompleted: () => void;
+  totalEmployees: number;
+}
+
+function BulkGeneratePayslipModal({ onClose, onCompleted, totalEmployees }: BulkGenerateModalProps) {
+  const queryClient = useQueryClient();
+  const [month, setMonth] = useState<string>("October");
+  const [year, setYear] = useState<number>(new Date().getFullYear());
+  const [loading, setLoading] = useState<boolean>(false);
+  const [result, setResult] = useState<BulkGeneratePayslipsResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const months = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+  ];
+
+  const handleRun = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    setResult(null);
+    try {
+      const res = await adminPayrollService.bulkGenerate({
+        month,
+        year: Number(year),
+      });
+      setResult(res);
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.admin.payrollAnalytics(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.admin.dashboard(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["admin", "payslips"],
+      });
+      onCompleted();
+    } catch (err: any) {
+      setError(err?.message || "Failed to execute bulk payroll run");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+              <Users className="h-4 w-4" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-900">Run Monthly Payroll</h3>
+              <p className="text-xs text-slate-500">Auto-generate payslips for {totalEmployees} eligible active employees</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {error && (
+          <div className="mt-3 flex items-center gap-2 rounded-lg bg-rose-50 p-3 text-xs text-rose-700">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {result && (
+          <div className="mt-3 rounded-lg bg-emerald-50 p-3.5 text-xs text-emerald-800">
+            <div className="flex items-center gap-2 font-bold">
+              <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+              <span>Bulk Payroll Processing Complete</span>
+            </div>
+            <div className="mt-2 grid grid-cols-3 gap-2 text-center">
+              <div className="rounded bg-white/70 p-2">
+                <div className="text-[10px] text-slate-500 uppercase">Eligible</div>
+                <div className="font-bold text-slate-800">{result.total_eligible}</div>
+              </div>
+              <div className="rounded bg-white/70 p-2">
+                <div className="text-[10px] text-emerald-600 uppercase">Created</div>
+                <div className="font-bold text-emerald-700">{result.created}</div>
+              </div>
+              <div className="rounded bg-white/70 p-2">
+                <div className="text-[10px] text-slate-500 uppercase">Skipped</div>
+                <div className="font-bold text-slate-600">{result.skipped}</div>
+              </div>
+            </div>
+            {result.errors && result.errors.length > 0 && (
+              <p className="mt-2 text-[11px] text-rose-600">
+                {result.errors.length} employee(s) failed. Check salary structures.
+              </p>
+            )}
+          </div>
+        )}
+
+        <form onSubmit={handleRun} className="mt-4 space-y-4 text-xs">
+          <div className="rounded-lg bg-blue-50/60 p-3 text-slate-700">
+            <p className="font-medium">
+              This will automatically calculate gross salary, apply tax/statutory deductions, deduct Loss of Pay (LOP) from attendance records, and generate payslips for all active employees.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1 block font-semibold text-slate-700">Month</label>
+              <select
+                value={month}
+                onChange={(e) => setMonth(e.target.value)}
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-slate-800 focus:border-blue-500 focus:outline-none"
+              >
+                {months.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block font-semibold text-slate-700">Year</label>
+              <input
+                type="number"
+                value={year}
+                onChange={(e) => setYear(Number(e.target.value))}
+                min={2020}
+                max={2030}
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-slate-800 focus:border-blue-500 focus:outline-none"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="mt-6 flex items-center justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={loading}
+              className="rounded-lg border border-slate-200 px-4 py-2 font-medium text-slate-700 hover:bg-slate-50"
+            >
+              {result ? "Close" : "Cancel"}
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white shadow hover:bg-blue-700 disabled:opacity-50"
+            >
+              {loading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+              {loading ? "Processing..." : "Run Payroll for All"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function BulkEmailPayslipModal({
+  month,
+  year,
+  onClose,
+}: {
+  month: string;
+  year: number;
+  onClose: () => void;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [statusMsg, setStatusMsg] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSend = async () => {
+    setLoading(true);
+    setError(null);
+    setStatusMsg(null);
+    try {
+      const res = await adminPayrollService.bulkSendEmail({
+        month,
+        year,
+      });
+      setStatusMsg(`Dispatched ${res.sent} payslip emails successfully (${res.failed} failed).`);
+    } catch (err: any) {
+      setError(err?.message || "Failed to dispatch payslip emails");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+              <Mail className="h-4 w-4" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-900">Email Payslips</h3>
+              <p className="text-xs text-slate-500">Dispatch payslips to employee emails for {month} {year}</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {error && (
+          <div className="mt-3 flex items-center gap-2 rounded-lg bg-rose-50 p-3 text-xs text-rose-700">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {statusMsg && (
+          <div className="mt-3 flex items-center gap-2 rounded-lg bg-emerald-50 p-3 text-xs text-emerald-700">
+            <CheckCircle2 className="h-4 w-4 shrink-0" />
+            <span>{statusMsg}</span>
+          </div>
+        )}
+
+        <div className="mt-4 space-y-4 text-xs">
+          <p className="text-slate-600">
+            This will send an official payslip notification email with a salary summary and portal link to every employee who has a generated payslip for <strong>{month} {year}</strong>.
+          </p>
+
+          <div className="mt-6 flex items-center justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={loading}
+              className="rounded-lg border border-slate-200 px-4 py-2 font-medium text-slate-700 hover:bg-slate-50"
+            >
+              Close
+            </button>
+            <button
+              type="button"
+              onClick={handleSend}
+              disabled={loading}
+              className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white shadow hover:bg-blue-700 disabled:opacity-50"
+            >
+              {loading ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Send className="h-3.5 w-3.5" />
+              )}
+              {loading ? "Sending..." : "Send All Emails"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface PayslipsTabProps {
   initialStatusFilter?: string;
 }
@@ -397,6 +783,8 @@ export default function PayslipsTab({ initialStatusFilter = "" }: PayslipsTabPro
   const [error, setError] = useState<string | null>(null);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [showGenerateModal, setShowGenerateModal] = useState<boolean>(false);
+  const [showBulkModal, setShowBulkModal] = useState<boolean>(false);
+  const [showBulkEmailModal, setShowBulkEmailModal] = useState<boolean>(false);
 
   useEffect(() => {
     if (initialStatusFilter !== undefined) {
@@ -489,11 +877,31 @@ export default function PayslipsTab({ initialStatusFilter = "" }: PayslipsTabPro
 
           <button
             type="button"
+            onClick={() => setShowBulkEmailModal(true)}
+            className="flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3.5 py-2 text-xs font-semibold text-blue-700 shadow-sm hover:bg-blue-100"
+            title="Email payslips to employees"
+          >
+            <Mail className="h-4 w-4" />
+            Email Payslips
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowBulkModal(true)}
+            className="flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-xs font-semibold text-emerald-800 shadow-sm hover:bg-emerald-100"
+            title="Batch generate monthly payroll for all employees"
+          >
+            <Users className="h-4 w-4" />
+            Run Monthly Payroll
+          </button>
+
+          <button
+            type="button"
             onClick={() => setShowGenerateModal(true)}
             className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm hover:bg-blue-700"
           >
             <Plus className="h-4 w-4" />
-            Generate Payslip
+            Generate Single Payslip
           </button>
         </div>
       </div>
@@ -678,6 +1086,22 @@ export default function PayslipsTab({ initialStatusFilter = "" }: PayslipsTabPro
           employees={employees}
           onClose={() => setShowGenerateModal(false)}
           onGenerated={fetchPayslips}
+        />
+      )}
+
+      {showBulkModal && (
+        <BulkGeneratePayslipModal
+          totalEmployees={employees.length}
+          onClose={() => setShowBulkModal(false)}
+          onCompleted={fetchPayslips}
+        />
+      )}
+
+      {showBulkEmailModal && (
+        <BulkEmailPayslipModal
+          month={monthValue ? new Date(`${monthValue}-01`).toLocaleString("en-US", { month: "long" }) : "October"}
+          year={monthValue ? Number(monthValue.slice(0, 4)) : new Date().getFullYear()}
+          onClose={() => setShowBulkEmailModal(false)}
         />
       )}
     </div>

@@ -81,9 +81,9 @@ const STORAGE_KEY = "hrms_settings";
 function freshDefaults(): SettingsData {
   return {
     organization: {
-      companyName: "AarMarks Media Pvt. Ltd.",
+      companyName: "PeopleSync Technologies Pvt. Ltd.",
       address: "123 Business Street, Bengaluru, KA 560001",
-      contactEmail: "hr@acme.com",
+      contactEmail: "hr@peoplesync.io",
       phoneNumber: "+91 98765 43210",
     },
     workingDays: ["Wed", "Thu", "Fri"],
@@ -365,9 +365,8 @@ interface ShiftDetailItemProps {
 function ShiftDetailItem({ shift, index, onEdit, onDelete, isDeleting }: ShiftDetailItemProps) {
   return (
     <div
-      className={`rounded-2xl border border-l-4 border-gray-100 border-l-violet-300 p-4 shadow-sm transition hover:shadow-md ${
-        shift.is_active ? "" : "bg-gray-50 opacity-70"
-      }`}
+      className={`rounded-2xl border border-l-4 border-gray-100 border-l-violet-300 p-4 shadow-sm transition hover:shadow-md ${shift.is_active ? "" : "bg-gray-50 opacity-70"
+        }`}
     >
       <div className="flex items-center gap-2.5">
         <span className="text-[11px] font-semibold text-gray-400">
@@ -1085,503 +1084,500 @@ export default function AdminSettings() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          {/* Organization Details */}
-          <SettingsCard
-            icon={<Building2 className="h-4 w-4 text-blue-600" />}
-            iconBg="bg-blue-50"
-            title="Organization Details"
-            action={
-              <EditActions
-                editing={isEditingOrganization}
-                onEdit={() => startEdit("organization")}
-                onSave={saveEdit}
-                onCancel={cancelEdit}
-                canSave={canSave}
+        {/* Organization Details */}
+        <SettingsCard
+          icon={<Building2 className="h-4 w-4 text-blue-600" />}
+          iconBg="bg-blue-50"
+          title="Organization Details"
+          action={
+            <EditActions
+              editing={isEditingOrganization}
+              onEdit={() => startEdit("organization")}
+              onSave={saveEdit}
+              onCancel={cancelEdit}
+              canSave={canSave}
+            />
+          }
+        >
+          {isEditingOrganization ? (
+            <>
+              <InputField
+                label="Company Name"
+                value={view.organization.companyName}
+                onChange={(value) => updateOrganization("companyName", value)}
               />
-            }
-          >
-            {isEditingOrganization ? (
-              <>
-                <InputField
-                  label="Company Name"
-                  value={view.organization.companyName}
-                  onChange={(value) => updateOrganization("companyName", value)}
-                />
-                <InputField
-                  label="Address"
-                  value={view.organization.address}
-                  onChange={(value) => updateOrganization("address", value)}
-                />
-                <InputField
-                  label="Contact Email"
-                  value={view.organization.contactEmail}
-                  onChange={(value) => updateOrganization("contactEmail", value)}
-                />
-                <InputField
-                  label="Phone Number"
-                  value={view.organization.phoneNumber}
-                  onChange={(value) => updateOrganization("phoneNumber", value)}
-                />
-              </>
-            ) : (
-              <>
-                <Field label="Company Name" value={view.organization.companyName} />
-                <Field label="Address" value={view.organization.address} />
-                <Field label="Contact Email" value={view.organization.contactEmail} />
-                <Field label="Phone Number" value={view.organization.phoneNumber} />
-              </>
-            )}
-          </SettingsCard>
-
-          {/* Shift Management */}
-          <SettingsCard
-            icon={<Users2 className="h-4 w-4 text-violet-600" />}
-            iconBg="bg-violet-50"
-            title="Shift Management"
-            headerAction={
-              !isShiftFormOpen && shifts.length > 0 ? (
-                <button
-                  type="button"
-                  onClick={() => setIsShiftDetailModalOpen(true)}
-                  className="text-xs font-semibold text-blue-600 hover:text-blue-700"
-                >
-                  View All →
-                </button>
-              ) : undefined
-            }
-            action={
-              isShiftFormOpen ? undefined : (
-                <button
-                  type="button"
-                  onClick={openShiftCreate}
-                  className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  Add Shift
-                </button>
-              )
-            }
-          >
-            {isShiftFormOpen && !isShiftDetailModalOpen ? (
-              shiftFormView
-            ) : (
-              <div className="h-[192px] overflow-y-auto pr-1 [scrollbar-width:thin]">
-                {shiftsLoading ? (
-                  <div className="flex h-full items-center justify-center">
-                    <p className="text-sm text-slate-500">Loading shifts...</p>
-                  </div>
-                ) : shiftError ? (
-                  <div className="flex h-full items-center justify-center px-4">
-                    <div className="rounded-lg bg-rose-50 p-3 text-sm text-rose-600">
-                      {shiftError}
-                    </div>
-                  </div>
-                ) : shifts.length === 0 ? (
-                  <div className="flex h-full items-center justify-center">
-                    <p className="text-sm text-slate-500">
-                      No shifts yet. Add your first shift to start tracking
-                      overtime.
-                    </p>
-                  </div>
-                ) : (
-                  <ul className="space-y-3">
-                    {shifts.slice(0, 2).map((shift) => (
-                  <li
-                    key={shift.id}
-                    className={`rounded-xl border border-slate-100 p-3 ${
-                      shift.is_active ? "bg-white" : "bg-slate-50 opacity-70"
-                    }`}
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="text-sm font-semibold text-slate-900">
-                            {shift.name}
-                          </span>
-                          {shift.is_overnight && (
-                            <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[11px] font-medium text-violet-600">
-                              Ends next day
-                            </span>
-                          )}
-                          {!shift.is_active && (
-                            <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-medium text-slate-600">
-                              Inactive
-                            </span>
-                          )}
-                          <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-600">
-                            {formatDuration(shift.duration_minutes)}
-                          </span>
-                          <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">
-                            {shift.grace_period_minutes ?? 15}m grace
-                          </span>
-                        </div>
-
-                        <p className="mt-0.5 text-xs text-slate-600">
-                          {formatShiftTime(shift.start_time)} -{" "}
-                          {formatShiftTime(shift.end_time)}
-                        </p>
-
-                        <p className="mt-0.5 text-[11px] text-slate-400">
-                          {shift.assigned_employee_count} employee
-                          {shift.assigned_employee_count === 1 ? "" : "s"}{" "}
-                          assigned
-                        </p>
-
-                        {shift.notes && (
-                          <p className="mt-0.5 text-[11px] text-slate-500">
-                            {shift.notes}
-                          </p>
-                        )}
-                      </div>
-
-                      <div className="flex shrink-0 gap-1">
-                        <button
-                          type="button"
-                          onClick={() => openShiftEdit(shift)}
-                          aria-label={`Edit ${shift.name}`}
-                          className="rounded-full p-1.5 text-slate-400 hover:bg-slate-50 hover:text-slate-700"
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => deleteShift(shift)}
-                          disabled={shiftDeletingId === shift.id}
-                          aria-label={`Delete ${shift.name}`}
-                          className="rounded-full p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-40"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  </li>
-                ))}
-                </ul>
-                )}
-              </div>
-            )}
-          </SettingsCard>
-
-          {/* Working Days & Holidays */}
-          <SettingsCard
-            icon={<CalendarDays className="h-4 w-4 text-blue-600" />}
-            iconBg="bg-blue-50"
-            title="Working Days & Holidays"
-            action={
-              <EditActions
-                editing={isEditingWorkingDays}
-                onEdit={() => startEdit("workingDays")}
-                onSave={saveEdit}
-                onCancel={cancelEdit}
-                canSave={canSave}
+              <InputField
+                label="Address"
+                value={view.organization.address}
+                onChange={(value) => updateOrganization("address", value)}
               />
-            }
-          >
-            <p className="text-xs text-slate-400 mb-2">Work Week</p>
-            <div className="flex flex-wrap gap-2 mb-4">
-              {weekDays.map((day) => {
-                const isSelected = view.workingDays.includes(day);
+              <InputField
+                label="Contact Email"
+                value={view.organization.contactEmail}
+                onChange={(value) => updateOrganization("contactEmail", value)}
+              />
+              <InputField
+                label="Phone Number"
+                value={view.organization.phoneNumber}
+                onChange={(value) => updateOrganization("phoneNumber", value)}
+              />
+            </>
+          ) : (
+            <>
+              <Field label="Company Name" value={view.organization.companyName} />
+              <Field label="Address" value={view.organization.address} />
+              <Field label="Contact Email" value={view.organization.contactEmail} />
+              <Field label="Phone Number" value={view.organization.phoneNumber} />
+            </>
+          )}
+        </SettingsCard>
 
-                if (!isEditingWorkingDays) {
-                  return (
-                    <span
-                      key={day}
-                      className={`inline-flex h-9 w-11 items-center justify-center rounded-lg text-xs font-semibold ${
-                        isSelected ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"
-                      }`}
-                    >
-                      {day}
-                    </span>
-                  );
-                }
-
-                return (
-                  <button
-                    key={day}
-                    type="button"
-                    onClick={() => toggleDay(day)}
-                    aria-pressed={isSelected}
-                    className={`inline-flex h-9 w-11 items-center justify-center rounded-lg text-xs font-semibold transition ${
-                      isSelected
-                        ? "bg-blue-600 text-white"
-                        : "bg-slate-100 text-slate-500 hover:bg-slate-200"
-                    }`}
-                  >
-                    {day}
-                  </button>
-                );
-              })}
-            </div>
-            <div className="mt-5 border-t border-slate-100 pt-4">
-              <div className="mb-3 flex items-center justify-between">
-                <div>
-                  <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                    Holidays ({holidays.length})
-                  </h4>
-                  <p className="text-[11px] text-slate-400">
-                    Public, company, optional, & department-specific holidays
+        {/* Shift Management */}
+        <SettingsCard
+          icon={<Users2 className="h-4 w-4 text-violet-600" />}
+          iconBg="bg-violet-50"
+          title="Shift Management"
+          headerAction={
+            !isShiftFormOpen && shifts.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => setIsShiftDetailModalOpen(true)}
+                className="text-xs font-semibold text-blue-600 hover:text-blue-700"
+              >
+                View All →
+              </button>
+            ) : undefined
+          }
+          action={
+            isShiftFormOpen ? undefined : (
+              <button
+                type="button"
+                onClick={openShiftCreate}
+                className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Add Shift
+              </button>
+            )
+          }
+        >
+          {isShiftFormOpen && !isShiftDetailModalOpen ? (
+            shiftFormView
+          ) : (
+            <div className="h-[192px] overflow-y-auto pr-1">
+              {shiftsLoading ? (
+                <div className="flex h-full items-center justify-center">
+                  <p className="text-sm text-slate-500">Loading shifts...</p>
+                </div>
+              ) : shiftError ? (
+                <div className="flex h-full items-center justify-center px-4">
+                  <div className="rounded-lg bg-rose-50 p-3 text-sm text-rose-600">
+                    {shiftError}
+                  </div>
+                </div>
+              ) : shifts.length === 0 ? (
+                <div className="flex h-full items-center justify-center">
+                  <p className="text-sm text-slate-500">
+                    No shifts yet. Add your first shift to start tracking
+                    overtime.
                   </p>
                 </div>
+              ) : (
+                <ul className="space-y-3">
+                  {shifts.slice(0, 2).map((shift) => (
+                    <li
+                      key={shift.id}
+                      className={`rounded-xl border border-slate-100 p-3 ${shift.is_active ? "bg-white" : "bg-slate-50 opacity-70"
+                        }`}
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="text-sm font-semibold text-slate-900">
+                              {shift.name}
+                            </span>
+                            {shift.is_overnight && (
+                              <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[11px] font-medium text-violet-600">
+                                Ends next day
+                              </span>
+                            )}
+                            {!shift.is_active && (
+                              <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                                Inactive
+                              </span>
+                            )}
+                            <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-600">
+                              {formatDuration(shift.duration_minutes)}
+                            </span>
+                            <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">
+                              {shift.grace_period_minutes ?? 15}m grace
+                            </span>
+                          </div>
+
+                          <p className="mt-0.5 text-xs text-slate-600">
+                            {formatShiftTime(shift.start_time)} -{" "}
+                            {formatShiftTime(shift.end_time)}
+                          </p>
+
+                          <p className="mt-0.5 text-[11px] text-slate-400">
+                            {shift.assigned_employee_count} employee
+                            {shift.assigned_employee_count === 1 ? "" : "s"}{" "}
+                            assigned
+                          </p>
+
+                          {shift.notes && (
+                            <p className="mt-0.5 text-[11px] text-slate-500">
+                              {shift.notes}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="flex shrink-0 gap-1">
+                          <button
+                            type="button"
+                            onClick={() => openShiftEdit(shift)}
+                            aria-label={`Edit ${shift.name}`}
+                            className="rounded-full p-1.5 text-slate-400 hover:bg-slate-50 hover:text-slate-700"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => deleteShift(shift)}
+                            disabled={shiftDeletingId === shift.id}
+                            aria-label={`Delete ${shift.name}`}
+                            className="rounded-full p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-40"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+        </SettingsCard>
+
+        {/* Working Days & Holidays */}
+        <SettingsCard
+          icon={<CalendarDays className="h-4 w-4 text-blue-600" />}
+          iconBg="bg-blue-50"
+          title="Working Days & Holidays"
+          action={
+            <EditActions
+              editing={isEditingWorkingDays}
+              onEdit={() => startEdit("workingDays")}
+              onSave={saveEdit}
+              onCancel={cancelEdit}
+              canSave={canSave}
+            />
+          }
+        >
+          <p className="text-xs text-slate-400 mb-2">Work Week</p>
+          <div className="flex flex-wrap gap-2 mb-4">
+            {weekDays.map((day) => {
+              const isSelected = view.workingDays.includes(day);
+
+              if (!isEditingWorkingDays) {
+                return (
+                  <span
+                    key={day}
+                    className={`inline-flex h-9 w-11 items-center justify-center rounded-lg text-xs font-semibold ${isSelected ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"
+                      }`}
+                  >
+                    {day}
+                  </span>
+                );
+              }
+
+              return (
+                <button
+                  key={day}
+                  type="button"
+                  onClick={() => toggleDay(day)}
+                  aria-pressed={isSelected}
+                  className={`inline-flex h-9 w-11 items-center justify-center rounded-lg text-xs font-semibold transition ${isSelected
+                    ? "bg-blue-600 text-white"
+                    : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                    }`}
+                >
+                  {day}
+                </button>
+              );
+            })}
+          </div>
+          <div className="mt-5 border-t border-slate-100 pt-4">
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  Holidays ({holidays.length})
+                </h4>
+                <p className="text-[11px] text-slate-400">
+                  Public, company, optional, & department-specific holidays
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingHoliday(null);
+                  setIsHolidayModalOpen(true);
+                }}
+                className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-2.5 py-1.5 text-xs font-semibold text-blue-600 transition hover:bg-blue-100"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Add Holiday
+              </button>
+            </div>
+
+            {holidaysLoading ? (
+              <p className="py-3 text-center text-xs text-slate-400">Loading holidays...</p>
+            ) : holidays.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-slate-200 py-6 text-center">
+                <CalendarDays className="mx-auto h-6 w-6 text-slate-300" />
+                <p className="mt-1 text-xs text-slate-500">No holidays scheduled yet.</p>
                 <button
                   type="button"
                   onClick={() => {
                     setEditingHoliday(null);
                     setIsHolidayModalOpen(true);
                   }}
-                  className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-2.5 py-1.5 text-xs font-semibold text-blue-600 transition hover:bg-blue-100"
+                  className="mt-2 text-xs font-semibold text-blue-600 hover:underline"
                 >
-                  <Plus className="h-3.5 w-3.5" />
-                  Add Holiday
+                  + Add your first holiday
                 </button>
               </div>
-
-              {holidaysLoading ? (
-                <p className="py-3 text-center text-xs text-slate-400">Loading holidays...</p>
-              ) : holidays.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-slate-200 py-6 text-center">
-                  <CalendarDays className="mx-auto h-6 w-6 text-slate-300" />
-                  <p className="mt-1 text-xs text-slate-500">No holidays scheduled yet.</p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditingHoliday(null);
-                      setIsHolidayModalOpen(true);
-                    }}
-                    className="mt-2 text-xs font-semibold text-blue-600 hover:underline"
-                  >
-                    + Add your first holiday
-                  </button>
-                </div>
-              ) : (
-                <div className="max-h-60 divide-y divide-slate-100 overflow-y-auto rounded-xl border border-slate-100 bg-slate-50/50">
-                  {holidays.map((h) => {
-                    const badgeStyles: Record<string, string> = {
-                      public: "bg-emerald-50 text-emerald-700 border-emerald-100",
-                      company: "bg-blue-50 text-blue-700 border-blue-100",
-                      optional: "bg-purple-50 text-purple-700 border-purple-100",
-                      restricted: "bg-amber-50 text-amber-700 border-amber-100",
-                    };
-                    const badgeStyle = badgeStyles[h.type] ?? "bg-slate-100 text-slate-600 border-slate-200";
-
-                    return (
-                      <div
-                        key={h.id}
-                        className="flex items-center justify-between px-3.5 py-2.5 text-xs transition hover:bg-white"
-                      >
-                        <div className="min-w-0 flex-1 pr-3">
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            <span className="font-semibold text-slate-800">{h.name}</span>
-                            <span
-                              className={`rounded-full border px-2 py-0.5 text-[10px] font-medium capitalize ${badgeStyle}`}
-                            >
-                              {h.type}
-                            </span>
-                            {h.department_name ? (
-                              <span className="rounded-full border border-sky-100 bg-sky-50 px-2 py-0.5 text-[10px] font-medium text-sky-700">
-                                Dept: {h.department_name}
-                              </span>
-                            ) : (
-                              <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] text-slate-400">
-                                All Depts
-                              </span>
-                            )}
-                          </div>
-                          <p className="mt-0.5 text-[11px] text-slate-400">
-                            {new Date(h.date).toLocaleDateString("en-IN", {
-                              weekday: "short",
-                              day: "numeric",
-                              month: "short",
-                              year: "numeric",
-                            })}
-                            {h.description ? ` • ${h.description}` : ""}
-                          </p>
-                        </div>
-
-                        <div className="flex shrink-0 items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditingHoliday(h);
-                              setIsHolidayModalOpen(true);
-                            }}
-                            title="Edit holiday"
-                            aria-label={`Edit ${h.name}`}
-                            className="rounded p-1 text-slate-400 transition hover:bg-slate-100 hover:text-blue-600"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => void deleteHoliday(h.id, h.name)}
-                            title="Delete holiday"
-                            aria-label={`Delete ${h.name}`}
-                            className="rounded p-1 text-slate-400 transition hover:bg-slate-100 hover:text-rose-600"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </SettingsCard>
-
-          {/* Department Management */}
-          <SettingsCard
-            icon={<Layers className="h-4 w-4 text-blue-600" />}
-            iconBg="bg-blue-50"
-            title="Department Management"
-            headerAction={
-              !isDepartmentFormOpen && departments.length > 0 ? (
-                <button
-                  type="button"
-                  onClick={() => setIsDepartmentDetailModalOpen(true)}
-                  className="text-xs font-semibold text-blue-600 hover:text-blue-700"
-                >
-                  View All →
-                </button>
-              ) : undefined
-            }
-            action={
-              isDepartmentFormOpen ? undefined : (
-                <button
-                  type="button"
-                  onClick={openDepartmentCreate}
-                  className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  Add Department
-                </button>
-              )
-            }
-          >
-            {isDepartmentFormOpen && !isDepartmentDetailModalOpen ? (
-              departmentFormView
             ) : (
-              <div className="h-[192px] overflow-y-auto pr-1 [scrollbar-width:thin]">
-                {departmentsLoading ? (
-                  <div className="flex h-full items-center justify-center">
-                    <p className="text-sm text-slate-500">
-                      Loading departments...
-                    </p>
-                  </div>
-                ) : departmentError ? (
-                  <div className="flex h-full items-center justify-center px-4">
-                    <div className="rounded-lg bg-rose-50 p-3 text-sm text-rose-600">
-                      {departmentError}
-                    </div>
-                  </div>
-                ) : departments.length === 0 ? (
-                  <div className="flex h-full items-center justify-center">
-                    <p className="text-sm text-slate-500">
-                      No departments yet. Add your first department to organize
-                      employees.
-                    </p>
-                  </div>
-                ) : (
-                  <ul className="space-y-3">
-                    {departments.slice(0, 2).map((department) => (
-                  <li
-                    key={department.id}
-                    className="rounded-xl border border-slate-100 p-3"
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <span className="text-sm font-semibold text-slate-900">
-                          {department.name}
-                        </span>
+              <div className="max-h-60 divide-y divide-slate-100 overflow-y-auto rounded-xl border border-slate-100 bg-slate-50/50">
+                {holidays.map((h) => {
+                  const badgeStyles: Record<string, string> = {
+                    public: "bg-emerald-50 text-emerald-700 border-emerald-100",
+                    company: "bg-blue-50 text-blue-700 border-blue-100",
+                    optional: "bg-purple-50 text-purple-700 border-purple-100",
+                    restricted: "bg-amber-50 text-amber-700 border-amber-100",
+                  };
+                  const badgeStyle = badgeStyles[h.type] ?? "bg-slate-100 text-slate-600 border-slate-200";
 
-                        {department.description && (
-                          <p className="mt-0.5 text-[11px] text-slate-500">
-                            {department.description}
-                          </p>
-                        )}
+                  return (
+                    <div
+                      key={h.id}
+                      className="flex items-center justify-between px-3.5 py-2.5 text-xs transition hover:bg-white"
+                    >
+                      <div className="min-w-0 flex-1 pr-3">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="font-semibold text-slate-800">{h.name}</span>
+                          <span
+                            className={`rounded-full border px-2 py-0.5 text-[10px] font-medium capitalize ${badgeStyle}`}
+                          >
+                            {h.type}
+                          </span>
+                          {h.department_name ? (
+                            <span className="rounded-full border border-sky-100 bg-sky-50 px-2 py-0.5 text-[10px] font-medium text-sky-700">
+                              Dept: {h.department_name}
+                            </span>
+                          ) : (
+                            <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] text-slate-400">
+                              All Depts
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-0.5 text-[11px] text-slate-400">
+                          {new Date(h.date).toLocaleDateString("en-IN", {
+                            weekday: "short",
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                          {h.description ? ` • ${h.description}` : ""}
+                        </p>
                       </div>
 
-                      <div className="flex shrink-0 gap-1">
+                      <div className="flex shrink-0 items-center gap-1">
                         <button
                           type="button"
-                          onClick={() => openDepartmentEdit(department)}
-                          aria-label={`Edit ${department.name}`}
-                          className="rounded-full p-1.5 text-slate-400 hover:bg-slate-50 hover:text-slate-700"
+                          onClick={() => {
+                            setEditingHoliday(h);
+                            setIsHolidayModalOpen(true);
+                          }}
+                          title="Edit holiday"
+                          aria-label={`Edit ${h.name}`}
+                          className="rounded p-1 text-slate-400 transition hover:bg-slate-100 hover:text-blue-600"
                         >
                           <Pencil className="h-3.5 w-3.5" />
                         </button>
                         <button
                           type="button"
-                          onClick={() => deleteDepartment(department)}
-                          disabled={departmentDeletingId === department.id}
-                          aria-label={`Delete ${department.name}`}
-                          className="rounded-full p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-40"
+                          onClick={() => void deleteHoliday(h.id, h.name)}
+                          title="Delete holiday"
+                          aria-label={`Delete ${h.name}`}
+                          className="rounded p-1 text-slate-400 transition hover:bg-slate-100 hover:text-rose-600"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       </div>
                     </div>
-                  </li>
-                ))}
-                </ul>
-                )}
+                  );
+                })}
               </div>
             )}
-          </SettingsCard>
+          </div>
+        </SettingsCard>
 
-          {/* Payroll Settings */}
-          <SettingsCard
-            icon={<Wallet className="h-4 w-4 text-blue-600" />}
-            iconBg="bg-blue-50"
-            title="Payroll Settings"
-            action={
-              <EditActions
-                editing={isEditingPayroll}
-                onEdit={() => startEdit("payroll")}
-                onSave={saveEdit}
-                onCancel={cancelEdit}
-                canSave={canSave}
-              />
-            }
-          >
-            {isEditingPayroll ? (
-              <>
-                <SelectField
-                  label="Payroll Cycle"
-                  value={view.payroll.payrollCycle}
-                  options={["Monthly", "Bi-Weekly", "Weekly"]}
-                  onChange={(value) => updatePayroll("payrollCycle", value)}
-                />
-                <InputField
-                  label="Payment Date"
-                  value={view.payroll.paymentDate}
-                  onChange={(value) => updatePayroll("paymentDate", value)}
-                />
-              </>
-            ) : (
-              <>
-                <Field label="Payroll Cycle" value={view.payroll.payrollCycle} />
-                <Field label="Payment Date" value={view.payroll.paymentDate} />
-              </>
-            )}
-          </SettingsCard>
-
-          {/* Document Settings */}
-          <SettingsCard
-            icon={<FileText className="h-4 w-4 text-purple-600" />}
-            iconBg="bg-purple-50"
-            title="Document Settings"
-            action={
+        {/* Department Management */}
+        <SettingsCard
+          icon={<Layers className="h-4 w-4 text-blue-600" />}
+          iconBg="bg-blue-50"
+          title="Department Management"
+          headerAction={
+            !isDepartmentFormOpen && departments.length > 0 ? (
               <button
                 type="button"
-                className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition"
+                onClick={() => setIsDepartmentDetailModalOpen(true)}
+                className="text-xs font-semibold text-blue-600 hover:text-blue-700"
               >
-                Save
+                View All →
               </button>
-            }
-          >
-            <Field label="Allowed File Types" value="PDF, DOC, DOCX, XLS, XLSX, JPG, PNG" />
-            <Field label="Max File Size" value="10 MB" />
-          </SettingsCard>
+            ) : undefined
+          }
+          action={
+            isDepartmentFormOpen ? undefined : (
+              <button
+                type="button"
+                onClick={openDepartmentCreate}
+                className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Add Department
+              </button>
+            )
+          }
+        >
+          {isDepartmentFormOpen && !isDepartmentDetailModalOpen ? (
+            departmentFormView
+          ) : (
+            <div className="h-[192px] overflow-y-auto pr-1">
+              {departmentsLoading ? (
+                <div className="flex h-full items-center justify-center">
+                  <p className="text-sm text-slate-500">
+                    Loading departments...
+                  </p>
+                </div>
+              ) : departmentError ? (
+                <div className="flex h-full items-center justify-center px-4">
+                  <div className="rounded-lg bg-rose-50 p-3 text-sm text-rose-600">
+                    {departmentError}
+                  </div>
+                </div>
+              ) : departments.length === 0 ? (
+                <div className="flex h-full items-center justify-center">
+                  <p className="text-sm text-slate-500">
+                    No departments yet. Add your first department to organize
+                    employees.
+                  </p>
+                </div>
+              ) : (
+                <ul className="space-y-3">
+                  {departments.slice(0, 2).map((department) => (
+                    <li
+                      key={department.id}
+                      className="rounded-xl border border-slate-100 p-3"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <span className="text-sm font-semibold text-slate-900">
+                            {department.name}
+                          </span>
+
+                          {department.description && (
+                            <p className="mt-0.5 text-[11px] text-slate-500">
+                              {department.description}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="flex shrink-0 gap-1">
+                          <button
+                            type="button"
+                            onClick={() => openDepartmentEdit(department)}
+                            aria-label={`Edit ${department.name}`}
+                            className="rounded-full p-1.5 text-slate-400 hover:bg-slate-50 hover:text-slate-700"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => deleteDepartment(department)}
+                            disabled={departmentDeletingId === department.id}
+                            aria-label={`Delete ${department.name}`}
+                            className="rounded-full p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-40"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+        </SettingsCard>
+
+        {/* Payroll Settings */}
+        <SettingsCard
+          icon={<Wallet className="h-4 w-4 text-blue-600" />}
+          iconBg="bg-blue-50"
+          title="Payroll Settings"
+          action={
+            <EditActions
+              editing={isEditingPayroll}
+              onEdit={() => startEdit("payroll")}
+              onSave={saveEdit}
+              onCancel={cancelEdit}
+              canSave={canSave}
+            />
+          }
+        >
+          {isEditingPayroll ? (
+            <>
+              <SelectField
+                label="Payroll Cycle"
+                value={view.payroll.payrollCycle}
+                options={["Monthly", "Bi-Weekly", "Weekly"]}
+                onChange={(value) => updatePayroll("payrollCycle", value)}
+              />
+              <InputField
+                label="Payment Date"
+                value={view.payroll.paymentDate}
+                onChange={(value) => updatePayroll("paymentDate", value)}
+              />
+            </>
+          ) : (
+            <>
+              <Field label="Payroll Cycle" value={view.payroll.payrollCycle} />
+              <Field label="Payment Date" value={view.payroll.paymentDate} />
+            </>
+          )}
+        </SettingsCard>
+
+        {/* Document Settings */}
+        <SettingsCard
+          icon={<FileText className="h-4 w-4 text-purple-600" />}
+          iconBg="bg-purple-50"
+          title="Document Settings"
+          action={
+            <button
+              type="button"
+              className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition"
+            >
+              Save
+            </button>
+          }
+        >
+          <Field label="Allowed File Types" value="PDF, DOC, DOCX, XLS, XLSX, JPG, PNG" />
+          <Field label="Max File Size" value="10 MB" />
+        </SettingsCard>
       </div>
 
       {/* Mounted only while open, so the form always starts blank. */}

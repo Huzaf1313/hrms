@@ -150,7 +150,7 @@ function DashboardLayout({
   }, []);
 
   return (
-    <div className="flex min-h-screen bg-[#f5f7fb]">
+    <div className="flex h-screen w-full overflow-hidden bg-[#f5f7fb]">
       <Sidebar
         activePage={activePage}
         onNavigate={handleNavigate}
@@ -159,7 +159,7 @@ function DashboardLayout({
         onClose={() => setSidebarOpen(false)}
       />
 
-      <main className="min-w-0 flex-1">
+      <div className="flex flex-1 flex-col h-full min-w-0 overflow-hidden">
         <Header
           onLogout={onLogout}
           pageTitle={isRegularizationPage ? "Regularization Requests" : activePage}
@@ -172,51 +172,53 @@ function DashboardLayout({
 
         {/* Scoped so a crash in one admin page leaves the sidebar and header
             usable, instead of blanking the whole screen. */}
-        <ErrorBoundary label={isRegularizationPage ? "Regularization Requests" : activePage}>
-          {isRegularizationPage ? (
-          <AdminRegularizationRequests />
-        ) : activePage === "Employees" ? (
-          <AdminEmployees
-            autoOpenCreateForm={openEmployeeFormOnMount}
-            employeeSearchRequest={employeeSearchRequest}
-            employeeSelectionRequest={employeeSelectionRequest}
-          />
-        ) : activePage === "Recruitment" ? (
-          <AdminRecruitment />
-        ) : activePage === "Attendance" ? (
-          <AdminAttendance />
-        ) : activePage === "Leave" ? (
-          <AdminLeave />
-        ) : activePage === "Payroll" ? (
-          <AdminPayroll />
-        ) : activePage === "Assets" ? (
-          <AdminAssets />
-        ) : activePage === "Announcement" ? (
-          <AdminAnnouncements
-            onCreateEmployee={handleCreateEmployee}
-            autoOpenCreateForm={openAnnouncementFormOnMount}
-          />
-        ) : activePage === "Exit Requests" ? (
-          <AdminExitRequests />
-        ) : activePage === "Support Tickets" ? (
-          <AdminSupportTickets />
-        ) : activePage === "Settings" ? (
-          <AdminSettings />
-        ) : activePage === "My Profile" ? (
-          <AdminMyProfile />
-        ) : activePage === "Admin Accounts" ? (
-          <AdminAccounts />
-        ) : (
-          <AdminDashboard
-            totalHeadcount={dashboardData?.total_headcount ?? null}
-            celebrations={dashboardData?.celebrations ?? []}
-            recentActivities={dashboardData?.recent_activities ?? []}
-            onNavigate={handleNavigate}
-            onCreateAnnouncement={handleCreateAnnouncement}
-          />
-        )}
-        </ErrorBoundary>
-      </main>
+        <main className="flex-1 overflow-y-auto min-w-0">
+          <ErrorBoundary label={isRegularizationPage ? "Regularization Requests" : activePage}>
+            {isRegularizationPage ? (
+              <AdminRegularizationRequests />
+            ) : activePage === "Employees" ? (
+              <AdminEmployees
+                autoOpenCreateForm={openEmployeeFormOnMount}
+                employeeSearchRequest={employeeSearchRequest}
+                employeeSelectionRequest={employeeSelectionRequest}
+              />
+            ) : activePage === "Recruitment" ? (
+              <AdminRecruitment />
+            ) : activePage === "Attendance" ? (
+              <AdminAttendance />
+            ) : activePage === "Leave" ? (
+              <AdminLeave />
+            ) : activePage === "Payroll" ? (
+              <AdminPayroll />
+            ) : activePage === "Assets" ? (
+              <AdminAssets />
+            ) : activePage === "Announcement" ? (
+              <AdminAnnouncements
+                onCreateEmployee={handleCreateEmployee}
+                autoOpenCreateForm={openAnnouncementFormOnMount}
+              />
+            ) : activePage === "Exit Requests" ? (
+              <AdminExitRequests />
+            ) : activePage === "Support Tickets" ? (
+              <AdminSupportTickets />
+            ) : activePage === "Settings" ? (
+              <AdminSettings />
+            ) : activePage === "My Profile" ? (
+              <AdminMyProfile />
+            ) : activePage === "Admin Accounts" ? (
+              <AdminAccounts />
+            ) : (
+              <AdminDashboard
+                totalHeadcount={dashboardData?.total_headcount ?? null}
+                celebrations={dashboardData?.celebrations ?? []}
+                recentActivities={dashboardData?.recent_activities ?? []}
+                onNavigate={handleNavigate}
+                onCreateAnnouncement={handleCreateAnnouncement}
+              />
+            )}
+          </ErrorBoundary>
+        </main>
+      </div>
     </div>
   );
 }

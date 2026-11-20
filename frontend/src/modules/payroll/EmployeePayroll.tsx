@@ -10,7 +10,8 @@ import {
   FileText,
   Landmark,
   ShieldCheck,
-  Wallet,
+  Printer,
+  X,
 } from "lucide-react";
 import { api } from "../../services/api";
 import { employeeService } from "../employees/employeeService";
@@ -67,106 +68,106 @@ function EmployeePayroll() {
   const [latestPayroll, setLatestPayroll] = useState<any | null>(null);
   const [selectedPayrollId, setSelectedPayrollId] = useState("");
   const [bankInformation, setBankInformation] = useState<{
-  bank_name?: string;
-  account_holder_name?: string;
-  account_number?: string;
-  ifsc_code?: string;
-  branch?: string;
-} | null>(null);
+    bank_name?: string;
+    account_holder_name?: string;
+    account_number?: string;
+    ifsc_code?: string;
+    branch?: string;
+  } | null>(null);
 
   const [bankInformationLoading, setBankInformationLoading] = useState(true);
 
   useEffect(() => {
-  async function fetchPayroll() {
-    try {
-      setLoading(true);
-      setError("");
+    async function fetchPayroll() {
+      try {
+        setLoading(true);
+        setError("");
 
-      const user = JSON.parse(
-        localStorage.getItem("user") || "{}"
-      );
+        const user = JSON.parse(
+          localStorage.getItem("user") || "{}"
+        );
 
-      const employeeId = user.employee_id;
+        const employeeId = user.employee_id;
 
-      if (!employeeId) {
-        throw new Error("Employee information not found.");
+        if (!employeeId) {
+          throw new Error("Employee information not found.");
+        }
+
+        const response = await api.get<{
+          items: any[];
+          total: number;
+          page: number;
+          limit: number;
+          pages: number;
+        }>(`/employee-payroll/employees/${employeeId}`, {
+          page: 1,
+          limit: 100,
+        });
+
+        setPayrollData(response.items || []);
+
+        const latestResponse = await api.get<any>(
+          `/employee-payroll/employees/${employeeId}/latest`
+        );
+
+        setLatestPayroll(latestResponse);
+      } catch (err) {
+        console.error("Failed to fetch payroll:", err);
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Failed to load payroll information."
+        );
+      } finally {
+        setLoading(false);
       }
-
-      const response = await api.get<{
-        items: any[];
-        total: number;
-        page: number;
-        limit: number;
-        pages: number;
-      }>(`/employee-payroll/employees/${employeeId}`, {
-        page: 1,
-        limit: 100,
-      });
-
-      setPayrollData(response.items || []);
-
-      const latestResponse = await api.get<any>(
-        `/employee-payroll/employees/${employeeId}/latest`
-      );
-
-      setLatestPayroll(latestResponse);
-    } catch (err) {
-      console.error("Failed to fetch payroll:", err);
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to load payroll information."
-      );
-    } finally {
-      setLoading(false);
     }
-  }
 
-  fetchPayroll();
-}, []);
+    fetchPayroll();
+  }, []);
 
   useEffect(() => {
-  let isMounted = true;
+    let isMounted = true;
 
-  async function fetchBankInformation() {
-    try {
-      setBankInformationLoading(true);
+    async function fetchBankInformation() {
+      try {
+        setBankInformationLoading(true);
 
-      const employeeProfile = await employeeService.getMyProfile();
+        const employeeProfile = await employeeService.getMyProfile();
 
-      if (!isMounted) return;
+        if (!isMounted) return;
 
-      setBankInformation(employeeProfile.bank_information ?? null);
-    } catch (error) {
-      console.error("Failed to fetch employee bank information:", error);
+        setBankInformation(employeeProfile.bank_information ?? null);
+      } catch (error) {
+        console.error("Failed to fetch employee bank information:", error);
 
-      if (isMounted) {
-        setBankInformation(null);
-      }
-    } finally {
-      if (isMounted) {
-        setBankInformationLoading(false);
+        if (isMounted) {
+          setBankInformation(null);
+        }
+      } finally {
+        if (isMounted) {
+          setBankInformationLoading(false);
+        }
       }
     }
-  }
 
-  fetchBankInformation();
+    fetchBankInformation();
 
-  return () => {
-    isMounted = false;
-  };
-}, []);
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
-// Payroll runs a whole month at a time, so the header calendar's day is
-// resolved to its month here. Filtered in the browser rather than by the
-// backend, because the list endpoint only offers paging.
-const { date: globalDate, isDefault: isGlobalDateDefault } = useGlobalDate();
+  // Payroll runs a whole month at a time, so the header calendar's day is
+  // resolved to its month here. Filtered in the browser rather than by the
+  // backend, because the list endpoint only offers paging.
+  const { date: globalDate, isDefault: isGlobalDateDefault } = useGlobalDate();
 
-const globalMonthKey = globalDate.slice(0, 7);
+  const globalMonthKey = globalDate.slice(0, 7);
 
-const visiblePayrollData = isGlobalDateDefault
-  ? payrollData
-  : payrollData.filter((record) => {
+  const visiblePayrollData = isGlobalDateDefault
+    ? payrollData
+    : payrollData.filter((record) => {
       // pay_period_start arrives as an ISO date, so its year-month prefix lines
       // up with the header date's without any parsing.
       const periodStart = record?.pay_period_start;
@@ -178,42 +179,42 @@ const visiblePayrollData = isGlobalDateDefault
       return periodStart.slice(0, 7) === globalMonthKey;
     });
 
-const payslips: Payslip[] = visiblePayrollData.map((record) => ({
-  id: record.id,
-  month: record.month,
-  paidOn: record.payment?.paid_on
-    ? new Date(record.payment.paid_on).toLocaleDateString("en-IN", {
+  const payslips: Payslip[] = visiblePayrollData.map((record) => ({
+    id: record.id,
+    month: record.month,
+    paidOn: record.payment?.paid_on
+      ? new Date(record.payment.paid_on).toLocaleDateString("en-IN", {
         day: "2-digit",
         month: "short",
         year: "numeric",
       })
-    : "Not paid",
-  amount: Number(record.net_salary ?? 0),
-  status:
-    record.payment?.status === "Processing"
-      ? "Processing"
-      : "Credited",
-}));
+      : "Not paid",
+    amount: Number(record.net_salary ?? 0),
+    status:
+      record.payment?.status === "Processing"
+        ? "Processing"
+        : "Credited",
+  }));
 
-useEffect(() => {
-  if (payslips.length > 0 && !selectedPayrollId) {
-    setSelectedPayrollId(payslips[0].id);
-  }
-}, [payslips, selectedPayrollId]);
+  useEffect(() => {
+    if (payslips.length > 0 && !selectedPayrollId) {
+      setSelectedPayrollId(payslips[0].id);
+    }
+  }, [payslips, selectedPayrollId]);
 
 
-const salaryComponents: SalaryComponent[] = latestPayroll
-  ? [
+  const salaryComponents: SalaryComponent[] = latestPayroll
+    ? [
       {
         label: "Basic Salary",
         amount: Number(latestPayroll.salary?.basic ?? 0),
         percentage:
           latestPayroll.salary?.gross > 0
             ? Math.round(
-                (Number(latestPayroll.salary?.basic ?? 0) /
-                  Number(latestPayroll.salary.gross)) *
-                  100
-              )
+              (Number(latestPayroll.salary?.basic ?? 0) /
+                Number(latestPayroll.salary.gross)) *
+              100
+            )
             : 0,
       },
       {
@@ -222,10 +223,10 @@ const salaryComponents: SalaryComponent[] = latestPayroll
         percentage:
           latestPayroll.salary?.gross > 0
             ? Math.round(
-                (Number(latestPayroll.salary?.hra ?? 0) /
-                  Number(latestPayroll.salary.gross)) *
-                  100
-              )
+              (Number(latestPayroll.salary?.hra ?? 0) /
+                Number(latestPayroll.salary.gross)) *
+              100
+            )
             : 0,
       },
       {
@@ -234,10 +235,10 @@ const salaryComponents: SalaryComponent[] = latestPayroll
         percentage:
           latestPayroll.salary?.gross > 0
             ? Math.round(
-                (Number(latestPayroll.salary?.special_allowance ?? 0) /
-                  Number(latestPayroll.salary.gross)) *
-                  100
-              )
+              (Number(latestPayroll.salary?.special_allowance ?? 0) /
+                Number(latestPayroll.salary.gross)) *
+              100
+            )
             : 0,
       },
       {
@@ -246,10 +247,10 @@ const salaryComponents: SalaryComponent[] = latestPayroll
         percentage:
           latestPayroll.salary?.gross > 0
             ? Math.round(
-                (Number(latestPayroll.salary?.conveyance ?? 0) /
-                  Number(latestPayroll.salary.gross)) *
-                  100
-              )
+              (Number(latestPayroll.salary?.conveyance ?? 0) /
+                Number(latestPayroll.salary.gross)) *
+              100
+            )
             : 0,
       },
       {
@@ -258,17 +259,17 @@ const salaryComponents: SalaryComponent[] = latestPayroll
         percentage:
           latestPayroll.salary?.gross > 0
             ? Math.round(
-                (Number(latestPayroll.salary?.other_allowance ?? 0) /
-                  Number(latestPayroll.salary.gross)) *
-                  100
-              )
+              (Number(latestPayroll.salary?.other_allowance ?? 0) /
+                Number(latestPayroll.salary.gross)) *
+              100
+            )
             : 0,
       },
     ]
-  : [];
+    : [];
 
   const deductions: Deduction[] = latestPayroll
-  ? [
+    ? [
       {
         label: "Provident Fund",
         shortLabel: "PF",
@@ -285,15 +286,15 @@ const salaryComponents: SalaryComponent[] = latestPayroll
         amount: Number(latestPayroll.deductions?.tds ?? 0),
       },
     ]
-  : [];
+    : [];
 
   const taxableIncome = latestPayroll
-  ? Number(latestPayroll.tax_details?.taxable_income ?? 0)
-  : 0;
+    ? Number(latestPayroll.tax_details?.taxable_income ?? 0)
+    : 0;
 
   const taxDeducted = latestPayroll
-  ? Number(latestPayroll.tax_details?.tax_deducted ?? 0)
-  : 0;
+    ? Number(latestPayroll.tax_details?.tax_deducted ?? 0)
+    : 0;
 
   const totalPages = Math.ceil(payslips.length / ITEMS_PER_PAGE);
 
@@ -314,12 +315,12 @@ const salaryComponents: SalaryComponent[] = latestPayroll
   );
 
   const totalDeductions = latestPayroll
-  ? Number(latestPayroll.deductions?.total ?? 0)
-  : 0;
+    ? Number(latestPayroll.deductions?.total ?? 0)
+    : 0;
 
   const grossSalary = latestPayroll
-  ? Number(latestPayroll.salary?.gross ?? 0)
-  : 0;
+    ? Number(latestPayroll.salary?.gross ?? 0)
+    : 0;
 
   const netSalary = grossSalary - totalDeductions;
 
@@ -337,84 +338,77 @@ const salaryComponents: SalaryComponent[] = latestPayroll
 
   return (
     <>
-      <div className="min-h-screen bg-slate-50">
-        <main className="mx-auto w-full max-w-[1600px] px-4 py-5 sm:px-6 lg:px-8">
-          {/* Page Header */}
-          <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <div className="mb-1 flex items-center gap-2 text-sm text-slate-500">
-                <Wallet className="h-4 w-4" />
-                <span>Payroll</span>
-              </div>
-
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-                My Payslip
-              </h1>
-
-              <p className="mt-1 text-sm text-slate-500">
-                View your salary, payslips, deductions and tax information.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
-              <CalendarDays className="h-4 w-4 text-slate-400" />
-
-              <label
-                htmlFor="payroll-month"
-                className="text-xs font-medium text-slate-500"
-              >
-                Month & Year
-              </label>
-
-              <select
-                id="payroll-month"
-                value={selectedPayrollId}
-                onChange={(event) => setSelectedPayrollId(event.target.value)}
-                disabled={payslips.length === 0}
-                className="cursor-pointer bg-transparent text-sm font-semibold text-slate-700 outline-none disabled:cursor-not-allowed disabled:text-slate-400"
-              >
-                {payslips.length === 0 ? (
-                  <option value="">No payroll available</option>
-                ) : (
-                  payslips.map((payslip) => (
-                    <option key={payslip.id} value={payslip.id}>
-                      {payslip.month}
-                    </option>
-                  ))
-                )}
-              </select>
-            </div>
+      <div className="space-y-6 px-4 pb-12 pt-6 sm:px-6 lg:px-8">
+        {/* Page Header */}
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 font-manrope">
+              My Payslip
+            </h1>
+            <p className="mt-1 text-sm font-medium text-slate-500">
+              View your monthly salary slips, deductions, and tax calculations.
+            </p>
           </div>
 
-          {/* Summary Cards */}
-          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {/* Net Salary */}
-            <div className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-slate-500">
-                      Net Salary
-                    </p>
-                    <p className="mt-2 text-xl font-bold text-slate-900">
-                      {latestPayroll
-                        ? formatCurrency(Number(latestPayroll.net_salary ?? 0))
-                        : "—"}
-                    </p>
-                  </div>
+          <div className="flex items-center gap-2 rounded-2xl border border-slate-200/80 bg-white px-3.5 py-2 shadow-xs">
+            <CalendarDays className="h-4 w-4 text-blue-600" />
 
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50">
-                    <Banknote className="h-5 w-5 text-emerald-600" />
-                  </div>
+            <label
+              htmlFor="payroll-month"
+              className="text-xs font-semibold text-slate-500"
+            >
+              Month & Year
+            </label>
+
+            <select
+              id="payroll-month"
+              value={selectedPayrollId}
+              onChange={(event) => setSelectedPayrollId(event.target.value)}
+              disabled={payslips.length === 0}
+              className="cursor-pointer bg-transparent text-sm font-bold text-slate-800 outline-none disabled:cursor-not-allowed disabled:text-slate-400"
+            >
+              {payslips.length === 0 ? (
+                <option value="">No payroll available</option>
+              ) : (
+                payslips.map((payslip) => (
+                  <option key={payslip.id} value={payslip.id}>
+                    {payslip.month}
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
+        </div>
+
+        {/* Summary Cards */}
+        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {/* Net Salary */}
+          <div className="flex flex-col justify-between rounded-3xl border border-slate-100 bg-white p-5.5 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
+            <div>
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 font-manrope">
+                    Net Take-Home Salary
+                  </p>
+                  <p className="mt-2 text-2xl font-bold font-manrope text-slate-900">
+                    {latestPayroll
+                      ? formatCurrency(Number(latestPayroll.net_salary ?? 0))
+                      : "—"}
+                  </p>
                 </div>
 
-                <div className="mt-4 flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-                    <CircleCheck className="h-3.5 w-3.5" />
-                    {latestPayroll?.payment?.status ?? "—"}
-                  </span>
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50">
+                  <Banknote className="h-5 w-5 text-emerald-600" />
                 </div>
               </div>
+
+              <div className="mt-3 flex items-center gap-2">
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-bold text-emerald-700">
+                  <CircleCheck className="h-3.5 w-3.5" />
+                  {latestPayroll?.payment?.status ?? "Credited"}
+                </span>
+              </div>
+            </div>
 
               <div className="mt-4 grid grid-cols-2 gap-3 border-t border-slate-100 pt-3">
                 <div>
@@ -458,20 +452,20 @@ const salaryComponents: SalaryComponent[] = latestPayroll
                 <p className="mt-4 text-sm text-slate-500">
                   {latestPayroll
                     ? `${new Date(latestPayroll.pay_period_start).toLocaleDateString(
-                        "en-IN",
-                        {
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric",
-                        }
-                      )} – ${new Date(latestPayroll.pay_period_end).toLocaleDateString(
-                        "en-IN",
-                        {
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric",
-                        }
-                      )}`
+                      "en-IN",
+                      {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      }
+                    )} – ${new Date(latestPayroll.pay_period_end).toLocaleDateString(
+                      "en-IN",
+                      {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      }
+                    )}`
                     : "—"}
                 </p>
               </div>
@@ -483,7 +477,7 @@ const salaryComponents: SalaryComponent[] = latestPayroll
               </div>
             </div>
 
-            
+
             {/* Bank Account */}
             <div className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <div>
@@ -505,59 +499,59 @@ const salaryComponents: SalaryComponent[] = latestPayroll
                   </div>
                 </div>
 
-                
-              <div className="mt-4 space-y-3">
-                {/* Account Number */}
-                <div className="flex items-center gap-2">
-                  <CreditCard className="h-4 w-4 shrink-0 text-slate-400" />
 
-                  <span className="text-sm font-medium text-slate-600">
-                    {bankInformationLoading
-                      ? "Loading account details..."
-                      : bankInformation?.account_number
-                        ? `•••• •••• ${bankInformation.account_number.slice(-4)}`
-                        : "Account number not provided"}
-                  </span>
-                </div>
-                {/* Account Holder */}
-                <div className="flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4 shrink-0 text-slate-400" />
+                <div className="mt-4 space-y-3">
+                  {/* Account Number */}
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="h-4 w-4 shrink-0 text-slate-400" />
 
-                  <span className="text-sm text-slate-600">
-                    <span className="font-medium text-slate-500">
-                      Account Holder:{" "}
+                    <span className="text-sm font-medium text-slate-600">
+                      {bankInformationLoading
+                        ? "Loading account details..."
+                        : bankInformation?.account_number
+                          ? `•••• •••• ${bankInformation.account_number.slice(-4)}`
+                          : "Account number not provided"}
                     </span>
-                    {bankInformationLoading
-                      ? "Loading..."
-                      : bankInformation?.account_holder_name || "Not provided"}
-                  </span>
-                </div>
+                  </div>
+                  {/* Account Holder */}
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="h-4 w-4 shrink-0 text-slate-400" />
 
-                {/* IFSC Code */}
-                <div className="flex items-center gap-2">
-                  <Landmark className="h-4 w-4 shrink-0 text-slate-400" />
-
-                  <span className="text-sm text-slate-600">
-                    <span className="font-medium text-slate-500">
-                      IFSC Code:{" "}
+                    <span className="text-sm text-slate-600">
+                      <span className="font-medium text-slate-500">
+                        Account Holder:{" "}
+                      </span>
+                      {bankInformationLoading
+                        ? "Loading..."
+                        : bankInformation?.account_holder_name || "Not provided"}
                     </span>
-                    {bankInformationLoading
-                      ? "Loading..."
-                      : bankInformation?.ifsc_code || "Not provided"}
-                  </span>
+                  </div>
+
+                  {/* IFSC Code */}
+                  <div className="flex items-center gap-2">
+                    <Landmark className="h-4 w-4 shrink-0 text-slate-400" />
+
+                    <span className="text-sm text-slate-600">
+                      <span className="font-medium text-slate-500">
+                        IFSC Code:{" "}
+                      </span>
+                      {bankInformationLoading
+                        ? "Loading..."
+                        : bankInformation?.ifsc_code || "Not provided"}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
           </section>
 
           {/* Main Payroll Area */}
           <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
             {/* Main Content */}
-            <section className="min-w-0 rounded-2xl border border-gray-100 bg-white shadow-sm">
+            <section className="min-w-0 rounded-3xl border border-slate-100 bg-white shadow-xs">
               {/* Tabs */}
-              <div className="overflow-x-auto border-b border-slate-200">
-                <div className="flex min-w-max px-2 sm:px-4">
+              <div className="overflow-x-auto border-b border-slate-100 p-3">
+                <div className="flex min-w-max gap-1.5">
                   {tabs.map((tab) => {
                     const isActive = activeTab === tab;
 
@@ -566,17 +560,13 @@ const salaryComponents: SalaryComponent[] = latestPayroll
                         key={tab}
                         type="button"
                         onClick={() => handleTabChange(tab)}
-                        className={`relative whitespace-nowrap px-3 py-4 text-sm font-semibold transition sm:px-4 ${
+                        className={`rounded-xl px-4 py-2.5 text-xs font-bold transition ${
                           isActive
-                            ? "text-blue-600"
-                            : "text-slate-500 hover:text-slate-800"
+                            ? "bg-[#0066ff] text-white shadow-md shadow-blue-500/20"
+                            : "text-slate-500 hover:bg-slate-100/70 hover:text-slate-800"
                         }`}
                       >
                         {tab}
-
-                        {isActive && (
-                          <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-blue-600 sm:inset-x-4" />
-                        )}
                       </button>
                     );
                   })}
@@ -787,10 +777,10 @@ const salaryComponents: SalaryComponent[] = latestPayroll
                 )}
 
                 {activeTab === "Tax Details" && <TaxDetails
-                                                  latestPayroll={latestPayroll}
-                                                  taxableIncome={taxableIncome}
-                                                  taxDeducted={taxDeducted}
-                                                />
+                  latestPayroll={latestPayroll}
+                  taxableIncome={taxableIncome}
+                  taxDeducted={taxDeducted}
+                />
                 }
               </div>
             </section>
@@ -803,7 +793,7 @@ const salaryComponents: SalaryComponent[] = latestPayroll
                   <h2 className="text-lg font-bold text-slate-900">
                     Salary Breakdown
                   </h2>
-                   <p className="mt-1 text-sm text-slate-500">
+                  <p className="mt-1 text-sm text-slate-500">
                     {latestPayroll?.month ?? "—"}
                   </p>
                 </div>
@@ -814,54 +804,46 @@ const salaryComponents: SalaryComponent[] = latestPayroll
                     className="relative h-52 w-52 rounded-full"
                     style={{
                       background: latestPayroll
-                      ? `conic-gradient(
-                          #2563eb 0deg ${
-                            (salaryComponents[0].percentage / 100) * 360
-                          }deg,
-                          #60a5fa ${
-                            (salaryComponents[0].percentage / 100) * 360
-                          }deg ${
-                            ((salaryComponents[0].percentage +
-                              salaryComponents[1].percentage) /
-                              100) *
-                            360
-                          }deg,
-                          #818cf8 ${
-                            ((salaryComponents[0].percentage +
-                              salaryComponents[1].percentage) /
-                              100) *
-                            360
-                          }deg ${
-                            ((salaryComponents[0].percentage +
-                              salaryComponents[1].percentage +
-                              salaryComponents[2].percentage) /
-                              100) *
-                            360
-                          }deg,
-                          #a78bfa ${
-                            ((salaryComponents[0].percentage +
-                              salaryComponents[1].percentage +
-                              salaryComponents[2].percentage) /
-                              100) *
-                            360
-                          }deg ${
-                            ((salaryComponents[0].percentage +
-                              salaryComponents[1].percentage +
-                              salaryComponents[2].percentage +
-                              salaryComponents[3].percentage) /
-                              100) *
-                            360
-                          }deg,
-                          #c4b5fd ${
-                            ((salaryComponents[0].percentage +
-                              salaryComponents[1].percentage +
-                              salaryComponents[2].percentage +
-                              salaryComponents[3].percentage) /
-                              100) *
-                            360
-                          }deg 360deg
+                        ? `conic-gradient(
+                          #2563eb 0deg ${(salaryComponents[0].percentage / 100) * 360
+                        }deg,
+                          #60a5fa ${(salaryComponents[0].percentage / 100) * 360
+                        }deg ${((salaryComponents[0].percentage +
+                          salaryComponents[1].percentage) /
+                          100) *
+                        360
+                        }deg,
+                          #818cf8 ${((salaryComponents[0].percentage +
+                          salaryComponents[1].percentage) /
+                          100) *
+                        360
+                        }deg ${((salaryComponents[0].percentage +
+                          salaryComponents[1].percentage +
+                          salaryComponents[2].percentage) /
+                          100) *
+                        360
+                        }deg,
+                          #a78bfa ${((salaryComponents[0].percentage +
+                          salaryComponents[1].percentage +
+                          salaryComponents[2].percentage) /
+                          100) *
+                        360
+                        }deg ${((salaryComponents[0].percentage +
+                          salaryComponents[1].percentage +
+                          salaryComponents[2].percentage +
+                          salaryComponents[3].percentage) /
+                          100) *
+                        360
+                        }deg,
+                          #c4b5fd ${((salaryComponents[0].percentage +
+                          salaryComponents[1].percentage +
+                          salaryComponents[2].percentage +
+                          salaryComponents[3].percentage) /
+                          100) *
+                        360
+                        }deg 360deg
                         )`
-                      : "conic-gradient(#e2e8f0 0deg 360deg)",
+                        : "conic-gradient(#e2e8f0 0deg 360deg)",
                     }}
                   >
                     <div className="absolute inset-[24px] flex flex-col items-center justify-center rounded-full bg-white">
@@ -884,15 +866,14 @@ const salaryComponents: SalaryComponent[] = latestPayroll
                     >
                       <div className="flex min-w-0 items-center gap-2.5">
                         <span
-                          className={`h-2.5 w-2.5 shrink-0 rounded-full ${
-                            [
-                              "bg-blue-600",
-                              "bg-blue-400",
-                              "bg-indigo-400",
-                              "bg-violet-400",
-                              "bg-violet-300",
-                            ][index]
-                          }`}
+                          className={`h-2.5 w-2.5 shrink-0 rounded-full ${[
+                            "bg-blue-600",
+                            "bg-blue-400",
+                            "bg-indigo-400",
+                            "bg-violet-400",
+                            "bg-violet-300",
+                          ][index]
+                            }`}
                         />
 
                         <span className="truncate text-sm text-slate-600">
@@ -968,18 +949,252 @@ const salaryComponents: SalaryComponent[] = latestPayroll
               </section>
             </aside>
           </div>
-        </main>
       </div>
 
-      {/* Payslip View Modal */}
-      {selectedPayslip && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedPayslip(null); }}>
-          <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4"><div><h2 className="text-lg font-bold text-slate-900">Payslip Details</h2><p className="mt-0.5 text-sm text-slate-500">{selectedPayslip.month}</p></div><button type="button" onClick={() => setSelectedPayslip(null)} className="h-9 w-9 rounded-lg text-slate-400" aria-label="Close">x</button></div>
-            <div className="space-y-5 p-5"><div className="rounded-xl bg-slate-50 p-4"><div className="flex items-center justify-between"><span className="text-sm text-slate-500">Net Salary</span><span className="text-xl font-bold text-slate-900">{formatCurrency(selectedPayslip.amount)}</span></div><div className="mt-3 flex items-center justify-between border-t border-slate-200 pt-3"><span className="text-sm text-slate-500">Paid On</span><span className="text-sm font-semibold text-slate-700">{selectedPayslip.paidOn}</span></div><div className="mt-3 flex items-center justify-between"><span className="text-sm text-slate-500">Status</span><span className="text-sm font-semibold text-emerald-700">{selectedPayslip.status}</span></div></div><div><h3 className="text-sm font-bold text-slate-800">Salary Summary</h3><div className="mt-3 space-y-3"><div className="flex justify-between text-sm"><span className="text-slate-500">Gross Salary</span><span className="font-semibold text-slate-800">{formatCurrency(grossSalary)}</span></div><div className="flex justify-between text-sm"><span className="text-slate-500">Total Deductions</span><span className="font-semibold text-slate-800">{formatCurrency(totalDeductions)}</span></div><div className="flex justify-between border-t border-slate-100 pt-3 text-sm"><span className="font-semibold text-slate-700">Net Salary</span><span className="font-bold text-blue-600">{formatCurrency(netSalary)}</span></div></div></div><button type="button" onClick={() => setSelectedPayslip(null)} className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-200">Close</button></div>
+      {/* Payslip View & Print Modal */}
+      {selectedPayslip && (() => {
+        const activeRecord = payrollData.find((p) => p.id === selectedPayslip.id) || latestPayroll;
+        const earningsList = activeRecord?.salary?.earnings && activeRecord.salary.earnings.length > 0
+          ? activeRecord.salary.earnings
+          : [{ label: "Basic Salary", amount: activeRecord?.salary?.basic || activeRecord?.salary?.gross || selectedPayslip.amount }];
+
+        const deductionsList = activeRecord?.deductions?.items && activeRecord.deductions.items.length > 0
+          ? activeRecord.deductions.items
+          : Object.entries(activeRecord?.deductions || {})
+            .filter(([k, v]) => k !== "total" && k !== "items" && typeof v === "number" && v > 0)
+            .map(([k, v]) => ({ label: k.replace(/_/g, " ").toUpperCase(), amount: Number(v) }));
+
+        const maxRows = Math.max(earningsList.length, deductionsList.length, 1);
+        const rows = [];
+        for (let i = 0; i < maxRows; i++) {
+          rows.push({
+            earning: earningsList[i] || null,
+            deduction: deductionsList[i] || null,
+          });
+        }
+
+        const gross = activeRecord?.salary?.gross || selectedPayslip.amount;
+        const deductionsTotal = activeRecord?.deductions?.total || 0;
+        const net = activeRecord?.net_salary || selectedPayslip.amount;
+        const status = activeRecord?.payment?.status || selectedPayslip.status;
+        const userObj = JSON.parse(localStorage.getItem("user") || "{}");
+        const empName = userObj.full_name || userObj.name || "Employee";
+        const empCode = userObj.employee_id || "-";
+        const att = activeRecord?.attendance_summary;
+
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+            onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedPayslip(null); }}
+          >
+            <style>{`
+              @media print {
+                body * {
+                  visibility: hidden !important;
+                }
+                .employee-payslip-printable, .employee-payslip-printable * {
+                  visibility: visible !important;
+                }
+                .employee-payslip-printable {
+                  position: fixed !important;
+                  left: 0 !important;
+                  top: 0 !important;
+                  width: 100% !important;
+                  height: auto !important;
+                  background: white !important;
+                  padding: 24px !important;
+                  margin: 0 !important;
+                  box-shadow: none !important;
+                  border: none !important;
+                }
+                .no-print {
+                  display: none !important;
+                }
+              }
+            `}</style>
+            <div className="max-h-[94vh] w-full max-w-3xl overflow-y-auto rounded-xl bg-white shadow-2xl">
+              <div className="no-print flex items-center justify-between border-b border-slate-100 px-6 py-4">
+                <div className="flex items-center gap-3">
+                  <h3 className="text-base font-bold text-slate-900">Official Payslip</h3>
+                  <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 border border-emerald-200">
+                    {status}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                    title="Print or Save as PDF"
+                  >
+                    <Printer className="h-3.5 w-3.5 text-slate-500" />
+                    Print / PDF
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPayslip(null)}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="employee-payslip-printable relative p-6 sm:p-8">
+                <header className="flex flex-col gap-4 border-b-2 border-slate-700 pb-5 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-3">
+                    <img
+                      src="/peoplesync-logo.png"
+                      alt="PeopleSync logo"
+                      className="h-14 w-14 object-contain"
+                    />
+                    <div>
+                      <div className="font-sans text-xl font-bold tracking-tight text-[#0066ff]">
+                        PeopleSync Technologies Pvt. Ltd.
+                      </div>
+                      <div className="text-xs text-slate-500">Human Resources &amp; Payroll</div>
+                    </div>
+                  </div>
+                  <div className="text-left text-xs leading-5 text-slate-600 sm:text-right">
+                    <div>Website: <span className="text-[#0066ff] font-medium">www.peoplesync.io</span></div>
+                    <div>Email: hr@peoplesync.io</div>
+                    <div>Month: <span className="font-semibold text-slate-900">{selectedPayslip.month}</span></div>
+                    {selectedPayslip.paidOn && (
+                      <div className="text-slate-500">Paid on: <span className="font-medium text-slate-700">{selectedPayslip.paidOn}</span></div>
+                    )}
+                  </div>
+                </header>
+
+                <section className="mt-5">
+                  <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Employee Information
+                  </h4>
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-2 rounded-lg bg-slate-50 p-4 text-xs sm:grid-cols-3">
+                    <div>
+                      <span className="text-slate-400">Name:</span>{" "}
+                      <span className="font-semibold text-slate-800">{empName}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400">Employee ID:</span>{" "}
+                      <span className="font-semibold text-slate-800">{empCode}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400">Department:</span>{" "}
+                      <span className="font-semibold text-slate-800">{userObj.department || "General"}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400">Bank Name:</span>{" "}
+                      <span className="font-semibold text-slate-800">{bankInformation?.bank_name || activeRecord?.bank_details?.bank_name || "-"}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400">Account No:</span>{" "}
+                      <span className="font-semibold text-slate-800">
+                        {bankInformation?.account_number
+                          ? `•••• •••• ${bankInformation.account_number.slice(-4)}`
+                          : activeRecord?.bank_details?.account_last4
+                            ? `•••• ${activeRecord.bank_details.account_last4}`
+                            : "-"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400">Payment Status:</span>{" "}
+                      <span className="font-semibold text-emerald-700">{status}</span>
+                    </div>
+                  </div>
+                </section>
+
+                {att && (att.total_days || 0) > 0 && (
+                  <section className="mt-4">
+                    <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">
+                      Attendance & Leave Summary
+                    </h4>
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-2 rounded-lg bg-slate-50 p-3 text-xs sm:grid-cols-4">
+                      <div>
+                        <span className="text-slate-400">Working Days:</span>{" "}
+                        <span className="font-semibold text-slate-800">{att.total_days}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400">Present Days:</span>{" "}
+                        <span className="font-semibold text-emerald-700">{att.present_days}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400">Paid Leaves:</span>{" "}
+                        <span className="font-semibold text-blue-700">{att.paid_leave_days || 0}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400">Loss of Pay (LOP):</span>{" "}
+                        <span className={`font-semibold ${(att.lop_days || 0) > 0 ? "text-rose-600 font-bold" : "text-slate-700"}`}>
+                          {att.lop_days || 0} days
+                          {(att.lop_deduction || 0) > 0 && (
+                            <span className="ml-1 text-[11px] text-rose-600">(-₹{att.lop_deduction.toLocaleString("en-IN")})</span>
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                  </section>
+                )}
+
+                <section className="mt-6">
+                  <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Salary Breakdown
+                  </h4>
+                  <div className="overflow-hidden rounded-lg border border-slate-200 text-xs">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-slate-200 bg-slate-100 font-bold text-slate-700">
+                          <th className="px-4 py-2.5 text-left">Earnings</th>
+                          <th className="px-4 py-2.5 text-right">Amount</th>
+                          <th className="px-4 py-2.5 text-left">Deductions</th>
+                          <th className="px-4 py-2.5 text-right">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {rows.map((row, idx) => (
+                          <tr key={idx} className="hover:bg-slate-50/50">
+                            <td className="px-4 py-2 text-slate-700">
+                              {row.earning?.label || row.earning?.name || "-"}
+                            </td>
+                            <td className="px-4 py-2 text-right text-slate-900">
+                              {row.earning ? formatCurrency(row.earning.amount) : "-"}
+                            </td>
+                            <td className="px-4 py-2 text-slate-700">
+                              {row.deduction?.label || row.deduction?.name || "-"}
+                            </td>
+                            <td className="px-4 py-2 text-right text-slate-900">
+                              {row.deduction ? formatCurrency(row.deduction.amount) : "-"}
+                            </td>
+                          </tr>
+                        ))}
+                        <tr className="border-t border-slate-200 bg-slate-50 font-bold text-slate-900">
+                          <td className="px-4 py-2.5">Gross Earnings</td>
+                          <td className="px-4 py-2.5 text-right text-emerald-700">
+                            {formatCurrency(gross)}
+                          </td>
+                          <td className="px-4 py-2.5">Total Deductions</td>
+                          <td className="px-4 py-2.5 text-right text-rose-700">
+                            {formatCurrency(deductionsTotal)}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+
+                <section className="mt-5 rounded-lg border border-blue-100 bg-blue-50/50 p-4">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-semibold text-slate-700">Net Salary Payable</span>
+                    <span className="text-xl font-bold text-blue-700">{formatCurrency(net)}</span>
+                  </div>
+                </section>
+
+                <footer className="mt-6 border-t border-slate-200 pt-3 text-center text-[10px] text-slate-400">
+                  Krystal Square, 4th floor 406, near Khanvilkar Pump, Sita Colony, Kolhapur, Maharashtra 416003
+                </footer>
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </>
   );
 }

@@ -1,7 +1,9 @@
 from datetime import date, datetime, timezone, timedelta, time
 from calendar import monthrange
 import re
+from bson import ObjectId
 
+from app.core.config import settings
 from app.core.exceptions import AppException
 from app.core.scope import visibility_scope, visible_employee_codes
 from app.repositories.employee_repository import EmployeeRepository
@@ -13,6 +15,8 @@ from app.repositories.admin_payslip_repository import (
 )
 from app.modules.payroll.deduction_service import AdminDeductionService
 from app.modules.dashboard.activity_service import ActivityService
+from app.modules.dashboard.employee_notification_service import EmployeeNotificationService
+from app.core.email_service import EmailService
 
 
 class AdminPayslipService:
@@ -22,6 +26,102 @@ class AdminPayslipService:
         self.salary_structure_repository = AdminSalaryStructureRepository()
         self.deduction_service = AdminDeductionService()
         self.activity_service = ActivityService()
+        self.notification_service = EmployeeNotificationService()
+        self.email_service = EmailService()
+
+    async def _calculate_lop_and_attendance(
+        self,
+        employee_id: str,
+        start_date: date,
+        end_date: date,
+        gross_salary: float,
+    ) -> tuple[float, dict]:
+        total_days = (end_date - start_date).days + 1
+        daily_rate = round(gross_salary / total_days, 2) if total_days > 0 else 0.0
+
+        start_dt = datetime(start_date.year, start_date.month, start_date.day, 0, 0, 0)
+        end_dt = datetime(end_date.year, end_date.month, end_date.day, 23, 59, 59)
+
+        # 1. Fetch attendance records in pay period
+        attendance_cursor = self.payslip_repository.collection.database["employee_attendance"].find({
+            "employee_id": employee_id,
+            "date": {"$gte": start_dt, "$lte": end_dt},
+        })
+        attendance_records = await attendance_cursor.to_list(length=100)
+
+        absent_dates = set()
+        half_day_dates = set()
+        present_dates = set()
+
+        for rec in attendance_records:
+            d_val = rec.get("date")
+            if isinstance(d_val, datetime):
+                rec_date = d_val.date()
+            elif isinstance(d_val, date):
+                rec_date = d_val
+            elif isinstance(d_val, str):
+                try:
+                    rec_date = date.fromisoformat(d_val[:10])
+                except Exception:
+                    continue
+            else:
+                continue
+
+            status = str(rec.get("status", "")).strip().lower()
+            if status == "absent":
+                absent_dates.add(rec_date)
+            elif status in {"half day", "half_day", "half-day"}:
+                half_day_dates.add(rec_date)
+            elif status in {"present", "late", "on time", "on-time"}:
+                present_dates.add(rec_date)
+
+        # 2. Fetch approved unpaid leaves overlapping this period
+        leaves_cursor = self.payslip_repository.collection.database["employee_leaves"].find({
+            "employee_id": employee_id,
+            "status": {"$regex": "^approved$", "$options": "i"},
+        })
+        all_leaves = await leaves_cursor.to_list(length=100)
+
+        unpaid_leave_dates = set()
+        paid_leave_dates = set()
+
+        for lv in all_leaves:
+            s_val = lv.get("start_date")
+            e_val = lv.get("end_date")
+            try:
+                l_start = s_val.date() if isinstance(s_val, datetime) else (s_val if isinstance(s_val, date) else date.fromisoformat(str(s_val)[:10]))
+                l_end = e_val.date() if isinstance(e_val, datetime) else (e_val if isinstance(e_val, date) else date.fromisoformat(str(e_val)[:10]))
+            except Exception:
+                continue
+
+            cur = max(l_start, start_date)
+            last = min(l_end, end_date)
+            is_unpaid = bool(re.search(r"(unpaid|loss of pay|lop)", str(lv.get("leave_type", "")), re.I))
+
+            while cur <= last:
+                if is_unpaid:
+                    unpaid_leave_dates.add(cur)
+                else:
+                    paid_leave_dates.add(cur)
+                cur = cur.fromordinal(cur.toordinal() + 1)
+
+        # Net absent dates: absent or unpaid leave minus any approved paid leave
+        net_absent_dates = (absent_dates | unpaid_leave_dates) - paid_leave_dates
+        lop_days = len(net_absent_dates) + (len(half_day_dates - paid_leave_dates) * 0.5)
+
+        lop_amount = round(lop_days * daily_rate, 2)
+
+        summary = {
+            "total_days": total_days,
+            "present_days": len(present_dates),
+            "paid_leave_days": len(paid_leave_dates),
+            "unpaid_leave_days": len(unpaid_leave_dates),
+            "lop_days": lop_days,
+            "daily_rate": daily_rate,
+            "lop_deduction": lop_amount,
+        }
+
+        return lop_amount, summary
 
     async def create_payslip(
         self,
@@ -98,7 +198,7 @@ class AdminPayslipService:
             2,
         )
 
-        # 7. Calculate deductions
+        # 7. Calculate statutory & custom deductions
         deduction_result = (
             await self.deduction_service.calculate_deductions(
                 basic_salary=self._get_basic_salary(earnings),
@@ -108,34 +208,34 @@ class AdminPayslipService:
 
         total_deductions = deduction_result.total_deductions
 
-        # 8. Calculate net salary
-        net_salary = round(
-            gross_salary - total_deductions,
-            2,
-        )
-
-        if net_salary < 0:
-            raise AppException(
-                "Net salary cannot be negative",
-                400,
-            )
-
-        # 9. Prepare deduction details
+        # Prepare deduction details
         deduction_items = {}
-
         for result in deduction_result.results:
             if result.type == "deduction":
                 deduction_items[result.code.lower()] = (
                     result.calculated_amount
                 )
 
+        # 8. Calculate Loss of Pay (LOP) from attendance & unpaid leaves
+        lop_amount, attendance_summary = await self._calculate_lop_and_attendance(
+            employee_id=employee_id,
+            start_date=pay_period_start,
+            end_date=pay_period_end,
+            gross_salary=gross_salary,
+        )
+
+        if lop_amount > 0:
+            deduction_items["loss_of_pay"] = lop_amount
+            total_deductions = round(total_deductions + lop_amount, 2)
+
         deduction_items["total"] = total_deductions
+
+        # 9. Calculate net salary
+        net_salary = max(0.0, round(gross_salary - total_deductions, 2))
 
         # 10. Prepare bank details
         bank_information = employee.get("bank_information") or {}
-
         account_number = bank_information.get("account_number", "")
-
         bank_details = {
             "bank_name": bank_information.get("bank_name", ""),
             "account_last4": (
@@ -157,6 +257,7 @@ class AdminPayslipService:
                 "gross": gross_salary,
             },
             "deductions": deduction_items,
+            "attendance_summary": attendance_summary,
             "net_salary": net_salary,
             "bank_details": bank_details,
             "payment": {
@@ -173,6 +274,19 @@ class AdminPayslipService:
         payroll = await self.payslip_repository.create(
             payroll_data
         )
+
+        # 13. Create in-app notification for employee
+        try:
+            await self.notification_service.create(
+                employee_id=employee_id,
+                notification_type="payroll",
+                title="Payslip Generated",
+                message=f"Your payslip for {month} {year} is ready. Net Salary: ₹{net_salary:,.2f}",
+                target="/employee/payroll",
+                target_id=str(payroll.get("_id")),
+            )
+        except Exception:
+            pass
 
         await self.activity_service.record(
             text=f"Payroll created for {employee_id} ({month} {year})",
@@ -230,6 +344,8 @@ class AdminPayslipService:
             serialized["account_number"] = account_number
             serialized["month_value"] = month_value
             serialized["status"] = doc.get("payment", {}).get("status", "Processing")
+            serialized["paid_on"] = doc.get("payment", {}).get("paid_on")
+            serialized["attendance_summary"] = doc.get("attendance_summary", {})
 
             results.append(serialized)
         return results
@@ -368,6 +484,19 @@ class AdminPayslipService:
             paid_on=paid_on,
         )
 
+        if normalized_status.lower() in {"paid", "credited"}:
+            try:
+                await self.notification_service.create(
+                    employee_id=payslip.get("employee_id"),
+                    notification_type="payroll",
+                    title="Salary Credited",
+                    message=f"Your salary for {payslip.get('month')} has been marked as Paid (Net: ₹{payslip.get('net_salary', 0):,.2f}).",
+                    target="/employee/payroll",
+                    target_id=payslip_id,
+                )
+            except Exception:
+                pass
+
         await self.activity_service.record(
             text=f"Payroll status changed to {normalized_status} for {payslip.get('employee_id', '')}",
             employee_id=payslip.get("employee_id"),
@@ -375,6 +504,197 @@ class AdminPayslipService:
         )
 
         return await self._enrich_payslip(updated)
+
+    async def bulk_generate_payslips(
+        self,
+        month: str,
+        year: int,
+        department_id: str | None = None,
+    ) -> dict:
+        query: dict = {}
+        if department_id and department_id.strip():
+            dept_val = department_id.strip()
+            if ObjectId.is_valid(dept_val):
+                query["$or"] = [{"department_id": ObjectId(dept_val)}, {"department_id": dept_val}]
+            else:
+                query["department_id"] = dept_val
+
+        cursor = self.employee_repository.collection.find(query)
+        employees = await cursor.to_list(length=1000)
+
+        eligible_employees = [e for e in employees if e.get("salary_structure")]
+        created = 0
+        skipped = 0
+        errors = []
+
+        for emp in eligible_employees:
+            eid = emp.get("employee_id")
+            if not eid:
+                continue
+
+            existing = await self.payslip_repository.get_by_employee_and_month(eid, month)
+            if existing:
+                skipped += 1
+                continue
+
+            try:
+                await self.create_payslip(employee_id=eid, month=month, year=year)
+                created += 1
+            except Exception as exc:
+                errors.append({"employee_id": eid, "error": str(exc)})
+
+        await self.activity_service.record(
+            text=f"Bulk payroll run for {month} {year}: {created} created, {skipped} skipped",
+            target="/dashboard/payroll",
+        )
+
+        return {
+            "total_eligible": len(eligible_employees),
+            "created": created,
+            "skipped": skipped,
+            "errors": errors,
+        }
+
+    async def bulk_update_status(
+        self,
+        payslip_ids: list[str],
+        status: str,
+    ) -> dict:
+        updated_count = 0
+        for pid in payslip_ids:
+            try:
+                await self.update_payslip_status(pid, status)
+                updated_count += 1
+            except Exception:
+                pass
+        return {"total": len(payslip_ids), "updated": updated_count, "status": status}
+
+    async def send_payslip_email(self, payslip_id: str) -> dict:
+        payslip = await self.payslip_repository.get_by_id(payslip_id)
+        if not payslip:
+            raise AppException("Payslip not found", 404)
+
+        employee_id = payslip.get("employee_id")
+        employee = await self.employee_repository.get_by_employee_id(employee_id)
+        if not employee:
+            raise AppException("Employee not found", 404)
+
+        recipient_email = employee.get("email")
+        if not recipient_email:
+            user = await self.employee_repository.collection.database["users"].find_one({"employee_id": employee_id})
+            if user:
+                recipient_email = user.get("email")
+
+        if not recipient_email:
+            raise AppException(f"No email address found for employee {employee_id}", 400)
+
+        emp_name = " ".join(filter(None, [employee.get("first_name"), employee.get("last_name")])).strip()
+        if not emp_name:
+            emp_name = employee.get("full_name") or employee_id
+
+        dept_id = str(employee.get("department_id", ""))
+        dept_doc = await self.employee_repository.collection.database["departments"].find_one({"_id": ObjectId(dept_id)}) if ObjectId.is_valid(dept_id) else None
+        department_name = dept_doc.get("name") if dept_doc else (employee.get("department") or "General")
+
+        bank_info = employee.get("bank_information") or {}
+        bank_details = payslip.get("bank_details") or {}
+        bank_name = bank_details.get("bank_name") or bank_info.get("bank_name") or "-"
+        account_num = bank_info.get("account_number") or ""
+        if not account_num and bank_details.get("account_last4"):
+            account_num = f"•••• {bank_details.get('account_last4')}"
+        if not account_num:
+            account_num = "-"
+
+        pay_period_start = payslip.get("pay_period_start")
+        year = pay_period_start.year if isinstance(pay_period_start, (datetime, date)) else datetime.now().year
+
+        paid_on_str = ""
+        paid_dt = payslip.get("payment", {}).get("paid_on")
+        if isinstance(paid_dt, (datetime, date)):
+            paid_on_str = paid_dt.strftime("%d %b %Y")
+
+        att_summary = payslip.get("attendance_summary") or {}
+        portal_url = settings.cors_origins_list[0] if settings.cors_origins_list and settings.cors_origins_list[0] != "*" else "http://localhost:5173"
+
+        template_data = {
+            "company_name": "AarMarks Media Pvt. Ltd",
+            "employee_name": emp_name,
+            "employee_code": employee_id,
+            "month": payslip.get("month", ""),
+            "year": year,
+            "net_salary": float(payslip.get("net_salary", 0)),
+            "gross_salary": float(payslip.get("salary", {}).get("gross", 0)),
+            "total_deductions": float(payslip.get("deductions", {}).get("total", 0)),
+            "lop_days": att_summary.get("lop_days", 0),
+            "lop_amount": att_summary.get("lop_deduction", 0),
+            "status": payslip.get("payment", {}).get("status", "Processing"),
+            "paid_on": paid_on_str,
+            "bank_name": bank_name,
+            "account_number": account_num,
+            "department": department_name,
+            "portal_url": portal_url,
+        }
+
+        try:
+            self.email_service.send_html_email(
+                to_email=recipient_email,
+                subject=f"Payslip for {payslip.get('month')} {year} - AarMarks Media",
+                template_name="emails/payslip_notification.html",
+                template_data=template_data,
+            )
+        except Exception as exc:
+            raise AppException(f"Failed to send email: {exc}", 500)
+
+        try:
+            await self.notification_service.create(
+                employee_id=employee_id,
+                notification_type="payroll",
+                title="Payslip Sent via Email",
+                message=f"Your payslip for {payslip.get('month')} {year} has been emailed to {recipient_email}.",
+                target="/employee/payroll",
+                target_id=payslip_id,
+            )
+        except Exception:
+            pass
+
+        await self.activity_service.record(
+            text=f"Payslip emailed to {emp_name} ({employee_id}) for {payslip.get('month')}",
+            employee_id=employee_id,
+            target="/dashboard/payroll",
+        )
+
+        return {
+            "success": True,
+            "message": f"Payslip emailed successfully to {recipient_email}",
+            "recipient": recipient_email,
+        }
+
+    async def bulk_send_payslip_emails(
+        self,
+        month: str,
+        year: int,
+        status: str | None = None,
+    ) -> dict:
+        month_query: dict = {"month": {"$regex": f"^{re.escape(month)}$", "$options": "i"}}
+        if status:
+            month_query["payment.status"] = {"$regex": f"^{re.escape(status)}$", "$options": "i"}
+
+        cursor = self.payslip_repository.collection.find(month_query)
+        payslips = await cursor.to_list(length=1000)
+
+        sent = 0
+        failed = 0
+        errors = []
+        for p in payslips:
+            pid = str(p["_id"])
+            try:
+                await self.send_payslip_email(pid)
+                sent += 1
+            except Exception as exc:
+                failed += 1
+                errors.append({"employee_id": p.get("employee_id"), "error": str(exc)})
+
+        return {"total": len(payslips), "sent": sent, "failed": failed, "errors": errors}
 
     async def download_payslip(self, payslip_id: str):
         raise AppException(

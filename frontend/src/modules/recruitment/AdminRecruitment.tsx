@@ -2,10 +2,14 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 import {
   Briefcase,
   CalendarClock,
+  CheckCircle2,
   Download,
   Eye,
+  FileText,
+  Mail,
   Plus,
   Search,
+  Send,
   Trash2,
   UserCheck,
   Users,
@@ -14,6 +18,9 @@ import {
 import {
   CandidateModal,
   JobModal,
+  OfferModal,
+  OnboardCandidateModal,
+  RejectionModal,
 } from "./RecruitmentModals";
 import ResumeViewerModal from "./ResumeViewerModal";
 import NoticePopup from "../../components/ui/NoticePopup";
@@ -155,6 +162,9 @@ function InterviewScheduler({
 }) {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState("");
+  const [meetingLink, setMeetingLink] = useState(candidate.meeting_link ?? "");
+  const [notes, setNotes] = useState("");
+  const [sendEmail, setSendEmail] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -169,15 +179,20 @@ function InterviewScheduler({
     setError(null);
 
     try {
-      // datetime-local yields a naive local time; the offset has to be added
-      // explicitly or the server would read it as UTC.
-      await recruitmentService.scheduleInterview(
-        candidate.id,
-        new Date(value).toISOString(),
-      );
+      await recruitmentService.scheduleInterview(candidate.id, {
+        interview_scheduled_at: new Date(value).toISOString(),
+        meeting_link: meetingLink.trim() || undefined,
+        notes: notes.trim() || undefined,
+        send_email: sendEmail,
+      });
       setOpen(false);
       setValue("");
-      onChanged(`Interview scheduled for ${candidate.full_name}`);
+      setNotes("");
+      onChanged(
+        sendEmail
+          ? `Interview scheduled for ${candidate.full_name} and invitation email sent.`
+          : `Interview scheduled for ${candidate.full_name}.`
+      );
     } catch (err) {
       setError(errorText(err));
     } finally {
@@ -238,36 +253,77 @@ function InterviewScheduler({
   }
 
   return (
-    <div className="flex flex-col items-end gap-1.5">
-      <div className="flex items-center gap-1.5 rounded-xl border border-violet-200 bg-violet-50/60 p-1.5">
+    <div className="flex flex-col items-end gap-2 rounded-xl border border-violet-200 bg-violet-50/70 p-2.5 w-full max-w-[320px]">
+      <div className="w-full space-y-1.5">
+        <label className="block text-[10px] font-medium text-slate-600">
+          Date & Time
+        </label>
         <input
           type="datetime-local"
           value={value}
           min={new Date().toISOString().slice(0, 16)}
           onChange={(e) => setValue(e.target.value)}
           aria-label={`Interview date and time for ${candidate.full_name}`}
-          className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[11px] text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500"
+          className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500"
         />
+
+        <label className="block text-[10px] font-medium text-slate-600">
+          Meeting Link (Google Meet / Zoom)
+        </label>
+        <input
+          type="url"
+          placeholder="https://meet.google.com/..."
+          value={meetingLink}
+          onChange={(e) => setMeetingLink(e.target.value)}
+          className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500"
+        />
+
+        <label className="block text-[10px] font-medium text-slate-600">
+          Notes / Instructions
+        </label>
+        <input
+          type="text"
+          placeholder="e.g. Technical Round 1 with Team Lead"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500"
+        />
+
+        <label className="flex items-center gap-1.5 cursor-pointer pt-0.5">
+          <input
+            type="checkbox"
+            checked={sendEmail}
+            onChange={(e) => setSendEmail(e.target.checked)}
+            className="rounded border-slate-300 text-violet-600 focus:ring-violet-500 h-3 w-3"
+          />
+          <span className="text-[10px] text-slate-600 flex items-center gap-1">
+            <Mail className="h-3 w-3 text-violet-600" />
+            Send invitation email to candidate
+          </span>
+        </label>
+      </div>
+
+      <div className="flex items-center gap-1.5 pt-1">
         <button
           type="button"
           disabled={busy || !value}
           onClick={save}
-          className="rounded-lg bg-violet-600 px-3 py-1.5 text-[11px] font-semibold text-white transition hover:bg-violet-700 disabled:opacity-40"
+          className="rounded-lg bg-violet-600 px-3 py-1 text-[11px] font-semibold text-white transition hover:bg-violet-700 disabled:opacity-40"
         >
-          {busy ? "Saving..." : "Save"}
+          {busy ? "Scheduling..." : "Confirm & Send"}
         </button>
         <button
           type="button"
           disabled={busy}
           onClick={() => setOpen(false)}
-          className="rounded-lg px-2 py-1.5 text-[11px] font-medium text-slate-500 transition hover:bg-slate-100"
+          className="rounded-lg px-2 py-1 text-[11px] font-medium text-slate-500 transition hover:bg-slate-100"
         >
-          Dismiss
+          Cancel
         </button>
       </div>
 
       {error && (
-        <p className="max-w-[280px] text-[10px] leading-4 text-red-600">{error}</p>
+        <p className="w-full text-[10px] leading-4 text-red-600">{error}</p>
       )}
     </div>
   );
@@ -312,6 +368,16 @@ function AdminRecruitment() {
   } | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
+
+  const [offerModalCandidate, setOfferModalCandidate] = useState<Candidate | null>(null);
+  const [onboardModalCandidate, setOnboardModalCandidate] = useState<Candidate | null>(null);
+  const [rejectionCandidate, setRejectionCandidate] = useState<{ id: string; name: string } | null>(null);
+  const [draggedCandidate, setDraggedCandidate] = useState<{
+    id: string;
+    name: string;
+    currentStage: CandidateStage;
+  } | null>(null);
+  const [dragOverStage, setDragOverStage] = useState<CandidateStage | null>(null);
 
   const refresh = useCallback(() => setRefreshKey((key) => key + 1), []);
 
@@ -439,6 +505,11 @@ function AdminRecruitment() {
     name: string,
     stage: CandidateStage,
   ) {
+    if (stage === "rejected") {
+      setRejectionCandidate({ id: candidateId, name });
+      return;
+    }
+
     try {
       const updated = await recruitmentService.changeStage(candidateId, stage);
 
@@ -447,6 +518,31 @@ function AdminRecruitment() {
         text: updated.job_auto_closed
           ? `${name} moved to ${STAGE_LABELS[stage]}. All openings are filled, so "${updated.job_title}" was closed automatically.`
           : `${name} moved to ${STAGE_LABELS[stage]}`,
+      });
+      refresh();
+
+      if (stage === "offer" && !updated.offer_details) {
+        setOfferModalCandidate(updated);
+      } else if (stage === "hired" && !updated.is_onboarded) {
+        setOnboardModalCandidate(updated);
+      }
+    } catch (error) {
+      setNotice({ type: "error", text: errorText(error) });
+    }
+  }
+
+  async function handleConfirmRejection(sendEmail: boolean, reason: string) {
+    if (!rejectionCandidate) return;
+    const { id, name } = rejectionCandidate;
+    setRejectionCandidate(null);
+
+    try {
+      await recruitmentService.changeStage(id, "rejected", sendEmail, reason);
+      setNotice({
+        type: "success",
+        text: sendEmail
+          ? `${name} marked as Rejected and notification email sent.`
+          : `${name} marked as Rejected.`,
       });
       refresh();
     } catch (error) {
@@ -598,61 +694,186 @@ function AdminRecruitment() {
       >
         <div className="overflow-x-auto">
           <div className="grid min-w-[980px] grid-cols-7 gap-3">
-            {pipeline.map((column) => (
-              <div
-                key={column.stage}
-                className="rounded-xl border bg-slate-50/60"
-                style={{ borderColor: `${STAGE_COLORS[column.stage]}55` }}
-              >
+            {pipeline.map((column) => {
+              const isOver = dragOverStage === column.stage;
+              return (
                 <div
-                  className="flex items-center justify-between rounded-t-xl px-3 py-2 text-sm font-semibold"
-                  style={{
-                    backgroundColor: `${STAGE_COLORS[column.stage]}1a`,
-                    color: STAGE_COLORS[column.stage],
+                  key={column.stage}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = "move";
+                    if (dragOverStage !== column.stage) {
+                      setDragOverStage(column.stage);
+                    }
                   }}
+                  onDragLeave={(e) => {
+                    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                      setDragOverStage(null);
+                    }
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setDragOverStage(null);
+                    const candidateId =
+                      e.dataTransfer.getData("text/plain") || draggedCandidate?.id;
+                    if (candidateId && draggedCandidate) {
+                      if (draggedCandidate.currentStage !== column.stage) {
+                        void handleStageChange(
+                          candidateId,
+                          draggedCandidate.name,
+                          column.stage,
+                        );
+                      }
+                    }
+                    setDraggedCandidate(null);
+                  }}
+                  className={`rounded-xl border transition-all ${
+                    isOver
+                      ? "ring-2 ring-blue-500 bg-blue-50/50 shadow-md"
+                      : "bg-slate-50/60"
+                  }`}
+                  style={{ borderColor: `${STAGE_COLORS[column.stage]}55` }}
                 >
-                  <span>{STAGE_LABELS[column.stage]}</span>
-                  <span>{column.count}</span>
+                  <div
+                    className="flex items-center justify-between rounded-t-xl px-3 py-2 text-sm font-semibold"
+                    style={{
+                      backgroundColor: `${STAGE_COLORS[column.stage]}1a`,
+                      color: STAGE_COLORS[column.stage],
+                    }}
+                  >
+                    <span>{STAGE_LABELS[column.stage]}</span>
+                    <span>{column.count}</span>
+                  </div>
+
+                  <div className="max-h-[380px] space-y-2 overflow-y-auto overscroll-contain p-2">
+                    {column.candidates.length === 0 && (
+                      <p className="py-4 text-center text-xs text-slate-400">
+                        {isOver ? "Drop candidate here" : "No candidates"}
+                      </p>
+                    )}
+
+                    {column.candidates.map((card) => {
+                      const fullCandidate = candidates?.items.find(
+                        (c) => c.id === card.id,
+                      );
+
+                      return (
+                        <div
+                          key={card.id}
+                          draggable
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData("text/plain", card.id);
+                            e.dataTransfer.effectAllowed = "move";
+                            setDraggedCandidate({
+                              id: card.id,
+                              name: card.full_name,
+                              currentStage: column.stage,
+                            });
+                          }}
+                          onDragEnd={() => setDraggedCandidate(null)}
+                          className="cursor-grab active:cursor-grabbing rounded-lg border border-slate-200 bg-white p-2.5 shadow-sm transition hover:border-slate-300 hover:shadow"
+                        >
+                          <p className="truncate text-sm font-medium text-slate-800">
+                            {card.full_name}
+                          </p>
+                          <p className="truncate text-xs text-slate-500">
+                            {card.job_title}
+                          </p>
+                          <p className="mb-1.5 text-[11px] text-slate-400">
+                            {timeAgo(card.stage_updated_at)}
+                          </p>
+
+                          {/* Quick stage action badges */}
+                          {column.stage === "offer" && (
+                            <div className="mb-2">
+                              {card.offer_details ? (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (fullCandidate) setOfferModalCandidate(fullCandidate);
+                                    else {
+                                      void recruitmentService
+                                        .listCandidates({ search: card.full_name })
+                                        .then((res) => {
+                                          const c = res.items.find((i) => i.id === card.id);
+                                          if (c) setOfferModalCandidate(c);
+                                        });
+                                    }
+                                  }}
+                                  className="w-full truncate rounded bg-pink-50 px-2 py-1 text-left text-[11px] font-semibold text-pink-700 hover:bg-pink-100"
+                                >
+                                  ₹{Number(card.offer_details.offered_salary).toLocaleString("en-IN")} · Edit
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (fullCandidate) setOfferModalCandidate(fullCandidate);
+                                    else {
+                                      void recruitmentService
+                                        .listCandidates({ search: card.full_name })
+                                        .then((res) => {
+                                          const c = res.items.find((i) => i.id === card.id);
+                                          if (c) setOfferModalCandidate(c);
+                                        });
+                                    }
+                                  }}
+                                  className="w-full rounded border border-pink-200 bg-white px-2 py-1 text-[11px] font-medium text-pink-600 hover:bg-pink-50"
+                                >
+                                  + Issue Offer
+                                </button>
+                              )}
+                            </div>
+                          )}
+
+                          {column.stage === "hired" && (
+                            <div className="mb-2">
+                              {card.is_onboarded ? (
+                                <span className="inline-flex items-center gap-1 rounded bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                                  <CheckCircle2 className="h-3 w-3" />
+                                  Onboarded ({card.employee_code ?? "EMP"})
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (fullCandidate) setOnboardModalCandidate(fullCandidate);
+                                    else {
+                                      void recruitmentService
+                                        .listCandidates({ search: card.full_name })
+                                        .then((res) => {
+                                          const c = res.items.find((i) => i.id === card.id);
+                                          if (c) setOnboardModalCandidate(c);
+                                        });
+                                    }
+                                  }}
+                                  className="w-full rounded bg-emerald-600 px-2 py-1 text-[11px] font-semibold text-white hover:bg-emerald-700"
+                                >
+                                  Onboard as Employee
+                                </button>
+                              )}
+                            </div>
+                          )}
+
+                          <StageSelect
+                            value={column.stage}
+                            onChange={(stage) =>
+                              void handleStageChange(card.id, card.full_name, stage)
+                            }
+                          />
+                        </div>
+                      );
+                    })}
+
+                    {column.count > column.candidates.length && (
+                      <p className="text-center text-xs font-medium text-slate-500">
+                        + {column.count - column.candidates.length} more
+                      </p>
+                    )}
+                  </div>
                 </div>
-
-                <div className="max-h-[340px] space-y-2 overflow-y-auto overscroll-contain p-2">
-                  {column.candidates.length === 0 && (
-                    <p className="py-4 text-center text-xs text-slate-400">
-                      No candidates
-                    </p>
-                  )}
-
-                  {column.candidates.map((card) => (
-                    <div
-                      key={card.id}
-                      className="rounded-lg border border-slate-200 bg-white p-2"
-                    >
-                      <p className="truncate text-sm font-medium text-slate-800">
-                        {card.full_name}
-                      </p>
-                      <p className="truncate text-xs text-slate-500">
-                        {card.job_title}
-                      </p>
-                      <p className="mb-1 text-[11px] text-slate-400">
-                        {timeAgo(card.stage_updated_at)}
-                      </p>
-                      <StageSelect
-                        value={column.stage}
-                        onChange={(stage) =>
-                          void handleStageChange(card.id, card.full_name, stage)
-                        }
-                      />
-                    </div>
-                  ))}
-
-                  {column.count > column.candidates.length && (
-                    <p className="text-center text-xs font-medium text-slate-500">
-                      + {column.count - column.candidates.length} more
-                    </p>
-                  )}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </Section>
@@ -877,6 +1098,50 @@ function AdminRecruitment() {
                           run(() => Promise.resolve(), message)
                         }
                       />
+
+                      {candidate.stage === "offer" && (
+                        <div className="mt-1">
+                          {candidate.offer_details ? (
+                            <button
+                              type="button"
+                              onClick={() => setOfferModalCandidate(candidate)}
+                              className="inline-flex items-center gap-1 rounded-full bg-pink-50 px-2.5 py-1 text-[11px] font-semibold text-pink-700 hover:bg-pink-100"
+                            >
+                              <FileText className="h-3 w-3" />
+                              Offer: ₹{Number(candidate.offer_details.offered_salary).toLocaleString("en-IN")}
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setOfferModalCandidate(candidate)}
+                              className="inline-flex items-center gap-1 rounded-full bg-pink-600 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm hover:bg-pink-700"
+                            >
+                              <Send className="h-3 w-3" />
+                              Issue Job Offer
+                            </button>
+                          )}
+                        </div>
+                      )}
+
+                      {candidate.stage === "hired" && (
+                        <div className="mt-1">
+                          {candidate.is_onboarded ? (
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                              Onboarded ({candidate.employee_code ?? "EMP"})
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setOnboardModalCandidate(candidate)}
+                              className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-3 py-1 text-[11px] font-semibold text-white shadow-sm hover:bg-emerald-700"
+                            >
+                              <UserCheck className="h-3.5 w-3.5" />
+                              Onboard as Employee
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </li>
                 ))}
@@ -1139,6 +1404,38 @@ function AdminRecruitment() {
           jobs={jobs}
           onClose={() => setCandidateModalOpen(false)}
           onSaved={handleSaved}
+        />
+      )}
+
+      {offerModalCandidate && (
+        <OfferModal
+          candidate={offerModalCandidate}
+          onClose={() => setOfferModalCandidate(null)}
+          onSaved={handleSaved}
+        />
+      )}
+
+      {onboardModalCandidate && (
+        <OnboardCandidateModal
+          candidate={onboardModalCandidate}
+          onClose={() => setOnboardModalCandidate(null)}
+          onSaved={handleSaved}
+        />
+      )}
+
+      {rejectionCandidate && (
+        <RejectionModal
+          candidate={
+            (candidates?.items.find((c) => c.id === rejectionCandidate.id) ?? {
+              id: rejectionCandidate.id,
+              full_name: rejectionCandidate.name,
+              job_title: "Candidate",
+            }) as Candidate
+          }
+          onClose={() => setRejectionCandidate(null)}
+          onConfirm={(sendEmail, reason) =>
+            void handleConfirmRejection(sendEmail, reason)
+          }
         />
       )}
     </div>
