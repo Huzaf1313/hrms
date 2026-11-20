@@ -1,8 +1,8 @@
 import { useState, type ReactNode } from "react";
-import { X } from "lucide-react";
+import { Mail, UserCheck, X } from "lucide-react";
 
 import { recruitmentService } from "./recruitmentService";
-import type { JobPosition } from "./types";
+import type { Candidate, JobPosition } from "./types";
 
 const inputClass =
   "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500";
@@ -383,6 +383,398 @@ export function CandidateModal({ jobs, onClose, onSaved }: CandidateModalProps) 
           </div>
         </div>
       )}
+    </ModalShell>
+  );
+}
+
+// ---------------------------------------------------------------- Offer modal
+
+interface OfferModalProps {
+  candidate: Candidate;
+  onClose: () => void;
+  onSaved: (message: string) => void;
+}
+
+export function OfferModal({ candidate, onClose, onSaved }: OfferModalProps) {
+  const existing = candidate.offer_details;
+  const [offeredSalary, setOfferedSalary] = useState(
+    existing ? String(existing.offered_salary) : ""
+  );
+  const [joiningDate, setJoiningDate] = useState(
+    existing?.joining_date ?? new Date(Date.now() + 15 * 86400000).toISOString().slice(0, 10)
+  );
+  const [designation, setDesignation] = useState(
+    existing?.designation ?? candidate.job_title
+  );
+  const [workLocation, setWorkLocation] = useState(
+    existing?.work_location ?? "Office"
+  );
+  const [expiryDate, setExpiryDate] = useState(
+    existing?.expiry_date ?? new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10)
+  );
+  const [notes, setNotes] = useState(existing?.notes ?? "");
+  const [sendEmail, setSendEmail] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSave() {
+    const salary = Number(offeredSalary);
+    if (!salary || Number.isNaN(salary) || salary <= 0) {
+      return setError("Please enter a valid offered salary (Annual CTC).");
+    }
+    if (!joiningDate) {
+      return setError("Please specify a proposed joining date.");
+    }
+
+    setSaving(true);
+    setError("");
+
+    try {
+      await recruitmentService.issueOffer(candidate.id, {
+        offered_salary: salary,
+        joining_date: joiningDate,
+        designation: designation.trim() || candidate.job_title,
+        work_location: workLocation.trim() || "Office",
+        expiry_date: expiryDate || undefined,
+        notes: notes.trim() || undefined,
+        send_email: sendEmail,
+      });
+
+      onSaved(
+        sendEmail
+          ? `Offer issued to ${candidate.full_name} and email notification dispatched.`
+          : `Offer issued to ${candidate.full_name} successfully.`
+      );
+    } catch (err) {
+      setError(errorText(err));
+      setSaving(false);
+    }
+  }
+
+  return (
+    <ModalShell title={`Issue Job Offer — ${candidate.full_name}`} onClose={onClose}>
+      <div className="space-y-4">
+        <div className="rounded-xl border border-blue-100 bg-blue-50/70 p-3 text-xs text-blue-900">
+          <p className="font-semibold text-blue-800">{candidate.full_name}</p>
+          <p className="text-blue-600">
+            {candidate.job_title} · {candidate.department} · {candidate.email}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Annual CTC (₹)" required>
+            <input
+              className={inputClass}
+              type="number"
+              min={1}
+              step="1000"
+              placeholder="e.g. 650000"
+              value={offeredSalary}
+              onChange={(e) => setOfferedSalary(e.target.value)}
+            />
+          </Field>
+          <Field label="Proposed Joining Date" required>
+            <input
+              className={inputClass}
+              type="date"
+              value={joiningDate}
+              onChange={(e) => setJoiningDate(e.target.value)}
+            />
+          </Field>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Designation">
+            <input
+              className={inputClass}
+              value={designation}
+              onChange={(e) => setDesignation(e.target.value)}
+            />
+          </Field>
+          <Field label="Work Location">
+            <input
+              className={inputClass}
+              value={workLocation}
+              onChange={(e) => setWorkLocation(e.target.value)}
+            />
+          </Field>
+        </div>
+
+        <Field label="Offer Expiry Date (optional)">
+          <input
+            className={inputClass}
+            type="date"
+            value={expiryDate}
+            onChange={(e) => setExpiryDate(e.target.value)}
+          />
+        </Field>
+
+        <Field label="Special Notes / Instructions (optional)">
+          <textarea
+            className={inputClass}
+            rows={2}
+            placeholder="e.g. Please bring original degree certificates and ID proof on Day 1."
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+          />
+        </Field>
+
+        <label className="flex items-center gap-2 cursor-pointer pt-1">
+          <input
+            type="checkbox"
+            checked={sendEmail}
+            onChange={(e) => setSendEmail(e.target.checked)}
+            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+          />
+          <span className="text-xs font-medium text-slate-700 flex items-center gap-1.5">
+            <Mail className="h-3.5 w-3.5 text-blue-600" />
+            Send formal offer letter notification email to candidate
+          </span>
+        </label>
+
+        {error && <p className="text-sm text-red-600">{error}</p>}
+
+        <div className="flex justify-end gap-3 pt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={saving}
+            onClick={() => void handleSave()}
+            className="rounded-lg bg-[#2563eb] px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+          >
+            {saving ? "Issuing Offer..." : "Issue & Send Offer"}
+          </button>
+        </div>
+      </div>
+    </ModalShell>
+  );
+}
+
+// -------------------------------------------------------- Onboard candidate modal
+
+interface OnboardCandidateModalProps {
+  candidate: Candidate;
+  onClose: () => void;
+  onSaved: (message: string) => void;
+}
+
+export function OnboardCandidateModal({
+  candidate,
+  onClose,
+  onSaved,
+}: OnboardCandidateModalProps) {
+  const offer = candidate.offer_details;
+  const [joiningDate, setJoiningDate] = useState(
+    offer?.joining_date ?? new Date().toISOString().slice(0, 10)
+  );
+  const [employmentType, setEmploymentType] = useState("Full-time");
+  const [workLocation, setWorkLocation] = useState(
+    offer?.work_location ?? "Office"
+  );
+  const [salary, setSalary] = useState(
+    offer ? String(offer.offered_salary) : ""
+  );
+  const [tempPassword, setTempPassword] = useState("");
+  const [sendWelcomeEmail, setSendWelcomeEmail] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleOnboard() {
+    setSaving(true);
+    setError("");
+
+    try {
+      const updated = await recruitmentService.onboardCandidate(candidate.id, {
+        joining_date: joiningDate,
+        employment_type: employmentType,
+        work_location: workLocation,
+        salary: salary ? Number(salary) : undefined,
+        temporary_password: tempPassword.trim() || undefined,
+        send_welcome_email: sendWelcomeEmail,
+      });
+
+      onSaved(
+        `Candidate ${candidate.full_name} onboarded as Employee ${updated.employee_code ?? ""} successfully!`
+      );
+    } catch (err) {
+      setError(errorText(err));
+      setSaving(false);
+    }
+  }
+
+  return (
+    <ModalShell title={`Onboard as Employee — ${candidate.full_name}`} onClose={onClose}>
+      <div className="space-y-4">
+        <div className="rounded-xl border border-emerald-100 bg-emerald-50/70 p-3 text-xs text-emerald-900">
+          <p className="font-semibold text-emerald-800 flex items-center gap-1.5">
+            <UserCheck className="h-4 w-4 text-emerald-600" />
+            {candidate.full_name}
+          </p>
+          <p className="text-emerald-700 mt-0.5">
+            Designation: <strong>{candidate.job_title}</strong> · Department: <strong>{candidate.department}</strong>
+          </p>
+          <p className="text-emerald-600">{candidate.email} {candidate.phone ? `· ${candidate.phone}` : ""}</p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Official Joining Date" required>
+            <input
+              className={inputClass}
+              type="date"
+              value={joiningDate}
+              onChange={(e) => setJoiningDate(e.target.value)}
+            />
+          </Field>
+          <Field label="Employment Type">
+            <select
+              className={inputClass}
+              value={employmentType}
+              onChange={(e) => setEmploymentType(e.target.value)}
+            >
+              <option value="Full-time">Full-time</option>
+              <option value="Part-time">Part-time</option>
+              <option value="Contract">Contract</option>
+              <option value="Intern">Intern</option>
+            </select>
+          </Field>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Work Location">
+            <input
+              className={inputClass}
+              value={workLocation}
+              onChange={(e) => setWorkLocation(e.target.value)}
+            />
+          </Field>
+          <Field label="Annual Salary / CTC (₹)">
+            <input
+              className={inputClass}
+              type="number"
+              min={0}
+              placeholder="e.g. 600000"
+              value={salary}
+              onChange={(e) => setSalary(e.target.value)}
+            />
+          </Field>
+        </div>
+
+        <Field label="Custom Password (leave blank to auto-generate)">
+          <input
+            className={inputClass}
+            type="text"
+            placeholder="Auto-generated secure password"
+            value={tempPassword}
+            onChange={(e) => setTempPassword(e.target.value)}
+          />
+        </Field>
+
+        <label className="flex items-center gap-2 cursor-pointer pt-1">
+          <input
+            type="checkbox"
+            checked={sendWelcomeEmail}
+            onChange={(e) => setSendWelcomeEmail(e.target.checked)}
+            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+          />
+          <span className="text-xs font-medium text-slate-700 flex items-center gap-1.5">
+            <Mail className="h-3.5 w-3.5 text-blue-600" />
+            Send Welcome Email with login portal instructions
+          </span>
+        </label>
+
+        {error && <p className="text-sm text-red-600">{error}</p>}
+
+        <div className="flex justify-end gap-3 pt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={saving}
+            onClick={() => void handleOnboard()}
+            className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60"
+          >
+            {saving ? "Onboarding..." : "Confirm & Create Employee"}
+          </button>
+        </div>
+      </div>
+    </ModalShell>
+  );
+}
+
+// ----------------------------------------------------------- Rejection modal
+
+interface RejectionModalProps {
+  candidate: Candidate;
+  onClose: () => void;
+  onConfirm: (sendEmail: boolean, reason: string) => void;
+}
+
+export function RejectionModal({
+  candidate,
+  onClose,
+  onConfirm,
+}: RejectionModalProps) {
+  const [sendEmail, setSendEmail] = useState(true);
+  const [reason, setReason] = useState("");
+
+  return (
+    <ModalShell title={`Move to Rejected — ${candidate.full_name}`} onClose={onClose}>
+      <div className="space-y-4">
+        <p className="text-sm text-slate-600">
+          Are you sure you want to mark <strong>{candidate.full_name}</strong> as <strong>Rejected</strong> for the position of <strong>{candidate.job_title}</strong>?
+        </p>
+
+        <Field label="Rejection Feedback (Optional - shared with candidate if email is sent)">
+          <textarea
+            className={inputClass}
+            rows={3}
+            placeholder="e.g. We are moving forward with candidates who have deeper expertise in the required stack."
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+          />
+        </Field>
+
+        <label className="flex items-center gap-2 cursor-pointer pt-1">
+          <input
+            type="checkbox"
+            checked={sendEmail}
+            onChange={(e) => setSendEmail(e.target.checked)}
+            className="rounded border-slate-300 text-red-600 focus:ring-red-500"
+          />
+          <span className="text-xs font-medium text-slate-700 flex items-center gap-1.5">
+            <Mail className="h-3.5 w-3.5 text-red-600" />
+            Send polite rejection email to candidate
+          </span>
+        </label>
+
+        <div className="flex justify-end gap-3 pt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => onConfirm(sendEmail, reason.trim())}
+            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+          >
+            Confirm Rejection
+          </button>
+        </div>
+      </div>
     </ModalShell>
   );
 }

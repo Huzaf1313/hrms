@@ -2,6 +2,8 @@ import { api, downloadFile } from "../../services/api";
 import type {
   Candidate,
   CandidateInput,
+  CandidateOfferInput,
+  CandidateOnboardInput,
   CandidateStage,
   JobPosition,
   JobPositionInput,
@@ -9,6 +11,7 @@ import type {
   Paginated,
   PipelineColumn,
   RecruitmentStats,
+  ScheduleInterviewInput,
   UpcomingInterview,
 } from "./types";
 
@@ -71,9 +74,16 @@ export const recruitmentService = {
     return api.post<Candidate>("/recruitment/candidates", data);
   },
 
-  changeStage(id: string, stage: CandidateStage) {
+  changeStage(
+    id: string,
+    stage: CandidateStage,
+    sendRejectionEmail = false,
+    rejectionReason?: string,
+  ) {
     return api.patch<Candidate>(`/recruitment/candidates/${id}/stage`, {
       stage,
+      send_rejection_email: sendRejectionEmail,
+      rejection_reason: rejectionReason,
     });
   },
 
@@ -84,10 +94,27 @@ export const recruitmentService = {
    * timezone offset; the server rejects naive or past times. Pass null to
    * cancel a booking.
    */
-  scheduleInterview(id: string, when: string | null) {
-    return api.patch<Candidate>(`/recruitment/candidates/${id}/interview`, {
-      interview_scheduled_at: when,
-    });
+  scheduleInterview(
+    id: string,
+    payload: ScheduleInterviewInput | string | null,
+  ) {
+    if (typeof payload === "string" || payload === null) {
+      return api.patch<Candidate>(`/recruitment/candidates/${id}/interview`, {
+        interview_scheduled_at: payload,
+      });
+    }
+
+    return api.patch<Candidate>(`/recruitment/candidates/${id}/interview`, payload);
+  },
+
+  // ---- Offers & Onboarding
+
+  issueOffer(id: string, data: CandidateOfferInput) {
+    return api.post<Candidate>(`/recruitment/candidates/${id}/offer`, data);
+  },
+
+  onboardCandidate(id: string, data: CandidateOnboardInput = {}) {
+    return api.post<Candidate>(`/recruitment/candidates/${id}/onboard`, data);
   },
 
   /** Interviews still ahead of now, soonest first. */

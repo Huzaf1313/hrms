@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interview Scheduled: {{ job_title }} - {{ company_name }}</title>
+</head>
+<body style="
+    margin: 0;
+    padding: 0;
+    background-color: #f4f6f8;
+    font-family: Arial, Helvetica, sans-serif;
+    color: #1f2937;
+">
+    <div style="width: 100%; padding: 40px 0;">
+        <div style="
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+        ">
+            <!-- Header -->
+            <div style="
+                background: linear-gradient(135deg, #7c3aed, #6d28d9);
+                padding: 28px 32px;
+                text-align: center;
+            ">
+                <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700;">
+                    {{ company_name }}
+                </h1>
+                <p style="margin: 6px 0 0; color: #ede9fe; font-size: 13px;">
+                    Interview Invitation
+                </p>
+            </div>
+
+            <!-- Content -->
+            <div style="padding: 32px;">
+                <h2 style="margin: 0 0 12px; font-size: 20px; color: #111827;">
+                    Your Interview is Confirmed
+                </h2>
+                <p style="margin: 0 0 16px; font-size: 14px; line-height: 1.6; color: #4b5563;">
+                    Dear <strong>{{ candidate_name }}</strong>,
+                </p>
+                <p style="margin: 0 0 20px; font-size: 14px; line-height: 1.6; color: #4b5563;">
+                    Thank you for applying for the position of <strong>{{ job_title }}</strong> at <strong>{{ company_name }}</strong>. We were impressed with your profile and would like to invite you for an interview.
+                </p>
+
+                <!-- Interview Highlight Card -->
+                <div style="
+                    background-color: #faf5ff;
+                    border: 1px solid #e9d5ff;
+                    border-radius: 10px;
+                    padding: 20px;
+                    margin-bottom: 24px;
+                    text-align: center;
+                ">
+                    <div style="font-size: 12px; font-weight: 600; color: #7c3aed; text-transform: uppercase; letter-spacing: 0.5px;">
+                        Scheduled Date & Time
+                    </div>
+                    <div style="font-size: 20px; font-weight: 700; color: #581c87; margin: 8px 0;">
+                        {{ interview_date_time }}
+                    </div>
+                    {% if timezone_info %}
+                    <div style="font-size: 12px; color: #9333ea;">
+                        Timezone: {{ timezone_info }}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Interview Details Table -->
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 13px;">
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 10px 0; color: #64748b; width: 35%;">Position:</td>
+                        <td style="padding: 10px 0; font-weight: 600; color: #1e293b;">{{ job_title }}</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 10px 0; color: #64748b;">Department:</td>
+                        <td style="padding: 10px 0; font-weight: 600; color: #1e293b;">{{ department }}</td>
+                    </tr>
+                    {% if meeting_link %}
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 10px 0; color: #64748b;">Meeting Link:</td>
+                        <td style="padding: 10px 0; font-weight: 600; color: #2563eb;">
+                            <a href="{{ meeting_link }}" style="color: #2563eb; text-decoration: underline;" target="_blank">
+                                Join Video Call
+                            </a>
+                        </td>
+                    </tr>
+                    {% endif %}
+                </table>
+
+                {% if notes %}
+                <div style="
+                    background-color: #f8fafc;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 8px;
+                    padding: 14px 16px;
+                    margin-bottom: 24px;
+                    font-size: 13px;
+                    color: #475569;
+                    line-height: 1.5;
+                ">
+                    <strong style="color: #334155;">Instructions / Agenda:</strong><br>
+                    {{ notes }}
+                </div>
+                {% endif %}
+
+                <p style="margin: 0 0 16px; font-size: 14px; line-height: 1.6; color: #4b5563;">
+                    Please ensure you are ready a few minutes before the scheduled time. If you need to reschedule or have any questions, reply to this email as soon as possible.
+                </p>
+
+                <!-- Signature -->
+                <p style="margin: 24px 0 0; font-size: 13px; line-height: 1.6; color: #6b7280;">
+                    Best regards,<br>
+                    <strong>Recruitment Team</strong><br>
+                    {{ company_name }}
+                </p>
+            </div>
+
+            <!-- Footer -->
+            <div style="
+                padding: 16px 32px;
+                background-color: #f9fafb;
+                border-top: 1px solid #e5e7eb;
+                text-align: center;
+                font-size: 12px;
+                color: #9ca3af;
+            ">
+                <p style="margin: 0;">Automated interview scheduling notification from {{ company_name }}.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

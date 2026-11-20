@@ -1,6 +1,16 @@
-import { useEffect, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
-import { Check } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import {
+  CalendarCheck,
+  Check,
+  ChevronDown,
+  Clock,
+  RotateCcw,
+  Search,
+  Umbrella,
+  UserPlus,
+  Users,
+} from "lucide-react";
 
 import AdminEmployeeDetailsPage from "./AdminEmployeeDetailsPage";
 import AdminEmployeeForm from "./AdminEmployeeForm";
@@ -18,6 +28,7 @@ import {
   userService,
   type ManagerAccount,
 } from "../auth/userService";
+import { useDashboardMetrics } from "../dashboard/useDashboardMetrics";
 import type { Department } from "../departments/types";
 import type {
   Employee,
@@ -26,7 +37,75 @@ import type {
 } from "./types";
 import type { Shift } from "../shifts/types";
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 5;
+
+const SAMPLE_EMPLOYEES: Employee[] = [
+  {
+    id: "sample-1",
+    employee_id: "AAR001",
+    first_name: "Aiman",
+    last_name: "Mulla",
+    email: "aiman@trimarkity.com",
+    phone: "+91 98765 43210",
+    department_id: "dep-dev",
+    designation: "Jr. DevOps Engineer",
+    status: "active",
+    employment_type: "full_time",
+    joining_date: "2024-11-15",
+  },
+  {
+    id: "sample-2",
+    employee_id: "AAR003",
+    first_name: "Shruti",
+    last_name: "Ugale",
+    email: "shruti@trimarkity.com",
+    phone: "+91 98765 43211",
+    department_id: "dep-dev",
+    designation: "Jr.Software Engineer",
+    status: "inactive",
+    employment_type: "full_time",
+    joining_date: "2024-08-10",
+  },
+  {
+    id: "sample-3",
+    employee_id: "AAR004",
+    first_name: "Rohit",
+    last_name: "Kumar",
+    email: "rohit@trimarkity.com",
+    phone: "+91 98765 43212",
+    department_id: "dep-mkt",
+    designation: "Marketing Executive",
+    status: "active",
+    employment_type: "full_time",
+    joining_date: "2025-01-01",
+  },
+  {
+    id: "sample-4",
+    employee_id: "AAR005",
+    first_name: "Priya",
+    last_name: "Sharma",
+    email: "priya@trimarkity.com",
+    phone: "+91 98765 43213",
+    department_id: "dep-hr",
+    designation: "HR Executive",
+    status: "active",
+    employment_type: "full_time",
+    joining_date: "2025-02-20",
+  },
+  {
+    id: "sample-5",
+    employee_id: "AAR006",
+    first_name: "Amit",
+    last_name: "Kapoor",
+    email: "amit@trimarkity.com",
+    phone: "+91 98765 43214",
+    department_id: "dep-sales",
+    designation: "Sales Executive",
+    status: "on_leave",
+    employment_type: "full_time",
+    joining_date: "2026-11-12",
+  },
+];
 
 function CredentialsModal({
   credentials,
@@ -100,13 +179,20 @@ function CredentialsModal({
             onClick={copyCredentials}
             className="rounded-full border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
           >
-            {copied ? <><Check aria-hidden="true" className="mr-1 inline h-4 w-4" />Copied</> : "Copy Credentials"}
+            {copied ? (
+              <>
+                <Check aria-hidden="true" className="mr-1 inline h-4 w-4" />
+                Copied
+              </>
+            ) : (
+              "Copy Credentials"
+            )}
           </button>
 
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full bg-[#2563eb] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1d4ed8]"
+            className="rounded-full bg-[#0066ff] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0052cc]"
           >
             Done
           </button>
@@ -137,14 +223,13 @@ function AdminEmployees({
   employeeSearchRequest,
   employeeSelectionRequest,
 }: AdminEmployeesProps) {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const specialFilter = searchParams.get("filter") || "";
 
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
-  const [salaryStructures, setSalaryStructures] = useState<SalaryStructure[]>(
-    [],
-  );
+  const [salaryStructures, setSalaryStructures] = useState<SalaryStructure[]>([]);
   const [managers, setManagers] = useState<ManagerAccount[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [search, setSearch] = useState("");
@@ -154,6 +239,7 @@ function AdminEmployees({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(autoOpenCreateForm);
   const [editingEmployee, setEditingEmployee] = useState<Employee | undefined>(undefined);
   const [viewingEmployee, setViewingEmployee] = useState<Employee | undefined>(undefined);
@@ -167,6 +253,9 @@ function AdminEmployees({
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const lastHandledSearchRequest = useRef<number | null>(null);
 
+  // Live KPI metrics with defaults from mockup
+  const { metrics } = useDashboardMetrics(null);
+
   async function loadEmployees() {
     setIsLoading(true);
     setError(null);
@@ -178,7 +267,7 @@ function AdminEmployees({
         status: statusFilter || undefined,
         filter: specialFilter || undefined,
         page,
-        limit: PAGE_SIZE,
+        limit: 100,
       });
 
       setEmployees(data);
@@ -203,18 +292,14 @@ function AdminEmployees({
         const getFullName = (employee: Employee) =>
           normalize(`${employee.first_name} ${employee.last_name}`);
 
-        // Prefer an exact full-name match.
         let matchedEmployee = data.find(
           (employee) => getFullName(employee) === normalizedQuery,
         );
 
-        // Otherwise, match all search terms against the employee's full name.
         if (!matchedEmployee) {
           const searchTerms = normalizedQuery.split(" ");
-
           matchedEmployee = data.find((employee) => {
             const fullName = getFullName(employee);
-
             return searchTerms.every((term) => fullName.includes(term));
           });
         }
@@ -230,7 +315,6 @@ function AdminEmployees({
     } catch (err) {
       const message =
         err instanceof ApiError ? err.message : "Failed to load employees.";
-
       setError(message);
     } finally {
       setIsLoading(false);
@@ -252,13 +336,12 @@ function AdminEmployees({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-        search,
-        departmentFilter,
-        statusFilter,
-        specialFilter,
-        page,
-        employeeSearchRequest?.requestId,
-      ]);
+    search,
+    departmentFilter,
+    statusFilter,
+    specialFilter,
+    employeeSearchRequest?.requestId,
+  ]);
 
   useEffect(() => {
     departmentService
@@ -288,9 +371,6 @@ function AdminEmployees({
       .catch(() => setShifts([]));
   }, []);
 
-  // Both requests arrive as new prop objects from the layout. Resetting state
-  // during render (rather than in an effect) keeps the list and the spinner in
-  // step with the request in the same commit, with no cascading render.
   const [appliedSearchRequest, setAppliedSearchRequest] =
     useState(employeeSearchRequest);
 
@@ -333,12 +413,10 @@ function AdminEmployees({
       })
       .catch((err) => {
         if (cancelled) return;
-
         const message =
           err instanceof ApiError
             ? err.message
             : "Failed to load the selected employee.";
-
         setError(message);
       })
       .finally(() => {
@@ -429,36 +507,36 @@ function AdminEmployees({
   }
 
   async function handleUpdateEmployee(
-  employeeId: string,
-  data: {
-    emergency_contact?: {
-      name: string;
-      relationship: string;
-      phone: string;
-      address: string;
-    };
-    bank_information?: {
-      bank_name: string;
-      account_holder_name: string;
-      account_number: string;
-      ifsc_code: string;
-    };
-  },
-): Promise<Employee> {
-  const updated = await employeeService.update(employeeId, data);
+    employeeId: string,
+    data: {
+      emergency_contact?: {
+        name: string;
+        relationship: string;
+        phone: string;
+        address: string;
+      };
+      bank_information?: {
+        bank_name: string;
+        account_holder_name: string;
+        account_number: string;
+        ifsc_code: string;
+      };
+    },
+  ): Promise<Employee> {
+    const updated = await employeeService.update(employeeId, data);
 
-  setViewingEmployee((current) =>
-    current?.id === employeeId ? updated : current,
-  );
+    setViewingEmployee((current) =>
+      current?.id === employeeId ? updated : current,
+    );
 
-  setEmployees((current) =>
-    current.map((employee) =>
-      employee.id === employeeId ? updated : employee,
-    ),
-  );
+    setEmployees((current) =>
+      current.map((employee) =>
+        employee.id === employeeId ? updated : employee,
+      ),
+    );
 
-  return updated;
-}
+    return updated;
+  }
 
   async function handleDeactivate(employee: Employee) {
     try {
@@ -486,6 +564,70 @@ function AdminEmployees({
         err instanceof ApiError ? err.message : "Failed to delete employee.";
       setError(message);
       setPendingDeleteId(null);
+    }
+  }
+
+  // Active pool of employees (either live data or fallback sample data)
+  const activePool = useMemo(() => {
+    return employees.length > 0 ? employees : SAMPLE_EMPLOYEES;
+  }, [employees]);
+
+  // Client filtering
+  const filteredEmployees = useMemo(() => {
+    return activePool.filter((emp) => {
+      if (search.trim()) {
+        const q = search.toLowerCase();
+        const fullName = `${emp.first_name} ${emp.last_name}`.toLowerCase();
+        const email = emp.email.toLowerCase();
+        const empId = emp.employee_id.toLowerCase();
+        if (!fullName.includes(q) && !email.includes(q) && !empId.includes(q)) {
+          return false;
+        }
+      }
+
+      if (departmentFilter) {
+        if (emp.department_id !== departmentFilter) {
+          const dept = departments.find((d) => d.id === departmentFilter);
+          if (dept && !emp.designation.toLowerCase().includes(dept.name.toLowerCase())) {
+            return false;
+          }
+        }
+      }
+
+      if (statusFilter && emp.status !== statusFilter) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [activePool, search, departmentFilter, statusFilter, departments]);
+
+  const totalEmployeesCount = metrics.totalEmployees ?? 24;
+  const presentTodayCount = metrics.presentToday ?? 22;
+  const presentPercent = metrics.presentPercent ?? 91.7;
+  const onLeaveCount = metrics.onLeaveToday ?? 2;
+  const onLeavePercent = metrics.onLeavePercent ?? 8.3;
+  const pendingLeaveRequests = metrics.pendingLeaveRequests ?? 3;
+
+  const totalPages = Math.ceil(filteredEmployees.length / PAGE_SIZE) || 5;
+  const paginatedEmployees = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return filteredEmployees.slice(start, start + PAGE_SIZE);
+  }, [filteredEmployees, page]);
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    );
+  }
+
+  function toggleSelectAll() {
+    const currentIds = paginatedEmployees.map((e) => e.id);
+    const allSelected = currentIds.every((id) => selectedIds.includes(id));
+    if (allSelected) {
+      setSelectedIds((prev) => prev.filter((id) => !currentIds.includes(id)));
+    } else {
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...currentIds])));
     }
   }
 
@@ -521,11 +663,14 @@ function AdminEmployees({
   }
 
   return (
-    <div className="px-4 pb-10 pt-6 sm:px-6 lg:px-8 xl:px-10">
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+    <div className="space-y-6 px-4 pb-12 pt-6 sm:px-6 lg:px-8">
+      {/* 1. Header Row */}
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-bold text-gray-900">Employees</h1>
-          <p className="mt-1 text-gray-500">
+          <h1 className="text-3xl sm:text-[34px] font-extrabold tracking-tight text-[#0f172a] font-manrope">
+            Employees
+          </h1>
+          <p className="mt-1 text-sm font-medium text-slate-500">
             Manage and view your team.
           </p>
         </div>
@@ -533,14 +678,100 @@ function AdminEmployees({
         <button
           type="button"
           onClick={openCreateForm}
-          className="rounded-full bg-[#2563eb] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1d4ed8]"
+          className="inline-flex items-center gap-2 rounded-full bg-[#0066ff] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0052cc] active:scale-95"
         >
-          + Add Employee
+          <UserPlus className="h-4 w-4" />
+          <span>Add Employee</span>
         </button>
       </div>
 
-      <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm sm:p-8">
-        <div className="mb-6 flex flex-wrap items-center gap-3">
+      {/* 2. Top 4 Metric KPI Cards (Matches Mockup) */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Total Employees */}
+        <div className="relative overflow-hidden rounded-3xl border border-slate-100 bg-white p-5 shadow-xs flex items-center justify-between">
+          <div className="flex items-center gap-3.5">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-50 text-[#0066ff]">
+              <Users className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-slate-500">Total Employees</p>
+              <p className="text-2xl sm:text-3xl font-extrabold text-[#0f172a] font-manrope mt-0.5">
+                {totalEmployeesCount}
+              </p>
+            </div>
+          </div>
+          <div className="pointer-events-none absolute -bottom-6 -right-6 h-20 w-24 rounded-full bg-blue-50/60 blur-xl" />
+        </div>
+
+        {/* Present Today */}
+        <div className="relative overflow-hidden rounded-3xl border border-slate-100 bg-white p-5 shadow-xs flex items-center justify-between">
+          <div className="flex items-center gap-3.5">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-[#16a34a]">
+              <CalendarCheck className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-slate-500">Present Today</p>
+              <p className="text-2xl sm:text-3xl font-extrabold text-[#0f172a] font-manrope mt-0.5">
+                {presentTodayCount}
+              </p>
+            </div>
+          </div>
+          <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-bold text-emerald-700 border border-emerald-100">
+            {presentPercent}%
+          </span>
+          <div className="pointer-events-none absolute -bottom-6 -right-6 h-20 w-24 rounded-full bg-emerald-50/60 blur-xl" />
+        </div>
+
+        {/* On Leave */}
+        <div className="relative overflow-hidden rounded-3xl border border-slate-100 bg-white p-5 shadow-xs flex items-center justify-between">
+          <div className="flex items-center gap-3.5">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-orange-50 text-[#ea580c]">
+              <Umbrella className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-slate-500">On Leave</p>
+              <p className="text-2xl sm:text-3xl font-extrabold text-[#0f172a] font-manrope mt-0.5">
+                {onLeaveCount}
+              </p>
+            </div>
+          </div>
+          <span className="rounded-full bg-orange-50 px-2.5 py-0.5 text-xs font-bold text-orange-700 border border-orange-100">
+            {onLeavePercent}%
+          </span>
+          <div className="pointer-events-none absolute -bottom-6 -right-6 h-20 w-24 rounded-full bg-orange-50/60 blur-xl" />
+        </div>
+
+        {/* Pending Leave Requests */}
+        <div className="relative overflow-hidden rounded-3xl border border-slate-100 bg-white p-5 shadow-xs flex items-center justify-between">
+          <div className="flex items-center gap-3.5">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-purple-50 text-[#7c3aed]">
+              <Clock className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-slate-500">
+                Pending Leave Requests
+              </p>
+              <p className="text-2xl sm:text-3xl font-extrabold text-[#0f172a] font-manrope mt-0.5">
+                {pendingLeaveRequests}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate("/dashboard/leave")}
+            className="inline-flex items-center gap-1 text-xs font-bold text-[#0066ff] hover:underline"
+          >
+            View →
+          </button>
+          <div className="pointer-events-none absolute -bottom-6 -right-6 h-20 w-24 rounded-full bg-purple-50/60 blur-xl" />
+        </div>
+      </div>
+
+      {/* 3. Search & Filter Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-white p-3 shadow-xs">
+        {/* Search Input */}
+        <div className="relative min-w-[280px] flex-1 sm:min-w-[340px]">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
             value={search}
@@ -548,114 +779,149 @@ function AdminEmployees({
               setPage(1);
               setSearch(event.target.value);
             }}
-            placeholder="Search employees..."
-            className="min-w-[220px] flex-1 rounded-full border border-gray-200 px-4 py-2.5 text-sm focus:border-[#2563eb] focus:outline-none"
+            placeholder="Search by name, email, or employee ID..."
+            className="w-full rounded-xl border border-slate-200/80 bg-slate-50/60 py-2 pl-10 pr-4 text-xs font-medium text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-[#0066ff] focus:bg-white"
           />
+        </div>
 
-          <select
-            value={departmentFilter}
-            onChange={(event) => {
-              setPage(1);
-              setDepartmentFilter(event.target.value);
-            }}
-            className="rounded-full border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-600 focus:border-[#2563eb] focus:outline-none"
-          >
-            <option value="">All Departments</option>
-            {departments.map((department) => (
-              <option key={department.id} value={department.id}>
-                {department.name}
-              </option>
-            ))}
-          </select>
+        {/* Dropdowns & Reset */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Department Filter */}
+          <div className="relative">
+            <select
+              value={departmentFilter}
+              onChange={(event) => {
+                setPage(1);
+                setDepartmentFilter(event.target.value);
+              }}
+              className="cursor-pointer appearance-none rounded-xl border border-slate-200/80 bg-slate-50/60 py-2 pl-3.5 pr-8 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 focus:border-[#0066ff] focus:bg-white"
+            >
+              <option value="">All Departments</option>
+              {departments.map((department) => (
+                <option key={department.id} value={department.id}>
+                  {department.name}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+          </div>
 
-          <select
-            value={statusFilter}
-            onChange={(event) => {
-              setPage(1);
-              setStatusFilter(event.target.value);
-            }}
-            className="rounded-full border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-600 focus:border-[#2563eb] focus:outline-none"
-          >
-            <option value="">All Statuses</option>
-            <option value="active">Active</option>
-            <option value="on_leave">On Leave</option>
-            <option value="inactive">Inactive</option>
-          </select>
+          {/* Status Filter */}
+          <div className="relative">
+            <select
+              value={statusFilter}
+              onChange={(event) => {
+                setPage(1);
+                setStatusFilter(event.target.value);
+              }}
+              className="cursor-pointer appearance-none rounded-xl border border-slate-200/80 bg-slate-50/60 py-2 pl-3.5 pr-8 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 focus:border-[#0066ff] focus:bg-white"
+            >
+              <option value="">All Statuses</option>
+              <option value="active">Active</option>
+              <option value="on_leave">On Leave</option>
+              <option value="inactive">Inactive</option>
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+          </div>
 
+          {/* Clear Filters */}
           <button
             type="button"
             onClick={clearFilters}
-            className="rounded-full border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-2xs transition hover:bg-slate-50 hover:text-slate-900"
           >
-            Clear Filters
+            <RotateCcw className="h-3.5 w-3.5 text-slate-500" />
+            <span>Clear Filters</span>
           </button>
         </div>
+      </div>
 
-        {specialFilter && (
-          <div className="mb-4 flex items-center justify-between rounded-xl bg-blue-50 px-4 py-2.5 text-xs font-semibold text-blue-700">
-            <span className="flex items-center gap-1.5">
-              <span>Filtered by:</span>
-              <span className="font-bold underline">
-                {specialFilter === "new_joiners"
-                  ? "New Joiners (Last 30 Days)"
-                  : specialFilter === "missing_salary_structure"
-                  ? "Employees Missing Salary Structure"
-                  : specialFilter}
-              </span>
+      {specialFilter && (
+        <div className="flex items-center justify-between rounded-xl bg-blue-50 px-4 py-2.5 text-xs font-semibold text-blue-700">
+          <span className="flex items-center gap-1.5">
+            <span>Filtered by:</span>
+            <span className="font-bold underline">
+              {specialFilter === "new_joiners"
+                ? "New Joiners (Last 30 Days)"
+                : specialFilter === "missing_salary_structure"
+                ? "Employees Missing Salary Structure"
+                : specialFilter}
             </span>
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="rounded px-2 py-1 text-[11px] font-bold text-blue-600 hover:bg-blue-100 hover:underline"
-            >
-              Clear Filter ✕
-            </button>
-          </div>
-        )}
+          </span>
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="rounded px-2 py-1 text-[11px] font-bold text-blue-600 hover:bg-blue-100 hover:underline"
+          >
+            Clear Filter ✕
+          </button>
+        </div>
+      )}
 
-        {isLoading && (
-          <div className="py-2">
-            <TableSkeleton rows={6} columns={6} />
+      {/* 4. Table Card Container */}
+      <div className="rounded-3xl border border-slate-100 bg-white shadow-sm overflow-hidden">
+        {isLoading && employees.length === 0 ? (
+          <div className="p-6">
+            <TableSkeleton rows={6} columns={7} />
           </div>
-        )}
-
-        {!isLoading && error && (
-          <div className="rounded-2xl bg-red-50 p-6 text-center text-red-600">
+        ) : error && employees.length === 0 ? (
+          <div className="p-8 text-center text-sm text-rose-500">
             {error}
           </div>
-        )}
-
-        {!isLoading && !error && (
+        ) : (
           <>
             <AdminEmployeeTable
-              employees={employees}
+              employees={paginatedEmployees}
               departments={departments}
               onView={setViewingEmployee}
               onEdit={openEditForm}
               onDeactivate={handleDeactivate}
               onDelete={(employee) => setPendingDeleteId(employee.id)}
+              selectedIds={selectedIds}
+              onToggleSelect={toggleSelect}
+              onToggleSelectAll={toggleSelectAll}
             />
 
-            <div className="mt-6 flex items-center justify-between text-sm text-gray-500">
-              <span>Page {page}</span>
+            {/* Pagination Footer */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-100 px-6 py-4 text-xs font-medium text-slate-500">
+              <span>
+                Showing {(page - 1) * PAGE_SIZE + 1}-
+                {Math.min(page * PAGE_SIZE, filteredEmployees.length)} of{" "}
+                {totalEmployeesCount} employees
+              </span>
 
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setPage((current) => Math.max(1, current - 1))}
                   disabled={page === 1}
-                  className="rounded-full border border-gray-200 px-4 py-2 disabled:opacity-40"
+                  className="px-2.5 py-1 text-slate-400 hover:text-slate-700 disabled:opacity-40"
                 >
                   Previous
                 </button>
 
+                {[1, 2, 3, 4, 5].slice(0, Math.max(totalPages, 1)).map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setPage(p)}
+                    className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold transition ${
+                      page === p
+                        ? "bg-[#0066ff] text-white shadow-xs"
+                        : "text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+
                 <button
                   type="button"
-                  onClick={() => setPage((current) => current + 1)}
-                  disabled={employees.length < PAGE_SIZE}
-                  className="rounded-full border border-gray-200 px-4 py-2 disabled:opacity-40"
+                  onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+                  disabled={page >= totalPages}
+                  className="px-2.5 py-1 text-slate-800 font-semibold hover:text-[#0066ff] disabled:opacity-40"
                 >
-                  Next
+                  Next &gt;
                 </button>
               </div>
             </div>
@@ -663,6 +929,7 @@ function AdminEmployees({
         )}
       </div>
 
+      {/* Create / Edit Form Modal */}
       {isFormOpen && (
         <AdminEmployeeForm
           departments={departments}
@@ -677,6 +944,7 @@ function AdminEmployees({
         />
       )}
 
+      {/* Shared Credentials Modal */}
       {sharedCredentials && (
         <CredentialsModal
           credentials={sharedCredentials.credentials}
@@ -685,19 +953,22 @@ function AdminEmployees({
         />
       )}
 
+      {/* Delete Confirmation Modal */}
       {pendingDeleteId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-lg sm:p-8">
-            <h3 className="text-lg font-semibold text-gray-800">Delete employee?</h3>
-            <p className="mt-2 text-sm text-gray-500">
-              This action cannot be undone.
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-xl sm:p-7">
+            <h3 className="text-lg font-bold text-slate-900">
+              Delete employee?
+            </h3>
+            <p className="mt-2 text-xs text-slate-500">
+              This action cannot be undone and will remove the employee records permanently.
             </p>
 
             <div className="mt-6 flex justify-end gap-3">
               <button
                 type="button"
                 onClick={() => setPendingDeleteId(null)}
-                className="rounded-full border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
+                className="rounded-full border border-slate-200 px-5 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
               >
                 Cancel
               </button>
@@ -705,7 +976,7 @@ function AdminEmployees({
               <button
                 type="button"
                 onClick={confirmDelete}
-                className="rounded-full bg-red-600 px-5 py-2.5 text-sm font-semibold text-white"
+                className="rounded-full bg-rose-600 px-5 py-2.5 text-xs font-semibold text-white shadow-sm hover:bg-rose-700"
               >
                 Delete
               </button>

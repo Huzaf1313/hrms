@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Bell, ChevronDown, ChevronRight, LogOut, Menu, Search } from "lucide-react";
+import { Bell, ChevronDown, LogOut, Menu, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import AdminNotificationDropdown from "../modules/dashboard/AdminNotificationDropdown";
@@ -20,13 +20,6 @@ interface HeaderProps {
   onSearchEmployee?: (query: string) => void;
   onSelectEmployee?: (employeeId: string) => void;
 }
-
-// Only pages that genuinely sit under a parent get a trail; the rest render
-// flat as just their own name. Attendance, Leave and My Profile are top-level
-// pages in the sidebar, so they carry no "Dashboard" prefix.
-const trails: Record<string, string[]> = {
-  "Regularization Requests": ["Attendance", "Regularization Requests"],
-};
 
 function readUser() {
   try {
@@ -132,18 +125,18 @@ function Header({
 
   const employeeSuggestions = normalizedQuery
     ? allEmployees
-        .filter((employee) => {
-          const fullName = employeeFullName(employee).toLowerCase();
-          const firstName = employee.first_name.toLowerCase();
-          const lastName = employee.last_name.toLowerCase();
+      .filter((employee) => {
+        const fullName = employeeFullName(employee).toLowerCase();
+        const firstName = employee.first_name.toLowerCase();
+        const lastName = employee.last_name.toLowerCase();
 
-          return (
-            fullName.includes(normalizedQuery) ||
-            firstName.startsWith(normalizedQuery) ||
-            lastName.startsWith(normalizedQuery)
-          );
-        })
-        .slice(0, 8)
+        return (
+          fullName.includes(normalizedQuery) ||
+          firstName.startsWith(normalizedQuery) ||
+          lastName.startsWith(normalizedQuery)
+        );
+      })
+      .slice(0, 8)
     : [];
 
   function selectEmployee(employee: Employee) {
@@ -248,7 +241,7 @@ function Header({
     .toUpperCase();
 
   return (
-    <header className="sticky top-0 z-30 flex h-[72px] items-center justify-between gap-4 border-b border-gray-200 bg-white px-6">
+    <header className="sticky top-0 z-30 flex h-[72px] items-center justify-between gap-4 border-b border-slate-100 bg-white px-6">
       <div className="flex min-w-0 items-center gap-4">
         <button
           type="button"
@@ -256,7 +249,7 @@ function Header({
             if (onOpenSidebar) onOpenSidebar();
             else onToggleSidebar?.();
           }}
-          className="flex h-10 w-10 items-center justify-center rounded-lg text-gray-600 transition hover:bg-gray-100 lg:hidden"
+          className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-700 transition hover:bg-slate-100 lg:hidden"
           aria-label="Open menu"
         >
           <Menu className="h-5 w-5" />
@@ -266,7 +259,7 @@ function Header({
           <button
             type="button"
             onClick={onToggleSidebar}
-            className="hidden h-10 w-10 items-center justify-center rounded-lg text-gray-600 transition hover:bg-gray-100 lg:flex"
+            className="hidden h-10 w-10 items-center justify-center rounded-xl text-slate-700 transition hover:bg-slate-100 lg:flex"
             aria-label="Toggle menu"
             aria-expanded={!collapsed}
           >
@@ -274,97 +267,82 @@ function Header({
           </button>
         )}
 
-        <nav aria-label="Breadcrumb" className="min-w-0">
-          <ol className="flex items-center gap-1.5 text-sm">
-            {(trails[pageTitle] ?? [pageTitle]).map((crumb, index, all) => (
-              <li key={crumb} className="flex min-w-0 items-center gap-1.5">
-                <span
-                  className={`truncate ${index === all.length - 1 ? "font-semibold text-gray-900" : "text-gray-500"}`}
-                >
-                  {crumb}
-                </span>
-
-                {index < all.length - 1 && (
-                  <ChevronRight className="h-4 w-4 shrink-0 text-gray-300" />
-                )}
-              </li>
-            ))}
-          </ol>
-        </nav>
+        <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0f172a] font-manrope">
+          {pageTitle}
+        </h1>
       </div>
 
-      <div className="flex items-center gap-3">
-        <div className="relative hidden lg:block">
-          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+      {/* Center Search Pill */}
+      <div className="relative hidden md:block flex-1 max-w-xs lg:max-w-sm mx-4">
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
 
-          <input
-            type="text"
-            value={employeeSearch}
-            onChange={(event) => {
-              setEmployeeSearch(event.target.value);
-              setShowEmployeeSuggestions(true);
-            }}
-            onFocus={() => setShowEmployeeSuggestions(true)}
-            onBlur={() => setShowEmployeeSuggestions(false)}
-            onKeyDown={handleEmployeeSearchKeyDown}
-            placeholder="Search employees..."
-            aria-label="Search employees"
-            aria-autocomplete="list"
-            aria-expanded={
-              showEmployeeSuggestions && employeeSuggestions.length > 0
-            }
-            className="w-64 rounded-full border border-gray-200 bg-[#f5f7fb] py-2.5 pl-10 pr-4 text-sm outline-none transition placeholder:text-gray-400 focus:border-[#2563eb] focus:bg-white focus:ring-2 focus:ring-[#2563eb]/15"
-          />
+        <input
+          type="text"
+          value={employeeSearch}
+          onChange={(event) => {
+            setEmployeeSearch(event.target.value);
+            setShowEmployeeSuggestions(true);
+          }}
+          onFocus={() => setShowEmployeeSuggestions(true)}
+          onBlur={() => setShowEmployeeSuggestions(false)}
+          onKeyDown={handleEmployeeSearchKeyDown}
+          placeholder="Search employees..."
+          aria-label="Search employees"
+          className="w-full rounded-full bg-[#f1f4f9] py-2 pl-10 pr-4 text-xs text-slate-800 outline-none transition placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-blue-500/20 border border-transparent focus:border-slate-200"
+        />
 
-          {showEmployeeSuggestions && normalizedQuery && (
-            <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
-              {employeeSuggestions.length > 0 ? (
-                <ul role="listbox" className="max-h-80 overflow-y-auto py-2">
-                  {employeeSuggestions.map((employee) => (
-                    <li key={employee.id} role="option" aria-selected={false}>
-                      <button
-                        type="button"
-                        onMouseDown={(event) => event.preventDefault()}
-                        onClick={() => selectEmployee(employee)}
-                        className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-blue-50"
-                      >
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-700">
-                          {employee.first_name.charAt(0).toUpperCase()}
+        {showEmployeeSuggestions && normalizedQuery && (
+          <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
+            {employeeSuggestions.length > 0 ? (
+              <ul role="listbox" className="max-h-80 overflow-y-auto py-2">
+                {employeeSuggestions.map((employee) => (
+                  <li key={employee.id} role="option" aria-selected={false}>
+                    <button
+                      type="button"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => selectEmployee(employee)}
+                      className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-blue-50"
+                    >
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-700">
+                        {employee.first_name.charAt(0).toUpperCase()}
+                      </span>
+
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-medium text-slate-900">
+                          {employeeFullName(employee)}
                         </span>
-
-                        <span className="min-w-0">
-                          <span className="block truncate text-sm font-medium text-gray-900">
-                            {employeeFullName(employee)}
-                          </span>
-                          <span className="block text-xs text-gray-500">
-                            {employee.employee_id || "Employee"}
-                          </span>
+                        <span className="block text-xs text-slate-500">
+                          {employee.employee_id || "Employee"}
                         </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="px-4 py-4 text-sm text-gray-500">
-                  No matching employees found.
-                </p>
-              )}
-            </div>
-          )}
-        </div>
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="px-4 py-4 text-sm text-slate-500">
+                No matching employees found.
+              </p>
+            )}
+          </div>
+        )}
+      </div>
 
+      {/* Right Navbar Controls */}
+      <div className="flex items-center gap-3 sm:gap-4">
+        {/* Notification Bell with Badge */}
         <div ref={notificationRef} className="relative">
           <button
             type="button"
             onClick={() => setShowNotificationDropdown((current) => !current)}
-            className="relative flex h-10 w-10 items-center justify-center rounded-full text-gray-600 transition hover:bg-gray-100"
+            className="relative flex h-10 w-10 items-center justify-center rounded-full text-slate-700 transition hover:bg-slate-100"
             aria-label="Notifications"
             aria-expanded={showNotificationDropdown}
           >
             <Bell className="h-5 w-5" />
 
             {unreadCount > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 flex h-4.5 min-w-4 items-center justify-center rounded-full bg-[#ef4444] px-1 text-[9px] font-bold text-white">
+              <span className="absolute -top-0.5 -right-0.5 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-[#ef4444] px-1 text-[10px] font-bold text-white ring-2 ring-white shadow-sm">
                 {unreadCount > 99 ? "99+" : unreadCount}
               </span>
             )}
@@ -378,15 +356,17 @@ function Header({
           )}
         </div>
 
+        {/* Date Badge */}
         <DatePicker canManageHolidays={isAdminRole(user?.role)} />
 
+        {/* User Profile Pill */}
         <div className="relative" ref={profileMenuRef}>
           <button
             type="button"
             onClick={() => setShowProfileMenu((previous) => !previous)}
-            className="flex items-center gap-2.5 rounded-full py-1 pl-1 pr-2 transition hover:bg-gray-100"
+            className="flex items-center gap-2.5 rounded-full p-1 transition hover:bg-slate-100/80"
           >
-            <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-[#2563eb] text-xs font-bold text-white">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#0066ff] text-xs font-extrabold text-white shadow-sm">
               {avatarUrl ? (
                 <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
               ) : (
@@ -394,27 +374,27 @@ function Header({
               )}
             </span>
 
-            <span className="hidden min-w-0 max-w-[180px] text-left sm:block">
-              <span className="block truncate text-sm font-semibold leading-tight text-gray-900">
+            <span className="hidden min-w-0 max-w-[160px] text-left sm:block">
+              <span className="block truncate text-xs font-extrabold leading-tight text-slate-900 tracking-wider uppercase">
                 {fullName}
               </span>
-              <span className="block truncate text-[11px] leading-tight text-gray-500">
+              <span className="block truncate text-[11px] leading-tight text-slate-500 capitalize font-medium">
                 {roleDisplay(user?.role)}
               </span>
             </span>
 
-            <ChevronDown className="h-4 w-4 text-gray-400" />
+            <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
           </button>
 
           {showProfileMenu && (
-            <div className="absolute right-0 top-12 z-50 w-44 overflow-hidden rounded-xl border border-gray-100 bg-white py-1 shadow-xl">
+            <div className="absolute right-0 top-12 z-50 w-44 overflow-hidden rounded-2xl border border-slate-100 bg-white py-1 shadow-xl">
               <button
                 type="button"
                 onClick={() => {
                   setShowProfileMenu(false);
                   navigate("/dashboard/profile");
                 }}
-                className="w-full px-4 py-2.5 text-left text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+                className="w-full px-4 py-2.5 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
               >
                 My Profile
               </button>
@@ -425,9 +405,9 @@ function Header({
                   setShowProfileMenu(false);
                   onLogout();
                 }}
-                className="w-full px-4 py-2.5 text-left text-sm font-medium text-red-600 transition hover:bg-red-50"
+                className="w-full px-4 py-2.5 text-left text-sm font-medium text-red-600 transition hover:bg-red-50 flex items-center gap-2"
               >
-                <LogOut className="mr-2 inline h-4 w-4" />
+                <LogOut className="h-4 w-4" />
                 Log out
               </button>
             </div>

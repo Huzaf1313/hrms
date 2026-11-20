@@ -133,15 +133,15 @@ function StatCard({
   iconBg: string;
 }) {
   return (
-    <div className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5">
-      <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${iconBg}`}>
+    <div className="flex items-center gap-4.5 rounded-3xl border border-slate-100 bg-white p-5.5 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
+      <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${iconBg}`}>
         {icon}
       </span>
       <div className="min-w-0">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <p className="text-2xl font-bold font-manrope text-slate-900">{value}</p>
+        <p className="mt-0.5 text-xs font-semibold uppercase tracking-wider text-slate-400 font-manrope">
           {label}
         </p>
-        <p className="mt-0.5 text-2xl font-bold text-slate-900">{value}</p>
       </div>
     </div>
   );
@@ -694,15 +694,15 @@ export default function AdminAccounts() {
   }, [accounts, roleFilter, search]);
 
   return (
-    <div className="px-5 pb-10 pt-8 sm:px-8 xl:px-10">
+    <div className="space-y-6 px-4 pb-12 pt-6 sm:px-6 lg:px-8">
       {/* Page header */}
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="truncate text-2xl font-bold text-slate-900 sm:text-3xl">
+          <h1 className="truncate text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 font-manrope">
             Admin Accounts
           </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Create, delete and unlock the HR admin and manager accounts.
+          <p className="mt-1 text-sm font-medium text-slate-500">
+            Create, manage and unlock HR admin and manager accounts (Super Admin only).
           </p>
         </div>
 
@@ -710,7 +710,7 @@ export default function AdminAccounts() {
           <button
             type="button"
             onClick={() => setCreating(true)}
-            className="inline-flex h-10 shrink-0 items-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+            className="inline-flex h-11 shrink-0 items-center gap-2 rounded-2xl bg-[#0066ff] px-5 text-sm font-bold text-white shadow-md shadow-blue-500/20 transition hover:bg-[#0052cc]"
           >
             <Plus className="h-4 w-4" />
             Create Account

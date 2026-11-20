@@ -5,8 +5,12 @@ from app.core.roles import Permission
 from app.api.deps import require_permission
 from app.modules.payroll.admin_payslip_schemas import (
     AdminPayslipCreate,
+    AdminBulkPayslipCreate,
+    AdminBulkPayslipResponse,
     PayrollAnalyticsResponse,
     PayslipStatusUpdate,
+    BulkStatusUpdate,
+    BulkEmailRequest,
 )
 from app.core.common_schemas import APIResponse
 from app.core.exceptions import AppException
@@ -181,6 +185,109 @@ async def update_payslip_status(
         "success": True,
         "message": "Payslip status updated successfully",
         "data": updated,
+    }
+
+
+@router.post(
+    "/bulk-generate",
+    summary="Bulk Generate Payslips",
+    description="Run monthly payroll generation for all active employees or a specific department.",
+)
+async def bulk_generate_payslips(
+    payload: AdminBulkPayslipCreate,
+    current_user: dict = Depends(
+        require_permission(Permission.PAYROLL_PROCESS)
+    ),
+):
+    result = await service.bulk_generate_payslips(
+        month=payload.month,
+        year=payload.year,
+        department_id=payload.department_id,
+    )
+
+    try:
+        await invalidate_payroll_analytics_cache()
+        await invalidate_dashboard_cache()
+        await invalidate_payslips_cache()
+    except Exception as exc:
+        logger.error("Failed to invalidate payroll cache after bulk payslip generation: %s", exc)
+
+    return {
+        "success": True,
+        "message": f"Bulk payroll completed: {result.get('created', 0)} created, {result.get('skipped', 0)} skipped",
+        "data": result,
+    }
+
+
+@router.post(
+    "/bulk-status",
+    summary="Bulk Update Payslip Status",
+    description="Update status (e.g. Paid, Credited) for multiple payslips simultaneously.",
+)
+async def bulk_update_payslip_status(
+    payload: BulkStatusUpdate,
+    current_user: dict = Depends(
+        require_permission(Permission.PAYROLL_PROCESS)
+    ),
+):
+    result = await service.bulk_update_status(
+        payslip_ids=payload.payslip_ids,
+        status=payload.status,
+    )
+
+    try:
+        await invalidate_payroll_analytics_cache()
+        await invalidate_dashboard_cache()
+        await invalidate_payslips_cache()
+    except Exception as exc:
+        logger.error("Failed to invalidate payroll cache after bulk status update: %s", exc)
+
+    return {
+        "success": True,
+        "message": f"Updated {result.get('updated', 0)} payslips to '{payload.status}'",
+        "data": result,
+    }
+
+
+@router.post(
+    "/{payslip_id}/send-email",
+    summary="Email Payslip to Employee",
+    description="Send official payslip summary notification to employee's registered email address.",
+)
+async def send_payslip_email(
+    payslip_id: str,
+    current_user: dict = Depends(
+        require_permission(Permission.PAYROLL_PROCESS)
+    ),
+):
+    result = await service.send_payslip_email(payslip_id=payslip_id)
+    return {
+        "success": True,
+        "message": result.get("message", "Payslip email dispatched successfully"),
+        "data": result,
+    }
+
+
+@router.post(
+    "/bulk-send-email",
+    summary="Bulk Email Payslips",
+    description="Dispatch payslip emails to all employees for a given month and year.",
+)
+async def bulk_send_payslip_emails(
+    payload: BulkEmailRequest,
+    current_user: dict = Depends(
+        require_permission(Permission.PAYROLL_PROCESS)
+    ),
+):
+    result = await service.bulk_send_payslip_emails(
+        month=payload.month,
+        year=payload.year,
+        status=payload.status,
+    )
+    return {
+        "success": True,
+        "message": f"Dispatched {result.get('sent', 0)} payslip emails ({result.get('failed', 0)} failed)",
+        "data": result,
     }
 
 

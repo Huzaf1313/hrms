@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from enum import Enum
 from typing import Generic, TypeVar
 
@@ -117,12 +117,39 @@ class CandidateUpdate(BaseModel):
 
 class CandidateStageUpdate(BaseModel):
     stage: CandidateStage
+    send_rejection_email: bool = False
+    rejection_reason: str | None = Field(default=None, max_length=1000)
 
 
 class InterviewScheduleUpdate(BaseModel):
     # Null clears an existing booking, which is how a cancelled interview is
     # taken off the dashboard without deleting the candidate.
     interview_scheduled_at: datetime | None = None
+    meeting_link: str | None = Field(default=None, max_length=500)
+    notes: str | None = Field(default=None, max_length=2000)
+    send_email: bool = True
+
+
+class CandidateOfferCreate(BaseModel):
+    offered_salary: float = Field(gt=0, description="Annual CTC in INR")
+    joining_date: date
+    designation: str | None = Field(default=None, max_length=100)
+    work_location: str | None = Field(default=None, max_length=100)
+    expiry_date: date | None = None
+    notes: str | None = Field(default=None, max_length=2000)
+    send_email: bool = True
+
+
+class CandidateOnboardRequest(BaseModel):
+    joining_date: date | None = None
+    work_location: str | None = Field(default=None, max_length=100)
+    employment_type: str = "Full-time"
+    salary_structure: str | None = None
+    salary: float | None = None
+    manager_id: str | None = None
+    reporting_manager: str | None = None
+    temporary_password: str | None = Field(default=None, min_length=8, max_length=128)
+    send_welcome_email: bool = True
 
 
 class CandidateResponse(BaseModel):
@@ -143,9 +170,17 @@ class CandidateResponse(BaseModel):
     # Set once HR books the interview. Candidates moved off the interview stage
     # keep it, so the dashboard can still show a completed interview.
     interview_scheduled_at: datetime | None = None
+    meeting_link: str | None = None
     # Only set by the change-stage endpoint: True when this change filled the
     # last opening and the job position was closed automatically.
     job_auto_closed: bool = False
+    # Onboarding status into Employees
+    is_onboarded: bool = False
+    employee_id: str | None = None
+    employee_code: str | None = None
+    onboarded_at: datetime | None = None
+    # Offer letter details
+    offer_details: dict | None = None
 
 
 # ---------------------------------------------------------- Pipeline and stats
@@ -156,6 +191,9 @@ class PipelineCandidate(BaseModel):
     full_name: str
     job_title: str
     stage_updated_at: datetime
+    is_onboarded: bool = False
+    employee_code: str | None = None
+    offer_details: dict | None = None
 
 
 class PipelineColumn(BaseModel):

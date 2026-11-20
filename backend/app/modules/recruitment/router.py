@@ -6,6 +6,8 @@ from app.core.roles import Permission
 from app.core.common_schemas import APIResponse
 from app.modules.recruitment.schemas import (
     CandidateCreate,
+    CandidateOfferCreate,
+    CandidateOnboardRequest,
     CandidateResponse,
     CandidateStage,
     CandidateStageUpdate,
@@ -70,6 +72,12 @@ def serialize_candidate(candidate: dict) -> CandidateResponse:
         applied_at=candidate["applied_at"],
         stage_updated_at=candidate["stage_updated_at"],
         interview_scheduled_at=candidate.get("interview_scheduled_at"),
+        meeting_link=candidate.get("meeting_link"),
+        is_onboarded=candidate.get("is_onboarded", False),
+        employee_id=str(candidate["employee_id"]) if candidate.get("employee_id") else None,
+        employee_code=candidate.get("employee_code"),
+        onboarded_at=candidate.get("onboarded_at"),
+        offer_details=candidate.get("offer_details"),
     )
 
 
@@ -284,6 +292,9 @@ async def change_candidate_stage(
         candidate_id,
         data.stage.value,
         changed_by=str(current_user["_id"]),
+        send_rejection_email=data.send_rejection_email,
+        rejection_reason=data.rejection_reason,
+        current_user=current_user,
     )
 
     result = serialize_candidate(candidate)
@@ -332,6 +343,10 @@ async def schedule_candidate_interview(
     candidate = await candidate_service.schedule_interview(
         candidate_id,
         data.interview_scheduled_at,
+        meeting_link=data.meeting_link,
+        notes=data.notes,
+        send_email=data.send_email,
+        current_user=current_user,
     )
 
     scheduled = candidate.get("interview_scheduled_at")
@@ -343,6 +358,56 @@ async def schedule_candidate_interview(
             if scheduled
             else "Interview cancelled"
         ),
+        data=serialize_candidate(candidate),
+    )
+
+
+# ----------------------------------------------------------------------- Offer
+
+
+@router.post(
+    "/candidates/{candidate_id}/offer",
+    response_model=APIResponse[CandidateResponse],
+)
+async def issue_candidate_offer(
+    candidate_id: str,
+    data: CandidateOfferCreate,
+    current_user: dict = Depends(require_permission(Permission.RECRUITMENT_UPDATE)),
+):
+    candidate = await candidate_service.create_offer(
+        candidate_id,
+        data.model_dump(),
+        current_user=current_user,
+    )
+
+    return APIResponse(
+        success=True,
+        message="Job offer issued and sent to candidate successfully",
+        data=serialize_candidate(candidate),
+    )
+
+
+# ------------------------------------------------------------------ Onboarding
+
+
+@router.post(
+    "/candidates/{candidate_id}/onboard",
+    response_model=APIResponse[CandidateResponse],
+)
+async def onboard_candidate(
+    candidate_id: str,
+    data: CandidateOnboardRequest,
+    current_user: dict = Depends(require_permission(Permission.RECRUITMENT_UPDATE)),
+):
+    candidate, employee, temp_pw = await candidate_service.onboard_candidate(
+        candidate_id,
+        data.model_dump(),
+        current_user=current_user,
+    )
+
+    return APIResponse(
+        success=True,
+        message=f"Candidate successfully onboarded as employee {employee['employee_id']}",
         data=serialize_candidate(candidate),
     )
 
@@ -456,6 +521,9 @@ async def get_pipeline(
                         full_name=candidate["full_name"],
                         job_title=candidate["job_title"],
                         stage_updated_at=candidate["stage_updated_at"],
+                        is_onboarded=candidate.get("is_onboarded", False),
+                        employee_code=candidate.get("employee_code"),
+                        offer_details=candidate.get("offer_details"),
                     )
                     for candidate in column["candidates"]
                 ],

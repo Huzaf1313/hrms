@@ -1,115 +1,78 @@
 import React, { type ReactNode } from "react";
+import { WorkstationIllustration } from "./WorkstationIllustration";
 
 interface AuthShellProps {
-  headline: string;
-  accent: string;
-  subcopy: string;
-  features: string[];
+  headline?: string;
+  subcopy?: string;
   children: ReactNode;
 }
 
 export const AuthShell: React.FC<AuthShellProps> = ({
-  headline,
-  accent,
-  subcopy,
-  features,
+  headline = "Simplify\nmanagement with\nour dashboard",
+  subcopy = "Simplify your workforce & talent operations with our user-friendly admin dashboard",
   children,
 }) => {
   return (
-    <div className="min-h-dvh w-full bg-surface-muted antialiased text-ink-900">
-      <div className="grid min-h-dvh w-full lg:grid-cols-12">
-        {/* Left Section: Brand Panel (hidden below lg) */}
-        <aside
-          className="auth-brand-panel relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-panel-900 via-panel-800 to-[#0c1424] p-10 text-white lg:col-span-5 lg:flex xl:col-span-6 xl:p-14"
-          aria-label="Brand Overview"
-        >
-          {/* Subtle Aurora Lighting Effect */}
-          <div
-            className="pointer-events-none absolute inset-0 overflow-hidden"
-            aria-hidden="true"
+    <div className="min-h-screen w-full bg-[#f1f3f7] flex items-center justify-center p-3 sm:p-6 lg:p-8 relative overflow-hidden font-sans selection:bg-blue-600 selection:text-white">
+      {/* Ambient Atmospheric Lighting (matching reference design) */}
+      <div
+        className="pointer-events-none absolute -top-28 -right-28 h-[460px] w-[460px] rounded-full bg-purple-400/20 blur-[110px]"
+        aria-hidden="true"
+      />
+      <div
+        className="pointer-events-none absolute -bottom-28 -left-28 h-[420px] w-[420px] rounded-full bg-blue-300/25 blur-[120px]"
+        aria-hidden="true"
+      />
+      {/* Subtle Dot Grid */}
+      <div
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:28px_28px] opacity-40"
+        aria-hidden="true"
+      />
+
+      {/* Main Elevated Modal Card */}
+      <div className="relative z-10 w-full max-w-[1000px] rounded-[32px] bg-white p-4 sm:p-6 lg:p-7 shadow-[0_20px_60px_-15px_rgba(15,23,42,0.10)] border border-slate-100 my-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-stretch">
+          {/* Left Sub-Card: Vibrant Blue with 3D Workstation Illustration */}
+          <aside
+            className="hidden lg:flex lg:col-span-6 rounded-[26px] bg-gradient-to-b from-[#4068f6] via-[#385fed] to-[#284be3] p-8 lg:p-9 flex-col justify-between text-white relative overflow-hidden shadow-inner min-h-[580px]"
+            aria-label="Portal Overview"
           >
-            <div className="auth-aurora-1 absolute -top-24 -left-24 h-96 w-96 rounded-full bg-brand-600/25 blur-3xl" />
-            <div className="auth-aurora-2 absolute -bottom-28 -right-28 h-96 w-96 rounded-full bg-brand-500/20 blur-3xl" />
-          </div>
-
-          {/* Brand Header */}
-          <div className="relative z-10 flex items-center gap-3">
-            <img
-              src="/aarmarks-logo.png"
-              alt="AarMarks Logo"
-              className="h-11 w-11 rounded-xl bg-white/10 p-1.5 object-contain backdrop-blur-sm"
+            {/* Soft Internal Lighting */}
+            <div
+              className="pointer-events-none absolute -top-24 -left-24 h-64 w-64 rounded-full bg-white/10 blur-2xl"
+              aria-hidden="true"
             />
-            <div>
-              <span className="brand-wordmark block text-xl font-bold tracking-tight text-white">
-                AarMarks HRMS
-              </span>
-              <span className="block text-xs font-medium tracking-wide text-ink-300">
-                Workforce Intelligence System
-              </span>
-            </div>
-          </div>
-
-          {/* Central Hero Copy & Feature Chips */}
-          <div className="relative z-10 my-auto py-12">
-            <h2 className="text-3xl font-bold leading-tight tracking-tight text-white sm:text-4xl lg:text-[40px]">
-              {headline} <span className="text-brand-500">{accent}</span>
-            </h2>
-
-            <p className="mt-4 max-w-lg text-sm leading-relaxed text-ink-300 sm:text-base">
-              {subcopy}
-            </p>
-
-            {/* Feature Chips */}
-            <div className="mt-8 grid grid-cols-2 gap-3">
-              {features.map((feature) => (
-                <div
-                  key={feature}
-                  className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/5 px-3.5 py-3 backdrop-blur-sm transition-colors hover:bg-white/[0.08]"
-                >
-                  <span
-                    className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand-500"
-                    aria-hidden="true"
-                  />
-                  <span className="text-xs font-medium text-slate-200">
-                    {feature}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Footer Metadata */}
-          <div className="relative z-10 flex items-center justify-between text-xs text-ink-400">
-            <span>&copy; {new Date().getFullYear()} AarMarks Media Pvt. Ltd.</span>
-            <span className="flex items-center gap-1.5 text-ink-300">
-              <span className="h-2 w-2 rounded-full bg-emerald-400" />
-              Enterprise Secure
-            </span>
-          </div>
-        </aside>
-
-        {/* Right Section: Form Container */}
-        <main className="flex flex-col items-center justify-center p-3 sm:p-5 lg:col-span-7 lg:p-6 xl:col-span-6 xl:p-8">
-          {/* Mobile Logo & Wordmark (hidden lg and up) */}
-          <div className="mb-3 flex flex-col items-center text-center sm:mb-4 lg:hidden">
-            <img
-              src="/aarmarks-logo.png"
-              alt="AarMarks Logo"
-              className="h-12 w-12 object-contain"
+            <div
+              className="pointer-events-none absolute -bottom-24 -right-24 h-64 w-64 rounded-full bg-indigo-950/30 blur-2xl"
+              aria-hidden="true"
             />
-            <span className="brand-wordmark mt-2 text-xl font-bold tracking-tight text-ink-900">
-              AarMarks HRMS
-            </span>
-            <span className="text-xs text-ink-600">
-              Human Resource Management System
-            </span>
-          </div>
 
-          {/* Form Card (Max width ~28rem / 448px, animated with auth-rise) */}
-          <div className="auth-rise w-full max-w-[28rem] rounded-2xl border border-line bg-surface p-5 shadow-xl shadow-ink-900/5 sm:p-6 lg:p-7">
+            {/* Top Text */}
+            <div className="relative z-10">
+              <h2 className="text-3xl lg:text-[34px] font-extrabold tracking-tight text-white leading-[1.22]">
+                {headline.split("\n").map((line, idx) => (
+                  <React.Fragment key={idx}>
+                    {line}
+                    <br />
+                  </React.Fragment>
+                ))}
+              </h2>
+              <p className="mt-3.5 max-w-[320px] text-xs sm:text-sm font-normal text-blue-100/90 leading-relaxed">
+                {subcopy}
+              </p>
+            </div>
+
+            {/* Workstation 3D Character Illustration */}
+            <div className="relative z-10 mt-auto pt-4 flex items-end justify-center">
+              <WorkstationIllustration className="w-full h-auto max-h-[310px] drop-shadow-md" />
+            </div>
+          </aside>
+
+          {/* Right Column: Form Container */}
+          <main className="flex flex-col justify-center px-2 sm:px-6 lg:px-8 py-3 sm:py-6 lg:col-span-6">
             {children}
-          </div>
-        </main>
+          </main>
+        </div>
       </div>
     </div>
   );
