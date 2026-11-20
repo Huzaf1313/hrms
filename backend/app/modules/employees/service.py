@@ -20,6 +20,7 @@ from app.modules.employees.identity import next_employee_code
 from app.modules.auth.otp_service import OTPService
 from app.utils.filtering import build_filter
 from app.utils.pagination import PaginationParams
+from app.repositories.user_repository import UserRepository
 
 logger = logging.getLogger(__name__)
 
@@ -484,7 +485,6 @@ class EmployeeService:
 
         return updated_employee
 
-    
     async def deactivate_employee(
         self,
         employee_id: str,
@@ -512,6 +512,40 @@ class EmployeeService:
         if not updated_employee:
             raise AppException("Employee not found", 404)
 
+        # Also deactivate the employee's login account.
+        user_repository = UserRepository()
+
+        linked_user = None
+
+        # Prefer the direct user ID relationship when available.
+        linked_user_id = employee.get("user_id")
+
+        if linked_user_id:
+            linked_user = await user_repository.get_by_id(
+                str(linked_user_id)
+            )
+
+        # Fall back to the employee's email if no user ID is linked.
+        if not linked_user:
+            employee_email = (
+                employee.get("email")
+                or employee.get("work_email")
+            )
+
+            if employee_email:
+                linked_user = await user_repository.get_by_email(
+                    employee_email.lower().strip()
+                )
+
+        if linked_user:
+            await user_repository.update(
+                str(linked_user["_id"]),
+                {
+                    "is_active": False,
+                    "updated_at": datetime.utcnow(),
+                },
+            )
+
         await self.activity_service.record(
             text=f"Employee {employee.get('full_name') or employee.get('employee_id', '')} was deactivated",
             actor=current_user,
@@ -520,7 +554,6 @@ class EmployeeService:
         )
 
         return updated_employee
-
 
     async def delete_employee(
         self,

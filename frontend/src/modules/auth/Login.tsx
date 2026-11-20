@@ -82,6 +82,7 @@ function Login() {
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showDeactivatedModal, setShowDeactivatedModal] = useState(false);
 
   // Greet users arriving from a forced logout with the reason: a password
   // change elsewhere, or a revoked/expired session.
@@ -154,11 +155,21 @@ function Login() {
       );
     } catch (err: unknown) {
       clearSession();
-      setError(
-        err instanceof ApiError
-          ? err.message
-          : "Unable to sign in. Please check your email and password and try again."
-      );
+
+      if (
+        err instanceof ApiError &&
+        err.status === 403 &&
+        err.message.toLowerCase().includes("inactive")
+      ) {
+        setError("");
+        setShowDeactivatedModal(true);
+      } else {
+        setError(
+          err instanceof ApiError
+            ? err.message
+            : "Unable to sign in. Please check your email and password and try again."
+        );
+      }
     } finally {
       setIsLoading(false);
     }
@@ -421,6 +432,60 @@ function Login() {
         "Performance & Goals",
       ]}
     >
+
+      {showDeactivatedModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm">
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="deactivated-title"
+            aria-describedby="deactivated-description"
+            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200"
+          >
+            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
+              <svg
+                className="h-8 w-8 text-red-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M12 9v4m0 4h.01M10.3 3.86L1.82 18a2 2 0 001.72 3h16.92a2 2 0 001.72-3L13.7 3.86a2 2 0 00-3.4 0z"
+                />
+              </svg>
+            </div>
+
+            <div className="text-center">
+              <h2
+                id="deactivated-title"
+                className="text-xl font-bold text-ink-900"
+              >
+                Account Deactivated
+              </h2>
+
+              <p
+                id="deactivated-description"
+                className="mt-3 text-sm leading-6 text-ink-500"
+              >
+                Your account has been deactivated by the administrator.
+                Please contact your HR administrator for assistance.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowDeactivatedModal(false)}
+              className="mt-7 w-full rounded-xl bg-brand-600 py-3 text-sm font-semibold text-white shadow-md transition-colors hover:bg-brand-700"
+            >
+              Okay, Got It
+            </button>
+          </div>
+        </div>
+      )}
+
       {!isForgotPassword ? (
         authMode === "login" ? (
           <form onSubmit={handleLogin} className="space-y-4">
