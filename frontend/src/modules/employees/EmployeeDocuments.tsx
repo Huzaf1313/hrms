@@ -7,11 +7,9 @@ import {
   Download,
   Eye,
   FileText,
-  MoreVertical,
   Search,
   X,
   Loader2,
-  ExternalLink,
   Upload,
   FileUp,
   CheckCircle2,
@@ -102,7 +100,7 @@ export default function EmployeeDocuments() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [, setOpenMenuId] = useState<string | null>(null);
   const [selectedDocument, setSelectedDocument] =
     useState<EmployeeDocument | null>(null);
   const [loadingDocument, setLoadingDocument] = useState(false);
@@ -772,85 +770,24 @@ return (
                           )}
                         </button>
 
-                        <div className="relative">
+                        {/* Delete Document Button */}
+                        {(document.source === "employee" ||
+                          document.source === "employee_upload") && (
                           <button
                             type="button"
-                            title="More actions"
-                            aria-label={`More actions for ${document.document_name}`}
-                            aria-expanded={openMenuId === document.id}
-                            onClick={() =>
-                              setOpenMenuId((current) =>
-                                current === document.id
-                                  ? null
-                                  : document.id
-                              )
-                            }
-                            className="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 hover:text-gray-800"
+                            title="Delete document"
+                            aria-label={`Delete ${document.document_name}`}
+                            disabled={deletingId === document.id}
+                            onClick={() => void handleDelete(document)}
+                            className="rounded-lg p-2 text-red-500 transition hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
                           >
-                            <MoreVertical size={18} />
+                            {deletingId === document.id ? (
+                              <Loader2 size={18} className="animate-spin" />
+                            ) : (
+                              <Trash2 size={18} />
+                            )}
                           </button>
-
-                          {openMenuId === document.id && (
-                            <div className="absolute right-0 top-full z-20 mt-1 w-48 overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
-                              <button
-                                type="button"
-                                onClick={() => void handleView(document)}
-                                className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
-                              >
-                                <Eye size={16} />
-                                  Preview document
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() => void handleDownload(document)}
-                                className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
-                              >
-                                <Download size={16} />
-                                Download
-                              </button>
-
-                              {(document.file_url.startsWith("http://") ||
-                                document.file_url.startsWith("https://")) && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setOpenMenuId(null);
-                                    window.open(
-                                      document.file_url,
-                                      "_blank",
-                                      "noopener,noreferrer"
-                                    );
-                                  }}
-                                  className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
-                                >
-                                  <ExternalLink size={16} />
-                                  Open file
-                                </button>
-                              )}
-
-                              {(document.source === "employee" ||
-                                document.source === "employee_upload") && (
-                                <button
-                                  type="button"
-                                  disabled={deletingId === document.id}
-                                  onClick={() => void handleDelete(document)}
-                                  className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-                                >
-                                  {deletingId === document.id ? (
-                                    <Loader2
-                                      size={16}
-                                      className="animate-spin"
-                                    />
-                                  ) : (
-                                    <Trash2 size={16} />
-                                  )}
-                                  Delete
-                                </button>
-                              )}
-                            </div>
-                          )}
-                        </div>
+                        )}
                       </div>
                     </td>
                   </tr>
