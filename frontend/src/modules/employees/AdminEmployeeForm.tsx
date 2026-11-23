@@ -38,7 +38,7 @@ type IdentityField = "first_name" | "last_name" | "phone";
 
 const NAME_DIGIT_PATTERN = /[0-9]/;
 const PHONE_PATTERN = /^[0-9]{10}$/;
-
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const COUNTRY_CODES = [
   { code: "+91", label: "India", flag: "🇮🇳" },
   { code: "+1", label: "USA", flag: "🇺🇸" },
@@ -148,7 +148,7 @@ function AdminEmployeeForm({
   const [otpError, setOtpError] = useState<string | null>(null);
   const [otpSuccess, setOtpSuccess] = useState<string | null>(null);
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
-
+  const [emailError, setEmailError] = useState("");
   useEffect(() => {
     if (cooldownSeconds <= 0) return;
     const interval = setInterval(() => {
@@ -299,8 +299,8 @@ function AdminEmployeeForm({
 
   const legacyStructureName =
     form.salary_structure &&
-    !selectedStructure &&
-    LEGACY_SALARY_STRUCTURE_LABELS[form.salary_structure]
+      !selectedStructure &&
+      LEGACY_SALARY_STRUCTURE_LABELS[form.salary_structure]
       ? form.salary_structure
       : null;
 
@@ -500,7 +500,19 @@ function AdminEmployeeForm({
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const email = form.email.trim();
 
+    if (!email) {
+      setEmailError("Email address is required.");
+      return;
+    }
+
+    if (!EMAIL_PATTERN.test(email)) {
+      setEmailError("Enter a valid email address.");
+      return;
+    }
+
+    setEmailError("");
     if (!validateIdentityFields()) {
       return;
     }
@@ -635,7 +647,7 @@ function AdminEmployeeForm({
               <input
                 ref={fileInputRef}
                 type="file"
-                 accept="image/png,image/jpeg,image/jpg"
+                accept="image/png,image/jpeg,image/jpg"
                 onChange={handlePhotoChange}
                 className="hidden"
               />
@@ -692,47 +704,47 @@ function AdminEmployeeForm({
             </select>
           </div>
 
-{/* SHIFT */}
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
-                Shift
-              </label>
+          {/* SHIFT */}
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
+              Shift
+            </label>
 
-              <select
-                value={form.shift_id ?? ""}
-                onChange={(event) =>
-                  updateField("shift_id", event.target.value)
-                }
-                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10 disabled:cursor-not-allowed disabled:bg-gray-50"
-              >
-                <option value="">
-                  {availableShifts.length === 0
-                    ? "No shifts available yet"
-                    : "No shift assigned"}
+            <select
+              value={form.shift_id ?? ""}
+              onChange={(event) =>
+                updateField("shift_id", event.target.value)
+              }
+              className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10 disabled:cursor-not-allowed disabled:bg-gray-50"
+            >
+              <option value="">
+                {availableShifts.length === 0
+                  ? "No shifts available yet"
+                  : "No shift assigned"}
+              </option>
+              {availableShifts.map((shift) => (
+                <option key={shift.id} value={shift.id}>
+                  {shift.name} ({formatShiftTime(shift.start_time)} -{" "}
+                  {formatShiftTime(shift.end_time)},{" "}
+                  {formatDuration(shift.duration_minutes)})
                 </option>
-                {availableShifts.map((shift) => (
-                  <option key={shift.id} value={shift.id}>
-                    {shift.name} ({formatShiftTime(shift.start_time)} -{" "}
-                    {formatShiftTime(shift.end_time)},{" "}
-                    {formatDuration(shift.duration_minutes)})
-                  </option>
-                ))}
-              </select>
+              ))}
+            </select>
 
-              {availableShifts.length === 0 ? (
-                <p className="mt-1.5 text-xs font-medium text-amber-600">
-                  No shift added yet!
-                </p>
-              ) : (
-                <p className="mt-1.5 text-xs text-gray-500">
-                  {selectedShift
-                    ? `Overtime is worked time beyond this ${formatDuration(
-                        selectedShift.duration_minutes,
-                      )} shift.`
-                    : "Assign a shift so attendance can be measured against it."}
-                </p>
-              )}
-            </div>
+            {availableShifts.length === 0 ? (
+              <p className="mt-1.5 text-xs font-medium text-amber-600">
+                No shift added yet!
+              </p>
+            ) : (
+              <p className="mt-1.5 text-xs text-gray-500">
+                {selectedShift
+                  ? `Overtime is worked time beyond this ${formatDuration(
+                    selectedShift.duration_minutes,
+                  )} shift.`
+                  : "Assign a shift so attendance can be measured against it."}
+              </p>
+            )}
+          </div>
 
           {/* FIRST NAME */}
           <div>
@@ -754,11 +766,10 @@ function AdminEmployeeForm({
               }
               placeholder="First name"
               aria-invalid={Boolean(identityErrors.first_name)}
-              className={`w-full rounded-xl border px-4 py-3 text-sm outline-none transition focus:ring-2 ${
-                identityErrors.first_name
-                  ? "border-red-400 focus:border-red-400 focus:ring-red-400/10"
-                  : "border-gray-200 focus:border-[#2563eb] focus:ring-[#2563eb]/10"
-              }`}
+              className={`w-full rounded-xl border px-4 py-3 text-sm outline-none transition focus:ring-2 ${identityErrors.first_name
+                ? "border-red-400 focus:border-red-400 focus:ring-red-400/10"
+                : "border-gray-200 focus:border-[#2563eb] focus:ring-[#2563eb]/10"
+                }`}
             />
 
             {identityErrors.first_name && (
@@ -788,11 +799,10 @@ function AdminEmployeeForm({
               }
               placeholder="Last name"
               aria-invalid={Boolean(identityErrors.last_name)}
-              className={`w-full rounded-xl border px-4 py-3 text-sm outline-none transition focus:ring-2 ${
-                identityErrors.last_name
-                  ? "border-red-400 focus:border-red-400 focus:ring-red-400/10"
-                  : "border-gray-200 focus:border-[#2563eb] focus:ring-[#2563eb]/10"
-              }`}
+              className={`w-full rounded-xl border px-4 py-3 text-sm outline-none transition focus:ring-2 ${identityErrors.last_name
+                ? "border-red-400 focus:border-red-400 focus:ring-red-400/10"
+                : "border-gray-200 focus:border-[#2563eb] focus:ring-[#2563eb]/10"
+                }`}
             />
 
             {identityErrors.last_name && (
@@ -822,8 +832,18 @@ function AdminEmployeeForm({
                 required
                 type="email"
                 value={form.email}
-                onChange={(event) => updateField("email", event.target.value)}
-                placeholder="employee@company.com"
+                onChange={(event) => {
+                  const value = event.target.value;
+                  updateField("email", value);
+
+                  if (!value.trim()) {
+                    setEmailError("Email address is required.");
+                  } else if (!EMAIL_PATTERN.test(value.trim())) {
+                    setEmailError("Enter a valid email address.");
+                  } else {
+                    setEmailError("");
+                  }
+                }} placeholder="employee@company.com"
                 className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
               />
             ) : (
@@ -835,11 +855,10 @@ function AdminEmployeeForm({
                     value={form.email}
                     onChange={(event) => handleEmailChange(event.target.value)}
                     placeholder="employee@company.com"
-                    className={`w-full rounded-xl border px-4 py-3 pr-32 text-sm outline-none transition focus:ring-2 ${
-                      isEmailVerified
-                        ? "border-emerald-300 bg-emerald-50/20 text-gray-900 focus:border-emerald-500 focus:ring-emerald-500/10"
-                        : "border-gray-200 focus:border-[#2563eb] focus:ring-[#2563eb]/10"
-                    }`}
+                    className={`w-full rounded-xl border px-4 py-3 pr-32 text-sm outline-none transition focus:ring-2 ${isEmailVerified
+                      ? "border-emerald-300 bg-emerald-50/20 text-gray-900 focus:border-emerald-500 focus:ring-emerald-500/10"
+                      : "border-gray-200 focus:border-[#2563eb] focus:ring-[#2563eb]/10"
+                      }`}
                   />
 
                   <button
@@ -868,6 +887,7 @@ function AdminEmployeeForm({
                       "Send OTP"
                     )}
                   </button>
+
                 </div>
 
                 {/* OTP Verification Box */}
@@ -963,406 +983,408 @@ function AdminEmployeeForm({
                 )}
               </div>
             )}
-          </div>
-
-          {/* PHONE */}
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
-              Phone <span className="ml-1 text-red-500">*</span>
-            </label>
-
-            <div className="flex gap-2">
-              <select
-                value={countryCode}
-                onChange={(event) => setCountryCode(event.target.value)}
-                title={COUNTRY_CODES.find((c) => c.code === countryCode)?.label}
-                className="w-[150px] shrink-0 rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm text-[#17375e] outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
-              >
-                {COUNTRY_CODES.map((country) => (
-                  <option key={country.code} value={country.code}>
-                    {country.flag} {country.code} ({country.label})
-                  </option>
-                ))}
-              </select>
-
-              <input
-                required
-                type="tel"
-                inputMode="numeric"
-                maxLength={10}
-                value={form.phone}
-                onChange={(event) => handlePhoneChange(event.target.value)}
-                onBlur={() =>
-                  setIdentityError("phone", validateIdentityField("phone"))
-                }
-                placeholder="10-digit phone number"
-                aria-invalid={Boolean(identityErrors.phone)}
-                className={`min-w-0 flex-1 rounded-xl border px-4 py-3 text-sm outline-none transition focus:ring-2 ${
-                  identityErrors.phone
-                    ? "border-red-400 focus:border-red-400 focus:ring-red-400/10"
-                    : "border-gray-200 focus:border-[#2563eb] focus:ring-[#2563eb]/10"
-                }`}
-              />
-            </div>
-
-            {identityErrors.phone ? (
-              <p className="mt-1.5 text-xs font-medium text-red-600">
-                {identityErrors.phone}
-              </p>
-            ) : (
-              <p className="mt-1.5 text-xs text-gray-400">
-                Exactly 10 digits, shown with{" "}
-                {COUNTRY_CODES.find((c) => c.code === countryCode)?.code} prefix
+            {isEditMode && emailError && (
+              <p className="mt-1.5 text-xs font-medium text-red-600" role="alert">
+                {emailError}
               </p>
             )}
           </div>
 
-          {/* REPORTING MANAGER */}
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
-              Reporting Manager
-            </label>
+      {/* PHONE */}
+      <div>
+        <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
+          Phone <span className="ml-1 text-red-500">*</span>
+        </label>
 
-            <select
-              value={form.manager_id || unmatchedManager || ""}
-              onChange={(event) => handleManagerChange(event.target.value)}
-              className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
-            >
-              <option value="">Select reporting manager</option>
+        <div className="flex gap-2">
+          <select
+            value={countryCode}
+            onChange={(event) => setCountryCode(event.target.value)}
+            title={COUNTRY_CODES.find((c) => c.code === countryCode)?.label}
+            className="w-[150px] shrink-0 rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm text-[#17375e] outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
+          >
+            {COUNTRY_CODES.map((country) => (
+              <option key={country.code} value={country.code}>
+                {country.flag} {country.code} ({country.label})
+              </option>
+            ))}
+          </select>
 
-              {unmatchedManager && (
-                <option value={unmatchedManager}>
-                  {unmatchedManager} (legacy)
-                </option>
-              )}
+          <input
+            required
+            type="tel"
+            inputMode="numeric"
+            maxLength={10}
+            value={form.phone}
+            onChange={(event) => handlePhoneChange(event.target.value)}
+            onBlur={() =>
+              setIdentityError("phone", validateIdentityField("phone"))
+            }
+            placeholder="10-digit phone number"
+            aria-invalid={Boolean(identityErrors.phone)}
+            className={`min-w-0 flex-1 rounded-xl border px-4 py-3 text-sm outline-none transition focus:ring-2 ${identityErrors.phone
+              ? "border-red-400 focus:border-red-400 focus:ring-red-400/10"
+              : "border-gray-200 focus:border-[#2563eb] focus:ring-[#2563eb]/10"
+              }`}
+          />
+        </div>
 
-              {managers.map((manager) => (
-                <option key={manager.id} value={manager.id}>
-                  {manager.full_name}
-                </option>
-              ))}
-            </select>
+        {identityErrors.phone ? (
+          <p className="mt-1.5 text-xs font-medium text-red-600">
+            {identityErrors.phone}
+          </p>
+        ) : (
+          <p className="mt-1.5 text-xs text-gray-400">
+            Exactly 10 digits, shown with{" "}
+            {COUNTRY_CODES.find((c) => c.code === countryCode)?.code} prefix
+          </p>
+        )}
+      </div>
 
-            <p className="mt-1.5 text-xs text-gray-400">
-              {managers.length === 0
-                ? "No HR or manager accounts available"
-                : unmatchedManager
-                  ? "Previously typed manually — please re-select a current account"
-                  : "HR and manager accounts only"}
-            </p>
-          </div>
+      {/* REPORTING MANAGER */}
+      <div>
+        <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
+          Reporting Manager
+        </label>
 
-          {/* LOGIN CREDENTIALS - create mode only */}
-          {!isEditMode && (
-            <div className="md:col-span-2">
-              <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
-                Temporary Password{" "}
-              </label>
+        <select
+          value={form.manager_id || unmatchedManager || ""}
+          onChange={(event) => handleManagerChange(event.target.value)}
+          className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
+        >
+          <option value="">Select reporting manager</option>
 
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={form.password ?? ""}
-                  onChange={(event) => {
-                    setPasswordError(null);
-                    updateField("password", event.target.value);
-                  }}
-                  placeholder="Employee login password"
-                  autoComplete="new-password"
-                  className={`w-full rounded-xl border px-4 py-3 pr-12 text-sm outline-none transition focus:ring-2 ${
-                    passwordError
-                      ? "border-red-400 focus:border-red-400 focus:ring-red-400/10"
-                      : "border-gray-200 focus:border-[#2563eb] focus:ring-[#2563eb]/10"
-                  }`}
-                />
-
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((previous) => !previous)}
-                  aria-label={
-                    showPassword ? "Hide password" : "Show password"
-                  }
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold text-[#2563eb] hover:underline"
-                >
-                  {showPassword ? "Hide" : "Show"}
-                </button>
-              </div>
-
-              {passwordError ? (
-                <p className="mt-1.5 text-xs font-medium text-red-600">
-                  {passwordError}
-                </p>
-              ) : (
-                <p className="mt-1.5 text-xs text-gray-400">
-                  Min 8 characters with an uppercase letter, lowercase letter,
-                  number &amp; special character. Shown once after creation so
-                  you can share it with the employee.
-                </p>
-              )}
-            </div>
+          {unmatchedManager && (
+            <option value={unmatchedManager}>
+              {unmatchedManager} (legacy)
+            </option>
           )}
 
-          {/* DEPARTMENT */}
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
-              Department
-            </label>
+          {managers.map((manager) => (
+            <option key={manager.id} value={manager.id}>
+              {manager.full_name}
+            </option>
+          ))}
+        </select>
 
-            <select
-              required
-              value={form.department_id}
-              onChange={(event) =>
-                updateField("department_id", event.target.value)
-              }
-              className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
-            >
-              <option value="">Select department</option>
+        <p className="mt-1.5 text-xs text-gray-400">
+          {managers.length === 0
+            ? "No HR or manager accounts available"
+            : unmatchedManager
+              ? "Previously typed manually — please re-select a current account"
+              : "HR and manager accounts only"}
+        </p>
+      </div>
 
-              {departments.map((department) => (
-                <option
-                  key={department.id}
-                  value={department.id}
-                >
-                  {department.name}
-                </option>
-              ))}
-            </select>
+      {/* LOGIN CREDENTIALS - create mode only */}
+      {!isEditMode && (
+        <div className="md:col-span-2">
+          <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
+            Temporary Password{" "}
+          </label>
 
-            {departments.length === 0 ? (
-              <p className="mt-1.5 text-xs font-medium text-amber-600">
-                No department added yet!
-              </p>
-            ) : null}
-          </div>
-
-          {/* DESIGNATION */}
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
-              Designation
-            </label>
-
+          <div className="relative">
             <input
-              required
-              value={form.designation}
-              onChange={(event) =>
-                updateField("designation", event.target.value)
-              }
-              placeholder="e.g. Software Engineer"
-              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
-            />
-          </div>
-
-          {/* JOINING DATE */}
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
-              Joining Date
-            </label>
-
-            <input
-              required
-              type="date"
-              value={form.joining_date}
-              onChange={(event) =>
-                updateField("joining_date", event.target.value)
-              }
-              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
-            />
-          </div>
-
-          {/* DATE OF BIRTH */}
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
-              Date of Birth <span className="ml-1 text-red-500">*</span>
-            </label>
-
-            <input
-              required={!isEditMode}
-              type="date"
-              value={form.date_of_birth ?? ""}
-              onChange={(event) =>
-                updateField("date_of_birth", event.target.value)
-              }
-              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
-            />
-          </div>
-
-          {/* GENDER */}
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
-              Gender <span className="ml-1 text-red-500">*</span>
-            </label>
-
-            <select
-              required={!isEditMode}
-              value={form.gender ?? ""}
-              onChange={(event) =>
-                updateField("gender", event.target.value)
-              }
-              className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
-            >
-              <option value="">Select gender</option>
-              <option value="Male">Male</option>
-              <option value="Female">Female</option>
-              <option value="Other">Other</option>
-            </select>
-          </div>
-
-          {/* WORK LOCATION */}
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
-              Work Location
-            </label>
-
-            <input
-              value={form.work_location ?? ""}
-              onChange={(event) =>
-                updateField("work_location", event.target.value)
-              }
-              placeholder="e.g. Mumbai Office"
-              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
-            />
-          </div>
-
-          {/* SALARY STRUCTURE */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:col-span-2">
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
-                Salary Structure
-              </label>
-
-              <select
-                value={form.salary_structure ?? ""}
-                onChange={(event) => {
-                  updateField("salary_structure", event.target.value);
-                  updateField("salary", "");
-                }}
-                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#456b54] focus:ring-2 focus:ring-[#456b54]/10"
-              >
-                <option value="" disabled>
-                  Select Salary Structure
-                </option>
-
-                {legacyStructureName && (
-                  <option value={legacyStructureName}>
-                    {LEGACY_SALARY_STRUCTURE_LABELS[legacyStructureName]} (legacy)
-                  </option>
-                )}
-
-                {salaryStructures.map((structure) => (
-                  <option key={structure.id} value={structure.name}>
-                    {structure.name}
-                  </option>
-                ))}
-              </select>
-
-              <p className="mt-1.5 text-xs text-gray-400">
-                {selectedStructure
-                  ? `Range: ${selectedStructure.range} · Gross: ₹${selectedStructure.gross_salary.toLocaleString("en-IN")}`
-                  : legacyStructureName
-                    ? "Previously hardcoded structure — please re-assign a current one"
-                    : "Choose a structure from Payroll → Salary Structure"}
-              </p>
-            </div>
-
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
-                Salary Amount
-              </label>
-
-              <input
-                type="number"
-                min={salaryBand.min ?? undefined}
-                max={salaryBand.max ?? undefined}
-                required={Boolean(form.salary_structure)}
-                value={form.salary ?? ""}
-                onChange={(event) => {
-                  updateField("salary", event.target.value);
-                  setSalaryError(null);
-                }}
-                onBlur={validateSalary}
-                placeholder="Enter salary"
-                disabled={!form.salary_structure}
-                aria-invalid={Boolean(salaryError)}
-                className={`w-full rounded-xl border px-4 py-3 text-sm outline-none transition focus:ring-2 disabled:bg-gray-100 disabled:cursor-not-allowed ${
-                  salaryError
-                    ? "border-red-400 focus:border-red-500 focus:ring-red-500/10"
-                    : "border-gray-200 focus:border-[#456b54] focus:ring-[#456b54]/10"
+              type={showPassword ? "text" : "password"}
+              value={form.password ?? ""}
+              onChange={(event) => {
+                setPasswordError(null);
+                updateField("password", event.target.value);
+              }}
+              placeholder="Employee login password"
+              autoComplete="new-password"
+              className={`w-full rounded-xl border px-4 py-3 pr-12 text-sm outline-none transition focus:ring-2 ${passwordError
+                ? "border-red-400 focus:border-red-400 focus:ring-red-400/10"
+                : "border-gray-200 focus:border-[#2563eb] focus:ring-[#2563eb]/10"
                 }`}
-              />
-
-              {salaryError ? (
-                <p className="mt-1.5 text-xs text-red-600">{salaryError}</p>
-              ) : (
-                <p className="mt-1.5 text-xs text-gray-400">
-                  {!form.salary_structure
-                    ? "Select a salary structure first"
-                    : salaryBand.min === null && salaryBand.max === null
-                      ? "No salary limits set on this structure"
-                      : salaryBand.max === null
-                        ? `Minimum ₹${salaryBand.min?.toLocaleString("en-IN")} · Structure gross: ₹${selectedStructure?.gross_salary.toLocaleString("en-IN")}`
-                        : `Allowed ₹${salaryBand.min?.toLocaleString("en-IN")} – ₹${salaryBand.max.toLocaleString("en-IN")}`}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* ADDRESS */}
-          <div className="col-span-1 md:col-span-2">
-            <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
-              Address
-            </label>
-
-            <textarea
-              value={form.address ?? ""}
-              onChange={(event) =>
-                updateField("address", event.target.value)
-              }
-              rows={3}
-              placeholder="Employee address"
-              className="w-full resize-none rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
             />
-          </div>
 
-          {/* ERROR */}
-          {errorMessage && (
-            <div className="col-span-1 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600 md:col-span-2">
-              {errorMessage}
-            </div>
-          )}
-
-          {/* BUTTONS */}
-          <div className="col-span-1 mt-2 flex justify-end gap-3 border-t border-gray-100 pt-5 md:col-span-2">
             <button
               type="button"
-              onClick={onCancel}
-              disabled={isSubmitting}
-              className="rounded-full border border-gray-200 px-6 py-3 text-sm font-medium text-gray-600 transition hover:bg-gray-50 disabled:opacity-50"
-            >
-              Cancel
-            </button>
-
-            
-
-            <button
-              type="submit"
-              disabled={isSubmitting || (!isEditMode && !isEmailVerified)}
-              title={
-                !isEditMode && !isEmailVerified
-                  ? "Verify employee email to enable"
-                  : undefined
+              onClick={() => setShowPassword((previous) => !previous)}
+              aria-label={
+                showPassword ? "Hide password" : "Show password"
               }
-              className="rounded-full bg-[#2563eb] px-7 py-3 text-sm font-semibold text-white transition hover:bg-[#385b45] disabled:cursor-not-allowed disabled:opacity-50"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold text-[#2563eb] hover:underline"
             >
-              {isSubmitting
-                ? "Saving…"
-                : isEditMode
-                  ? "Save Changes"
-                  : "Add Employee"}
+              {showPassword ? "Hide" : "Show"}
             </button>
           </div>
-        </form>
+
+          {passwordError ? (
+            <p className="mt-1.5 text-xs font-medium text-red-600">
+              {passwordError}
+            </p>
+          ) : (
+            <p className="mt-1.5 text-xs text-gray-400">
+              Min 8 characters with an uppercase letter, lowercase letter,
+              number &amp; special character. Shown once after creation so
+              you can share it with the employee.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* DEPARTMENT */}
+      <div>
+        <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
+          Department
+        </label>
+
+        <select
+          required
+          value={form.department_id}
+          onChange={(event) =>
+            updateField("department_id", event.target.value)
+          }
+          className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
+        >
+          <option value="">Select department</option>
+
+          {departments.map((department) => (
+            <option
+              key={department.id}
+              value={department.id}
+            >
+              {department.name}
+            </option>
+          ))}
+        </select>
+
+        {departments.length === 0 ? (
+          <p className="mt-1.5 text-xs font-medium text-amber-600">
+            No department added yet!
+          </p>
+        ) : null}
       </div>
-    </div>
+
+      {/* DESIGNATION */}
+      <div>
+        <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
+          Designation
+        </label>
+
+        <input
+          required
+          value={form.designation}
+          onChange={(event) =>
+            updateField("designation", event.target.value)
+          }
+          placeholder="e.g. Software Engineer"
+          className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
+        />
+      </div>
+
+      {/* JOINING DATE */}
+      <div>
+        <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
+          Joining Date
+        </label>
+
+        <input
+          required
+          type="date"
+          value={form.joining_date}
+          onChange={(event) =>
+            updateField("joining_date", event.target.value)
+          }
+          className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
+        />
+      </div>
+
+      {/* DATE OF BIRTH */}
+      <div>
+        <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
+          Date of Birth <span className="ml-1 text-red-500">*</span>
+        </label>
+
+        <input
+          required={!isEditMode}
+          type="date"
+          value={form.date_of_birth ?? ""}
+          onChange={(event) =>
+            updateField("date_of_birth", event.target.value)
+          }
+          className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
+        />
+      </div>
+
+      {/* GENDER */}
+      <div>
+        <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
+          Gender <span className="ml-1 text-red-500">*</span>
+        </label>
+
+        <select
+          required={!isEditMode}
+          value={form.gender ?? ""}
+          onChange={(event) =>
+            updateField("gender", event.target.value)
+          }
+          className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
+        >
+          <option value="">Select gender</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+
+      {/* WORK LOCATION */}
+      <div>
+        <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
+          Work Location
+        </label>
+
+        <input
+          value={form.work_location ?? ""}
+          onChange={(event) =>
+            updateField("work_location", event.target.value)
+          }
+          placeholder="e.g. Mumbai Office"
+          className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
+        />
+      </div>
+
+      {/* SALARY STRUCTURE */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:col-span-2">
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
+            Salary Structure
+          </label>
+
+          <select
+            value={form.salary_structure ?? ""}
+            onChange={(event) => {
+              updateField("salary_structure", event.target.value);
+              updateField("salary", "");
+            }}
+            className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#456b54] focus:ring-2 focus:ring-[#456b54]/10"
+          >
+            <option value="" disabled>
+              Select Salary Structure
+            </option>
+
+            {legacyStructureName && (
+              <option value={legacyStructureName}>
+                {LEGACY_SALARY_STRUCTURE_LABELS[legacyStructureName]} (legacy)
+              </option>
+            )}
+
+            {salaryStructures.map((structure) => (
+              <option key={structure.id} value={structure.name}>
+                {structure.name}
+              </option>
+            ))}
+          </select>
+
+          <p className="mt-1.5 text-xs text-gray-400">
+            {selectedStructure
+              ? `Range: ${selectedStructure.range} · Gross: ₹${selectedStructure.gross_salary.toLocaleString("en-IN")}`
+              : legacyStructureName
+                ? "Previously hardcoded structure — please re-assign a current one"
+                : "Choose a structure from Payroll → Salary Structure"}
+          </p>
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
+            Salary Amount
+          </label>
+
+          <input
+            type="number"
+            min={salaryBand.min ?? undefined}
+            max={salaryBand.max ?? undefined}
+            required={Boolean(form.salary_structure)}
+            value={form.salary ?? ""}
+            onChange={(event) => {
+              updateField("salary", event.target.value);
+              setSalaryError(null);
+            }}
+            onBlur={validateSalary}
+            placeholder="Enter salary"
+            disabled={!form.salary_structure}
+            aria-invalid={Boolean(salaryError)}
+            className={`w-full rounded-xl border px-4 py-3 text-sm outline-none transition focus:ring-2 disabled:bg-gray-100 disabled:cursor-not-allowed ${salaryError
+              ? "border-red-400 focus:border-red-500 focus:ring-red-500/10"
+              : "border-gray-200 focus:border-[#456b54] focus:ring-[#456b54]/10"
+              }`}
+          />
+
+          {salaryError ? (
+            <p className="mt-1.5 text-xs text-red-600">{salaryError}</p>
+          ) : (
+            <p className="mt-1.5 text-xs text-gray-400">
+              {!form.salary_structure
+                ? "Select a salary structure first"
+                : salaryBand.min === null && salaryBand.max === null
+                  ? "No salary limits set on this structure"
+                  : salaryBand.max === null
+                    ? `Minimum ₹${salaryBand.min?.toLocaleString("en-IN")} · Structure gross: ₹${selectedStructure?.gross_salary.toLocaleString("en-IN")}`
+                    : `Allowed ₹${salaryBand.min?.toLocaleString("en-IN")} – ₹${salaryBand.max.toLocaleString("en-IN")}`}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* ADDRESS */}
+      <div className="col-span-1 md:col-span-2">
+        <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
+          Address
+        </label>
+
+        <textarea
+          value={form.address ?? ""}
+          onChange={(event) =>
+            updateField("address", event.target.value)
+          }
+          rows={3}
+          placeholder="Employee address"
+          className="w-full resize-none rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
+        />
+      </div>
+
+      {/* ERROR */}
+      {errorMessage && (
+        <div className="col-span-1 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600 md:col-span-2">
+          {errorMessage}
+        </div>
+      )}
+
+      {/* BUTTONS */}
+      <div className="col-span-1 mt-2 flex justify-end gap-3 border-t border-gray-100 pt-5 md:col-span-2">
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={isSubmitting}
+          className="rounded-full border border-gray-200 px-6 py-3 text-sm font-medium text-gray-600 transition hover:bg-gray-50 disabled:opacity-50"
+        >
+          Cancel
+        </button>
+
+
+
+        <button
+          type="submit"
+          disabled={isSubmitting || (!isEditMode && !isEmailVerified)}
+          title={
+            !isEditMode && !isEmailVerified
+              ? "Verify employee email to enable"
+              : undefined
+          }
+          className="rounded-full bg-[#2563eb] px-7 py-3 text-sm font-semibold text-white transition hover:bg-[#385b45] disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {isSubmitting
+            ? "Saving…"
+            : isEditMode
+              ? "Save Changes"
+              : "Add Employee"}
+        </button>
+      </div>
+    </form>
+      </div >
+    </div >
   );
 }
 
