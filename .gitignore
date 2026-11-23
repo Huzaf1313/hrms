@@ -73,3 +73,5 @@ $RECYCLE.BIN/
 
 # Private employee uploads
 backend/private_uploads/
+
+backend/hrms.db

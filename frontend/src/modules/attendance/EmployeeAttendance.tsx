@@ -193,6 +193,7 @@ function EmployeeAttendance() {
   const [attendanceRecords, setAttendanceRecords] = useState<
     AttendanceRecord[]
   >([]);
+  const [monthRecords, setMonthRecords] = useState<AttendanceRecord[]>([]);
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
 
   const [isLoading, setIsLoading] = useState(true);
@@ -247,8 +248,7 @@ function EmployeeAttendance() {
 
   /** Punches scoped to viewMonth, fetched separately so the history list above
    *  can keep its own unfiltered window. */
-  const [monthRecords, setMonthRecords] = useState<AttendanceRecord[]>([]);
-
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | null>(null);
   /** Which range monthRecords actually holds. Loading is derived from whether
    *  this still matches the range on screen, so it cannot fall out of step with
    *  the request the way a separate loading flag would. */
@@ -573,7 +573,7 @@ function EmployeeAttendance() {
       }
 
       // Prefer the server's measurement, which is taken against the employee's
-      // real shift. Fall back to comparing shift start against check-in for
+      // real shift. Fall back to comparing shift start against Punch In for
       // records that predate lateness tracking.
       if (record.late_minutes !== null && record.late_minutes !== undefined) {
         return record.late_minutes > 0;
@@ -679,7 +679,7 @@ function EmployeeAttendance() {
     resolveCheckIn(todayRecordForHours) &&
     !resolveCheckOut(todayRecordForHours)
   ) {
-    // The live check-in value can be a display string ("09:30 AM") or an ISO
+    // The live Punch In value can be a display string ("09:30 AM") or an ISO
     // timestamp, depending on whether the record came from a reload or a fresh
     // punch. Only the ISO form can be turned into an elapsed duration.
     const checkIn = new Date(todayRecordForHours!.check_in ?? "");
@@ -715,8 +715,8 @@ function EmployeeAttendance() {
       "Date",
       "Status",
       "Shift",
-      "Check In",
-      "Check Out",
+      "Punch In",
+      "Punch Out",
       "Total Hours",
       "Overtime (Hours)",
       "Late (Minutes)",
@@ -725,11 +725,33 @@ function EmployeeAttendance() {
     const rows = [...currentMonthRecords]
       .sort((a, b) => a.date.localeCompare(b.date))
       .map((r) => [
-        `"${r.date}"`,
+        `"${new Date(r.date).toLocaleDateString("en-IN", {
+          timeZone: "Asia/Kolkata",
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        })}"`,
         `"${r.status}"`,
         `"${r.shift ?? myShift?.name ?? "-"}"`,
-        `"${resolveCheckIn(r) ?? "-"}"`,
-        `"${resolveCheckOut(r) ?? "-"}"`,
+        `"${resolveCheckIn(r) ? new Date(resolveCheckIn(r)!).toLocaleString("en-IN", {
+          timeZone: "Asia/Kolkata",
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: true,
+        }) : "-"}"`, `"${resolveCheckOut(r) ? new Date(resolveCheckOut(r)!).toLocaleString("en-IN", {
+          timeZone: "Asia/Kolkata",
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: true,
+        }) : "-"}"`,
         `"${r.total_hours?.toFixed(2) ?? "0"}"`,
         `"${((r.overtime_minutes ?? 0) / 60).toFixed(2)}"`,
         `"${r.late_minutes ?? (r.is_late ? "Late" : "0")}"`,
@@ -858,7 +880,7 @@ function EmployeeAttendance() {
         setActionError(err.message);
       } else {
         setActionError(
-          "Unable to check in. Please try again.",
+          "Unable to Punch In. Please try again.",
         );
       }
     } finally {
@@ -869,14 +891,14 @@ function EmployeeAttendance() {
   const handleCheckOut = async () => {
     if (!todayRecord) {
       setActionError(
-        "You need to check in before checking out.",
+        "You need to Punch In before checking out.",
       );
       return;
     }
 
     if (!resolveCheckIn(todayRecord)) {
       setActionError(
-        "Check-in time is missing for today's attendance.",
+        "Punch In time is missing for today's attendance.",
       );
       return;
     }
@@ -926,7 +948,7 @@ function EmployeeAttendance() {
         setActionError(err.message);
       } else {
         setActionError(
-          "Unable to check out. Please try again.",
+          "Unable to Punch Out. Please try again.",
         );
       }
     } finally {
@@ -946,320 +968,380 @@ function EmployeeAttendance() {
   }
 
   return (
-    <div className="space-y-6 px-4 pb-12 pt-6 sm:px-6 lg:px-8">
-      {/* Page Header */}
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 font-manrope">
-            My Attendance
-          </h1>
-          <p className="mt-1 text-sm font-medium text-slate-500">
-            Track your daily attendance, working hours, and regularization requests.
-          </p>
-        </div>
+    <div className="px-6 pb-10 pt-8 lg:px-8">
+      <main className="min-w-0 flex-1 p-6 lg:p-8">
 
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => setIsRegularizationModalOpen(true)}
-            className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50/60 px-4 py-2.5 text-xs font-bold text-[#0066ff] shadow-xs transition hover:bg-blue-100"
-          >
-            Request Regularization
-          </button>
-        </div>
-      </div>
+        {/* Page Header */}
+        <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
 
-      {/* =====================================================
-          MONTHLY SUMMARY (4 Modern PeopleSync KPI Cards)
-      ===================================================== */}
-      <section>
-        {isLoading && (
-          <div className="rounded-3xl border border-slate-100 bg-white p-8 text-center shadow-xs">
-            <p className="text-sm font-medium text-slate-400">Loading attendance data...</p>
-          </div>
-        )}
-
-        {!isLoading && error && (
-          <div className="rounded-3xl border border-rose-200 bg-rose-50 p-6 shadow-xs">
-            <p className="text-sm font-semibold text-rose-700">Unable to load attendance</p>
-            <p className="mt-1 text-xs text-rose-600">{error}</p>
-          </div>
-        )}
-
-        {!isLoading && !error && (
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
-            {/* Present Days */}
-            <div className="group relative overflow-hidden rounded-3xl border border-slate-100 bg-white p-5.5 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
-              <div className="flex items-center justify-between">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 transition-colors group-hover:bg-emerald-100">
-                  <span className="text-xl font-bold">✓</span>
-                </div>
-                <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-bold text-emerald-700">
-                  {Math.round(
-                    (presentDays / Math.max(presentDays + absentDays + leaveDays, 1)) * 100,
-                  )}%
-                </span>
-              </div>
-
-              <div className="mt-4">
-                <p className="text-2xl font-bold font-manrope text-slate-900">{presentDays}</p>
-                <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-slate-400 font-manrope">
-                  Present Days
-                </p>
-              </div>
-
-              <p className="mt-3 border-t border-slate-100 pt-3 text-xs text-slate-500">
-                {presentDays} of {presentDays + absentDays + leaveDays} working days this month
-              </p>
-            </div>
-
-            {/* Late Days */}
-            <div className="group relative overflow-hidden rounded-3xl border border-slate-100 bg-white p-5.5 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
-              <div className="flex items-center justify-between">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 transition-colors group-hover:bg-amber-100">
-                  <span className="text-xl font-bold">⏰</span>
-                </div>
-                <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-bold text-amber-700">
-                  Arrived Late
-                </span>
-              </div>
-
-              <div className="mt-4">
-                <p className="text-2xl font-bold font-manrope text-slate-900">{lateDays}</p>
-                <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-slate-400 font-manrope">
-                  Late Arrivals
-                </p>
-              </div>
-
-              <p className="mt-3 border-t border-slate-100 pt-3 text-xs text-slate-500">
-                Arrived after 09:30 AM
-              </p>
-            </div>
-
-            {/* On Leave */}
-            <div className="group relative overflow-hidden rounded-3xl border border-slate-100 bg-white p-5.5 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
-              <div className="flex items-center justify-between">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-purple-50 text-purple-600 transition-colors group-hover:bg-purple-100">
-                  <span className="text-xl font-bold">🏖</span>
-                </div>
-                <span className="rounded-full bg-purple-50 px-2.5 py-0.5 text-xs font-bold text-purple-700">
-                  Approved
-                </span>
-              </div>
-
-              <div className="mt-4">
-                <p className="text-2xl font-bold font-manrope text-slate-900">{leaveDays}</p>
-                <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-slate-400 font-manrope">
-                  Days On Leave
-                </p>
-              </div>
-
-              <p className="mt-3 border-t border-slate-100 pt-3 text-xs text-slate-500">
-                Approved leaves this month
-              </p>
-            </div>
-
-            {/* Total Working Hours */}
-            <div className="group relative overflow-hidden rounded-3xl border border-slate-100 bg-white p-5.5 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
-              <div className="flex items-center justify-between">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-[#0066ff] transition-colors group-hover:bg-blue-100">
-                  <span className="text-xl font-bold">⏱</span>
-                </div>
-                <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-bold text-blue-700">
-                  Hours Logged
-                </span>
-              </div>
-
-              <div className="mt-4">
-                <p className="text-2xl font-bold font-manrope text-slate-900">{workingHours.toFixed(1)}h</p>
-                <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-slate-400 font-manrope">
-                  Working Hours
-                </p>
-              </div>
-
-              <p className="mt-3 border-t border-slate-100 pt-3 text-xs text-slate-500">
-                {totalOvertimeMinutes > 0
-                  ? `+${formatDuration(totalOvertimeMinutes / 60)} overtime (${overtimeDays}d)`
-                  : "Total this month"}
-              </p>
-            </div>
-          </div>
-        )}
-      </section>
-
-      {/* =========================================================
-          TODAY'S ATTENDANCE & LEAVE BALANCE
-      ========================================================= */}
-      <section className="grid gap-6 lg:grid-cols-2">
-        {/* Today's Attendance Widget */}
-        <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-xs">
-          <div className="flex items-start justify-between">
-              <div>
-              <h2 className="text-base font-bold font-manrope text-slate-900">
-                Today's Punch Status
-              </h2>
-              <p className="mt-1 text-xs text-slate-500">
-                Record your daily in/out attendance times.
-              </p>
-              </div>
-
-            <span
-              className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                isCurrentlyAtWork
-                  ? "bg-emerald-50 text-emerald-700"
-                  : todayRecord
-                    ? "bg-blue-50 text-[#0066ff]"
-                    : "bg-slate-100 text-slate-600"
-              }`}
-            >
-              {isCurrentlyAtWork ? "Currently at work" : todayStatus}
-            </span>
-          </div>
-
-          <div className="mt-6 grid grid-cols-2 gap-4">
-            {/* Check In */}
-            <div className="rounded-2xl bg-slate-50 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 font-manrope">
-                  Check In
-              </p>
-              <p className="mt-2 text-xl font-bold font-manrope text-slate-900">
-                  {formatTime(resolveCheckIn(todayRecord) ?? null)}
-              </p>
-              </div>
-
-            {/* Check Out */}
-            <div className="rounded-2xl bg-slate-50 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 font-manrope">
-                  Check Out
-              </p>
-              <p className="mt-2 text-xl font-bold font-manrope text-slate-900">
-                  {formatTime(resolveCheckOut(todayRecord) ?? null)}
-              </p>
-              </div>
-          </div>
-
-          {actionError && (
-            <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-3">
-              <p className="text-xs font-semibold text-rose-700">{actionError}</p>
-            </div>
-          )}
-
-          {/* Work Status Row */}
-          <div className="mt-4 flex items-center justify-between rounded-2xl border border-slate-100 p-4">
-            <div className="flex items-center gap-3">
-              <span
-                className={`h-3 w-3 rounded-full ${
-                  isCurrentlyAtWork
-                    ? "bg-emerald-500"
-                    : todayRecord
-                      ? "bg-slate-400"
-                      : "bg-amber-400"
-                }`}
-              />
-              <div>
-                <p className="text-xs font-bold text-slate-800">
-                  {isCurrentlyAtWork
-                    ? "Active Shift"
-                    : todayRecord
-                      ? "Attendance recorded"
-                      : "Attendance not marked"}
-                  </p>
-                <p className="mt-0.5 text-[11px] text-slate-400">
-                  {todayRecord?.total_hours != null
-                    ? `${todayRecord.total_hours.toFixed(1)} hours logged`
-                    : "No hours logged yet"}
-                </p>
-              </div>
-              </div>
-
-            <span className="rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-semibold text-[#0066ff]">
-              Office
-              </span>
-          </div>
-
-          {/* Attendance Action Button */}
-          <div className="mt-4">
-            {!todayRecord ? (
-              <button
-                type="button"
-                onClick={handleCheckIn}
-                disabled={isActionLoading}
-                className="w-full rounded-2xl bg-[#0066ff] py-3.5 text-sm font-bold text-white shadow-md shadow-blue-500/20 transition hover:bg-[#0052cc] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isActionLoading ? "Marking Check In..." : "Check In Now"}
-              </button>
-            ) : !resolveCheckOut(todayRecord) ? (
-              <button
-                type="button"
-                onClick={handleCheckOut}
-                disabled={isActionLoading}
-                className="w-full rounded-2xl bg-[#f97316] py-3.5 text-sm font-bold text-white shadow-md shadow-orange-500/20 transition hover:bg-[#ea580c] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isActionLoading ? "Marking Check Out..." : "Check Out Now"}
-              </button>
-            ) : (
-              <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-3.5 text-center">
-                <p className="text-sm font-bold text-emerald-800">
-                  ✓ Attendance Completed For Today
-                </p>
-                <p className="mt-1 text-xs text-emerald-600">
-                  You have successfully checked in and checked out.
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* Shift Details */}
-          <div className="mt-5 border-t border-slate-100 pt-4 text-xs text-slate-500 flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <span className="font-semibold text-slate-700">
-                {myShift?.name ?? todayRecord?.shift ?? "Standard"} Shift:
-              </span>{" "}
-              {myShift
-                ? `${formatShiftTime(myShift.start_time)} – ${formatShiftTime(myShift.end_time)}`
-                : "09:00 AM – 06:00 PM"}
-            </div>
-            <div>
-              <span className="font-semibold text-slate-700">Location:</span>{" "}
-              {user?.work_location ?? "Main Office"}
-            </div>
-          </div>
-        </div>
-
-        {/* Leave Balance Quota */}
-        <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-xs">
           <div>
-            <h2 className="text-base font-bold font-manrope text-slate-900">
-              Leave Balance Quotas
-            </h2>
-            <p className="mt-1 text-xs text-slate-500">
-              Your allocated vs available leave balances.
+            <h1 className="text-2xl font-bold text-[#17213a]">
+              Attendance
+            </h1>
+
+            <p className="mt-1 text-sm text-gray-500">
+              Track your attendance, working hours, and daily records.
             </p>
           </div>
 
-          <div className="mt-5 grid grid-cols-2 gap-3.5">
+          <div className="flex flex-wrap gap-3">
+          </div>
+        </section>
+
+        {/* =====================================================
+              MONTHLY SUMMARY
+          ===================================================== */}
+        <section className="mt-6">
+
+          {isLoading && (
+            <div className="rounded-2xl border border-gray-100 bg-white p-8 text-center shadow-sm">
+              <p className="text-sm text-gray-500">
+                Loading attendance...
+              </p>
+            </div>
+          )}
+
+          {!isLoading && error && (
+            <div className="rounded-2xl border border-red-200 bg-red-50 p-6 shadow-sm">
+              <p className="text-sm font-semibold text-red-700">
+                Unable to load attendance
+              </p>
+
+              <p className="mt-1 text-sm text-red-600">
+                {error}
+              </p>
+            </div>
+          )}
+
+          {!isLoading && !error && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+
+              {/* Present */}
+              <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+                <p className="text-sm font-medium text-gray-500">
+                  Present Days
+                </p>
+
+                <div className="mt-3 flex items-end justify-between">
+                  <p className="text-2xl font-bold text-[#17213a]">
+                    {presentDays}
+                  </p>
+
+                  <span className="text-xs font-medium text-gray-400">
+                    this month
+                  </span>
+                </div>
+                <div className="mt-4 h-2 overflow-hidden rounded-full bg-gray-100">
+                  <div
+                    className="h-full rounded-full bg-[#2563eb]"
+                    style={{
+                      width: `${Math.min(
+                        (presentDays /
+                          Math.max(
+                            presentDays +
+                            absentDays +
+                            leaveDays,
+                            1,
+                          )) *
+                        100,
+                        100,
+                      )}%`,
+                    }}
+                  />
+                </div>
+
+                <p className="mt-2 text-xs text-gray-400">
+                  {presentDays} of{" "}
+                  {presentDays + absentDays + leaveDays}{" "}
+                  working days
+                </p>
+              </div>
+
+
+              {/* Absent */}
+              <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+
+                <p className="text-sm font-medium text-gray-500">
+                  Absent Days
+                </p>
+
+                <p className="mt-3 text-2xl font-bold text-[#17213a]">
+                  {absentDays}
+                </p>
+              </div>
+
+              {/* Late */}
+              <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+
+                <p className="text-sm font-medium text-gray-500">
+                  Late Days
+                </p>
+
+                <p className="mt-3 text-2xl font-bold text-[#17213a]">
+                  {lateDays}
+                </p>
+              </div>
+
+              {/* Overtime */}
+              <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+
+                <p className="text-sm font-medium text-gray-500">
+                  Overtime
+                </p>
+
+                <p className="mt-3 text-2xl font-bold text-amber-600">
+                  {totalOvertimeMinutes > 0
+                    ? formatDuration(totalOvertimeMinutes / 60)
+                    : "0h"}
+                </p>
+
+                <p className="mt-2 text-xs text-gray-400">
+                  {overtimeDays} day
+                  {overtimeDays === 1 ? "" : "s"} this month
+                </p>
+
+              </div>
+
+              {/* Leave */}
+              <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+
+                <p className="text-sm font-medium text-gray-500">
+                  On Leave
+                </p>
+
+                <p className="mt-3 text-2xl font-bold text-[#17213a]">
+                  {leaveDays}
+                </p>
+              </div>
+
+              {/* Working Hours */}
+              <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+
+                <p className="text-sm font-medium text-gray-500">
+                  Working Hours
+                </p>
+
+                <p className="mt-3 text-2xl font-bold text-[#17213a]">
+                  {workingHours.toFixed(1)}h
+                </p>
+
+                <p className="mt-2 text-xs text-gray-400">
+                  Total this month
+                </p>
+
+              </div>
+
+            </div>
+          )}
+
+        </section>
+
+        {/* =========================================================
+            TODAY'S ATTENDANCE & LEAVE BALANCE
+        ========================================================= */}
+        <section className="mt-6 grid gap-6 lg:grid-cols-2">
+
+          {/* Today's Attendance */}
+          <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+
+            <div className="flex items-start justify-between">
+
+              <div>
+                <h2 className="text-lg font-bold text-[#17213a]">
+                  Today's Attendance
+                </h2>
+
+                <p className="mt-1 text-sm text-gray-500">
+                  Your attendance status for today.
+                </p>
+              </div>
+
+              <span
+                className={`rounded-full px-3 py-1 text-xs font-semibold ${isCurrentlyAtWork
+                  ? "bg-green-100 text-green-700"
+                  : todayRecord
+                    ? "bg-[#eef3ef] text-[#2563eb]"
+                    : "bg-gray-100 text-gray-500"
+                  }`}
+              >
+                {isCurrentlyAtWork
+                  ? "Currently at work"
+                  : todayStatus}
+              </span>
+
+            </div>
+
+            <div className="mt-6 grid grid-cols-2 gap-4">
+
+              {/* Punch In */}
+              <div className="rounded-xl bg-[#f5f7fb] p-4">
+
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                  Punch In
+                </p>
+
+                <p className="mt-2 text-xl font-bold text-[#17213a]">
+                  {formatTime(resolveCheckIn(todayRecord) ?? null)}
+                </p>
+
+              </div>
+
+              {/* Punch Out */}
+              <div className="rounded-xl bg-[#f5f7fb] p-4">
+
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                  Punch Out
+                </p>
+
+                <p className="mt-2 text-xl font-bold text-[#17213a]">
+                  {formatTime(resolveCheckOut(todayRecord) ?? null)}
+                </p>
+
+              </div>
+
+            </div>
+
+            {actionError && (
+              <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3">
+                <p className="text-sm font-medium text-red-700">
+                  {actionError}
+                </p>
+              </div>
+            )}
+
+            {/* Work Status */}
+            <div className="mt-4 flex items-center justify-between rounded-xl border border-gray-100 p-4">
+
+              <div className="flex items-center gap-3">
+
+                <span
+                  className={`h-3 w-3 rounded-full ${isCurrentlyAtWork
+                    ? "bg-green-500"
+                    : todayRecord
+                      ? "bg-gray-400"
+                      : "bg-yellow-400"
+                    }`}
+                />
+
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">
+                    {isCurrentlyAtWork
+                      ? "Currently at work"
+                      : todayRecord
+                        ? "Attendance recorded"
+                        : "Attendance not marked"}
+                  </p>
+
+                  <p className="mt-1 text-xs text-gray-400">
+                    {todayRecord?.total_hours != null
+                      ? `${todayRecord.total_hours.toFixed(1)} hours recorded`
+                      : "No working hours recorded"}
+                  </p>
+                </div>
+
+              </div>
+
+              <span className="rounded-lg bg-[#eef3ef] px-3 py-1 text-xs font-semibold text-[#2563eb]">
+                Office
+              </span>
+
+            </div>
+
+            {/* Attendance Actions */}
+            <div className="mt-4">
+              {!todayRecord ? (
+                <button
+                  type="button"
+                  onClick={handleCheckIn}
+                  disabled={isActionLoading}
+                  className="w-full rounded-xl bg-[#2563eb] px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isActionLoading ? "Checking In..." : "Punch In"}
+                </button>
+              ) : !resolveCheckOut(todayRecord) ? (
+                <button
+                  type="button"
+                  onClick={handleCheckOut}
+                  disabled={isActionLoading}
+                  className="w-full rounded-xl bg-[#2563eb] px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isActionLoading ? "Checking Out..." : "Punch Out"}
+                </button>
+              ) : (
+                <div className="rounded-xl bg-[#eef3ef] px-4 py-3 text-center">
+                  <p className="text-sm font-semibold text-[#2563eb]">
+                    Attendance Completed
+                  </p>
+                  <p className="mt-1 text-xs text-gray-500">
+                    You have checked in and checked out for today.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Shift & Workplace Info */}
+            <div className="mt-5 border-t border-gray-100 pt-4">
+              <div className="flex flex-col gap-2 text-xs text-gray-500 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <span className="font-semibold text-gray-600">
+                    {myShift?.name ?? todayRecord?.shift ?? "No"} Shift:
+                  </span>{" "}
+                  {myShift
+                    ? `${formatShiftTime(myShift.start_time)} – ${formatShiftTime(
+                      myShift.end_time,
+                    )}${myShift.is_overnight
+                      ? " (ends next day)"
+                      : ""
+                    }`
+                    : "No shift assigned"}
+                </div>
+
+                {todayRecord && (todayRecord.overtime_minutes ?? 0) > 0 && (
+                  <div>
+                    <span className="font-semibold text-amber-600">
+                      Overtime today:
+                    </span>{" "}
+                    {todayRecord.overtime_display}
+                  </div>
+                )}
+
+                <div>
+                  <span className="font-semibold text-gray-600">
+                    Workplace:
+                  </span>{" "}
+                  {user?.work_location ?? "Main Office"}
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+          {/* Leave Balance */}
+          <div className="mt-6 grid grid-cols-2 gap-4">
             {leaveBalances.map((balance) => (
               <div
                 key={balance.type}
-                className="rounded-2xl border border-slate-100 bg-slate-50/50 p-4"
+                className="rounded-xl border border-gray-100 p-4"
               >
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 font-manrope">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
                   {balance.type}
                 </p>
-                <p className="mt-2 text-2xl font-bold font-manrope text-slate-900">
+
+                <p className="mt-2 text-2xl font-bold text-[#17213a]">
                   {balance.available}
                 </p>
-                <p className="mt-1 text-xs font-medium text-slate-500">
+
+                <p className="mt-1 text-xs text-gray-400">
                   Days available
                 </p>
-                <p className="mt-2 border-t border-slate-100 pt-2 text-[11px] text-slate-400">
+
+                <p className="mt-2 text-xs text-gray-400">
                   {balance.allocated} Allocated · {balance.used} Used
                 </p>
               </div>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
 
         {/* =========================================================
             PUNCH HISTORY & REGULARIZATION
@@ -1337,14 +1419,14 @@ function EmployeeAttendance() {
                             </p>
 
                             <p className="mt-1 text-xs text-gray-500">
-                              Check-In:{" "}
+                              Punch In:{" "}
                               {resolveCheckIn(record)
                                 ? formatTime(resolveCheckIn(record))
                                 : "--"}
                             </p>
 
                             <p className="mt-1 text-xs text-gray-500">
-                              Check-Out:{" "}
+                              Punch Out:{" "}
                               {resolveCheckOut(record)
                                 ? formatTime(resolveCheckOut(record))
                                 : "--"}
@@ -1560,7 +1642,7 @@ function EmployeeAttendance() {
 
             <div className="mt-6 space-y-6">
 
-              {/* Check-In */}
+              {/* Punch In */}
               <div className="flex items-start gap-4">
 
                 <div className="relative flex flex-col items-center">
@@ -1578,7 +1660,7 @@ function EmployeeAttendance() {
                   <div className="flex flex-col justify-between gap-1 sm:flex-row sm:items-center">
                     <div>
                       <p className="text-sm font-semibold text-gray-800">
-                        Check-In
+                        Punch In
                       </p>
 
                       <p className="mt-1 text-xs text-gray-400">
@@ -1603,7 +1685,7 @@ function EmployeeAttendance() {
 
               </div>
 
-              {/* Check-Out */}
+              {/* Punch Out */}
               <div className="flex items-start gap-4">
 
                 <div className="flex flex-col items-center">
@@ -1619,7 +1701,7 @@ function EmployeeAttendance() {
                   <div className="flex flex-col justify-between gap-1 sm:flex-row sm:items-center">
                     <div>
                       <p className="text-sm font-semibold text-gray-800">
-                        Check-Out
+                        Punch Out
                       </p>
 
                       <p className="mt-1 text-xs text-gray-400">
@@ -1859,9 +1941,12 @@ function EmployeeAttendance() {
                       : undefined;
 
                     return (
-                      <div
+                      <button
+                        type="button"
                         key={day}
-                        className="flex h-20 flex-col items-center justify-center gap-1 border-b border-r border-gray-100 px-1"
+                        onClick={() => setSelectedCalendarDate(dateKey)}
+                        aria-pressed={selectedCalendarDate === dateKey}
+                        className="flex h-20 w-full cursor-pointer flex-col items-center justify-center gap-1 border-b border-r border-gray-100 px-1 transition hover:bg-gray-50"
                         title={holidayTitle}
                       >
 
@@ -1891,11 +1976,75 @@ function EmployeeAttendance() {
                           </span>
                         )}
 
-                      </div>
+                      </button>
                     );
                   })}
 
                 </div>
+                {selectedCalendarDate && (
+                  <div className="mt-4 rounded-lg border p-4">
+                    <h3 className="text-sm font-semibold mb-3">
+                      Attendance Details - {selectedCalendarDate}
+                    </h3>
+
+                    {(() => {
+                      const selectedRecord = monthRecords.find(
+                        (record) =>
+                          new Date(record.date).toISOString().slice(0, 10) ===
+                          selectedCalendarDate
+                      );
+
+                      if (!selectedRecord) {
+                        return (
+                          <p className="text-sm text-gray-500">
+                            No attendance record found for this date.
+                          </p>
+                        );
+                      }
+
+                      return (
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          <p>Status: {selectedRecord.status || "--"}</p>
+                          <p>
+                            Check In:{" "}
+                            {selectedRecord.check_in
+                              ? new Date(selectedRecord.check_in).toLocaleTimeString("en-IN", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                hour12: true,
+                              })
+                              : "--"}
+                          </p>
+
+                          <p>
+                            Check Out:{" "}
+                            {selectedRecord.check_out
+                              ? new Date(selectedRecord.check_out).toLocaleTimeString("en-IN", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                hour12: true,
+                              })
+                              : "--"}
+                          </p>
+                          <p>
+                            Total Hours:{" "}
+                            {selectedRecord.check_in && selectedRecord.check_out
+                              ? (() => {
+                                const start = new Date(selectedRecord.check_in).getTime();
+                                const end = new Date(selectedRecord.check_out).getTime();
+                                const totalMinutes = Math.floor((end - start) / 60000);
+                                const hours = Math.floor(totalMinutes / 60);
+                                const minutes = totalMinutes % 60;
+
+                                return `${hours}h ${minutes}m`;
+                              })()
+                              : "--"}
+                          </p>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
 
               </div>
 
@@ -1960,6 +2109,7 @@ function EmployeeAttendance() {
           onClose={() => setIsRegularizationModalOpen(false)}
           attendanceRecords={attendanceRecords}
         />
+      </main>
     </div>
   );
 }

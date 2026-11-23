@@ -1,6 +1,6 @@
 from typing import Any
 
-from app.core.roles import ADMIN_ROLES
+from app.core.roles import ADMIN_ROLES, UserRole
 from app.repositories.employee_notification_repository import (
     EmployeeNotificationRepository,
 )
@@ -82,31 +82,47 @@ class AdminNotificationService:
             await self._load_employee(employee_id)
         )
 
-    async def _recipients_for(self, employee: dict | None) -> list[str]:
-        """Prefers the admin who created the employee's profile, so each HR
-        member sees the requests belonging to the people they onboarded. Falls
-        back to every active admin when that creator is unknown (records
-        predating `created_by`) or is no longer an active admin.
-        """
+    async def _recipients_for(
+        self,
+        employee: dict | None,
+        include_super_admin: bool = False,
+    ) -> list[str]:
+
+        recipients = []
+
+        # Include all active Super Admin accounts when requested.
+        if include_super_admin:
+            super_admins = await self.user_repository.list_by_roles(
+                [UserRole.SUPER_ADMIN.value]
+            )
+
+            recipients.extend(
+                str(admin["_id"])
+                for admin in super_admins
+                if admin.get("is_active") and not admin.get("is_locked")
+            )
+
         owner = employee.get("created_by") if employee else None
 
         if owner:
             creator = await self.user_repository.get_by_id(str(owner))
 
-            # ADMIN_ROLES includes the super admin, so an employee it onboarded
-            # notifies it alone. The fallback below (get_admin_accounts) only
-            # covers HR and managers.
             if (
                 creator
                 and creator.get("is_active")
                 and not creator.get("is_locked")
                 and creator.get("role") in ADMIN_ROLES
             ):
-                return [str(creator["_id"])]
+                recipients.append(str(creator["_id"]))
+                return list(dict.fromkeys(recipients))
 
+        # Existing fallback: active HR and Manager accounts.
         admins = await self.user_repository.get_admin_accounts()
 
-        return [str(admin["_id"]) for admin in admins]
+        recipients.extend(str(admin["_id"]) for admin in admins)
+
+        # Remove duplicate recipients.
+        return list(dict.fromkeys(recipients))
 
     async def create_for_employee(
         self,
@@ -116,11 +132,15 @@ class AdminNotificationService:
         message: str,
         target: str | None = None,
         target_id: str | None = None,
+        include_super_admin: bool = False,
     ) -> list[dict[str, Any]]:
         """Fan one notification out to every admin responsible for this employee."""
         employee = await self._load_employee(employee_id)
 
-        recipients = await self._recipients_for(employee)
+        recipients = await self._recipients_for(
+            employee,
+            include_super_admin=include_super_admin,
+        )
 
         if not recipients:
             return []

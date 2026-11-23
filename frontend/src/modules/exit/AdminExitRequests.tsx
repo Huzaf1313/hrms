@@ -10,6 +10,7 @@ import {
   Plus,
   Search,
   SlidersHorizontal,
+  Trash2,
   UserMinus,
   Wallet,
 } from "lucide-react";
@@ -90,6 +91,8 @@ export default function AdminExitRequests() {
 
   const [selected, setSelected] = useState<ExitRequest | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteConfirmRequest, setDeleteConfirmRequest] =
+  useState<ExitRequest | null>(null);
   const [notice, setNotice] = useState<InlineNotice>(null);
   const [creating, setCreating] = useState<ExitType | "any" | null>(null);
   const [version, setVersion] = useState(0);
@@ -181,18 +184,23 @@ export default function AdminExitRequests() {
     changeView("all");
   };
 
-  const deleteRequest = async (request: ExitRequest) => {
-    const confirmed = window.confirm(
-      `Delete ${request.employee_name}'s exit request? This cannot be undone.`,
-    );
+  const deleteRequest = (request: ExitRequest) => {
+    setDeleteConfirmRequest(request);
+  };
 
-    if (!confirmed) return;
+  const confirmDeleteRequest = async () => {
+    if (!deleteConfirmRequest || deletingId) return;
+
+    const request = deleteConfirmRequest;
 
     setDeletingId(request.id);
 
     try {
       await adminExitRequestService.remove(request.id);
+
+      setDeleteConfirmRequest(null);
       refresh();
+
       setNotice({
         type: "success",
         text: `${request.employee_name}'s exit request deleted.`,
@@ -642,6 +650,60 @@ export default function AdminExitRequests() {
             setNotice({ type: "success", text: message });
           }}
         />
+      )}
+
+      {deleteConfirmRequest && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-exit-title"
+            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"
+          >
+            <div className="flex items-start gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-red-100">
+                <Trash2 className="h-5 w-5 text-red-600" />
+              </div>
+
+              <div>
+                <h3
+                  id="delete-exit-title"
+                  className="text-lg font-semibold text-slate-900"
+                >
+                  Delete Exit Request?
+                </h3>
+
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  Are you sure you want to delete{" "}
+                  <span className="font-semibold text-slate-900">
+                    {deleteConfirmRequest.employee_name}
+                  </span>
+                  's exit request? This action cannot be undone.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                disabled={deletingId !== null}
+                onClick={() => setDeleteConfirmRequest(null)}
+                className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                disabled={deletingId !== null}
+                onClick={() => void confirmDeleteRequest()}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {deletingId !== null ? "Deleting..." : "Yes, Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

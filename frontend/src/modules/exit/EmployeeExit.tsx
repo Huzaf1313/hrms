@@ -111,6 +111,7 @@ function EmployeeExit() {
   const [error, setError] = useState("");
 
   const [cancelling, setCancelling] = useState(false);
+  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [uploadingKey, setUploadingKey] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const pendingKey = useRef<string | null>(null);
@@ -131,14 +132,20 @@ function EmployeeExit() {
     void load();
   }, [load]);
 
-  const handleCancel = async () => {
-    if (!request) return;
-    if (!window.confirm("Cancel your resignation request?")) return;
+  const handleCancel = () => {
+  if (!request || cancelling) return;
+  setCancelConfirmOpen(true);
+};
+
+  const confirmCancel = async () => {
+    if (!request || cancelling) return;
 
     setCancelling(true);
     setError("");
+
     try {
       setRequest(await exitRequestService.cancel(request.id));
+      setCancelConfirmOpen(false);
     } catch (err) {
       setError(errorText(err, "Unable to cancel the request."));
     } finally {
@@ -312,6 +319,57 @@ function EmployeeExit() {
             >
               {request ? "Start New Resignation" : "Start Resignation"}
             </Link>
+          )}
+
+          {cancelConfirmOpen && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="cancel-exit-title"
+                className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-red-100">
+                    <LogOut className="h-5 w-5 text-red-600" />
+                  </div>
+
+                  <div>
+                    <h3
+                      id="cancel-exit-title"
+                      className="text-lg font-semibold text-slate-900"
+                    >
+                      Cancel Resignation Request?
+                    </h3>
+
+                    <p className="mt-2 text-sm leading-6 text-slate-600">
+                      Are you sure you want to cancel your resignation request?
+                      This action cannot be undone.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-6 flex justify-end gap-3">
+                  <button
+                    type="button"
+                    disabled={cancelling}
+                    onClick={() => setCancelConfirmOpen(false)}
+                    className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    Keep Request
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={cancelling}
+                    onClick={() => void confirmCancel()}
+                    className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {cancelling ? "Cancelling..." : "Yes, Cancel Request"}
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
         </section>
 
