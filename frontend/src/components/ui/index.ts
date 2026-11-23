@@ -15,3 +15,5 @@ export * from "./Toast";
 export * from "./useToast";
 export * from "./ConfirmDialog";
 export * from "./Avatar";
+export * from "./Panel";
+export * from "./StatStrip";

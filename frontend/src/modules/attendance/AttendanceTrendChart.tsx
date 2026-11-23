@@ -227,7 +227,7 @@ export default function AttendanceTrendChart({
       ) : (
         <div className="flex gap-3">
           {/* Y Axis Numbers */}
-          <div className="flex w-6 shrink-0 flex-col justify-between pb-6 text-right text-[11px] font-medium text-slate-500">
+          <div className="flex w-6 shrink-0 flex-col justify-between pb-6 text-right text-xs font-medium text-slate-500">
             {[...ticks].reverse().map((tick) => (
               <span key={tick}>{tick}</span>
             ))}
@@ -318,7 +318,7 @@ export default function AttendanceTrendChart({
             </svg>
 
             {/* X Axis Date labels */}
-            <div className="relative mt-2 h-4 text-[11px] font-medium text-slate-500">
+            <div className="relative mt-2 h-4 text-xs font-medium text-slate-500">
               {series.map((point, index) => {
                 const percent =
                   (index / Math.max(series.length - 1, 1)) * 100;

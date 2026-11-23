@@ -1,6 +1,5 @@
 import React from "react";
-import { UserCheck, UserX, Clock, CalendarDays, Timer } from "lucide-react";
-import { StatCard } from "../../../components/ui/StatCard";
+import { UserCheck, Clock, CalendarDays, UserX, Timer } from "lucide-react";
 
 export interface AttendanceStatRowProps {
   presentCount: number;
@@ -13,6 +12,15 @@ export interface AttendanceStatRowProps {
   className?: string;
 }
 
+interface StatItemWithIcon {
+  label: string;
+  value: string | number;
+  helper?: string;
+  icon: React.ElementType;
+  iconBg: string;
+  iconColor: string;
+}
+
 export const AttendanceStatRow: React.FC<AttendanceStatRowProps> = ({
   presentCount,
   absentCount,
@@ -23,52 +31,86 @@ export const AttendanceStatRow: React.FC<AttendanceStatRowProps> = ({
   isPersonal = false,
   className = "",
 }) => {
+  const items: StatItemWithIcon[] = [
+    {
+      label: isPersonal ? "Days Present" : "Present",
+      value: presentCount,
+      helper: totalEmployees ? `${Math.round((presentCount / totalEmployees) * 100)}% on time` : "On time punches",
+      icon: UserCheck,
+      iconBg: "bg-[#E3F5E1]",
+      iconColor: "text-[#1E6B45]",
+    },
+    {
+      label: isPersonal ? "Days Late" : "Late",
+      value: lateCount,
+      helper: totalEmployees ? `${Math.round((lateCount / totalEmployees) * 100)}% late arrivals` : "Grace period exceeded",
+      icon: Clock,
+      iconBg: "bg-[#FDF3D6]",
+      iconColor: "text-[#8A5A00]",
+    },
+    {
+      label: isPersonal ? "Days On Leave" : "On Leave",
+      value: onLeaveCount,
+      helper: totalEmployees ? `${Math.round((onLeaveCount / totalEmployees) * 100)}% approved leaves` : "Approved leaves",
+      icon: CalendarDays,
+      iconBg: "bg-[#E8EEFB]",
+      iconColor: "text-[#2F5FD0]",
+    },
+    {
+      label: isPersonal ? "Days Absent" : "Absent",
+      value: absentCount,
+      helper: totalEmployees ? `${Math.round((absentCount / totalEmployees) * 100)}% unexcused` : "Unexcused absences",
+      icon: UserX,
+      iconBg: "bg-[#FBE4E1]",
+      iconColor: "text-[#A12D22]",
+    },
+    {
+      label: isPersonal ? "Avg. Daily Hours" : "Avg. Hours",
+      value: avgHours,
+      helper: "Standard 8.0h shift",
+      icon: Timer,
+      iconBg: "bg-[#F0F1EE]",
+      iconColor: "text-[#52606D]",
+    },
+  ];
+
   return (
-    <div className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 ${className}`}>
-      {/* Present: green dot */}
-      <StatCard
-        label={isPersonal ? "Days Present" : "Present Today"}
-        value={presentCount}
-        subtext={totalEmployees ? `${Math.round((presentCount / totalEmployees) * 100)}% of total` : undefined}
-        dotColor="bg-emerald-500"
-        icon={<UserCheck className="w-4 h-4 text-slate-400" />}
-      />
+    <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 ${className}`}>
+      {items.map((item, idx) => {
+        const Icon = item.icon;
+        return (
+          <div
+            key={idx}
+            className="rounded-lg border border-[#E4E6E1] bg-white p-[16px_20px] min-h-[96px] shadow-none flex flex-col justify-between min-w-0"
+          >
+            {/* Top row: Label on left, Icon badge on right */}
+            <div className="flex items-center justify-between gap-2 min-w-0">
+              <span className="text-[13px] font-medium text-[#7B8794] truncate">
+                {item.label}
+              </span>
+              <div
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${item.iconBg}`}
+              >
+                <Icon className={`h-5 w-5 shrink-0 ${item.iconColor}`} />
+              </div>
+            </div>
 
-      {/* Late: amber dot */}
-      <StatCard
-        label={isPersonal ? "Days Late" : "Late Today"}
-        value={lateCount}
-        subtext={totalEmployees ? `${Math.round((lateCount / totalEmployees) * 100)}% late` : undefined}
-        dotColor="bg-amber-500"
-        icon={<Clock className="w-4 h-4 text-slate-400" />}
-      />
+            {/* Big number: label to big number 8px (mt-2), line-height tight (1.1) */}
+            <div className="mt-2">
+              <span className="text-[28px] font-semibold text-[#1F2933] tracking-tight leading-[1.1] block">
+                {item.value}
+              </span>
+            </div>
 
-      {/* On Leave: blue dot */}
-      <StatCard
-        label={isPersonal ? "Days On Leave" : "On Leave Today"}
-        value={onLeaveCount}
-        subtext={totalEmployees ? `${Math.round((onLeaveCount / totalEmployees) * 100)}% on leave` : undefined}
-        dotColor="bg-blue-500"
-        icon={<CalendarDays className="w-4 h-4 text-slate-400" />}
-      />
-
-      {/* Absent: red dot */}
-      <StatCard
-        label={isPersonal ? "Days Absent" : "Absent Today"}
-        value={absentCount}
-        subtext={totalEmployees ? `${Math.round((absentCount / totalEmployees) * 100)}% absent` : undefined}
-        dotColor="bg-rose-500"
-        icon={<UserX className="w-4 h-4 text-slate-400" />}
-      />
-
-      {/* Avg Hours: slate dot */}
-      <StatCard
-        label={isPersonal ? "Avg. Daily Hours" : "Avg. Working Hours"}
-        value={avgHours}
-        subtext="Standard 8.0h shift"
-        dotColor="bg-slate-400"
-        icon={<Timer className="w-4 h-4 text-slate-400" />}
-      />
+            {/* Subtext: number to subtext 4px (mt-1), muted color, no extra margin (m-0) */}
+            {item.helper && (
+              <span className="text-xs text-[#7B8794] mt-1 truncate block m-0">
+                {item.helper}
+              </span>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 };

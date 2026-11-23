@@ -74,18 +74,18 @@ export function DataTable<T>({
   onRowClick,
 }: DataTableProps<T>) {
   const hasToolbar = onSearchChange || filters || actions;
-  const totalPages =
-    totalItems !== undefined && pageSize
-      ? Math.max(1, Math.ceil(totalItems / pageSize))
-      : undefined;
+  const total = totalItems !== undefined ? totalItems : data.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
-    <div className={`flex flex-col w-full rounded-[6px] border border-[#E5E7EB] bg-white overflow-hidden shadow-none ${className}`}>
+    <div
+      className={`flex flex-col w-full rounded-[8px] border border-[#E4E6E1] bg-white overflow-hidden shadow-none ${className}`}
+    >
       {/* Panel Title Header */}
       {title && (
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[#E5E7EB] bg-white">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-[#E4E6E1] bg-white shrink-0">
           {typeof title === "string" ? (
-            <h3 className="text-[14px] font-semibold text-[#111827]">{title}</h3>
+            <h3 className="text-[14px] font-semibold text-[#1F2933]">{title}</h3>
           ) : (
             title
           )}
@@ -94,35 +94,33 @@ export function DataTable<T>({
 
       {/* Toolbar */}
       {hasToolbar && (
-        <div className="flex items-center justify-between gap-3 px-3.5 py-2.5 border-b border-[#E5E7EB] bg-[#F9FAFB]/50 overflow-x-auto flex-nowrap">
-          <div className="flex items-center gap-2 flex-nowrap shrink-0">
-            {onSearchChange && (
-              <div className="relative w-48 sm:w-56 shrink-0">
-                <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-[#9CA3AF]" />
-                <input
-                  type="text"
-                  value={searchQuery ?? ""}
-                  onChange={(e) => onSearchChange(e.target.value)}
-                  placeholder={searchPlaceholder}
-                  className="w-full h-[32px] pl-8 pr-2.5 text-[13px] bg-white rounded-[6px] border border-[#E5E7EB] text-[#111827] placeholder:text-[#9CA3AF] focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-            )}
-            {filters}
-          </div>
-          {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
+        <div className="flex flex-row items-center flex-wrap gap-3 px-6 py-4 border-b border-[#E4E6E1] bg-white w-full">
+          {onSearchChange && (
+            <div className="relative flex-1 min-w-[220px] max-w-[320px] shrink-0">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 shrink-0 text-[#7B8794]" />
+              <input
+                type="text"
+                value={searchQuery ?? ""}
+                onChange={(e) => onSearchChange(e.target.value)}
+                placeholder={searchPlaceholder}
+                className="w-full h-10 pl-9 pr-3 text-sm bg-[#F6F7F5] rounded-[6px] border border-[#E4E6E1] text-[#1F2933] placeholder:text-[#7B8794] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#2F5FD0] focus:border-[#2F5FD0] transition-colors"
+              />
+            </div>
+          )}
+          {filters}
+          {actions && <div className="flex items-center gap-3 shrink-0 ml-auto">{actions}</div>}
         </div>
       )}
 
       {/* Table Container */}
       <div className="overflow-x-auto w-full">
-        <table className="w-full border-collapse text-left text-[13px]">
+        <table className="min-w-[960px] w-full border-collapse text-left text-sm">
           <thead
             className={`${
               stickyHeader ? "sticky top-0 z-10" : ""
-            } bg-[#F9FAFB] border-b border-[#E5E7EB] text-[#6B7280] font-semibold text-[12px] normal-case tracking-normal`}
+            } h-11 border-b border-[#E4E6E1] text-[#7B8794] font-medium text-xs normal-case tracking-[0.02em]`}
           >
-            <tr>
+            <tr className="h-11">
               {columns.map((col) => {
                 const alignClass =
                   col.align === "right"
@@ -135,8 +133,8 @@ export function DataTable<T>({
                   <th
                     key={col.key}
                     style={{ width: col.width }}
-                    className={`px-3.5 py-2.5 font-semibold text-[12px] text-[#6B7280] normal-case select-none ${alignClass} ${
-                      col.sortable ? "cursor-pointer hover:bg-slate-100/80 transition-colors" : ""
+                    className={`h-11 px-6 py-0 bg-[#F6F7F5] font-medium text-xs text-[#7B8794] normal-case select-none align-middle tracking-[0.02em] ${alignClass} ${
+                      col.sortable ? "cursor-pointer hover:bg-[#F0F1EE] transition-colors" : ""
                     }`}
                     onClick={() => {
                       if (col.sortable && onSort) {
@@ -155,15 +153,15 @@ export function DataTable<T>({
                     >
                       <span>{col.header}</span>
                       {col.sortable && (
-                        <span className="text-[#9CA3AF]">
+                        <span className="text-[#7B8794]">
                           {sortColumn === col.key ? (
                             sortDirection === "asc" ? (
-                              <ChevronUp className="w-3.5 h-3.5 text-blue-600" />
+                              <ChevronUp className="w-3.5 h-3.5 shrink-0 text-[#2F5FD0]" />
                             ) : (
-                              <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
+                              <ChevronDown className="w-3.5 h-3.5 shrink-0 text-[#2F5FD0]" />
                             )
                           ) : (
-                            <ChevronsUpDown className="w-3 h-3 text-[#D1D5DB]" />
+                            <ChevronsUpDown className="w-3.5 h-3.5 shrink-0 text-[#7B8794]/50" />
                           )}
                         </span>
                       )}
@@ -173,12 +171,12 @@ export function DataTable<T>({
               })}
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 bg-white text-[#111827]">
+          <tbody className="divide-y divide-[#E4E6E1] bg-white text-[#1F2933]">
             {isLoading ? (
               <TableRowSkeleton rows={5} columns={columns.length} />
             ) : data.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="px-4 py-12 text-center">
+                <td colSpan={columns.length} className="px-6 py-12 text-center">
                   <EmptyState
                     title={emptyTitle}
                     description={emptyDescription}
@@ -191,7 +189,7 @@ export function DataTable<T>({
                 <tr
                   key={keyExtractor(row)}
                   onClick={() => onRowClick && onRowClick(row)}
-                  className={`h-[44px] transition-colors hover:bg-[#F9FAFB] border-b border-[#E5E7EB] last:border-b-0 ${
+                  className={`min-h-[64px] h-[64px] transition-colors hover:bg-[#FAFAF8] ${
                     onRowClick ? "cursor-pointer" : ""
                   }`}
                 >
@@ -206,7 +204,7 @@ export function DataTable<T>({
                     return (
                       <td
                         key={col.key}
-                        className={`px-3.5 py-0 text-[13px] text-[#111827] whitespace-nowrap align-middle ${alignClass}`}
+                        className={`px-6 py-3 text-sm text-[#1F2933] whitespace-nowrap align-middle ${alignClass}`}
                       >
                         {col.render
                           ? col.render(row, rowIndex)
@@ -224,41 +222,42 @@ export function DataTable<T>({
       </div>
 
       {/* Pagination Footer */}
-      {totalPages !== undefined && page !== undefined && onPageChange && (
-        <div className="flex items-center justify-between px-3.5 py-2.5 border-t border-slate-200 bg-slate-50/50 text-xs text-slate-500">
-          <div>
+      {page !== undefined && onPageChange && (
+        <div className="flex justify-between items-center px-6 py-4 border-t border-[#E4E6E1] bg-white">
+          <div className="text-[13px] text-[#7B8794]">
             Showing{" "}
-            <span className="font-medium text-slate-700">
+            <span className="font-medium text-[#1F2933]">
               {data.length > 0 ? (page - 1) * pageSize + 1 : 0}
             </span>{" "}
             to{" "}
-            <span className="font-medium text-slate-700">
-              {Math.min(page * pageSize, totalItems ?? 0)}
+            <span className="font-medium text-[#1F2933]">
+              {Math.min(page * pageSize, total)}
             </span>{" "}
             of{" "}
-            <span className="font-medium text-slate-700">{totalItems ?? 0}</span> entries
+            <span className="font-medium text-[#1F2933]">{total}</span>
           </div>
-          <div className="flex items-center gap-1">
+
+          <div className="flex items-center gap-2">
             <button
               type="button"
-              disabled={page <= 1 || isLoading}
+              disabled={page <= 1}
               onClick={() => onPageChange(page - 1)}
-              className="inline-flex items-center justify-center p-1 rounded border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-8 h-8 flex items-center justify-center rounded-[6px] border border-[#E4E6E1] text-[#7B8794] hover:text-[#1F2933] hover:bg-[#F0F1EE] disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
               aria-label="Previous page"
             >
-              <ChevronLeft className="w-3.5 h-3.5" />
+              <ChevronLeft className="w-4 h-4 shrink-0" />
             </button>
-            <span className="px-2 text-slate-700 font-medium">
+            <span className="mx-2 text-[13px] font-medium text-[#1F2933]">
               {page} / {totalPages}
             </span>
             <button
               type="button"
-              disabled={page >= totalPages || isLoading}
+              disabled={page >= totalPages}
               onClick={() => onPageChange(page + 1)}
-              className="inline-flex items-center justify-center p-1 rounded border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-8 h-8 flex items-center justify-center rounded-[6px] border border-[#E4E6E1] text-[#7B8794] hover:text-[#1F2933] hover:bg-[#F0F1EE] disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
               aria-label="Next page"
             >
-              <ChevronRight className="w-3.5 h-3.5" />
+              <ChevronRight className="w-4 h-4 shrink-0" />
             </button>
           </div>
         </div>
@@ -266,3 +265,5 @@ export function DataTable<T>({
     </div>
   );
 }
+
+export default DataTable;

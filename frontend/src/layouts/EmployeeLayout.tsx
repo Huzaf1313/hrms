@@ -119,11 +119,11 @@ export function EmployeeLayout({ onLogout }: { onLogout: () => void }) {
   const pageTitle = pageTitles[location.pathname] ?? "Portal";
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-[#f8fafc]">
+    <div className="flex h-screen w-full overflow-hidden bg-[var(--bg-page)]">
       {/* Skip link for keyboard accessibility */}
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-2 focus:bg-white focus:text-blue-600 focus:ring-2 focus:ring-blue-500 rounded"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-2 focus:bg-white focus:text-[#2F5FD0] focus:ring-2 focus:ring-[#2F5FD0] rounded"
       >
         Skip to main content
       </a>
@@ -134,13 +134,13 @@ export function EmployeeLayout({ onLogout }: { onLogout: () => void }) {
       />
 
       <div className="flex flex-1 flex-col h-full min-w-0 overflow-hidden">
-        {/* Topbar: slim 56px, 1px bottom border, no shadow */}
-        <header className="shrink-0 z-30 flex h-14 items-center justify-between gap-4 border-b border-slate-200 bg-white px-5">
+        {/* Topbar: slim 60px, 1px bottom border, no shadow */}
+        <header className="shrink-0 z-30 flex h-[60px] items-center justify-between gap-4 border-b border-[#E4E6E1] bg-white px-6">
           <div className="flex min-w-0 items-center gap-3">
             <button
               type="button"
               onClick={() => setSidebarOpen((prev) => !prev)}
-              className="flex h-8 w-8 items-center justify-center rounded-md text-slate-600 hover:bg-slate-100 lg:hidden focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex h-8 w-8 items-center justify-center rounded-[6px] text-[#52606D] hover:bg-[#F0F1EE] lg:hidden focus:outline-none focus:ring-2 focus:ring-[#2F5FD0]"
               aria-label="Open navigation menu"
               aria-expanded={sidebarOpen}
             >
@@ -149,8 +149,8 @@ export function EmployeeLayout({ onLogout }: { onLogout: () => void }) {
 
             {/* Sole page title */}
             <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-400 font-medium hidden sm:inline">Self Service /</span>
-              <h1 className="text-sm font-semibold text-slate-900 truncate">
+              <span className="text-[12px] text-[#7B8794] font-medium hidden sm:inline">Self Service /</span>
+              <h1 className="text-[20px] font-semibold text-[#1F2933] truncate">
                 {pageTitle}
               </h1>
             </div>
@@ -171,7 +171,7 @@ export function EmployeeLayout({ onLogout }: { onLogout: () => void }) {
                 aria-label="Notifications"
                 aria-expanded={showNotificationDropdown}
               >
-                <Bell className="h-4 w-4" />
+                <Bell className="h-[18px] w-[18px] shrink-0" />
                 {unreadNotificationCount > 0 && (
                   <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold text-white">
                     {unreadNotificationCount > 99 ? "99+" : unreadNotificationCount}
@@ -199,11 +199,11 @@ export function EmployeeLayout({ onLogout }: { onLogout: () => void }) {
                   <span className="block truncate text-xs font-semibold text-slate-800 leading-tight">
                     {fullName}
                   </span>
-                  <span className="block truncate text-[10px] text-slate-400 leading-tight">
+                  <span className="block truncate text-xs text-slate-400 leading-tight">
                     {designation || "Employee"}
                   </span>
                 </div>
-                <ChevronDown className="h-3 w-3 text-slate-400" />
+                <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
               </button>
 
               {showProfileMenu && (
@@ -247,7 +247,7 @@ export function EmployeeLayout({ onLogout }: { onLogout: () => void }) {
         </header>
 
         {/* Main Content Area */}
-        <main id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto min-w-0 outline-none">
+        <main id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto min-w-0 outline-none w-full p-6 xl:p-8">
           <ErrorBoundary label={pageTitle}>
             <Outlet />
           </ErrorBoundary>

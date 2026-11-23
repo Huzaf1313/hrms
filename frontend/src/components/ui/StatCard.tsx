@@ -34,7 +34,7 @@ export const StatCard: React.FC<StatCardProps> = ({
           <span className="text-xs font-medium text-slate-500 truncate">{label}</span>
         </div>
         {icon && (
-          <div className="flex h-7 w-7 items-center justify-center rounded-md text-slate-400 shrink-0">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg text-slate-400 shrink-0 [&>svg]:w-5 [&>svg]:h-5 [&>svg]:shrink-0">
             {icon}
           </div>
         )}
@@ -48,7 +48,7 @@ export const StatCard: React.FC<StatCardProps> = ({
       </div>
 
       {subtext && (
-        <p className="mt-1 text-[11px] text-slate-500 truncate">{subtext}</p>
+        <p className="mt-1 text-xs text-slate-500 truncate">{subtext}</p>
       )}
     </div>
   );

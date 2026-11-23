@@ -216,18 +216,18 @@ function DatePicker({ canManageHolidays = false }: DatePickerProps) {
             ? "Showing today"
             : "Filtering every page by this date"
         }
-        className={`flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs font-semibold shadow-sm transition ${
+        className={`flex items-center gap-2 rounded-[6px] border h-[34px] px-3 text-[13.5px] font-medium transition ${
           isDefault
-            ? "border-slate-200/90 bg-white text-slate-700 hover:bg-slate-50"
-            : "border-blue-200 bg-blue-50/80 text-blue-700 hover:bg-blue-100"
+            ? "border-[#E4E6E1] bg-white text-[#1F2933] hover:bg-[#F0F1EE]"
+            : "border-[#2F5FD0]/30 bg-[#E8EEFB] text-[#2F5FD0] hover:bg-[#E8EEFB]/80"
         }`}
       >
-        <CalendarDays className="h-4 w-4 text-slate-500" />
-        <span className="hidden sm:inline font-sans">{formatDate(selectedDate)}</span>
+        <CalendarDays className="h-[18px] w-[18px] text-[#7B8794] shrink-0" />
+        <span className="hidden sm:inline">{formatDate(selectedDate)}</span>
         {!isDefault && (
           <span
             aria-hidden="true"
-            className="h-1.5 w-1.5 rounded-full bg-[#2563eb]"
+            className="h-1.5 w-1.5 rounded-full bg-[#2F5FD0]"
           />
         )}
       </button>
@@ -282,7 +282,7 @@ function DatePicker({ canManageHolidays = false }: DatePickerProps) {
             </div>
           </div>
 
-          <div className="grid grid-cols-7 text-center text-[11px] font-semibold text-gray-400">
+          <div className="grid grid-cols-7 text-center text-xs font-semibold text-gray-400">
             {weekdayLabels.map((label) => (
               <span key={label} className="pb-2">{label}</span>
             ))}
@@ -352,7 +352,7 @@ function DatePicker({ canManageHolidays = false }: DatePickerProps) {
           {/* Holiday list. Doubles as the legend for employees. */}
           {monthHolidays.length > 0 && (
             <div className="mt-3 border-t border-gray-100 pt-3">
-              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
                 Holidays this month
               </p>
 
@@ -368,12 +368,12 @@ function DatePicker({ canManageHolidays = false }: DatePickerProps) {
                         <span className="block truncate text-xs font-semibold text-gray-800">
                           {holiday.name}
                         </span>
-                        <span className="block text-[11px] text-gray-400">
+                        <span className="block text-xs text-gray-400">
                           {formatHolidayDate(holiday.date)}
                         </span>
                       </span>
 
-                      <span className="shrink-0 text-[10px] text-gray-400">
+                      <span className="shrink-0 text-xs text-gray-400">
                         {HOLIDAY_TYPE_LABELS[holiday.type]}
                       </span>
                     </>

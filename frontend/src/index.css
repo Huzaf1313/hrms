@@ -1,30 +1,16 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@500;700&family=Space+Grotesk:wght@400;500&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 @import "./styles/tokens.css";
 @import "tailwindcss";
 
-@theme {
-  --color-brand-50: #eff6ff;
-  --color-brand-100: #dbeafe;
-  --color-brand-500: #3b82f6;
-  --color-brand-600: #2563eb;
-  --color-brand-700: #1d4ed8;
-  --color-brand-900: #1e3a8a;
-
-  --color-ink-300: #8993a7;
-  --color-ink-400: #68758e;
-  --color-ink-600: #52607a;
-  --color-ink-800: #17213a;
-  --color-ink-900: #14213d;
-
-  --color-panel-800: #131c31;
-  --color-panel-900: #0b1220;
-
-  --color-line: #d6dbe6;
-  --color-surface: #ffffff;
-  --color-surface-muted: #f8faff;
+html {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  font-size: 16px;
 }
 
-html,
 body,
 #root {
   height: 100%;
@@ -32,8 +18,24 @@ body,
   margin: 0;
   padding: 0;
   overflow: hidden;
-  font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
-    sans-serif;
+  background: var(--bg-page);
+  color: var(--text);
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Hard rule: NO box-shadows on panels, cards, tables */
+.rounded-\[8px\],
+.rounded-lg,
+.rounded-xl,
+.rounded-2xl,
+.rounded-3xl,
+table,
+aside,
+header,
+main {
+  box-shadow: none !important;
 }
 
 /* Hide native browser calendar icon to prevent duplicate calendar icons */
@@ -43,62 +45,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   -webkit-appearance: none !important;
 }
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6,
-.brand-wordmark {
-  font-family: "Manrope", ui-sans-serif, system-ui, sans-serif;
-}
-
-label,
-th,
-dt,
-code,
-.font-mono,
-.technical-label {
-  font-family: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
-}
-
-/* Auth dark brand panel Lucide icon color override so icons don't render black */
-.auth-brand-panel svg.lucide {
-  color: currentColor !important;
-}
-
-:is(div, span):is([class~="h-7"][class~="w-7"],
-  [class~="h-8"][class~="w-8"],
-  [class~="h-9"][class~="w-9"],
-  [class~="h-10"][class~="w-10"],
-  [class~="h-11"][class~="w-11"],
-  [class~="h-14"][class~="w-14"],
-  [class~="h-16"][class~="w-16"]):has(> svg.lucide) {
-  background-color: transparent !important;
-}
-
-/* =========================================================
-   UNIVERSAL SCROLLBAR REMOVAL (ALL PAGES & ALL CONTAINERS)
-   Removes visible scrollbars everywhere while keeping smooth
-   scrolling fully functional via mouse wheel, touch, and keys.
-   ========================================================= */
-
-html,
-body,
-#root {
-  scrollbar-width: none !important;
-  -ms-overflow-style: none !important;
-}
-
-html::-webkit-scrollbar,
-body::-webkit-scrollbar,
-#root::-webkit-scrollbar {
-  width: 0 !important;
-  height: 0 !important;
-  display: none !important;
-}
-
-/* Hide scrollbars on every element site-wide (sidebars, tables, modals, cards) */
+/* Global scrollbar suppression */
 *,
 *::before,
 *::after {
@@ -107,47 +54,23 @@ body::-webkit-scrollbar,
 }
 
 *::-webkit-scrollbar {
+  display: none !important;
   width: 0 !important;
   height: 0 !important;
-  display: none !important;
 }
 
-*::-webkit-scrollbar-track,
-*::-webkit-scrollbar-thumb,
-*::-webkit-scrollbar-corner,
-::-webkit-scrollbar-button {
-  display: none !important;
-  background: transparent !important;
+/* Base focus styles */
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
 }
 
-.scrollbar-hidden,
-.sidebar-scrollbar,
-.no-scrollbar {
-  scrollbar-width: none !important;
-  -ms-overflow-style: none !important;
-}
-
-.scrollbar-hidden::-webkit-scrollbar,
-.sidebar-scrollbar::-webkit-scrollbar,
-.no-scrollbar::-webkit-scrollbar {
-  width: 0 !important;
-  height: 0 !important;
-  display: none !important;
-}
-
-/* =========================================
-   Celebration Scrolling Announcement
-   ========================================= */
-
-/* Marquee spacing comes from the measured width of one set of items, injected
-   as --marquee-distance by DashboardTicker. The percentage fallback applies
-   only for the frame before that measurement lands. */
+/* Celebration Scrolling Announcement */
 .celebration-marquee {
   animation: celebration-scroll var(--marquee-duration, 35s) linear infinite;
   will-change: transform;
 }
 
-/* Pause when user hovers over the celebration bar */
 .celebration-marquee:hover {
   animation-play-state: paused;
 }
@@ -156,219 +79,23 @@ body::-webkit-scrollbar,
   from {
     transform: translateX(0);
   }
-
   to {
     transform: translateX(calc(var(--marquee-distance, 50%) * -1));
   }
 }
 
-/* Respect users who prefer reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .celebration-marquee {
     animation: none;
   }
 }
 
-/* =========================================
-   Admin Dashboard entrance animations
-   ========================================= */
-
-/* Chart lines draw themselves left to right. pathLength="1" normalises every
-   path to a length of 1, so one dash value animates any series. */
-@keyframes dashboard-line-draw {
-  from {
-    stroke-dashoffset: 1;
-  }
-
-  to {
-    stroke-dashoffset: 0;
-  }
-}
-
-.dashboard-line-draw {
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-  animation: dashboard-line-draw 1600ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
-}
-
-/* Soft area fill and legend dots that trail the line draw. */
-@keyframes dashboard-fade-in {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
-}
-
-.dashboard-fade-in {
-  opacity: 0;
-  animation: dashboard-fade-in 900ms ease-out forwards;
-}
-
-/* Donut segments, counters and other single accents. */
-@keyframes dashboard-pop {
-  from {
-    opacity: 0;
-    transform: scale(0.8);
-  }
-
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-.dashboard-pop {
-  opacity: 0;
-  transform-origin: center;
-  animation: dashboard-pop 700ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-}
-
-/* Cards and table rows slide into place. Delays come from --dashboard-delay. */
-@keyframes dashboard-rise {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.dashboard-rise {
-  opacity: 0;
-  animation: dashboard-rise 550ms ease-out forwards;
-  animation-delay: var(--dashboard-delay, 0ms);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .dashboard-line-draw {
-    animation: none;
-    stroke-dashoffset: 0;
-  }
-
-  .dashboard-fade-in,
-  .dashboard-pop,
-  .dashboard-rise {
-    animation: none;
-    opacity: 1;
-    transform: none;
-  }
-}
-
+/* Payslip printing styles */
 .payslip-paper {
   color: #111827;
   font-family: "Times New Roman", Times, serif;
   font-size: 16px;
   line-height: 1.25;
-  isolation: isolate;
-}
-
-.payslip-header {
-  min-height: 104px;
-}
-
-.payslip-title,
-.payslip-section-title {
-  position: relative;
-  z-index: 1;
-  width: max-content;
-  margin-left: auto;
-  margin-right: auto;
-  padding: 5px 10px;
-  font-weight: 700;
-  text-decoration: underline;
-}
-
-.payslip-title {
-  margin-top: 34px;
-  font-size: 25px;
-}
-
-.payslip-section-title {
-  margin-top: 30px;
-  margin-bottom: 2px;
-  font-size: 22px;
-  text-decoration: none;
-}
-
-.payslip-table {
-  position: relative;
-  z-index: 1;
-  width: 100%;
-  border-collapse: collapse;
-  border: 2px solid #111;
-}
-
-.payslip-table td,
-.payslip-table th {
-  border: 1px solid #111;
-  padding: 8px 9px;
-  text-align: left;
-  vertical-align: middle;
-}
-
-.payslip-table th {
-  text-align: center;
-  font-weight: 700;
-}
-
-.payslip-details-table td {
-  width: 50%;
-  height: 43px;
-}
-
-.payslip-earnings-table {
-  table-layout: fixed;
-}
-
-.payslip-earnings-table th:nth-child(1),
-.payslip-earnings-table th:nth-child(3) {
-  width: 34%;
-}
-
-.payslip-earnings-table th:nth-child(2),
-.payslip-earnings-table th:nth-child(4) {
-  width: 16%;
-}
-
-.payslip-earnings-table td:nth-child(2),
-.payslip-earnings-table td:nth-child(4),
-.payslip-net-table td:nth-child(2) {
-  text-align: center;
-}
-
-.payslip-earnings-table td {
-  height: 42px;
-}
-
-.payslip-net-table {
-  table-layout: fixed;
-}
-
-.payslip-net-table th:first-child,
-.payslip-net-table td:first-child {
-  width: 55%;
-}
-
-.payslip-net-table td {
-  height: 43px;
-}
-
-.payslip-watermark {
-  position: absolute;
-  z-index: 0;
-  top: 300px;
-  left: 50%;
-  width: 560px;
-  max-width: 90%;
-  transform: translateX(-50%);
-  opacity: 0.12;
-  pointer-events: none;
 }
 
 @media print {
@@ -376,247 +103,37 @@ body::-webkit-scrollbar,
     size: A4;
     margin: 0;
   }
-
   body {
     background: white;
   }
-
   body * {
     visibility: hidden;
   }
-
   .payslip-modal,
   .payslip-modal .payslip-paper,
   .payslip-modal .payslip-paper * {
     visibility: visible;
   }
-
   .payslip-modal {
     position: static;
     display: block;
     padding: 0;
     background: white;
   }
-
-  .payslip-modal>div {
+  .payslip-modal > div {
     max-height: none;
     max-width: none;
     overflow: visible;
     border-radius: 0;
     box-shadow: none;
   }
-
-  .payslip-modal>div>div:first-child,
+  .payslip-modal > div > div:first-child,
   .payslip-actions {
     display: none;
   }
-
   .payslip-paper {
     width: 100%;
     min-height: 297mm;
     padding: 27px 42px 30px;
-  }
-}
-
-@media (max-width: 640px) {
-  .payslip-paper {
-    font-size: 12px;
-  }
-
-  .payslip-table td,
-  .payslip-table th {
-    padding: 6px 4px;
-  }
-
-  .payslip-header {
-    min-height: 84px;
-  }
-
-  .payslip-title {
-    font-size: 19px;
-  }
-
-  .payslip-section-title {
-    font-size: 16px;
-  }
-}
-
-/* =========================================
-   Auth entrance and aurora animations
-   ========================================= */
-
-@keyframes auth-rise {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.auth-rise {
-  animation: auth-rise 400ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-@keyframes auth-aurora-drift-1 {
-
-  0%,
-  100% {
-    transform: translate(0, 0) scale(1);
-  }
-
-  50% {
-    transform: translate(6%, 10%) scale(1.06);
-  }
-}
-
-@keyframes auth-aurora-drift-2 {
-
-  0%,
-  100% {
-    transform: translate(0, 0) scale(1);
-  }
-
-  50% {
-    transform: translate(-8%, -6%) scale(1.1);
-  }
-}
-
-.auth-aurora-1 {
-  animation: auth-aurora-drift-1 18s ease-in-out infinite;
-}
-
-.auth-aurora-2 {
-  animation: auth-aurora-drift-2 22s ease-in-out infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
-
-  .auth-rise,
-  .auth-aurora-1,
-  .auth-aurora-2 {
-    animation: none;
-  }
-}
-
-/* =========================================
-   Thought-of-the-day banner (dark aurora)
-   ========================================= */
-
-/* Drifting glow blobs keep the navy banner alive without distracting
-   from the scrolling text. */
-@keyframes ticker-glow-drift {
-
-  0%,
-  100% {
-    transform: translate(0, 0) scale(1);
-  }
-
-  50% {
-    transform: translate(6%, 14%) scale(1.14);
-  }
-}
-
-.ticker-glow-1 {
-  animation: ticker-glow-drift 14s ease-in-out infinite;
-}
-
-.ticker-glow-2 {
-  animation: ticker-glow-drift 18s ease-in-out infinite reverse;
-}
-
-/* One gloss sweep crosses the banner, then rests before repeating. */
-@keyframes ticker-shine {
-  0% {
-    transform: translateX(-160%) skewX(-18deg);
-  }
-
-  35%,
-  100% {
-    transform: translateX(320%) skewX(-18deg);
-  }
-}
-
-.ticker-shine {
-  animation: ticker-shine 9s ease-in-out infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
-
-  .ticker-glow-1,
-  .ticker-glow-2,
-  .ticker-shine {
-    animation: none;
-  }
-}
-
-/* Hide the sidebar scrollbar while preserving scrolling */
-.sidebar-scrollbar {
-  scrollbar-width: none;
-  /* Firefox */
-  -ms-overflow-style: none;
-  /* Internet Explorer and Edge Legacy */
-}
-
-.sidebar-scrollbar::-webkit-scrollbar {
-  display: none;
-  /* Chrome, Safari, and Edge */
-}
-
-
-/* Employee announcement ticker */
-@keyframes employee-announcement-scroll {
-  from {
-    transform: translateX(0);
-  }
-
-  to {
-    transform: translateX(calc(-1 * var(--marquee-distance)));
-  }
-}
-
-.employee-announcement-marquee {
-  animation: employee-announcement-scroll var(--marquee-duration) linear infinite;
-  will-change: transform;
-}
-
-.employee-announcement-marquee:hover {
-  animation-play-state: paused;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .employee-announcement-marquee {
-    animation: none;
-  }
-}
-
-
-@keyframes employee-leave-scroll {
-  from {
-    transform: translateX(0);
-  }
-
-  to {
-    transform: translateX(-50%);
-  }
-}
-
-.employee-leave-marquee {
-  animation-name: employee-leave-scroll;
-  animation-timing-function: linear;
-  animation-iteration-count: infinite;
-  will-change: transform;
-}
-
-.employee-leave-marquee:hover {
-  animation-play-state: paused;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .employee-leave-marquee {
-    animation: none;
   }
 }

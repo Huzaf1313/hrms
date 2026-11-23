@@ -48,7 +48,8 @@ export const AdminRegularizationRequests: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    loadRequests();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadRequests();
   }, [loadRequests]);
 
   const filteredRequests = useMemo(() => {
@@ -128,7 +129,7 @@ export const AdminRegularizationRequests: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col gap-4 p-5 max-w-7xl mx-auto w-full">
+    <div className="flex flex-col gap-4 w-full">
       {/* Page Header / Back navigation */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
@@ -146,7 +147,7 @@ export const AdminRegularizationRequests: React.FC = () => {
         </div>
 
         {isSampleData && (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
             Sample data
           </span>
         )}
@@ -229,7 +230,7 @@ export const AdminRegularizationRequests: React.FC = () => {
                         <Avatar name={req.employeeName} size="xs" />
                         <div>
                           <span className="block font-medium">{req.employeeName}</span>
-                          <span className="text-[10px] text-slate-400 font-mono">{req.employeeCode}</span>
+                          <span className="text-xs text-slate-400 font-mono">{req.employeeCode}</span>
                         </div>
                       </div>
                     </td>
@@ -246,7 +247,7 @@ export const AdminRegularizationRequests: React.FC = () => {
                     <td className="py-2.5 px-3 text-slate-700">
                       <div>
                         <span className="font-medium block">{req.issueType}</span>
-                        <span className="text-[10px] text-slate-400 truncate block max-w-xs" title={req.reason}>
+                        <span className="text-xs text-slate-400 truncate block max-w-xs" title={req.reason}>
                           {req.reason}
                         </span>
                       </div>
@@ -254,7 +255,7 @@ export const AdminRegularizationRequests: React.FC = () => {
 
                     {/* Logged vs Requested */}
                     <td className="py-2.5 px-3 font-mono">
-                      <span className="text-slate-400 line-through mr-1 text-[11px]">
+                      <span className="text-slate-400 line-through mr-1 text-xs">
                         {req.currentCheckIn ?? "--:--"} - {req.currentCheckOut ?? "--:--"}
                       </span>
                       <span className="text-blue-700 font-medium">
@@ -273,7 +274,7 @@ export const AdminRegularizationRequests: React.FC = () => {
                     </td>
 
                     {/* Requested On */}
-                    <td className="py-2.5 px-3 text-slate-500 font-mono text-[11px]">
+                    <td className="py-2.5 px-3 text-slate-500 font-mono text-xs">
                       {req.displayRequestedAt}
                     </td>
 
@@ -342,7 +343,7 @@ export const AdminRegularizationRequests: React.FC = () => {
                   <span className="font-semibold text-slate-900 block text-xs">
                     {selectedRequest.employeeName}
                   </span>
-                  <span className="text-[11px] text-slate-500 font-mono">
+                  <span className="text-xs text-slate-500 font-mono">
                     {selectedRequest.employeeCode} • {selectedRequest.department}
                   </span>
                 </div>
@@ -358,18 +359,18 @@ export const AdminRegularizationRequests: React.FC = () => {
             {/* Side-by-side Punches */}
             <div className="grid grid-cols-2 gap-3 p-3 rounded-lg border border-slate-200 bg-white text-xs">
               <div>
-                <span className="text-[11px] text-slate-400 block font-medium">Original Logged Times</span>
+                <span className="text-xs text-slate-400 block font-medium">Original Logged Times</span>
                 <span className="font-mono text-slate-600 mt-1 block font-medium">
                   {selectedRequest.currentCheckIn ?? "--:--"} → {selectedRequest.currentCheckOut ?? "--:--"}
                 </span>
-                <span className="text-[10px] text-slate-400 mt-0.5 block">Date: {selectedRequest.displayDate}</span>
+                <span className="text-xs text-slate-400 mt-0.5 block">Date: {selectedRequest.displayDate}</span>
               </div>
               <div>
-                <span className="text-[11px] text-blue-600 block font-semibold">Requested Correction</span>
+                <span className="text-xs text-blue-600 block font-semibold">Requested Correction</span>
                 <span className="font-mono text-blue-700 font-semibold mt-1 block">
                   {selectedRequest.requestedCheckIn} → {selectedRequest.requestedCheckOut}
                 </span>
-                <span className="text-[10px] text-blue-600 mt-0.5 block">Issue: {selectedRequest.issueType}</span>
+                <span className="text-xs text-blue-600 mt-0.5 block">Issue: {selectedRequest.issueType}</span>
               </div>
             </div>
 
@@ -388,7 +389,7 @@ export const AdminRegularizationRequests: React.FC = () => {
               <div className="flex items-center gap-2 p-2 rounded border border-slate-200 text-xs text-slate-700">
                 <Paperclip className="w-3.5 h-3.5 text-slate-400" />
                 <span className="truncate flex-1">{selectedRequest.attachmentName}</span>
-                <span className="text-[10px] text-blue-600 font-medium">Attached Proof</span>
+                <span className="text-xs text-blue-600 font-medium">Attached Proof</span>
               </div>
             )}
 
@@ -406,7 +407,7 @@ export const AdminRegularizationRequests: React.FC = () => {
                   <span className="font-medium">Reviewed by:</span> {selectedRequest.reviewedBy}
                   {selectedRequest.reviewedAt && ` on ${selectedRequest.reviewedAt}`}
                   {selectedRequest.reviewerComment && (
-                    <p className="mt-1 p-2 rounded bg-slate-100 text-[11px] text-slate-700 italic border-l-2 border-slate-400">
+                    <p className="mt-1 p-2 rounded bg-slate-100 text-xs text-slate-700 italic border-l-2 border-slate-400">
                       "{selectedRequest.reviewerComment}"
                     </p>
                   )}

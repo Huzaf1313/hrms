@@ -212,11 +212,11 @@ export function Header({
   const fullName = user?.full_name ?? "Admin User";
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between gap-4 border-b border-slate-200 bg-white px-5">
+    <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between gap-4 border-b border-[#E4E6E1] bg-white px-6">
       {/* Skip link for keyboard users */}
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-2 focus:bg-white focus:text-blue-600 focus:ring-2 focus:ring-blue-500 rounded"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-2 focus:bg-white focus:text-[#2F5FD0] focus:ring-2 focus:ring-[#2F5FD0] rounded"
       >
         Skip to main content
       </a>
@@ -229,7 +229,7 @@ export function Header({
             if (onOpenSidebar) onOpenSidebar();
             else onToggleSidebar?.();
           }}
-          className="flex h-8 w-8 items-center justify-center rounded-md text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors lg:hidden focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="flex h-8 w-8 items-center justify-center rounded-[6px] text-[#52606D] hover:bg-[#F0F1EE] transition-colors lg:hidden focus:outline-none focus:ring-2 focus:ring-[#2F5FD0]"
           aria-label="Toggle navigation"
         >
           <Menu className="h-4 w-4" />
@@ -239,7 +239,7 @@ export function Header({
           <button
             type="button"
             onClick={onToggleSidebar}
-            className="hidden h-8 w-8 items-center justify-center rounded-md text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors lg:flex focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="hidden h-8 w-8 items-center justify-center rounded-[6px] text-[#52606D] hover:bg-[#F0F1EE] transition-colors lg:flex focus:outline-none focus:ring-2 focus:ring-[#2F5FD0]"
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
@@ -248,9 +248,9 @@ export function Header({
         )}
 
         {/* Sole page title on screen */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-400 font-medium hidden sm:inline">Workspace /</span>
-          <h1 className="text-sm font-semibold text-slate-900 truncate">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-[13px] text-[#7B8794] font-medium hidden sm:inline">Workspace /</span>
+          <h1 className="text-[20px] font-semibold text-[#1F2933] truncate">
             {pageTitle}
           </h1>
         </div>
@@ -258,7 +258,7 @@ export function Header({
 
       {/* Center: Global Search */}
       <div className="relative hidden md:block flex-1 max-w-xs lg:max-w-sm mx-2">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-[18px] w-[18px] text-[#7B8794] pointer-events-none shrink-0" />
         <input
           type="text"
           value={employeeSearch}
@@ -270,7 +270,8 @@ export function Header({
           onBlur={() => setTimeout(() => setShowEmployeeSuggestions(false), 200)}
           onKeyDown={handleEmployeeSearchKeyDown}
           placeholder="Search employees by name or code..."
-          className="w-full h-8 rounded-md bg-slate-50 pl-8 pr-3 text-xs text-slate-800 placeholder:text-slate-400 border border-slate-200 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+          autoComplete="off"
+          className="w-full h-10 rounded-[6px] bg-[#F6F7F5] py-2.5 pl-10 pr-3.5 text-sm text-[#1F2933] placeholder:text-[#7B8794] border border-[#E4E6E1] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#2F5FD0] focus:border-[#2F5FD0] transition-colors"
         />
 
         {showEmployeeSuggestions && normalizedQuery && (
@@ -290,7 +291,7 @@ export function Header({
                         <span className="font-medium text-slate-900 block truncate">
                           {employeeFullName(employee)}
                         </span>
-                        <span className="text-[10px] text-slate-400 block font-mono">
+                        <span className="text-xs text-slate-400 block font-mono">
                           {employee.employee_id} • {employee.designation || "General"}
                         </span>
                       </div>
@@ -308,7 +309,7 @@ export function Header({
       </div>
 
       {/* Right Controls */}
-      <div className="flex items-center gap-2.5 sm:gap-3">
+      <div className="flex items-center gap-4">
         {/* Date Badge */}
         <DatePicker canManageHolidays={isAdminRole(user?.role)} />
 
@@ -322,9 +323,9 @@ export function Header({
             aria-label="Notifications"
             aria-expanded={showNotificationDropdown}
           >
-            <Bell className="h-4 w-4" />
+            <Bell className="h-[18px] w-[18px] shrink-0" />
             {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold text-white">
+              <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-xs font-bold text-white">
                 {unreadCount > 99 ? "99+" : unreadCount}
               </span>
             )}
@@ -344,18 +345,18 @@ export function Header({
           <button
             type="button"
             onClick={() => setShowProfileMenu((prev) => !prev)}
-            className="flex items-center gap-2 p-1 rounded-md hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex items-center gap-2.5 p-1 rounded-[6px] hover:bg-[#F0F1EE] transition-colors focus:outline-none focus:ring-2 focus:ring-[#2F5FD0] max-w-[200px]"
           >
             <Avatar name={fullName} src={avatarUrl} size="sm" />
-            <div className="hidden sm:block text-left min-w-0">
-              <span className="block truncate text-xs font-semibold text-slate-800 leading-tight">
+            <div className="hidden sm:block text-left min-w-0 flex-1">
+              <span className="block truncate text-sm font-medium text-[#1F2933] leading-tight">
                 {fullName}
               </span>
-              <span className="block truncate text-[10px] text-slate-400 leading-tight">
+              <span className="block truncate text-[12px] text-[#7B8794] leading-tight">
                 {roleDisplay(user?.role)}
               </span>
             </div>
-            <ChevronDown className="h-3 w-3 text-slate-400" />
+            <ChevronDown className="h-4 w-4 text-[#7B8794] shrink-0" />
           </button>
 
           {showProfileMenu && (

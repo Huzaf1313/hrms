@@ -41,7 +41,8 @@ export const EmployeeRegularizationHistory: React.FC<EmployeeRegularizationHisto
   }, [employeeId]);
 
   useEffect(() => {
-    fetchRequests();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void fetchRequests();
   }, [fetchRequests]);
 
   const filteredRequests = useMemo(() => {
@@ -87,7 +88,7 @@ export const EmployeeRegularizationHistory: React.FC<EmployeeRegularizationHisto
         {/* Right: Sample data indicator & Request button */}
         <div className="flex items-center gap-2">
           {isSampleData && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
               Sample data
             </span>
           )}
@@ -196,7 +197,7 @@ export const EmployeeRegularizationHistory: React.FC<EmployeeRegularizationHisto
                 <h3 className="text-sm font-semibold text-slate-900">
                   Regularization Request Details
                 </h3>
-                <span className="text-[11px] text-slate-400">
+                <span className="text-xs text-slate-400">
                   Ref: {selectedRequest.id} • {selectedRequest.displayDate}
                 </span>
               </div>
@@ -211,13 +212,13 @@ export const EmployeeRegularizationHistory: React.FC<EmployeeRegularizationHisto
             {/* Side-by-side Punches */}
             <div className="grid grid-cols-2 gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 text-xs">
               <div>
-                <span className="text-[11px] text-slate-400 block font-medium">Original Logged Times</span>
+                <span className="text-xs text-slate-400 block font-medium">Original Logged Times</span>
                 <span className="font-mono text-slate-600 mt-1 block">
                   {selectedRequest.currentCheckIn ?? "--:--"} - {selectedRequest.currentCheckOut ?? "--:--"}
                 </span>
               </div>
               <div>
-                <span className="text-[11px] text-blue-600 block font-semibold">Requested Correction</span>
+                <span className="text-xs text-blue-600 block font-semibold">Requested Correction</span>
                 <span className="font-mono text-blue-700 font-semibold mt-1 block">
                   {selectedRequest.requestedCheckIn} - {selectedRequest.requestedCheckOut}
                 </span>
@@ -239,7 +240,7 @@ export const EmployeeRegularizationHistory: React.FC<EmployeeRegularizationHisto
               <div className="flex items-center gap-2 p-2 rounded border border-slate-200 text-xs text-slate-700">
                 <Paperclip className="w-3.5 h-3.5 text-slate-400" />
                 <span className="truncate flex-1">{selectedRequest.attachmentName}</span>
-                <span className="text-[10px] text-blue-600 font-medium">Attached Proof</span>
+                <span className="text-xs text-blue-600 font-medium">Attached Proof</span>
               </div>
             )}
 
@@ -253,7 +254,7 @@ export const EmployeeRegularizationHistory: React.FC<EmployeeRegularizationHisto
                 <div className="relative text-xs">
                   <div className="absolute -left-4 top-0.5 w-3 h-3 rounded-full bg-blue-600 ring-4 ring-white" />
                   <span className="font-medium text-slate-900 block">Request Submitted</span>
-                  <span className="text-[11px] text-slate-400 block">
+                  <span className="text-xs text-slate-400 block">
                     {selectedRequest.displayRequestedAt} by Employee
                   </span>
                 </div>
@@ -288,12 +289,12 @@ export const EmployeeRegularizationHistory: React.FC<EmployeeRegularizationHisto
                     )}
                   </div>
                   {selectedRequest.reviewedBy && (
-                    <span className="text-[11px] text-slate-400 block">
+                    <span className="text-xs text-slate-400 block">
                       {selectedRequest.reviewedBy} • {selectedRequest.reviewedAt}
                     </span>
                   )}
                   {selectedRequest.reviewerComment && (
-                    <p className="mt-1.5 p-2 rounded bg-slate-100 text-[11px] text-slate-700 italic border-l-2 border-slate-400">
+                    <p className="mt-1.5 p-2 rounded bg-slate-100 text-xs text-slate-700 italic border-l-2 border-slate-400">
                       "{selectedRequest.reviewerComment}"
                     </p>
                   )}

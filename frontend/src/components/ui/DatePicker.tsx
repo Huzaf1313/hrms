@@ -47,24 +47,24 @@ export const DatePicker = React.forwardRef<HTMLInputElement, DatePickerProps>(
     };
 
     return (
-      <div className={`flex flex-col gap-1 w-full ${wrapperClassName}`}>
+      <div className={`flex flex-col gap-1 ${wrapperClassName || "w-full"}`}>
         {label && (
-          <label htmlFor={inputId} className="text-xs font-medium text-slate-700">
+          <label htmlFor={inputId} className="text-xs font-medium text-[#52606D]">
             {label}
           </label>
         )}
         <div
           onClick={handleClick}
-          className={`relative flex items-center justify-between w-full h-[32px] rounded-[6px] border bg-white px-2.5 text-[13px] text-[#111827] cursor-pointer select-none transition-colors ${
+          className={`relative flex items-center justify-between w-full h-10 rounded-[6px] border bg-white px-3 text-sm text-[#1F2933] cursor-pointer select-none transition-colors ${
             error
-              ? "border-rose-400 focus-within:border-rose-500"
-              : "border-[#E5E7EB] hover:border-[#D1D5DB]"
-          } ${disabled ? "bg-[#F9FAFB] text-[#9CA3AF] cursor-not-allowed" : ""} ${className}`}
+              ? "border-[#A12D22] focus-within:border-[#A12D22]"
+              : "border-[#E4E6E1] hover:border-[#D1D5DB]"
+          } ${disabled ? "bg-[#F6F7F5] text-[#7B8794] cursor-not-allowed" : ""} ${className}`}
         >
-          <span className="truncate font-medium">{displayString}</span>
-          <Calendar className="w-4 h-4 text-[#6B7280] shrink-0 ml-1.5 pointer-events-none" />
+          <span className="truncate font-normal">{displayString}</span>
+          <Calendar className="w-4 h-4 text-[#7B8794] shrink-0 ml-1.5 pointer-events-none" />
 
-          {/* Native date input visually invisible but functional for calendar popup */}
+          {/* Invisible native input for triggering native date popup */}
           <input
             ref={inputRef}
             type="date"
@@ -79,9 +79,9 @@ export const DatePicker = React.forwardRef<HTMLInputElement, DatePickerProps>(
           />
         </div>
         {error ? (
-          <p className="text-xs text-rose-600 mt-0.5">{error}</p>
+          <p className="text-xs text-[#A12D22] mt-0.5">{error}</p>
         ) : hint ? (
-          <p className="text-xs text-slate-500 mt-0.5">{hint}</p>
+          <p className="text-xs text-[#7B8794] mt-0.5">{hint}</p>
         ) : null}
       </div>
     );

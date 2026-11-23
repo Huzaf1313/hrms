@@ -1,54 +1,89 @@
 import React from "react";
 
 export type BadgeVariant =
-  | "success" // green  - Present, Approved, Active
-  | "warning" // amber  - Late, Pending, In Progress
-  | "danger"  // red    - Absent, Rejected, Terminated
-  | "info"    // blue   - Leave, Information, WFH
-  | "neutral" // gray   - Holiday, Weekend, Inactive
-  | "violet"  // violet - Special Leave, Casual
-  | "teal";   // teal   - Overtime, Remote
+  | "ok"
+  | "success"   // alias for ok
+  | "warn"
+  | "warning"   // alias for warn
+  | "bad"
+  | "danger"    // alias for bad
+  | "leave"
+  | "info"      // alias for leave
+  | "off"
+  | "neutral"   // alias for off
+  | "lt-casual"
+  | "lt-sick"
+  | "lt-earned"
+  | "lt-comp"
+  | "lt-unpaid";
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   variant?: BadgeVariant;
   dot?: boolean;
-  size?: "xs" | "sm" | "md";
+  size?: "xs" | "sm" | "md" | "lg" | string;
   children: React.ReactNode;
 }
 
 const variantStyles: Record<BadgeVariant, { pill: string; dot: string }> = {
+  ok: {
+    pill: "bg-[#E3F3EA] text-[#1E6B45]",
+    dot: "bg-[#1E6B45]",
+  },
   success: {
-    // Present / Approved - soft tinted background with darker text of same hue, 6px dot, NO border
-    pill: "bg-[#E6F4EA] text-[#137333]",
-    dot: "bg-[#137333]",
+    pill: "bg-[#E3F3EA] text-[#1E6B45]",
+    dot: "bg-[#1E6B45]",
+  },
+  warn: {
+    pill: "bg-[#FBF0D9] text-[#8A5A00]",
+    dot: "bg-[#8A5A00]",
   },
   warning: {
-    // Late / Pending - soft amber tint
-    pill: "bg-[#FEF7E0] text-[#B06000]",
-    dot: "bg-[#B06000]",
+    pill: "bg-[#FBF0D9] text-[#8A5A00]",
+    dot: "bg-[#8A5A00]",
   },
-  danger: {
-    // Absent / Rejected - muted red tint (#FBE4E1 bg, #A12D22 text)
+  bad: {
     pill: "bg-[#FBE4E1] text-[#A12D22]",
     dot: "bg-[#A12D22]",
   },
+  danger: {
+    pill: "bg-[#FBE4E1] text-[#A12D22]",
+    dot: "bg-[#A12D22]",
+  },
+  leave: {
+    pill: "bg-[#E6EEFB] text-[#274C9E]",
+    dot: "bg-[#274C9E]",
+  },
   info: {
-    // Leave / On Leave / Info - soft blue tint
-    pill: "bg-[#E8F0FE] text-[#1A73E8]",
-    dot: "bg-[#1A73E8]",
+    pill: "bg-[#E6EEFB] text-[#274C9E]",
+    dot: "bg-[#274C9E]",
+  },
+  off: {
+    pill: "bg-[#EEEFEC] text-[#5F6B76]",
+    dot: "bg-[#5F6B76]",
   },
   neutral: {
-    // Holiday / Weekend / Neutral - soft slate tint
-    pill: "bg-[#F1F3F4] text-[#5F6368]",
-    dot: "bg-[#5F6368]",
+    pill: "bg-[#EEEFEC] text-[#5F6B76]",
+    dot: "bg-[#5F6B76]",
   },
-  violet: {
-    pill: "bg-[#F3E8FF] text-[#6B21A8]",
-    dot: "bg-[#6B21A8]",
+  "lt-casual": {
+    pill: "bg-[#E8EEFB] text-[#2F5FD0]",
+    dot: "bg-[#2F5FD0]",
   },
-  teal: {
-    pill: "bg-[#E6FFFA] text-[#0D9488]",
-    dot: "bg-[#0D9488]",
+  "lt-sick": {
+    pill: "bg-[#FFF1EC] text-[#C2410C]",
+    dot: "bg-[#C2410C]",
+  },
+  "lt-earned": {
+    pill: "bg-[#E3F3EA] text-[#1E6B45]",
+    dot: "bg-[#1E6B45]",
+  },
+  "lt-comp": {
+    pill: "bg-[#F2EDFB] text-[#6D4AB5]",
+    dot: "bg-[#6D4AB5]",
+  },
+  "lt-unpaid": {
+    pill: "bg-[#EEEFEC] text-[#7B8794]",
+    dot: "bg-[#7B8794]",
   },
 };
 
@@ -73,3 +108,4 @@ export const Badge: React.FC<BadgeProps> = ({
 };
 
 export const StatusPill = Badge;
+export default StatusPill;

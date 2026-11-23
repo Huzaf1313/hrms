@@ -23,14 +23,14 @@ export const AttendanceDayDrawer: React.FC<AttendanceDayDrawerProps> = ({
 
   const statusVariant =
     record.status === "present"
-      ? "success"
+      ? "ok"
       : record.status === "late" || record.status === "half_day"
-      ? "warning"
+      ? "warn"
       : record.status === "on_leave"
-      ? "info"
+      ? "leave"
       : record.status === "absent" || record.status === "missing_punch"
-      ? "danger"
-      : "neutral";
+      ? "bad"
+      : "off";
 
   const formattedDate = new Date(record.date).toLocaleDateString("en-IN", {
     weekday: "long",
@@ -79,41 +79,41 @@ export const AttendanceDayDrawer: React.FC<AttendanceDayDrawerProps> = ({
     >
       <div className="flex flex-col gap-5 text-xs text-slate-700">
         {/* Punch Summary Grid */}
-        <div className="grid grid-cols-2 gap-3 p-4 rounded-lg bg-slate-50 border border-slate-200">
+        <div className="grid grid-cols-2 gap-3 p-4 rounded-[8px] bg-[#F6F7F5] border border-[#E4E6E1]">
           <div>
-            <span className="text-slate-400 block text-[11px] uppercase font-medium">Check In</span>
-            <span className="text-sm font-semibold text-slate-900 mt-0.5 block">
-              {record.in_time || record.check_in || "--"}
+            <span className="text-[#7B8794] block text-xs uppercase font-medium">Check In</span>
+            <span className="text-sm font-semibold text-[#1F2933] mt-0.5 block">
+              {record.status === "absent" ? "-" : (record.in_time || record.check_in || "-")}
             </span>
             {record.is_late && (
-              <span className="text-[11px] text-amber-600 font-medium mt-0.5 block">
+              <span className="text-xs text-[#8A5A00] font-medium mt-0.5 block">
                 Late arrival ({record.late_minutes ?? 0}m)
               </span>
             )}
           </div>
 
           <div>
-            <span className="text-slate-400 block text-[11px] uppercase font-medium">Check Out</span>
-            <span className="text-sm font-semibold text-slate-900 mt-0.5 block">
-              {record.out_time || record.check_out || "--"}
+            <span className="text-[#7B8794] block text-xs uppercase font-medium">Check Out</span>
+            <span className="text-sm font-semibold text-[#1F2933] mt-0.5 block">
+              {record.status === "absent" ? "-" : (record.out_time || record.check_out || "-")}
             </span>
             {!record.out_time && !record.check_out && record.in_time && (
-              <span className="text-[11px] text-rose-600 font-medium mt-0.5 block">
-                Missing punch out
+              <span className="text-xs text-[#8A5A00] font-medium mt-0.5 block">
+                Incomplete
               </span>
             )}
           </div>
 
-          <div className="pt-2 border-t border-slate-200/60">
-            <span className="text-slate-400 block text-[11px] uppercase font-medium">Total Duration</span>
-            <span className="text-sm font-semibold text-slate-900 mt-0.5 block">
-              {formatDurationHours(record.total_hours)}
+          <div className="pt-2 border-t border-[#E4E6E1]">
+            <span className="text-[#7B8794] block text-xs uppercase font-medium">Total Duration</span>
+            <span className="text-sm font-semibold text-[#1F2933] mt-0.5 block">
+              {record.status === "absent" ? "-" : formatDurationHours(record.total_hours)}
             </span>
           </div>
 
-          <div className="pt-2 border-t border-slate-200/60">
-            <span className="text-slate-400 block text-[11px] uppercase font-medium">Shift Assigned</span>
-            <span className="text-sm font-semibold text-slate-900 mt-0.5 block">
+          <div className="pt-2 border-t border-[#E4E6E1]">
+            <span className="text-[#7B8794] block text-xs uppercase font-medium">Shift Assigned</span>
+            <span className="text-sm font-semibold text-[#1F2933] mt-0.5 block capitalize">
               {record.shift || "General Shift"}
             </span>
           </div>
@@ -125,7 +125,7 @@ export const AttendanceDayDrawer: React.FC<AttendanceDayDrawerProps> = ({
             <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
             <div>
               <span className="font-semibold block">Regularization Approved</span>
-              <span className="text-slate-600 text-[11px] mt-0.5 block">
+              <span className="text-slate-600 text-xs mt-0.5 block">
                 This attendance entry was corrected via approved regularization.
               </span>
             </div>
@@ -145,11 +145,11 @@ export const AttendanceDayDrawer: React.FC<AttendanceDayDrawerProps> = ({
           <label className="text-xs font-semibold text-slate-800">Shift Specification</label>
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div className="p-2.5 rounded border border-slate-100 bg-slate-50/50">
-              <span className="text-slate-400 text-[11px] block">Start Time</span>
+              <span className="text-slate-400 text-xs block">Start Time</span>
               <span className="font-medium text-slate-800">{record.shift_start || "09:30 AM"}</span>
             </div>
             <div className="p-2.5 rounded border border-slate-100 bg-slate-50/50">
-              <span className="text-slate-400 text-[11px] block">End Time</span>
+              <span className="text-slate-400 text-xs block">End Time</span>
               <span className="font-medium text-slate-800">{record.shift_end || "06:30 PM"}</span>
             </div>
           </div>

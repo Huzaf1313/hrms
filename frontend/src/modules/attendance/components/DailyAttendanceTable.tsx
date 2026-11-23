@@ -87,39 +87,44 @@ export const DailyAttendanceTable: React.FC<DailyAttendanceTableProps> = ({
           {
             key: "selection",
             header: (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onToggleSelectAll?.();
-                }}
-                className="text-slate-500 hover:text-slate-800"
-                aria-label="Select all rows"
-              >
-                {selectedIds.size > 0 && selectedIds.size === records.length ? (
-                  <CheckSquare className="w-4 h-4 text-blue-600" />
-                ) : (
-                  <Square className="w-4 h-4" />
-                )}
-              </button>
+              <div className="flex items-center justify-center w-full">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleSelectAll?.();
+                  }}
+                  className="text-slate-500 hover:text-slate-800 flex items-center justify-center p-1 cursor-pointer"
+                  aria-label="Select all rows"
+                >
+                  {selectedIds.size > 0 && selectedIds.size === records.length ? (
+                    <CheckSquare className="w-4 h-4 text-blue-600" />
+                  ) : (
+                    <Square className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
             ),
-            width: "36px",
+            width: "48px",
+            align: "center" as const,
             render: (row: AttendanceRecord) => (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onToggleSelectRow(row.id);
-                }}
-                className="text-slate-400 hover:text-slate-700"
-                aria-label={`Select ${row.employee.first_name}`}
-              >
-                {selectedIds.has(row.id) ? (
-                  <CheckSquare className="w-4 h-4 text-blue-600" />
-                ) : (
-                  <Square className="w-4 h-4" />
-                )}
-              </button>
+              <div className="flex items-center justify-center w-full">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleSelectRow(row.id);
+                  }}
+                  className="text-slate-400 hover:text-slate-700 flex items-center justify-center p-1 cursor-pointer"
+                  aria-label={`Select ${row.employee.first_name}`}
+                >
+                  {selectedIds.has(row.id) ? (
+                    <CheckSquare className="w-4 h-4 text-blue-600" />
+                  ) : (
+                    <Square className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
             ),
           },
         ]
@@ -128,19 +133,20 @@ export const DailyAttendanceTable: React.FC<DailyAttendanceTableProps> = ({
     {
       key: "employee",
       header: "Employee",
+      width: "240px",
       sortable: true,
       render: (row) => (
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-3">
           <Avatar
             name={`${row.employee.first_name} ${row.employee.last_name}`}
             src={row.employee.avatar_url}
-            size="sm"
+            className="!w-9 !h-9 text-xs shrink-0"
           />
-          <div>
-            <span className="font-semibold text-slate-900 block leading-tight">
+          <div className="min-w-0">
+            <span className="font-medium text-[#1F2933] block leading-tight text-sm truncate">
               {row.employee.first_name} {row.employee.last_name}
             </span>
-            <span className="text-[11px] text-slate-400 font-mono">
+            <span className="text-xs text-[#7B8794] font-mono block mt-0.5 leading-tight">
               {row.employee.employee_code}
             </span>
           </div>
@@ -151,22 +157,24 @@ export const DailyAttendanceTable: React.FC<DailyAttendanceTableProps> = ({
     {
       key: "department",
       header: "Department",
+      width: "200px",
       sortable: true,
       render: (row) => (
-        <span className="text-slate-600">{row.employee.department_name ?? "--"}</span>
+        <span className="text-[#52606D] text-sm">{row.employee.department_name ?? "-"}</span>
       ),
     },
 
     {
       key: "shift",
       header: "Shift",
+      width: "160px",
       render: (row) => (
         <div>
-          <span className="text-slate-700 font-medium block">
+          <span className="text-[#1F2933] font-medium block capitalize text-sm leading-tight">
             {row.shift || "General Shift"}
           </span>
           {row.shift_start && row.shift_end && (
-            <span className="text-[11px] text-slate-400 block font-mono">
+            <span className="text-xs text-[#7B8794] block font-mono mt-0.5 leading-tight">
               {row.shift_start} - {row.shift_end}
             </span>
           )}
@@ -177,14 +185,18 @@ export const DailyAttendanceTable: React.FC<DailyAttendanceTableProps> = ({
     {
       key: "check_in",
       header: "Check In",
+      width: "120px",
       sortable: true,
       render: (row) => {
+        if (row.status === "absent") {
+          return <span className="font-mono text-[#7B8794] text-sm">-</span>;
+        }
         const inVal = row.in_time || row.check_in;
         return (
           <div>
-            <span className="font-mono text-slate-800">{inVal || "--"}</span>
+            <span className="font-mono text-[#1F2933] text-sm block leading-tight">{inVal || "-"}</span>
             {row.is_late && (
-              <span className="block text-[10px] font-medium text-amber-600">
+              <span className="block text-xs font-medium text-[#8A5A00] mt-0.5 leading-tight">
                 Late ({row.late_minutes ?? 0}m)
               </span>
             )}
@@ -196,14 +208,18 @@ export const DailyAttendanceTable: React.FC<DailyAttendanceTableProps> = ({
     {
       key: "check_out",
       header: "Check Out",
+      width: "120px",
       sortable: true,
       render: (row) => {
+        if (row.status === "absent") {
+          return <span className="font-mono text-[#7B8794] text-sm">-</span>;
+        }
         const outVal = row.out_time || row.check_out;
         return (
           <div>
-            <span className="font-mono text-slate-800">{outVal || "--"}</span>
+            <span className="font-mono text-[#1F2933] text-sm block leading-tight">{outVal || "-"}</span>
             {!outVal && (row.in_time || row.check_in) && (
-              <span className="block text-[10px] text-rose-500 font-medium">Incomplete</span>
+              <span className="block text-xs text-[#8A5A00] font-medium mt-0.5 leading-tight">Incomplete</span>
             )}
           </div>
         );
@@ -213,28 +229,38 @@ export const DailyAttendanceTable: React.FC<DailyAttendanceTableProps> = ({
     {
       key: "working_hours",
       header: "Total Hours",
+      width: "110px",
       align: "right",
       sortable: true,
       render: (row) => {
-        const val = row.working_hours ?? (row.total_hours != null ? `${row.total_hours}h` : "--");
-        return <span className="font-mono font-medium text-slate-900">{formatDurationHours(val)}</span>;
+        if (row.status === "absent") {
+          return <span className="font-mono text-[#7B8794] text-sm block">-</span>;
+        }
+        const val = row.working_hours ?? (row.total_hours != null ? `${row.total_hours}h` : "-");
+        return (
+          <span className="font-mono font-medium text-[#1F2933] text-sm block">
+            {formatDurationHours(val)}
+          </span>
+        );
       },
     },
 
     {
       key: "status",
       header: "Status",
+      width: "120px",
+      align: "left",
       render: (row) => {
         const variant =
           row.status === "present"
-            ? "success"
+            ? "ok"
             : row.status === "late" || row.status === "half_day"
-            ? "warning"
+            ? "warn"
             : row.status === "on_leave"
-            ? "info"
+            ? "leave"
             : row.status === "absent" || row.status === "missing_punch"
-            ? "danger"
-            : "neutral";
+            ? "bad"
+            : "off";
 
         const label =
           row.status === "on_leave"
@@ -247,11 +273,13 @@ export const DailyAttendanceTable: React.FC<DailyAttendanceTableProps> = ({
 
         return (
           <div className="flex items-center gap-1.5">
-            <StatusPill variant={variant}>{label}</StatusPill>
+            <StatusPill variant={variant} className="py-1 px-3 gap-1.5 h-auto text-xs leading-normal font-medium">
+              {label}
+            </StatusPill>
             {row.is_regularized && (
               <span
                 title="Regularized"
-                className="text-[10px] bg-blue-50 text-blue-600 border border-blue-200 px-1 rounded font-medium"
+                className="text-xs bg-[#E8EEFB] text-[#2F5FD0] px-1.5 py-0.5 rounded-[4px] font-medium"
               >
                 Reg
               </span>
@@ -264,27 +292,28 @@ export const DailyAttendanceTable: React.FC<DailyAttendanceTableProps> = ({
     {
       key: "actions",
       header: "Actions",
-      align: "right",
+      width: "100px",
+      align: "center",
       render: (row) => (
-        <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-center gap-2" onClick={(e) => e.stopPropagation()}>
           <button
             type="button"
             onClick={() => onRowClick?.(row)}
-            className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
             title="View details"
             aria-label="View details"
           >
-            <Eye className="w-3.5 h-3.5" />
+            <Eye className="w-[18px] h-[18px] shrink-0" />
           </button>
           {canOverride && onOverrideRecord && (
             <button
               type="button"
               onClick={() => onOverrideRecord(row)}
-              className="p-1 rounded text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
               title="Override attendance"
               aria-label="Override attendance"
             >
-              <FileEdit className="w-3.5 h-3.5" />
+              <FileEdit className="w-[18px] h-[18px] shrink-0" />
             </button>
           )}
         </div>
@@ -315,52 +344,57 @@ export const DailyAttendanceTable: React.FC<DailyAttendanceTableProps> = ({
         onRowClick={onRowClick}
         /* Single horizontal toolbar row: search | date | department | status | Export CSV */
         filters={
-          <div className="flex items-center gap-2 flex-nowrap">
-            <DatePicker
-              value={date}
-              onChange={(e) => onDateChange(e.target.value)}
-              className="h-8 text-xs w-36"
-              wrapperClassName="w-auto"
-            />
+          <>
+            <div className="w-[160px] shrink-0">
+              <DatePicker
+                value={date}
+                onChange={(e) => onDateChange(e.target.value)}
+                className="h-10 text-sm px-3 w-full"
+                wrapperClassName="w-[160px]"
+              />
+            </div>
 
-            <Select
-              value={departmentId}
-              onChange={(e) => onDepartmentChange(e.target.value)}
-              className="h-8 text-xs w-36"
-              wrapperClassName="w-auto"
-            >
-              <option value="">All Departments</option>
-              {departments.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name}
-                </option>
-              ))}
-            </Select>
+            <div className="w-[180px] shrink-0">
+              <Select
+                value={departmentId}
+                onChange={(e) => onDepartmentChange(e.target.value)}
+                className="h-10 text-sm px-3 w-full"
+                wrapperClassName="w-[180px]"
+              >
+                <option value="">All Departments</option>
+                {departments.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
 
-            <Select
-              value={status}
-              onChange={(e) => onStatusChange(e.target.value)}
-              className="h-8 text-xs w-32"
-              wrapperClassName="w-auto"
-            >
-              <option value="">All Statuses</option>
-              <option value="present">Present</option>
-              <option value="late">Late</option>
-              <option value="half_day">Half Day</option>
-              <option value="on_leave">On Leave</option>
-              <option value="absent">Absent</option>
-              <option value="missing_punch">Missing Punch</option>
-            </Select>
-          </div>
+            <div className="w-[160px] shrink-0">
+              <Select
+                value={status}
+                onChange={(e) => onStatusChange(e.target.value)}
+                className="h-10 text-sm px-3 w-full"
+                wrapperClassName="w-[160px]"
+              >
+                <option value="">All Statuses</option>
+                <option value="present">Present</option>
+                <option value="late">Late</option>
+                <option value="half_day">Half Day</option>
+                <option value="on_leave">On Leave</option>
+                <option value="absent">Absent</option>
+                <option value="missing_punch">Missing Punch</option>
+              </Select>
+            </div>
+          </>
         }
         actions={
-          <div className="flex items-center gap-2 flex-nowrap shrink-0">
+          <>
             {selectedIds.size > 0 && onBulkMark && (
               <Button
                 variant="primary"
-                size="xs"
                 onClick={onBulkMark}
-                className="h-8 text-xs shrink-0"
+                className="h-10 px-3.5 py-0 text-[13px] gap-2 shrink-0 font-medium"
               >
                 Bulk Mark ({selectedIds.size})
               </Button>
@@ -368,15 +402,14 @@ export const DailyAttendanceTable: React.FC<DailyAttendanceTableProps> = ({
             {onExportCsv && (
               <Button
                 variant="outline"
-                size="xs"
                 onClick={onExportCsv}
-                leftIcon={<Download className="w-3.5 h-3.5" />}
-                className="h-8 text-xs shrink-0"
+                leftIcon={<Download className="w-4 h-4 shrink-0" />}
+                className="h-10 px-3.5 py-0 text-[13px] gap-2 shrink-0 font-medium"
               >
                 Export CSV
               </Button>
             )}
-          </div>
+          </>
         }
       />
     </div>

@@ -219,33 +219,33 @@ export const AdminAttendance: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col gap-4 p-5 max-w-7xl mx-auto w-full">
+    <div className="flex flex-col gap-6 w-full">
       {/* Action ribbon with tabs - title is already in topbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         {/* Left: View Tabs */}
-        <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-md">
+        <div className="flex items-center gap-1 bg-[#F0F1EE] p-1 rounded-md">
           <button
             type="button"
             onClick={() => setActiveTab("roster")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+            className={`flex items-center gap-2 px-4 py-2 text-[13px] font-medium rounded transition-colors ${
               activeTab === "roster"
-                ? "bg-white text-blue-600 shadow-xs font-semibold"
-                : "text-slate-600 hover:text-slate-900"
+                ? "bg-white text-[#2F5FD0] border border-[#E4E6E1] font-semibold"
+                : "text-[#52606D] hover:text-[#1F2933]"
             }`}
           >
-            <Calendar className="w-3.5 h-3.5" />
+            <Calendar className="w-[18px] h-[18px] shrink-0" />
             Daily Roster
           </button>
           <button
             type="button"
             onClick={() => setActiveTab("reports")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+            className={`flex items-center gap-2 px-4 py-2 text-[13px] font-medium rounded transition-colors ${
               activeTab === "reports"
-                ? "bg-white text-blue-600 shadow-xs font-semibold"
-                : "text-slate-600 hover:text-slate-900"
+                ? "bg-white text-[#2F5FD0] border border-[#E4E6E1] font-semibold"
+                : "text-[#52606D] hover:text-[#1F2933]"
             }`}
           >
-            <BarChart3 className="w-3.5 h-3.5" />
+            <BarChart3 className="w-[18px] h-[18px] shrink-0" />
             Attendance Reports
           </button>
         </div>
@@ -253,16 +253,15 @@ export const AdminAttendance: React.FC = () => {
         {/* Right: Sample data indicator & Self Punch toggle */}
         <div className="flex items-center gap-2 shrink-0">
           {isSampleData && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
               Sample data
             </span>
           )}
           <Button
             variant={showSelfPunch ? "secondary" : "outline"}
-            size="xs"
             onClick={() => setShowSelfPunch((prev) => !prev)}
-            leftIcon={<UserCheck className="w-3.5 h-3.5" />}
-            className="h-8 text-xs font-medium"
+            leftIcon={<UserCheck className="w-4 h-4 shrink-0" />}
+            className="h-10 px-4 py-2 text-[13px] font-medium gap-2"
           >
             {showSelfPunch ? "Hide My Punch" : "My Workstation Punch"}
           </Button>
@@ -300,48 +299,44 @@ export const AdminAttendance: React.FC = () => {
           )}
 
           {/* Section 2: Pending Regularization Widget */}
-          <div className="grid grid-cols-1 gap-5">
-            <RegularizationRequestsCard />
-          </div>
+          <RegularizationRequestsCard />
 
           {/* Section 3: Daily Attendance Table */}
-          <div className="flex flex-col gap-2">
-            <DailyAttendanceTable
-              records={records}
-              isLoading={isLoading}
-              totalRecords={totalRecords}
-              page={page}
-              onPageChange={setPage}
-              date={date}
-              onDateChange={handleDateChange}
-              departmentId={departmentId}
-              onDepartmentChange={(dept) => {
-                setDepartmentId(dept);
-                setPage(1);
-              }}
-              departments={departments}
-              status={status}
-              onStatusChange={(st) => {
-                setStatus(st);
-                setPage(1);
-              }}
-              search={search}
-              onSearchChange={(q) => {
-                setSearch(q);
-                setPage(1);
-              }}
-              onRowClick={handleRowClick}
-              onOverrideRecord={(rec) => {
-                setOverrideRecord(rec);
-                setIsOverrideModalOpen(true);
-              }}
-              onExportCsv={handleExportCsv}
-              selectedIds={selectedIds}
-              onToggleSelectRow={handleToggleSelectRow}
-              onToggleSelectAll={handleToggleSelectAll}
-              onBulkMark={() => setIsBulkMarkModalOpen(true)}
-            />
-          </div>
+          <DailyAttendanceTable
+            records={records}
+            isLoading={isLoading}
+            totalRecords={totalRecords}
+            page={page}
+            onPageChange={setPage}
+            date={date}
+            onDateChange={handleDateChange}
+            departmentId={departmentId}
+            onDepartmentChange={(dept) => {
+              setDepartmentId(dept);
+              setPage(1);
+            }}
+            departments={departments}
+            status={status}
+            onStatusChange={(st) => {
+              setStatus(st);
+              setPage(1);
+            }}
+            search={search}
+            onSearchChange={(q) => {
+              setSearch(q);
+              setPage(1);
+            }}
+            onRowClick={handleRowClick}
+            onOverrideRecord={(rec) => {
+              setOverrideRecord(rec);
+              setIsOverrideModalOpen(true);
+            }}
+            onExportCsv={handleExportCsv}
+            selectedIds={selectedIds}
+            onToggleSelectRow={handleToggleSelectRow}
+            onToggleSelectAll={handleToggleSelectAll}
+            onBulkMark={() => setIsBulkMarkModalOpen(true)}
+          />
         </>
       ) : (
         /* Section: Comprehensive Attendance Reports */

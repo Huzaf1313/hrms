@@ -32,14 +32,14 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         {label && (
           <label
             htmlFor={inputId}
-            className="text-xs font-medium text-slate-700 flex items-center justify-between"
+            className="text-[12px] font-medium text-[#52606D] flex items-center justify-between"
           >
             <span>{label}</span>
           </label>
         )}
         <div className="relative flex items-center w-full">
           {leftIcon && (
-            <div className="absolute left-2.5 flex items-center pointer-events-none text-slate-400">
+            <div className="absolute left-2.5 flex items-center pointer-events-none text-[#7B8794]">
               {leftIcon}
             </div>
           )}
@@ -47,25 +47,25 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             id={inputId}
             disabled={disabled}
-            className={`w-full h-9 rounded-md border bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-400 disabled:border-slate-200 disabled:cursor-not-allowed ${
+            className={`w-full h-[34px] rounded-[6px] border bg-white px-3 text-[13.5px] text-[#1F2933] placeholder:text-[#7B8794] transition-colors focus:outline-none focus:ring-1 focus:ring-[#2F5FD0] focus:border-[#2F5FD0] disabled:bg-[#F6F7F5] disabled:text-[#7B8794] disabled:border-[#E4E6E1] disabled:cursor-not-allowed ${
               leftIcon ? "pl-9" : ""
             } ${rightIcon ? "pr-9" : ""} ${
               error
-                ? "border-rose-400 focus:border-rose-500 focus:ring-rose-500 text-rose-900"
-                : "border-slate-200 hover:border-slate-300"
-            } ${className}`}
+                ? "border-[#A12D22] focus:border-[#A12D22] focus:ring-[#A12D22] text-[#A12D22]"
+                : "border-[#E4E6E1] hover:border-[#D1D5DB]"
+              } ${className}`}
             {...props}
           />
           {rightIcon && (
-            <div className="absolute right-2.5 flex items-center pointer-events-none text-slate-400">
+            <div className="absolute right-2.5 flex items-center pointer-events-none text-[#7B8794]">
               {rightIcon}
             </div>
           )}
         </div>
         {error ? (
-          <p className="text-xs text-rose-600 mt-0.5">{error}</p>
+          <p className="text-xs text-[#A12D22] mt-0.5">{error}</p>
         ) : hint ? (
-          <p className="text-xs text-slate-500 mt-0.5">{hint}</p>
+          <p className="text-xs text-[#7B8794] mt-0.5">{hint}</p>
         ) : null}
       </div>
     );
@@ -73,3 +73,4 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
 );
 
 Input.displayName = "Input";
+export default Input;

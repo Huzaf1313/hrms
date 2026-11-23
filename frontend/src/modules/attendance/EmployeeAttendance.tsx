@@ -120,18 +120,19 @@ export const EmployeeAttendance: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col gap-4 p-5 max-w-7xl mx-auto w-full">
+    <div className="flex flex-col gap-4 w-full">
       {/* Top action bar with view switcher tabs */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         {/* Left: View Tabs */}
-        <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-md">
+        <div className="flex items-center gap-1 bg-[#F0F1EE] p-0.5 rounded-[6px]">
           <button
             type="button"
             onClick={() => setViewTab("calendar")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded transition-colors ${viewTab === "calendar"
-                ? "bg-white text-blue-600 shadow-xs font-semibold"
-                : "text-slate-600 hover:text-slate-900"
-              }`}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium rounded-[5px] transition-colors ${
+              viewTab === "calendar"
+                ? "bg-white text-[#2F5FD0] border border-[#E4E6E1] font-semibold"
+                : "text-[#52606D] hover:text-[#1F2933]"
+            }`}
           >
             <Calendar className="w-3.5 h-3.5" />
             Attendance Calendar
@@ -139,10 +140,11 @@ export const EmployeeAttendance: React.FC = () => {
           <button
             type="button"
             onClick={() => setViewTab("regularization")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded transition-colors ${viewTab === "regularization"
-                ? "bg-white text-blue-600 shadow-xs font-semibold"
-                : "text-slate-600 hover:text-slate-900"
-              }`}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium rounded-[5px] transition-colors ${
+              viewTab === "regularization"
+                ? "bg-white text-[#2F5FD0] border border-[#E4E6E1] font-semibold"
+                : "text-[#52606D] hover:text-[#1F2933]"
+            }`}
           >
             <ClipboardList className="w-3.5 h-3.5" />
             My Regularization Requests
@@ -152,7 +154,7 @@ export const EmployeeAttendance: React.FC = () => {
         {/* Right: Sample Data badge & Action button */}
         <div className="flex items-center gap-2 shrink-0">
           {isSampleData && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
               Sample data
             </span>
           )}
@@ -169,45 +171,48 @@ export const EmployeeAttendance: React.FC = () => {
       </div>
 
       {viewTab === "calendar" ? (
-        <>
-          {/* Section 1: Today Punch Card */}
-          <TodayPunchCard
-            shiftName="General Shift"
-            shiftTiming="09:30 AM - 06:30 PM"
-            gracePeriod={15}
-            onPunchSuccess={() => setRefreshKey((k) => k + 1)}
-          />
+        <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-4 items-start w-full">
+          {/* Left Column: 360px Today Punch Panel */}
+          <div className="w-full">
+            <TodayPunchCard
+              shiftName="General Shift"
+              shiftTiming="09:30 AM - 06:30 PM"
+              gracePeriod={15}
+              onPunchSuccess={() => setRefreshKey((k) => k + 1)}
+            />
+          </div>
 
-          {/* Section 2: Personal Stats */}
-          {isLoading ? (
-            <StatCardSkeleton count={5} />
-          ) : error ? (
-            <ErrorState
-              message={error}
-              onRetry={() => setRefreshKey((k) => k + 1)}
-            />
-          ) : (
-            <AttendanceStatRow
-              isPersonal
-              presentCount={stats.present}
-              lateCount={stats.late}
-              onLeaveCount={stats.onLeave}
-              absentCount={stats.absent}
-              avgHours={stats.avgHours}
-            />
-          )}
+          {/* Right Column: Personal Stats Strip & Calendar/History View */}
+          <div className="flex flex-col gap-4 min-w-0 w-full">
+            {isLoading ? (
+              <StatCardSkeleton count={5} />
+            ) : error ? (
+              <ErrorState
+                message={error}
+                onRetry={() => setRefreshKey((k) => k + 1)}
+              />
+            ) : (
+              <AttendanceStatRow
+                isPersonal
+                presentCount={stats.present}
+                lateCount={stats.late}
+                onLeaveCount={stats.onLeave}
+                absentCount={stats.absent}
+                avgHours={stats.avgHours}
+              />
+            )}
 
-          {/* Section 3: Monthly History View (Calendar & List) */}
-          {isLoading ? (
-            <TableSkeleton rows={8} columns={7} />
-          ) : (
-            <AttendanceHistoryView
-              records={records}
-              onSelectDay={handleSelectDay}
-              onRequestRegularization={handleRequestRegularization}
-            />
-          )}
-        </>
+            {isLoading ? (
+              <TableSkeleton rows={8} columns={7} />
+            ) : (
+              <AttendanceHistoryView
+                records={records}
+                onSelectDay={handleSelectDay}
+                onRequestRegularization={handleRequestRegularization}
+              />
+            )}
+          </div>
+        </div>
       ) : (
         /* Regularization History View */
         <EmployeeRegularizationHistory

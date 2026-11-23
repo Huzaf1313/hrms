@@ -48,7 +48,7 @@ export const Tabs: React.FC<TabsProps> = ({
               <span>{tab.label}</span>
               {tab.badge !== undefined && (
                 <span
-                  className={`text-[10px] font-semibold px-1.5 py-0.2 rounded-full ${
+                  className={`text-xs font-semibold px-1.5 py-0.2 rounded-full ${
                     isActive ? "bg-blue-100 text-blue-700" : "bg-slate-200 text-slate-600"
                   }`}
                 >
@@ -80,7 +80,11 @@ export const Tabs: React.FC<TabsProps> = ({
                   : "border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300"
               } ${tab.disabled ? "opacity-50 cursor-not-allowed" : ""}`}
             >
-              {tab.icon && <span className="w-4 h-4 shrink-0">{tab.icon}</span>}
+              {tab.icon && (
+                <span className="w-[18px] h-[18px] shrink-0 inline-flex items-center justify-center [&>svg]:w-[18px] [&>svg]:h-[18px] [&>svg]:shrink-0">
+                  {tab.icon}
+                </span>
+              )}
               <span>{tab.label}</span>
               {tab.badge !== undefined && (
                 <span

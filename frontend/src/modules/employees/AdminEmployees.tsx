@@ -680,7 +680,7 @@ function AdminEmployees({
           onClick={openCreateForm}
           className="inline-flex items-center gap-2 rounded-full bg-[#0066ff] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0052cc] active:scale-95"
         >
-          <UserPlus className="h-4 w-4" />
+          <UserPlus className="h-[18px] w-[18px] shrink-0" />
           <span>Add Employee</span>
         </button>
       </div>

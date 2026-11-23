@@ -34,9 +34,9 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
     const selectId = id || (label ? label.toLowerCase().replace(/\s+/g, "-") : undefined);
 
     return (
-      <div className={`flex flex-col gap-1 w-full ${wrapperClassName}`}>
+      <div className={`flex flex-col gap-1 ${wrapperClassName || "w-full"}`}>
         {label && (
-          <label htmlFor={selectId} className="text-xs font-medium text-slate-700">
+          <label htmlFor={selectId} className="text-xs font-medium text-[#52606D]">
             {label}
           </label>
         )}
@@ -45,29 +45,29 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
             ref={ref}
             id={selectId}
             disabled={disabled}
-            className={`w-full h-9 appearance-none rounded-md border bg-white pl-3 pr-8 text-sm text-slate-900 placeholder:text-slate-400 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-400 disabled:border-slate-200 disabled:cursor-not-allowed ${
+            className={`w-full h-10 appearance-none rounded-[6px] border bg-white pl-3 pr-8 text-sm text-[#1F2933] placeholder:text-[#7B8794] transition-colors focus:outline-none focus:ring-1 focus:ring-[#2F5FD0] focus:border-[#2F5FD0] disabled:bg-[#F6F7F5] disabled:text-[#7B8794] disabled:border-[#E4E6E1] disabled:cursor-not-allowed ${
               error
-                ? "border-rose-400 focus:border-rose-500 focus:ring-rose-500"
-                : "border-slate-200 hover:border-slate-300"
+                ? "border-[#A12D22] focus:border-[#A12D22] focus:ring-[#A12D22]"
+                : "border-[#E4E6E1] hover:border-[#D1D5DB]"
             } ${className}`}
             {...props}
           >
             {options
               ? options.map((opt) => (
-                  <option key={opt.value} value={opt.value} disabled={opt.disabled}>
-                    {opt.label}
-                  </option>
-                ))
+                <option key={opt.value} value={opt.value} disabled={opt.disabled}>
+                  {opt.label}
+                </option>
+              ))
               : children}
           </select>
-          <div className="pointer-events-none absolute right-2.5 flex items-center text-slate-400">
+          <div className="absolute right-2.5 flex items-center pointer-events-none text-[#7B8794]">
             <ChevronDown className="w-4 h-4" />
           </div>
         </div>
         {error ? (
-          <p className="text-xs text-rose-600 mt-0.5">{error}</p>
+          <p className="text-xs text-[#A12D22] mt-0.5">{error}</p>
         ) : hint ? (
-          <p className="text-xs text-slate-500 mt-0.5">{hint}</p>
+          <p className="text-xs text-[#7B8794] mt-0.5">{hint}</p>
         ) : null}
       </div>
     );
@@ -75,3 +75,4 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
 );
 
 Select.displayName = "Select";
+export default Select;

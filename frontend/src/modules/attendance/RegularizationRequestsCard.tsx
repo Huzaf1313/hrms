@@ -161,23 +161,23 @@ export const RegularizationRequestsCard: React.FC<{ onReviewed?: () => void }> =
   // When there are 0 pending requests, collapse to a single slim row (about 48px)
   if (pendingRequests.length === 0 && !isLoading) {
     return (
-      <div className="rounded-[6px] border border-[#E5E7EB] bg-white h-[48px] px-4 flex items-center justify-between shadow-none">
-        <div className="flex items-center gap-2.5">
-          <Clock className="w-4 h-4 text-[#D97706]" />
-          <h3 className="text-[14px] font-semibold text-[#111827]">
+      <div className="rounded-lg border border-[#E4E6E1] bg-white h-[48px] px-6 py-4 flex items-center justify-between shadow-none">
+        <div className="flex items-center gap-2">
+          <Clock className="w-4 h-4 shrink-0 text-[#8A5A00]" />
+          <h3 className="text-[14px] font-semibold text-[#1F2933]">
             Pending Regularization
           </h3>
-          <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-[#F3F4F6] text-[#6B7280]">
+          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-[#EEEFEC] text-[#5F6B76]">
             0
           </span>
-          <span className="text-[12px] text-[#6B7280] hidden sm:inline ml-2">
+          <span className="text-xs text-[#7B8794] hidden sm:inline ml-2">
             No pending requests
           </span>
         </div>
         <button
           type="button"
           onClick={() => navigate("/dashboard/regularization")}
-          className="text-[13px] font-medium text-[#2563EB] hover:text-[#1D4ED8] transition-colors cursor-pointer"
+          className="text-[13px] font-medium text-[#2F5FD0] hover:text-[#264FB0] transition-colors cursor-pointer"
         >
           View all requests
         </button>
@@ -186,15 +186,15 @@ export const RegularizationRequestsCard: React.FC<{ onReviewed?: () => void }> =
   }
 
   return (
-    <div className="rounded-[6px] border border-[#E5E7EB] bg-white overflow-hidden shadow-none">
+    <div className="rounded-lg border border-[#E4E6E1] bg-white overflow-hidden shadow-none">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[#E5E7EB]">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-[#E4E6E1]">
         <div className="flex items-center gap-2">
-          <Clock className="w-4 h-4 text-[#D97706]" />
-          <h3 className="text-[14px] font-semibold text-[#111827]">
+          <Clock className="w-4 h-4 shrink-0 text-[#8A5A00]" />
+          <h3 className="text-[14px] font-semibold text-[#1F2933]">
             Pending Regularization
           </h3>
-          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[#FFFBEB] text-[#D97706]">
+          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-[#FBF0D9] text-[#8A5A00]">
             {pendingRequests.length}
           </span>
         </div>
@@ -202,83 +202,83 @@ export const RegularizationRequestsCard: React.FC<{ onReviewed?: () => void }> =
         <button
           type="button"
           onClick={() => navigate("/dashboard/regularization")}
-          className="text-[13px] font-medium text-[#2563EB] hover:text-[#1D4ED8] transition-colors cursor-pointer"
+          className="text-[13px] font-medium text-[#2F5FD0] hover:text-[#264FB0] transition-colors cursor-pointer"
         >
           View all requests
         </button>
       </div>
 
       {/* List / Table Content */}
-      <div className="divide-y divide-slate-100 overflow-x-auto">
+      <div className="overflow-x-auto w-full">
         {isLoading ? (
-          <div className="p-4 text-center text-xs text-slate-400">Loading requests...</div>
+          <div className="p-4 text-center text-xs text-[#7B8794]">Loading requests...</div>
         ) : pendingRequests.length === 0 ? (
-          <div className="p-4 text-center text-xs text-slate-500">
+          <div className="p-4 text-center text-xs text-[#7B8794]">
             No pending regularization requests requiring review.
           </div>
         ) : (
-          <table className="w-full text-left text-xs">
-            <thead className="bg-[#F9FAFB] text-[12px] font-semibold text-[#6B7280] normal-case tracking-normal border-b border-[#E5E7EB]">
-              <tr>
-                <th className="px-3.5 py-2 font-semibold">Employee</th>
-                <th className="px-3.5 py-2 font-semibold">Date</th>
-                <th className="px-3.5 py-2 font-semibold">Issue / Reason</th>
-                <th className="px-3.5 py-2 font-semibold">Requested Time</th>
-                <th className="px-3.5 py-2 font-semibold">Status</th>
-                {canApprove && <th className="px-3.5 py-2 text-right font-semibold">Decision</th>}
+          <table className="w-full text-left text-sm border-collapse">
+            <thead className="bg-[#F6F7F5] text-xs font-medium text-[#7B8794] normal-case tracking-[0.02em] border-b border-[#E4E6E1]">
+              <tr className="h-11">
+                <th className="px-6 py-3 font-medium bg-[#F6F7F5] align-middle">Employee</th>
+                <th className="px-6 py-3 font-medium bg-[#F6F7F5] align-middle">Date</th>
+                <th className="px-6 py-3 font-medium bg-[#F6F7F5] align-middle">Issue / Reason</th>
+                <th className="min-w-[220px] px-6 py-3 pr-10 font-medium bg-[#F6F7F5] align-middle">Requested Time</th>
+                <th className="px-6 py-3 font-medium bg-[#F6F7F5] align-middle">Status</th>
+                {canApprove && <th className="px-6 py-3 text-right font-medium bg-[#F6F7F5] align-middle">Decision</th>}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-[#E4E6E1] bg-white text-[#1F2933]">
               {pendingRequests.map((req) => (
-                <tr key={req.id} className="hover:bg-slate-50/70 transition-colors">
-                  <td className="px-3.5 py-2.5">
-                    <div className="flex items-center gap-2">
+                <tr key={req.id} className="min-h-[64px] hover:bg-[#FAFAF8] transition-colors">
+                  <td className="px-6 py-4 align-middle">
+                    <div className="flex items-center gap-3">
                       <Avatar name={req.employeeName} size="xs" />
                       <div className="min-w-0">
-                        <span className="font-semibold text-slate-900 block truncate leading-tight">
+                        <span className="font-medium text-[#1F2933] block truncate leading-tight text-sm">
                           {req.employeeName}
                         </span>
-                        <span className="text-[10px] text-slate-400 block font-mono">
+                        <span className="text-xs text-[#7B8794] block font-mono mt-0.5 leading-tight">
                           {req.employeeCode} • {req.department}
                         </span>
                       </div>
                     </div>
                   </td>
 
-                  <td className="px-3.5 py-2.5 font-medium text-slate-800 whitespace-nowrap">
+                  <td className="px-6 py-4 align-middle font-medium text-[#1F2933] whitespace-nowrap text-sm">
                     {formatDisplayDate(req.date)}
                   </td>
 
-                  <td className="px-3.5 py-2.5 text-slate-600 max-w-xs truncate" title={req.reason}>
+                  <td className="px-6 py-4 align-middle text-[#52606D] max-w-xs truncate text-sm" title={req.reason}>
                     {req.reason}
                   </td>
 
-                  <td className="px-3.5 py-2.5 font-mono text-slate-700 whitespace-nowrap">
+                  <td className="min-w-[220px] px-6 py-4 pr-10 align-middle font-mono text-xs text-[#52606D] whitespace-nowrap">
                     {req.requestedCheckIn || "--"} - {req.requestedCheckOut || "--"}
                   </td>
 
-                  <td className="px-3.5 py-2.5 whitespace-nowrap">
-                    <StatusPill variant="warning">Pending</StatusPill>
+                  <td className="px-6 py-4 align-middle whitespace-nowrap text-sm">
+                    <StatusPill variant="warn">Pending</StatusPill>
                   </td>
 
                   {canApprove && (
-                    <td className="px-3.5 py-2.5 text-right whitespace-nowrap">
-                      <div className="inline-flex items-center gap-1.5 justify-end">
+                    <td className="px-6 py-4 align-middle text-right whitespace-nowrap text-sm">
+                      <div className="inline-flex items-center gap-2 justify-end">
                         <Button
                           variant="outline"
-                          size="xs"
-                          className="text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300 h-7 px-2"
+                          size="sm"
+                          className="h-8 px-3.5 py-0 text-[13px] font-medium gap-1.5 text-[#1E6B45] hover:bg-[#E3F3EA] border-[#E4E6E1]"
                           onClick={() => handleOpenDecision(req, "Approved")}
-                          leftIcon={<Check className="w-3 h-3 text-emerald-600" />}
+                          leftIcon={<Check className="w-4 h-4 shrink-0 text-[#1E6B45]" />}
                         >
                           Approve
                         </Button>
                         <Button
                           variant="outline"
-                          size="xs"
-                          className="text-rose-700 hover:bg-rose-50 hover:border-rose-300 h-7 px-2"
+                          size="sm"
+                          className="h-8 px-3.5 py-0 text-[13px] font-medium gap-1.5 text-[#A12D22] hover:bg-[#FBE4E1] border-[#E4E6E1]"
                           onClick={() => handleOpenDecision(req, "Rejected")}
-                          leftIcon={<X className="w-3 h-3 text-rose-600" />}
+                          leftIcon={<X className="w-4 h-4 shrink-0 text-[#A12D22]" />}
                         >
                           Reject
                         </Button>
@@ -308,10 +308,10 @@ export const RegularizationRequestsCard: React.FC<{ onReviewed?: () => void }> =
         >
           <div className="flex flex-col gap-3 text-xs">
             <div className="p-3 rounded-md bg-slate-50 border border-slate-200">
-              <span className="text-slate-400 block text-[10px] uppercase font-semibold">Stated Reason</span>
+              <span className="text-slate-400 block text-xs uppercase font-semibold">Stated Reason</span>
               <p className="text-slate-800 mt-0.5">{activeRequest.reason}</p>
               {activeRequest.note && (
-                <p className="text-slate-500 text-[11px] mt-1 italic">"{activeRequest.note}"</p>
+                <p className="text-slate-500 text-xs mt-1 italic">"{activeRequest.note}"</p>
               )}
             </div>
 
@@ -320,7 +320,7 @@ export const RegularizationRequestsCard: React.FC<{ onReviewed?: () => void }> =
               placeholder={actionType === "Rejected" ? "Please state why this request is rejected..." : "e.g. Verified with team lead"}
               value={reviewComment}
               onChange={(e) => setReviewComment(e.target.value)}
-              leftIcon={<MessageSquare className="w-3.5 h-3.5" />}
+              leftIcon={<MessageSquare className="w-4 h-4 shrink-0" />}
             />
 
             <div className="mt-3 flex items-center justify-end gap-2 pt-2 border-t border-slate-100">

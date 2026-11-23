@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { Download, Search, Users, CheckCircle2, Clock, AlertTriangle, Timer } from "lucide-react";
+import { Download, Search } from "lucide-react";
 import { Button } from "../../../components/ui/Button";
 import { StatusPill } from "../../../components/ui/Badge";
 import { Avatar } from "../../../components/ui/Avatar";
-import { StatCard } from "../../../components/ui/StatCard";
+import { StatStrip, type StatItem } from "../../../components/ui/StatStrip";
 import { TableSkeleton } from "../../../components/ui/Skeleton";
 import { EmptyState } from "../../../components/ui/EmptyState";
 import {
@@ -62,21 +62,57 @@ export const AttendanceReportsView: React.FC<AttendanceReportsViewProps> = ({ cl
     [],
   );
 
+  const kpiItems: StatItem[] = useMemo(() => {
+    if (!reportData) return [];
+    return [
+      {
+        label: "Total Employees",
+        value: reportData.totals.total_employees,
+        helper: "Tracked in period",
+        dotColor: "bg-[#5F6B76]",
+      },
+      {
+        label: "Avg Attendance",
+        value: `${reportData.totals.avg_attendance_rate}%`,
+        helper: "Organization presence",
+        dotColor: "bg-[#1E6B45]",
+      },
+      {
+        label: "Late Arrivals",
+        value: reportData.totals.total_late_instances,
+        helper: "Grace period exceeded",
+        dotColor: "bg-[#8A5A00]",
+      },
+      {
+        label: "Unplanned Absent",
+        value: reportData.totals.total_absent_days,
+        helper: "Days unexcused",
+        dotColor: "bg-[#A12D22]",
+      },
+      {
+        label: "Avg Daily Hours",
+        value: `${reportData.totals.avg_hours}h`,
+        helper: "Standard 8.0h shift",
+        dotColor: "bg-[#5F6B76]",
+      },
+    ];
+  }, [reportData]);
+
   return (
     <div className={`space-y-4 ${className}`}>
       {/* Top Controls & Toolbar in a single row */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 rounded-lg border border-slate-200">
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3.5 rounded-[8px] border border-[#E4E6E1] shadow-none">
         {/* Left: Report Type Tabs */}
-        <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-md">
+        <div className="flex items-center gap-1 bg-[#F0F1EE] p-0.5 rounded-[6px]">
           {reportTabs.map((tab) => (
             <button
               key={tab.id}
               type="button"
               onClick={() => setReportType(tab.id)}
-              className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+              className={`px-3 py-1.5 text-[12px] font-medium rounded-[5px] transition-colors ${
                 reportType === tab.id
-                  ? "bg-white text-blue-600 shadow-xs font-semibold"
-                  : "text-slate-600 hover:text-slate-900"
+                  ? "bg-white text-[#2F5FD0] border border-[#E4E6E1] font-semibold"
+                  : "text-[#52606D] hover:text-[#1F2933]"
               }`}
             >
               {tab.label}
@@ -88,7 +124,7 @@ export const AttendanceReportsView: React.FC<AttendanceReportsViewProps> = ({ cl
         <div className="flex flex-wrap items-center gap-2">
           {/* Sample data badge */}
           {reportData?.isMock && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-[#FBF0D9] text-[#8A5A00]">
               Sample data
             </span>
           )}
@@ -98,14 +134,14 @@ export const AttendanceReportsView: React.FC<AttendanceReportsViewProps> = ({ cl
             type="month"
             value={month}
             onChange={(e) => setMonth(e.target.value)}
-            className="h-8 px-2.5 text-xs rounded border border-slate-200 bg-white text-slate-700 focus:outline-none focus:border-blue-600"
+            className="h-[34px] px-2.5 text-sm rounded-[6px] border border-[#E4E6E1] bg-white text-[#1F2933] focus:outline-none focus:border-[#2F5FD0]"
           />
 
           {/* Department filter */}
           <select
             value={department}
             onChange={(e) => setDepartment(e.target.value)}
-            className="h-8 px-2.5 text-xs rounded border border-slate-200 bg-white text-slate-700 focus:outline-none focus:border-blue-600"
+            className="h-[34px] px-2.5 text-sm rounded-[6px] border border-[#E4E6E1] bg-white text-[#1F2933] focus:outline-none focus:border-[#2F5FD0]"
           >
             <option value="all">All Departments</option>
             <option value="Engineering">Engineering</option>
@@ -117,13 +153,13 @@ export const AttendanceReportsView: React.FC<AttendanceReportsViewProps> = ({ cl
 
           {/* Search */}
           <div className="relative">
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Search className="w-4 h-4 shrink-0 text-[#7B8794] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search employee..."
-              className="h-8 pl-8 pr-2.5 text-xs rounded border border-slate-200 bg-white text-slate-700 focus:outline-none focus:border-blue-600 w-36 sm:w-44"
+              className="h-[34px] pl-8 pr-2.5 text-sm rounded-[6px] border border-[#E4E6E1] bg-white text-[#1F2933] focus:outline-none focus:border-[#2F5FD0] w-36 sm:w-44"
             />
           </div>
 
@@ -132,55 +168,19 @@ export const AttendanceReportsView: React.FC<AttendanceReportsViewProps> = ({ cl
             variant="outline"
             size="xs"
             onClick={handleExportCsv}
-            leftIcon={<Download className="w-3.5 h-3.5" />}
-            className="h-8 text-xs font-medium"
+            leftIcon={<Download className="w-4 h-4 shrink-0" />}
+            className="h-[34px] text-sm font-medium"
           >
             Export CSV
           </Button>
         </div>
       </div>
 
-      {/* Summary KPI Cards */}
-      {reportData && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-          <StatCard
-            label="Total Employees"
-            value={reportData.totals.total_employees}
-            subtext="Tracked in period"
-            icon={<Users className="w-4 h-4 text-slate-500" />}
-          />
-          <StatCard
-            label="Avg Attendance"
-            value={`${reportData.totals.avg_attendance_rate}%`}
-            subtext="Organization rate"
-            dotColor="bg-emerald-500"
-            icon={<CheckCircle2 className="w-4 h-4 text-emerald-600" />}
-          />
-          <StatCard
-            label="Late Arrivals"
-            value={reportData.totals.total_late_instances}
-            subtext="Total instances"
-            dotColor="bg-amber-500"
-            icon={<Clock className="w-4 h-4 text-amber-600" />}
-          />
-          <StatCard
-            label="Unplanned Absent"
-            value={reportData.totals.total_absent_days}
-            subtext="Days missed"
-            dotColor="bg-rose-500"
-            icon={<AlertTriangle className="w-4 h-4 text-rose-600" />}
-          />
-          <StatCard
-            label="Avg Daily Hours"
-            value={`${reportData.totals.avg_hours}h`}
-            subtext="Standard 8.0h"
-            icon={<Timer className="w-4 h-4 text-slate-500" />}
-          />
-        </div>
-      )}
+      {/* Summary KPI Cards via StatStrip */}
+      {reportData && <StatStrip items={kpiItems} />}
 
       {/* Main Report Table */}
-      <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
+      <div className="rounded-[8px] border border-[#E4E6E1] bg-white overflow-hidden shadow-none">
         {isLoading ? (
           <div className="p-4">
             <TableSkeleton rows={8} columns={6} />
@@ -191,63 +191,63 @@ export const AttendanceReportsView: React.FC<AttendanceReportsViewProps> = ({ cl
           </div>
         ) : reportType === "monthly_summary" ? (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold sticky top-0">
-                <tr>
-                  <th className="py-2.5 px-3">Employee</th>
-                  <th className="py-2.5 px-3">Department</th>
-                  <th className="py-2.5 px-3 text-right">Scheduled</th>
-                  <th className="py-2.5 px-3 text-right">Present</th>
-                  <th className="py-2.5 px-3 text-right">Late</th>
-                  <th className="py-2.5 px-3 text-right">Absent</th>
-                  <th className="py-2.5 px-3 text-right">Half Day</th>
-                  <th className="py-2.5 px-3 text-right">Leave</th>
-                  <th className="py-2.5 px-3 text-right">Total Hours</th>
-                  <th className="py-2.5 px-3 text-right">Avg Hrs/Day</th>
-                  <th className="py-2.5 px-3 text-right">Attendance %</th>
+            <table className="w-full text-left text-sm border-collapse">
+              <thead className="bg-[#F6F7F5] border-b border-[#E4E6E1] text-[#7B8794] font-semibold text-[12px] normal-case tracking-normal h-[40px] sticky top-0">
+                <tr className="h-[40px]">
+                  <th className="py-0 px-4 bg-[#F6F7F5]">Employee</th>
+                  <th className="py-0 px-4 bg-[#F6F7F5]">Department</th>
+                  <th className="py-0 px-4 bg-[#F6F7F5] text-right">Scheduled</th>
+                  <th className="py-0 px-4 bg-[#F6F7F5] text-right">Present</th>
+                  <th className="py-0 px-4 bg-[#F6F7F5] text-right">Late</th>
+                  <th className="py-0 px-4 bg-[#F6F7F5] text-right">Absent</th>
+                  <th className="py-0 px-4 bg-[#F6F7F5] text-right">Half Day</th>
+                  <th className="py-0 px-4 bg-[#F6F7F5] text-right">Leave</th>
+                  <th className="py-0 px-4 bg-[#F6F7F5] text-right">Total Hours</th>
+                  <th className="py-0 px-4 bg-[#F6F7F5] text-right">Avg Hrs/Day</th>
+                  <th className="py-0 px-4 bg-[#F6F7F5] text-right">Attendance %</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-[#E4E6E1] bg-white text-[#1F2933]">
                 {reportData.monthlySummary.length === 0 ? (
                   <tr>
-                    <td colSpan={11} className="py-8 text-center text-slate-400">
+                    <td colSpan={11} className="py-8 text-center text-[#7B8794]">
                       No records match the current filters.
                     </td>
                   </tr>
                 ) : (
                   reportData.monthlySummary.map((row) => (
-                    <tr key={row.employee_code} className="hover:bg-slate-50/70 transition-colors">
-                      <td className="py-2.5 px-3 font-medium text-slate-900">
+                    <tr key={row.employee_code} className="h-[48px] hover:bg-[#FAFAF8] transition-colors">
+                      <td className="py-0 px-4 align-middle font-medium text-[#1F2933]">
                         <div className="flex items-center gap-2">
                           <Avatar name={row.name} size="xs" />
                           <div>
                             <span className="block font-medium">{row.name}</span>
-                            <span className="text-[10px] text-slate-400 font-mono">{row.employee_code}</span>
+                            <span className="text-xs text-[#7B8794] font-mono">{row.employee_code}</span>
                           </div>
                         </div>
                       </td>
-                      <td className="py-2.5 px-3 text-slate-600">
+                      <td className="py-0 px-4 align-middle text-[#52606D]">
                         <div>
                           <span>{row.department}</span>
-                          <span className="text-[10px] text-slate-400 block">{row.designation}</span>
+                          <span className="text-xs text-[#7B8794] block">{row.designation}</span>
                         </div>
                       </td>
-                      <td className="py-2.5 px-3 text-right font-mono text-slate-700">{row.scheduled_days}</td>
-                      <td className="py-2.5 px-3 text-right font-mono text-emerald-600 font-semibold">{row.present_days}</td>
-                      <td className="py-2.5 px-3 text-right font-mono text-amber-600 font-medium">{row.late_days}</td>
-                      <td className="py-2.5 px-3 text-right font-mono text-rose-600 font-medium">{row.absent_days}</td>
-                      <td className="py-2.5 px-3 text-right font-mono text-slate-600">{row.half_days}</td>
-                      <td className="py-2.5 px-3 text-right font-mono text-blue-600">{row.leave_days}</td>
-                      <td className="py-2.5 px-3 text-right font-mono text-slate-800">{row.total_hours.toFixed(1)}h</td>
-                      <td className="py-2.5 px-3 text-right font-mono text-slate-800">{row.avg_hours_per_day.toFixed(1)}h</td>
-                      <td className="py-2.5 px-3 text-right font-mono">
+                      <td className="py-0 px-4 align-middle text-right font-mono text-[#52606D]">{row.scheduled_days}</td>
+                      <td className="py-0 px-4 align-middle text-right font-mono text-[#1E6B45] font-semibold">{row.present_days}</td>
+                      <td className="py-0 px-4 align-middle text-right font-mono text-[#8A5A00] font-medium">{row.late_days}</td>
+                      <td className="py-0 px-4 align-middle text-right font-mono text-[#A12D22] font-medium">{row.absent_days}</td>
+                      <td className="py-0 px-4 align-middle text-right font-mono text-[#52606D]">{row.half_days}</td>
+                      <td className="py-0 px-4 align-middle text-right font-mono text-[#274C9E]">{row.leave_days}</td>
+                      <td className="py-0 px-4 align-middle text-right font-mono text-[#1F2933]">{row.total_hours.toFixed(1)}h</td>
+                      <td className="py-0 px-4 align-middle text-right font-mono text-[#1F2933]">{row.avg_hours_per_day.toFixed(1)}h</td>
+                      <td className="py-0 px-4 align-middle text-right font-mono">
                         <span
                           className={`font-semibold ${
                             row.attendance_percentage >= 95
-                              ? "text-emerald-700"
+                              ? "text-[#1E6B45]"
                               : row.attendance_percentage >= 85
-                              ? "text-amber-700"
-                              : "text-rose-700"
+                              ? "text-[#8A5A00]"
+                              : "text-[#A12D22]"
                           }`}
                         >
                           {row.attendance_percentage.toFixed(1)}%
@@ -261,49 +261,49 @@ export const AttendanceReportsView: React.FC<AttendanceReportsViewProps> = ({ cl
           </div>
         ) : reportType === "late_arrivals" ? (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold sticky top-0">
-                <tr>
-                  <th className="py-2.5 px-3">Employee</th>
-                  <th className="py-2.5 px-3">Department</th>
-                  <th className="py-2.5 px-3">Date</th>
-                  <th className="py-2.5 px-3">Shift Timing</th>
-                  <th className="py-2.5 px-3">Scheduled In</th>
-                  <th className="py-2.5 px-3">Actual In</th>
-                  <th className="py-2.5 px-3 text-right">Delay (Mins)</th>
-                  <th className="py-2.5 px-3">Status</th>
+            <table className="w-full text-left text-sm border-collapse">
+              <thead className="bg-[#F6F7F5] border-b border-[#E4E6E1] text-[#7B8794] font-semibold text-[12px] normal-case tracking-normal h-[40px] sticky top-0">
+                <tr className="h-[40px]">
+                  <th className="py-0 px-4 bg-[#F6F7F5]">Employee</th>
+                  <th className="py-0 px-4 bg-[#F6F7F5]">Department</th>
+                  <th className="py-0 px-4 bg-[#F6F7F5]">Date</th>
+                  <th className="py-0 px-4 bg-[#F6F7F5]">Shift Timing</th>
+                  <th className="py-0 px-4 bg-[#F6F7F5]">Scheduled In</th>
+                  <th className="py-0 px-4 bg-[#F6F7F5]">Actual In</th>
+                  <th className="py-0 px-4 bg-[#F6F7F5] text-right">Delay (Mins)</th>
+                  <th className="py-0 px-4 bg-[#F6F7F5]">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-[#E4E6E1] bg-white text-[#1F2933]">
                 {reportData.lateArrivals.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-8 text-center text-slate-400">
+                    <td colSpan={8} className="py-8 text-center text-[#7B8794]">
                       No late arrivals recorded.
                     </td>
                   </tr>
                 ) : (
                   reportData.lateArrivals.map((row) => (
-                    <tr key={row.id} className="hover:bg-slate-50/70 transition-colors">
-                      <td className="py-2.5 px-3 font-medium text-slate-900">
+                    <tr key={row.id} className="h-[48px] hover:bg-[#FAFAF8] transition-colors">
+                      <td className="py-0 px-4 align-middle font-medium text-[#1F2933]">
                         <div className="flex items-center gap-2">
                           <Avatar name={row.name} size="xs" />
                           <div>
                             <span className="block font-medium">{row.name}</span>
-                            <span className="text-[10px] text-slate-400 font-mono">{row.employee_code}</span>
+                            <span className="text-xs text-[#7B8794] font-mono">{row.employee_code}</span>
                           </div>
                         </div>
                       </td>
-                      <td className="py-2.5 px-3 text-slate-600">{row.department}</td>
-                      <td className="py-2.5 px-3 text-slate-700 font-mono">{row.date}</td>
-                      <td className="py-2.5 px-3 text-slate-500 font-mono">{row.shift_timing}</td>
-                      <td className="py-2.5 px-3 text-slate-500 font-mono">{row.scheduled_in}</td>
-                      <td className="py-2.5 px-3 font-mono font-medium text-amber-700">{row.actual_in}</td>
-                      <td className="py-2.5 px-3 text-right font-mono font-semibold text-rose-600">
+                      <td className="py-0 px-4 align-middle text-[#52606D]">{row.department}</td>
+                      <td className="py-0 px-4 align-middle text-[#1F2933] font-mono">{row.date}</td>
+                      <td className="py-0 px-4 align-middle text-[#7B8794] font-mono">{row.shift_timing}</td>
+                      <td className="py-0 px-4 align-middle text-[#7B8794] font-mono">{row.scheduled_in}</td>
+                      <td className="py-0 px-4 align-middle font-mono font-medium text-[#8A5A00]">{row.actual_in}</td>
+                      <td className="py-0 px-4 align-middle text-right font-mono font-semibold text-[#A12D22]">
                         +{row.delay_minutes} min
                       </td>
-                      <td className="py-2.5 px-3">
+                      <td className="py-0 px-4 align-middle">
                         <StatusPill
-                          variant={row.status === "Regularized" ? "success" : row.status === "Grace Availed" ? "warning" : "danger"}
+                          variant={row.status === "Regularized" ? "ok" : row.status === "Grace Availed" ? "warn" : "bad"}
                         >
                           {row.status}
                         </StatusPill>
@@ -316,41 +316,41 @@ export const AttendanceReportsView: React.FC<AttendanceReportsViewProps> = ({ cl
           </div>
         ) : reportType === "absenteeism" ? (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold sticky top-0">
-                <tr>
-                  <th className="py-2.5 px-3">Employee</th>
-                  <th className="py-2.5 px-3">Department</th>
-                  <th className="py-2.5 px-3">Date</th>
-                  <th className="py-2.5 px-3">Absence Classification</th>
-                  <th className="py-2.5 px-3">Reporting Manager</th>
+            <table className="w-full text-left text-sm border-collapse">
+              <thead className="bg-[#F6F7F5] border-b border-[#E4E6E1] text-[#7B8794] font-semibold text-[12px] normal-case tracking-normal h-[40px] sticky top-0">
+                <tr className="h-[40px]">
+                  <th className="py-0 px-4 bg-[#F6F7F5]">Employee</th>
+                  <th className="py-0 px-4 bg-[#F6F7F5]">Department</th>
+                  <th className="py-0 px-4 bg-[#F6F7F5]">Date</th>
+                  <th className="py-0 px-4 bg-[#F6F7F5]">Absence Classification</th>
+                  <th className="py-0 px-4 bg-[#F6F7F5]">Reporting Manager</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-[#E4E6E1] bg-white text-[#1F2933]">
                 {reportData.absenteeism.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="py-8 text-center text-slate-400">
+                    <td colSpan={5} className="py-8 text-center text-[#7B8794]">
                       No absenteeism incidents recorded.
                     </td>
                   </tr>
                 ) : (
                   reportData.absenteeism.map((row) => (
-                    <tr key={row.id} className="hover:bg-slate-50/70 transition-colors">
-                      <td className="py-2.5 px-3 font-medium text-slate-900">
+                    <tr key={row.id} className="h-[48px] hover:bg-[#FAFAF8] transition-colors">
+                      <td className="py-0 px-4 align-middle font-medium text-[#1F2933]">
                         <div className="flex items-center gap-2">
                           <Avatar name={row.name} size="xs" />
                           <div>
                             <span className="block font-medium">{row.name}</span>
-                            <span className="text-[10px] text-slate-400 font-mono">{row.employee_code}</span>
+                            <span className="text-xs text-[#7B8794] font-mono">{row.employee_code}</span>
                           </div>
                         </div>
                       </td>
-                      <td className="py-2.5 px-3 text-slate-600">{row.department}</td>
-                      <td className="py-2.5 px-3 text-slate-700 font-mono">{row.date}</td>
-                      <td className="py-2.5 px-3">
-                        <StatusPill variant="danger">{row.type}</StatusPill>
+                      <td className="py-0 px-4 align-middle text-[#52606D]">{row.department}</td>
+                      <td className="py-0 px-4 align-middle text-[#1F2933] font-mono">{row.date}</td>
+                      <td className="py-0 px-4 align-middle">
+                        <StatusPill variant="bad">{row.type}</StatusPill>
                       </td>
-                      <td className="py-2.5 px-3 text-slate-600">{row.reporting_manager}</td>
+                      <td className="py-0 px-4 align-middle text-[#52606D]">{row.reporting_manager}</td>
                     </tr>
                   ))
                 )}
@@ -359,51 +359,51 @@ export const AttendanceReportsView: React.FC<AttendanceReportsViewProps> = ({ cl
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold sticky top-0">
-                <tr>
-                  <th className="py-2.5 px-3">Employee</th>
-                  <th className="py-2.5 px-3">Department</th>
-                  <th className="py-2.5 px-3 text-right">Target Expected Hours</th>
-                  <th className="py-2.5 px-3 text-right">Logged Work Hours</th>
-                  <th className="py-2.5 px-3 text-right">Variance</th>
-                  <th className="py-2.5 px-3">Status</th>
+            <table className="w-full text-left text-sm border-collapse">
+              <thead className="bg-[#F6F7F5] border-b border-[#E4E6E1] text-[#7B8794] font-semibold text-[12px] normal-case tracking-normal h-[40px] sticky top-0">
+                <tr className="h-[40px]">
+                  <th className="py-0 px-4 bg-[#F6F7F5]">Employee</th>
+                  <th className="py-0 px-4 bg-[#F6F7F5]">Department</th>
+                  <th className="py-0 px-4 bg-[#F6F7F5] text-right">Target Expected Hours</th>
+                  <th className="py-0 px-4 bg-[#F6F7F5] text-right">Logged Work Hours</th>
+                  <th className="py-0 px-4 bg-[#F6F7F5] text-right">Variance</th>
+                  <th className="py-0 px-4 bg-[#F6F7F5]">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-[#E4E6E1] bg-white text-[#1F2933]">
                 {reportData.workingHours.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-8 text-center text-slate-400">
+                    <td colSpan={6} className="py-8 text-center text-[#7B8794]">
                       No records found.
                     </td>
                   </tr>
                 ) : (
                   reportData.workingHours.map((row) => (
-                    <tr key={row.employee_code} className="hover:bg-slate-50/70 transition-colors">
-                      <td className="py-2.5 px-3 font-medium text-slate-900">
+                    <tr key={row.employee_code} className="h-[48px] hover:bg-[#FAFAF8] transition-colors">
+                      <td className="py-0 px-4 align-middle font-medium text-[#1F2933]">
                         <div className="flex items-center gap-2">
                           <Avatar name={row.name} size="xs" />
                           <div>
                             <span className="block font-medium">{row.name}</span>
-                            <span className="text-[10px] text-slate-400 font-mono">{row.employee_code}</span>
+                            <span className="text-xs text-[#7B8794] font-mono">{row.employee_code}</span>
                           </div>
                         </div>
                       </td>
-                      <td className="py-2.5 px-3 text-slate-600">{row.department}</td>
-                      <td className="py-2.5 px-3 text-right font-mono text-slate-600">{row.expected_hours.toFixed(1)}h</td>
-                      <td className="py-2.5 px-3 text-right font-mono font-semibold text-slate-800">{row.logged_hours.toFixed(1)}h</td>
-                      <td className="py-2.5 px-3 text-right font-mono">
+                      <td className="py-0 px-4 align-middle text-[#52606D]">{row.department}</td>
+                      <td className="py-0 px-4 align-middle text-right font-mono text-[#52606D]">{row.expected_hours.toFixed(1)}h</td>
+                      <td className="py-0 px-4 align-middle text-right font-mono font-semibold text-[#1F2933]">{row.logged_hours.toFixed(1)}h</td>
+                      <td className="py-0 px-4 align-middle text-right font-mono">
                         <span
                           className={`font-semibold ${
-                            row.difference_hours >= 0 ? "text-emerald-600" : "text-rose-600"
+                            row.difference_hours >= 0 ? "text-[#1E6B45]" : "text-[#A12D22]"
                           }`}
                         >
                           {row.difference_hours >= 0 ? `+${row.difference_hours.toFixed(1)}h` : `${row.difference_hours.toFixed(1)}h`}
                         </span>
                       </td>
-                      <td className="py-2.5 px-3">
+                      <td className="py-0 px-4 align-middle">
                         <StatusPill
-                          variant={row.status === "Target Met" ? "success" : row.status === "Overtime" ? "info" : "warning"}
+                          variant={row.status === "Target Met" ? "ok" : row.status === "Overtime" ? "leave" : "warn"}
                         >
                           {row.status}
                         </StatusPill>

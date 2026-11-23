@@ -158,73 +158,73 @@ export const TodayPunchCard: React.FC<TodayPunchCardProps> = ({
   }
 
   return (
-    <div className={`rounded-lg border border-slate-200 bg-white p-4 shadow-none ${className}`}>
-      <div className="flex flex-wrap items-start justify-between gap-4">
+    <div className={`rounded-[8px] border border-[#E4E6E1] bg-white p-[20px] shadow-none ${className}`}>
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         {/* Left: Clock and Shift info */}
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-medium uppercase tracking-wider text-slate-500">
-              Live Workstation Time
+            <span className="text-[12px] font-medium text-[#7B8794]">
+              Workstation Live Time
             </span>
-            <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="inline-block h-2 w-2 rounded-full bg-[#1E6B45] animate-pulse" />
           </div>
           <div className="mt-1 flex items-baseline gap-3">
-            <h2 className="text-2xl font-bold font-mono tracking-tight text-slate-900">
+            <h2 className="text-[24px] font-semibold font-mono tracking-tight text-[#1F2933]">
               {formattedClock}
             </h2>
-            <span className="text-xs text-slate-500">{formattedDate}</span>
+            <span className="text-[12px] text-[#7B8794]">{formattedDate}</span>
           </div>
 
-          <div className="mt-2.5 flex flex-wrap items-center gap-3 text-xs text-slate-600">
-            <span className="flex items-center gap-1.5 font-medium">
-              <Clock className="w-3.5 h-3.5 text-slate-400" />
+          <div className="mt-2.5 flex flex-wrap items-center gap-3 text-[12px] text-[#52606D]">
+            <span className="flex items-center gap-1.5 font-medium text-[#1F2933]">
+              <Clock className="w-3.5 h-3.5 text-[#7B8794]" />
               {shiftName} ({shiftTiming})
             </span>
-            <span className="text-slate-300">•</span>
-            <span className="text-slate-500">Grace period: {gracePeriod} mins</span>
+            <span className="text-[#E4E6E1]">•</span>
+            <span className="text-[#7B8794]">Grace: {gracePeriod}m</span>
           </div>
         </div>
 
         {/* Right: Location & Action Button */}
         <div className="flex flex-col sm:items-end gap-3 min-w-[200px]">
           {/* Office vs WFH selector */}
-          <div className="inline-flex rounded-md border border-slate-200 bg-slate-50 p-0.5 text-xs">
+          <div className="inline-flex rounded-[6px] bg-[#F0F1EE] p-0.5 text-[12px]">
             <button
               type="button"
               disabled={punchState === "checked_in" || punchState === "checked_out"}
               onClick={() => setWorkLocation("office")}
-              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded font-medium transition-colors ${
+              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-[5px] font-medium transition-colors ${
                 workLocation === "office"
-                  ? "bg-white text-slate-900 shadow-xs border border-slate-200/80"
-                  : "text-slate-600 hover:text-slate-900"
+                  ? "bg-white text-[#1F2933] border border-[#E4E6E1]"
+                  : "text-[#52606D] hover:text-[#1F2933]"
               }`}
             >
-              <Building className="w-3 h-3 text-slate-500" />
+              <Building className="w-3 h-3 text-[#7B8794]" />
               Office
             </button>
             <button
               type="button"
               disabled={punchState === "checked_in" || punchState === "checked_out"}
               onClick={() => setWorkLocation("wfh")}
-              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded font-medium transition-colors ${
+              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-[5px] font-medium transition-colors ${
                 workLocation === "wfh"
-                  ? "bg-white text-slate-900 shadow-xs border border-slate-200/80"
-                  : "text-slate-600 hover:text-slate-900"
+                  ? "bg-white text-[#1F2933] border border-[#E4E6E1]"
+                  : "text-[#52606D] hover:text-[#1F2933]"
               }`}
             >
-              <Home className="w-3 h-3 text-slate-500" />
+              <Home className="w-3 h-3 text-[#7B8794]" />
               WFH
             </button>
           </div>
 
-          {/* Punch Button with Double-Click Protection */}
+          {/* Punch Button with Double-Click Protection (40px high) */}
           {punchState === "not_checked_in" ? (
             <Button
               variant="primary"
               size="md"
               isLoading={isPunching}
               onClick={handlePunch}
-              className="w-full sm:w-auto px-6 h-9"
+              className="w-full sm:w-auto px-6 h-[40px] text-[13.5px] font-medium"
               leftIcon={<Clock className="w-4 h-4" />}
             >
               Check In
@@ -232,8 +232,8 @@ export const TodayPunchCard: React.FC<TodayPunchCardProps> = ({
           ) : punchState === "checked_in" ? (
             <div className="flex items-center gap-2 w-full sm:w-auto">
               <div className="hidden sm:flex flex-col items-end mr-1">
-                <span className="text-[11px] text-slate-400 uppercase font-medium">Logged Time</span>
-                <span className="text-xs font-mono font-semibold text-emerald-700">
+                <span className="text-xs text-[#7B8794] uppercase font-medium">Logged Time</span>
+                <span className="text-xs font-mono font-semibold text-[#1E6B45]">
                   {formattedWorkDuration}
                 </span>
               </div>
@@ -242,7 +242,7 @@ export const TodayPunchCard: React.FC<TodayPunchCardProps> = ({
                 size="md"
                 isLoading={isPunching}
                 onClick={handlePunch}
-                className="w-full sm:w-auto px-6 h-9"
+                className="w-full sm:w-auto px-6 h-[40px] text-sm font-medium"
                 leftIcon={<Clock className="w-4 h-4" />}
               >
                 Check Out
@@ -250,7 +250,7 @@ export const TodayPunchCard: React.FC<TodayPunchCardProps> = ({
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <StatusPill variant="neutral" dot={false}>
+              <StatusPill variant="off" dot={false}>
                 Completed for Today
               </StatusPill>
             </div>
@@ -259,38 +259,38 @@ export const TodayPunchCard: React.FC<TodayPunchCardProps> = ({
       </div>
 
       {/* Today's Punch Log Ribbon */}
-      <div className="mt-4 pt-3.5 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs">
+      <div className="mt-4 pt-3.5 border-t border-[#E4E6E1] flex flex-wrap items-center justify-between gap-3 text-[12px]">
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-1.5">
-            <span className="text-slate-400">Status:</span>
+            <span className="text-[#7B8794]">Status:</span>
             {punchState === "not_checked_in" ? (
-              <StatusPill variant="warning">Not Checked In</StatusPill>
+              <StatusPill variant="warn">Not Checked In</StatusPill>
             ) : punchState === "checked_in" ? (
-              <StatusPill variant="success">Working ({workLocation.toUpperCase()})</StatusPill>
+              <StatusPill variant="ok">Working ({workLocation.toUpperCase()})</StatusPill>
             ) : (
-              <StatusPill variant="neutral">Shift Completed</StatusPill>
+              <StatusPill variant="off">Shift Completed</StatusPill>
             )}
           </div>
 
           <div className="flex items-center gap-1.5">
-            <span className="text-slate-400">First In:</span>
-            <span className="font-medium text-slate-800">
-              {myStatus?.in_time ? myStatus.in_time : "--"}
+            <span className="text-[#7B8794]">First In:</span>
+            <span className="font-medium text-[#1F2933]">
+              {myStatus?.in_time ? myStatus.in_time : "-"}
             </span>
           </div>
 
           <div className="flex items-center gap-1.5">
-            <span className="text-slate-400">Last Out:</span>
-            <span className="font-medium text-slate-800">
-              {myStatus?.out_time ? myStatus.out_time : "--"}
+            <span className="text-[#7B8794]">Last Out:</span>
+            <span className="font-medium text-[#1F2933]">
+              {myStatus?.out_time ? myStatus.out_time : "-"}
             </span>
           </div>
         </div>
 
         {punchState === "checked_in" && (
-          <div className="flex items-center gap-2 text-slate-600 font-medium sm:hidden">
+          <div className="flex items-center gap-2 text-[#52606D] font-medium sm:hidden">
             <span>Timer:</span>
-            <span className="font-mono text-emerald-700 font-semibold">{formattedWorkDuration}</span>
+            <span className="font-mono text-[#1E6B45] font-semibold">{formattedWorkDuration}</span>
           </div>
         )}
       </div>

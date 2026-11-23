@@ -205,19 +205,19 @@ export const EmployeeAttendanceRegularizationModal: React.FC<EmployeeAttendanceR
             </span>
             <div className="grid grid-cols-3 gap-2">
               <div>
-                <span className="text-[11px] text-slate-400 block">Logged In Time</span>
+                <span className="text-xs text-slate-400 block">Logged In Time</span>
                 <span className="font-mono font-medium text-slate-800">
                   {resolveCheckIn(selectedAttendance)}
                 </span>
               </div>
               <div>
-                <span className="text-[11px] text-slate-400 block">Logged Out Time</span>
+                <span className="text-xs text-slate-400 block">Logged Out Time</span>
                 <span className="font-mono font-medium text-slate-800">
                   {resolveCheckOut(selectedAttendance)}
                 </span>
               </div>
               <div>
-                <span className="text-[11px] text-slate-400 block">Current Status</span>
+                <span className="text-xs text-slate-400 block">Current Status</span>
                 <span className="font-medium text-slate-800">
                   {selectedAttendance?.status ?? "No Record"}
                 </span>
@@ -259,7 +259,7 @@ export const EmployeeAttendanceRegularizationModal: React.FC<EmployeeAttendanceR
             <label className="text-xs font-medium text-slate-700">
               Justification / Reason <span className="text-rose-500">*</span>
             </label>
-            <span className="text-[11px] text-slate-400">{reason.length}/300</span>
+            <span className="text-xs text-slate-400">{reason.length}/300</span>
           </div>
           <textarea
             value={reason}
@@ -288,7 +288,7 @@ export const EmployeeAttendanceRegularizationModal: React.FC<EmployeeAttendanceR
               className="absolute inset-0 opacity-0 cursor-pointer"
             />
             {attachment && (
-              <span className="text-[11px] text-emerald-600 flex items-center gap-1 font-medium">
+              <span className="text-xs text-emerald-600 flex items-center gap-1 font-medium">
                 <CheckCircle2 className="w-3.5 h-3.5" /> Attached
               </span>
             )}
