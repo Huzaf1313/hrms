@@ -16,20 +16,41 @@ interface ReportTableProps {
   emptyMessage?: string;
 }
 
+function StatusBadge({ status }: { status: string }) {
+  const isComplete = status === "Completed" || status === "Paid";
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border ${
+        isComplete
+          ? "bg-[#E3F5E1] text-[#1E6B45] border-[#BCE8B5]"
+          : "bg-[#FDF3D6] text-[#8A5A00] border-[#F6DE95]"
+      }`}
+    >
+      {status}
+    </span>
+  );
+}
+
+function isNumericCol(name: string): boolean {
+  return ["Processed Records", "Gross Salary", "Total Deductions", "Net Salary", "Employees"].includes(name);
+}
+
 function ReportTable({ title, columns, rows, emptyMessage = "No records found" }: ReportTableProps) {
   return (
-    <section className="overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm">
-      <h2 className="border-b border-slate-100 px-5 py-4 text-sm font-bold tracking-wide text-slate-900">
+    <section className="overflow-hidden rounded-lg border border-[#E4E6E1] bg-white shadow-none">
+      <h2 className="border-b border-[#E4E6E1] px-5 py-4 text-base font-semibold text-[#1F2933]">
         {title}
       </h2>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-slate-100 bg-slate-50 text-slate-500">
+            <tr className="h-11 border-b border-[#E4E6E1] bg-[#FAFAF8] text-xs font-medium uppercase tracking-wider text-[#7B8794]">
               {columns.map((col) => (
                 <th
                   key={col}
-                  className="whitespace-nowrap px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide"
+                  className={`whitespace-nowrap px-5 py-3 font-medium ${
+                    isNumericCol(col) ? "text-right" : "text-left"
+                  }`}
                 >
                   {col}
                 </th>
@@ -41,7 +62,7 @@ function ReportTable({ title, columns, rows, emptyMessage = "No records found" }
               <tr>
                 <td
                   colSpan={columns.length}
-                  className="px-5 py-8 text-center text-sm text-slate-400"
+                  className="px-5 py-8 text-center text-xs text-[#7B8794]"
                 >
                   {emptyMessage}
                 </td>
@@ -50,18 +71,38 @@ function ReportTable({ title, columns, rows, emptyMessage = "No records found" }
               rows.map((row, i) => (
                 <tr
                   key={i}
-                  className="border-b border-slate-50 transition-colors last:border-b-0 hover:bg-blue-50/40"
+                  className="min-h-[52px] border-b border-[#E4E6E1]/50 transition-colors last:border-b-0 hover:bg-[#FAFAF8]"
                 >
-                  {row.map((cell, j) => (
-                    <td
-                      key={j}
-                      className={`whitespace-nowrap px-5 py-3 text-slate-600 ${
-                        j === 0 ? "font-medium text-slate-800" : ""
-                      }`}
-                    >
-                      {cell}
-                    </td>
-                  ))}
+                  {row.map((cell, j) => {
+                    const col = columns[j];
+                    if (col === "Status") {
+                      return (
+                        <td key={j} className="whitespace-nowrap px-5 py-3.5 text-left">
+                          <StatusBadge status={String(cell)} />
+                        </td>
+                      );
+                    }
+                    if (isNumericCol(col)) {
+                      return (
+                        <td
+                          key={j}
+                          className="whitespace-nowrap px-5 py-3.5 text-right font-medium tabular-nums text-[#1F2933]"
+                        >
+                          {cell}
+                        </td>
+                      );
+                    }
+                    return (
+                      <td
+                        key={j}
+                        className={`whitespace-nowrap px-5 py-3.5 text-left ${
+                          j === 0 ? "font-semibold text-[#1F2933]" : "text-[#52606D]"
+                        }`}
+                      >
+                        {cell}
+                      </td>
+                    );
+                  })}
                 </tr>
               ))
             )}
@@ -118,19 +159,19 @@ export default function Reports() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Payroll Reports</h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <h2 className="text-base font-semibold text-[#1F2933]">Payroll Reports</h2>
+          <p className="mt-1 text-sm text-[#7B8794]">
             Real aggregated payroll analytics and department summaries.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 shadow-sm text-xs font-medium text-slate-700">
-            <Calendar className="h-3.5 w-3.5 text-slate-400" />
+          <div className="flex h-10 items-center gap-2 rounded-[6px] border border-[#E4E6E1] bg-white px-3 text-xs font-medium text-[#1F2933]">
+            <Calendar className="h-4 w-4 text-[#7B8794]" />
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(e.target.value)}
-              className="bg-transparent outline-none cursor-pointer"
+              className="bg-transparent outline-none cursor-pointer text-xs text-[#1F2933]"
             >
               <option value="all">Last 12 Months</option>
               {(data?.available_years || []).map((y) => (
@@ -144,24 +185,24 @@ export default function Reports() {
           <button
             onClick={fetchReports}
             disabled={loading}
-            className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50"
+            className="flex h-10 items-center gap-1.5 rounded-md border border-[#E4E6E1] bg-white px-3.5 text-xs font-medium text-[#1F2933] transition hover:bg-[#F0F1EE] disabled:opacity-60 cursor-pointer"
           >
-            <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+            <RefreshCw className={`h-4 w-4 shrink-0 ${loading ? "animate-spin" : ""}`} />
             Refresh
           </button>
         </div>
       </div>
 
       {error && (
-        <div className="flex items-center gap-3 rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
-          <AlertCircle className="h-5 w-5 shrink-0" />
+        <div className="flex items-center gap-3 rounded-lg border border-rose-200 bg-rose-50 p-4 text-xs text-rose-700">
+          <AlertCircle className="h-4 w-4 shrink-0" />
           <span>{error}</span>
         </div>
       )}
 
       {loading && !data ? (
         <div className="flex items-center justify-center py-16">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+          <Loader2 className="h-8 w-8 animate-spin text-[#2F5FD0]" />
         </div>
       ) : (
         <div className="space-y-6">
@@ -181,7 +222,7 @@ export default function Reports() {
         </div>
       )}
 
-      <p className="text-xs text-slate-400">
+      <p className="text-xs text-[#7B8794]">
         Data is dynamically calculated from persisted employee payroll records in MongoDB.
       </p>
     </div>

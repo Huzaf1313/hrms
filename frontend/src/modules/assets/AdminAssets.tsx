@@ -53,14 +53,14 @@ import {
   type Paginated,
 } from "./types";
 
-const PANEL_CLASS = "rounded-lg border border-[#E4E6E1] bg-white p-6 shadow-none";
+const PANEL_CLASS = "rounded-lg border border-[#E4E6E1] bg-white overflow-hidden shadow-none";
 
 // KPI cards share one row and clip rather than letting large numbers overflow.
 const KPI_CARD_CLASS =
   "min-w-0 overflow-hidden rounded-lg border border-[#E4E6E1] bg-white p-[16px_20px] min-h-[96px] shadow-none flex flex-col justify-between";
 
 const FILTER_CONTROL_CLASS =
-  "h-10 w-full appearance-none rounded-md border border-[#E4E6E1] bg-white px-3.5 pr-9 text-xs font-medium " +
+  "h-10 w-full appearance-none rounded-[6px] border border-[#E4E6E1] bg-white px-3.5 pr-9 text-xs font-medium " +
   "text-[#1F2933] transition hover:border-[#CBD2D9] focus:border-[#2F5FD0] focus:outline-none";
 
 const MONTHS = [
@@ -240,18 +240,22 @@ function PanelState({
 }) {
   if (loading) {
     return (
-      <div className="py-4">
-        <TableSkeleton rows={4} columns={5} />
+      <div className="py-8 px-5">
+        <TableSkeleton rows={3} columns={5} />
       </div>
     );
   }
 
   if (error) {
-    return <p className="py-10 text-center text-sm text-rose-500">{error}</p>;
+    return <p className="py-8 px-5 text-center text-xs text-rose-500">{error}</p>;
   }
 
   if (empty) {
-    return <p className="py-10 text-center text-sm text-gray-500">{emptyMessage}</p>;
+    return (
+      <div className="flex items-center justify-center py-8 px-5 text-center">
+        <p className="text-xs text-[#7B8794]">{emptyMessage}</p>
+      </div>
+    );
   }
 
   return <>{children}</>;
@@ -302,12 +306,16 @@ function PersonAvatar({ name }: { name: string }) {
 function SectionTitle({
   title,
   action,
+  className = "",
 }: {
   title: string;
   action?: ReactNode;
+  className?: string;
 }) {
   return (
-    <div className="mb-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+    <div
+      className={`flex items-center justify-between px-5 py-4 border-b border-[#E4E6E1] bg-white shrink-0 ${className}`}
+    >
       <h3 className="shrink-0 text-base font-semibold text-[#1F2933]">{title}</h3>
       {action}
     </div>
@@ -316,7 +324,7 @@ function SectionTitle({
 
 function ViewAllLink({
   onClick,
-  label = "View All →",
+  label = "View All",
 }: {
   onClick?: () => void;
   label?: string;
@@ -325,7 +333,7 @@ function ViewAllLink({
     <button
       type="button"
       onClick={onClick}
-      className="shrink-0 whitespace-nowrap text-xs font-semibold text-[#2F5FD0] hover:underline cursor-pointer"
+      className="shrink-0 whitespace-nowrap text-[13px] font-medium text-[#2F5FD0] hover:underline cursor-pointer"
     >
       {label}
     </button>
@@ -353,7 +361,7 @@ function Pagination({
   pageCount,
   onPageChange,
   summary,
-  className = "mt-5",
+  className = "px-5 py-3 border-t border-[#E4E6E1] bg-white",
 }: {
   page: number;
   pageCount: number;
@@ -363,7 +371,11 @@ function Pagination({
   className?: string;
 }) {
   if (pageCount <= 1) {
-    return <p className={`${className} text-xs text-[#7B8794]`}>{summary}</p>;
+    return (
+      <div className={`${className} flex items-center justify-between`}>
+        <p className="text-xs text-[#7B8794]">{summary}</p>
+      </div>
+    );
   }
 
   return (
@@ -378,7 +390,7 @@ function Pagination({
           onClick={() => onPageChange(page - 1)}
           className="flex h-8 w-8 items-center justify-center rounded-md border border-[#E4E6E1] text-[#52606D] transition hover:bg-[#F0F1EE] disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
         >
-          <ChevronLeft className="h-4 w-4" />
+          <ChevronLeft className="h-4 w-4 shrink-0" />
         </button>
 
         {pageWindow(page, pageCount).map((entry, index) =>
@@ -410,7 +422,7 @@ function Pagination({
           onClick={() => onPageChange(page + 1)}
           className="flex h-8 w-8 items-center justify-center rounded-md border border-[#E4E6E1] text-[#52606D] transition hover:bg-[#F0F1EE] disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
         >
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight className="h-4 w-4 shrink-0" />
         </button>
       </div>
     </div>
@@ -528,72 +540,67 @@ function AssetOverview({
   }
 
   return (
-    // `h-full` lets the card fill its grid band so Asset Overview and Asset
-    // Allocation stay the same size; the table itself keeps its natural height.
-    <div className={`${PANEL_CLASS} flex h-full min-w-0 flex-col`}>
-      <SectionTitle
-        title="Asset Overview"
-        action={
-          <div className="flex w-full min-w-0 flex-wrap items-center gap-2 lg:w-auto lg:flex-nowrap">
-            <button
-              type="button"
-              onClick={onToggleShowAll}
-              className={`h-10 shrink-0 whitespace-nowrap rounded-md border px-4 text-xs font-semibold transition cursor-pointer ${
-                showAll
-                  ? "border-[#2F5FD0] bg-[#2F5FD0] text-white hover:bg-[#264FB0]"
-                  : "border-[#E4E6E1] bg-white text-[#52606D] hover:bg-[#F0F1EE] hover:text-[#1F2933]"
-              }`}
-            >
-              {showAll ? "Show Less" : "View All Assets"}
-            </button>
+    <div className={`${PANEL_CLASS} flex min-w-0 flex-col`}>
+      <SectionTitle title="Asset Overview" />
 
-            <div className="relative">
-              <select
-                value={categoryFilter}
-                onChange={(event) => setFilter("category", event.target.value)}
-                aria-label="Filter by category"
-                className={`${FILTER_CONTROL_CLASS} w-full sm:w-36`}
-              >
-                <option value="">All Categories</option>
-                {ASSET_CATEGORIES.map((category) => (
-                  <option key={category.label} value={category.label}>
-                    {category.label}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7B8794]" />
-            </div>
+      <div className="flex flex-wrap items-center gap-3 px-5 py-3.5 border-b border-[#E4E6E1] bg-white">
+        <button
+          type="button"
+          onClick={onToggleShowAll}
+          className={`h-10 shrink-0 whitespace-nowrap rounded-[6px] border px-4 text-xs font-semibold transition cursor-pointer ${
+            showAll
+              ? "border-[#2F5FD0] bg-[#2F5FD0] text-white hover:bg-[#264FB0]"
+              : "border-[#E4E6E1] bg-white text-[#52606D] hover:bg-[#F0F1EE] hover:text-[#1F2933]"
+          }`}
+        >
+          {showAll ? "Show Less" : "View All Assets"}
+        </button>
 
-            <div className="relative">
-              <select
-                value={statusFilter}
-                onChange={(event) => setFilter("status", event.target.value)}
-                aria-label="Filter by status"
-                className={`${FILTER_CONTROL_CLASS} w-full sm:w-32`}
-              >
-                <option value="">All Status</option>
-                {ASSET_STATUS_ORDER.map((status) => (
-                  <option key={status} value={status}>
-                    {ASSET_STATUS_LABELS[status]}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7B8794]" />
-            </div>
+        <div className="relative">
+          <select
+            value={categoryFilter}
+            onChange={(event) => setFilter("category", event.target.value)}
+            aria-label="Filter by category"
+            className={`${FILTER_CONTROL_CLASS} w-full sm:w-36`}
+          >
+            <option value="">All Categories</option>
+            {ASSET_CATEGORIES.map((category) => (
+              <option key={category.label} value={category.label}>
+                {category.label}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7B8794]" />
+        </div>
 
-            <div className="relative w-full sm:w-auto sm:flex-1 lg:w-64">
-              <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7B8794]" />
-              <input
-                type="text"
-                value={search}
-                onChange={(event) => setFilter("search", event.target.value)}
-                placeholder="Search by name or ID"
-                className="h-10 w-full rounded-md border border-[#E4E6E1] bg-white pl-10 pr-4 text-sm text-[#1F2933] transition hover:border-[#CBD2D9] focus:border-[#2F5FD0] focus:outline-none"
-              />
-            </div>
-          </div>
-        }
-      />
+        <div className="relative">
+          <select
+            value={statusFilter}
+            onChange={(event) => setFilter("status", event.target.value)}
+            aria-label="Filter by status"
+            className={`${FILTER_CONTROL_CLASS} w-full sm:w-32`}
+          >
+            <option value="">All Status</option>
+            {ASSET_STATUS_ORDER.map((status) => (
+              <option key={status} value={status}>
+                {ASSET_STATUS_LABELS[status]}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7B8794]" />
+        </div>
+
+        <div className="relative w-full sm:w-auto sm:flex-1 lg:max-w-xs">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7B8794]" />
+          <input
+            type="text"
+            value={search}
+            onChange={(event) => setFilter("search", event.target.value)}
+            placeholder="Search by name or ID"
+            className="h-10 w-full rounded-[6px] border border-[#E4E6E1] bg-white pl-10 pr-4 text-sm text-[#1F2933] transition hover:border-[#CBD2D9] focus:border-[#2F5FD0] focus:outline-none"
+          />
+        </div>
+      </div>
 
       <PanelState
         loading={loading}
@@ -608,19 +615,19 @@ function AssetOverview({
         <div className="overflow-x-auto">
           <table className="w-full min-w-[600px] text-left text-sm">
             <thead>
-              <tr className="border-b border-[#E4E6E1] text-xs font-medium uppercase tracking-wide text-[#7B8794]">
-                <th className="whitespace-nowrap px-2.5 pb-3">Asset ID</th>
-                <th className="whitespace-nowrap px-2.5 pb-3">Asset Name</th>
-                <th className="whitespace-nowrap px-2.5 pb-3">Category</th>
-                <th className="hidden whitespace-nowrap px-2.5 pb-3 2xl:table-cell">
+              <tr className="h-11 bg-[#FAFAF8] border-b border-[#E4E6E1] text-xs font-medium uppercase tracking-wider text-[#7B8794]">
+                <th className="whitespace-nowrap px-5 py-3">Asset ID</th>
+                <th className="whitespace-nowrap px-5 py-3">Asset Name</th>
+                <th className="whitespace-nowrap px-5 py-3">Category</th>
+                <th className="hidden whitespace-nowrap px-5 py-3 2xl:table-cell">
                   Brand / Model
                 </th>
-                <th className="whitespace-nowrap px-2.5 pb-3">Assigned To</th>
-                <th className="hidden whitespace-nowrap px-2.5 pb-3 min-[1700px]:table-cell">
+                <th className="whitespace-nowrap px-5 py-3">Assigned To</th>
+                <th className="hidden whitespace-nowrap px-5 py-3 min-[1700px]:table-cell">
                   Issue Date
                 </th>
-                <th className="whitespace-nowrap px-2.5 pb-3">Status</th>
-                <th className="whitespace-nowrap px-2.5 pb-3 text-right">Actions</th>
+                <th className="whitespace-nowrap px-5 py-3">Status</th>
+                <th className="whitespace-nowrap px-5 py-3 text-right">Actions</th>
               </tr>
             </thead>
 
@@ -642,7 +649,6 @@ function AssetOverview({
         page={currentPage}
         pageCount={pageCount}
         onPageChange={(next) => setFilter("page", next)}
-        className="mt-auto pt-5"
         summary={`Showing ${firstRow} to ${lastRow} of ${total} assets`}
       />
 
@@ -721,38 +727,38 @@ function AssetRow({
   const Icon = ASSET_CATEGORY_ICONS[asset.category] ?? Package;
 
   return (
-    <tr className="border-b border-[#E4E6E1]/50 last:border-0 hover:bg-[#F6F7F5]/50 transition-colors">
-      <td className="whitespace-nowrap px-2.5 py-3.5 font-semibold text-[#2F5FD0]">
+    <tr className="min-h-[52px] border-b border-[#E4E6E1]/50 last:border-0 hover:bg-[#FAFAF8] transition-colors">
+      <td className="whitespace-nowrap px-5 py-3.5 text-sm font-semibold text-[#2F5FD0]">
         {asset.asset_tag}
       </td>
 
-      <td className="px-2.5 py-3.5">
+      <td className="px-5 py-3.5 text-sm">
         <div className="flex items-center gap-3">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#E8EEFB]">
-            <Icon className="h-4 w-4 shrink-0 text-[#2F5FD0]" />
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#E8EEFB] text-[#2F5FD0]">
+            <Icon className="h-4 w-4 shrink-0" />
           </span>
-          <span className="whitespace-nowrap font-semibold text-[#1F2933]">{asset.name}</span>
+          <span className="whitespace-nowrap font-medium text-[#1F2933]">{asset.name}</span>
         </div>
       </td>
 
-      <td className="whitespace-nowrap px-2.5 py-3.5 text-[#52606D]">{asset.category}</td>
-      <td className="hidden whitespace-nowrap px-2.5 py-3.5 text-[#52606D] 2xl:table-cell">
+      <td className="whitespace-nowrap px-5 py-3.5 text-sm text-[#52606D]">{asset.category}</td>
+      <td className="hidden whitespace-nowrap px-5 py-3.5 text-sm text-[#52606D] 2xl:table-cell">
         {asset.brand_model ?? "-"}
       </td>
 
-      <td className="whitespace-nowrap px-2.5 py-3.5 text-[#52606D]">
+      <td className="whitespace-nowrap px-5 py-3.5 text-sm text-[#52606D]">
         {asset.assigned_to_name ?? "-"}
       </td>
 
-      <td className="hidden whitespace-nowrap px-2.5 py-3.5 text-[#52606D] min-[1700px]:table-cell">
+      <td className="hidden whitespace-nowrap px-5 py-3.5 text-sm text-[#52606D] min-[1700px]:table-cell">
         {formatDate(asset.issue_date)}
       </td>
 
-      <td className="px-2.5 py-3.5">
+      <td className="px-5 py-3.5 text-sm">
         <AssetStatusBadge status={asset.status} />
       </td>
 
-      <td className="px-2.5 py-3.5">
+      <td className="px-5 py-3.5 text-sm">
         <div className="flex justify-end">
           <button
             type="button"
@@ -761,7 +767,7 @@ function AssetRow({
             aria-expanded={menuOpen}
             className="flex h-8 w-8 items-center justify-center rounded-md text-[#7B8794] transition hover:bg-[#F0F1EE] hover:text-[#1F2933] cursor-pointer"
           >
-            <MoreVertical className="h-4 w-4" />
+            <MoreVertical className="h-4 w-4 shrink-0" />
           </button>
         </div>
       </td>
@@ -835,13 +841,13 @@ function AssetCategoriesPanel({
   });
 
   return (
-    <div className={`${PANEL_CLASS} flex h-full min-w-0 flex-col`}>
+    <div className={`${PANEL_CLASS} flex min-w-0 flex-col`}>
       <SectionTitle title="Asset Categories" />
 
-      <div className="flex flex-1 items-center gap-3">
+      <div className="p-5 flex items-center gap-4">
         <svg
           viewBox="0 0 160 160"
-          className="h-[100px] w-[100px] shrink-0"
+          className="h-[140px] w-[140px] shrink-0"
           role="img"
           aria-label="Asset distribution by category"
         >
@@ -866,24 +872,24 @@ function AssetCategoriesPanel({
             ))}
           </g>
 
-          <text x="80" y="76" textAnchor="middle" className="fill-[#1F2933] text-[20px] font-bold">
+          <text x="80" y="76" textAnchor="middle" className="fill-[#1F2933] text-[22px] font-bold">
             {total}
           </text>
-          <text x="80" y="93" textAnchor="middle" className="fill-[#7B8794] text-[10px]">
+          <text x="80" y="94" textAnchor="middle" className="fill-[#7B8794] text-xs">
             Total Assets
           </text>
         </svg>
 
-        <ul className="min-w-0 flex-1 space-y-1.5">
+        <ul className="min-w-0 flex-1 space-y-1">
           {segments.map((segment) => (
-            <li key={segment.label} className="flex items-center gap-2 text-xs">
+            <li key={segment.label} className="flex h-6 items-center gap-2 text-xs">
               <span
                 className="h-2 w-2 shrink-0 rounded-full"
                 style={{ backgroundColor: segment.color }}
               />
               <span className="min-w-0 flex-1 truncate text-[#52606D]">{segment.label}</span>
-              <span className="shrink-0 font-semibold text-[#1F2933]">{segment.count}</span>
-              <span className="w-11 shrink-0 text-right text-[#7B8794]">
+              <span className="shrink-0 font-semibold tabular-nums text-right text-[#1F2933]">{segment.count}</span>
+              <span className="w-12 shrink-0 text-right tabular-nums text-[#7B8794]">
                 {((segment.count / Math.max(1, total)) * 100).toFixed(1)}%
               </span>
             </li>
@@ -917,48 +923,50 @@ function RecentAllocationPanel({ version }: { version: number }) {
   const allocations = data ?? [];
 
   return (
-    <div className={`${PANEL_CLASS} flex h-full min-w-0 flex-col`}>
+    <div className={`${PANEL_CLASS} flex min-w-0 flex-col`}>
       <SectionTitle
         title="Recent Allocation"
         action={
           <ViewAllLink
             onClick={() => setShowAll((previous) => !previous)}
-            label={showAll ? "Show Less ←" : "View All →"}
+            label={showAll ? "Show Less" : "View All"}
           />
         }
       />
 
-      <PanelState
-        loading={loading}
-        error={error}
-        empty={allocations.length === 0}
-        emptyMessage="Nothing has been allocated yet."
-      >
-        <ul className="flex flex-1 flex-col gap-2.5">
-          {allocations.map((asset) => (
-            <li
-              key={asset.id}
-              className="flex items-center gap-3 rounded-lg border border-[#E4E6E1] p-3 hover:bg-[#F6F7F5]/50 transition-colors"
-            >
-              <PersonAvatar name={asset.assigned_to_name ?? "?"} />
+      <div className="p-5">
+        <PanelState
+          loading={loading}
+          error={error}
+          empty={allocations.length === 0}
+          emptyMessage="Nothing has been allocated yet."
+        >
+          <ul className="flex flex-col gap-2.5">
+            {allocations.map((asset) => (
+              <li
+                key={asset.id}
+                className="flex items-center gap-3 rounded-lg border border-[#E4E6E1] p-3 hover:bg-[#F6F7F5]/50 transition-colors"
+              >
+                <PersonAvatar name={asset.assigned_to_name ?? "?"} />
 
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-[#1F2933]">
-                  {asset.assigned_to_name ?? "Unassigned"}
-                </p>
-                <p className="truncate text-xs text-[#7B8794]">
-                  {asset.asset_tag} - {asset.name}
-                </p>
-                <p className="mt-0.5 text-xs text-[#7B8794]">
-                  Allocated on {formatDate(asset.issue_date)}
-                </p>
-              </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-[#1F2933]">
+                    {asset.assigned_to_name ?? "Unassigned"}
+                  </p>
+                  <p className="truncate text-xs text-[#7B8794]">
+                    {asset.asset_tag} - {asset.name}
+                  </p>
+                  <p className="mt-0.5 text-xs text-[#7B8794]">
+                    Allocated on {formatDate(asset.issue_date)}
+                  </p>
+                </div>
 
-              <AssetStatusBadge status={asset.status} />
-            </li>
-          ))}
-        </ul>
-      </PanelState>
+                <AssetStatusBadge status={asset.status} />
+              </li>
+            ))}
+          </ul>
+        </PanelState>
+      </div>
     </div>
   );
 }
@@ -999,40 +1007,40 @@ function QuickActionsPanel({
       id: "add",
       label: "Add Asset",
       icon: Plus,
-      iconBg: "bg-[#F0F1EE]",
-      iconColor: "text-[#52606D]",
+      iconBg: "bg-[#E8EEFB]",
+      iconColor: "text-[#2F5FD0]",
       run: onAdd,
     },
     {
       id: "assign",
       label: "Assign Asset",
       icon: UserPlus,
-      iconBg: "bg-[#F0F1EE]",
-      iconColor: "text-[#52606D]",
+      iconBg: "bg-[#E3F5E1]",
+      iconColor: "text-[#1E6B45]",
       run: onAssign,
     },
     {
       id: "return",
       label: "Request Return",
       icon: RotateCcw,
-      iconBg: "bg-[#F0F1EE]",
-      iconColor: "text-[#52606D]",
+      iconBg: "bg-[#FDF3D6]",
+      iconColor: "text-[#8A5A00]",
       run: onReturn,
     },
     {
       id: "view-all",
       label: "View All Assets",
       icon: Eye,
-      iconBg: "bg-[#F0F1EE]",
-      iconColor: "text-[#52606D]",
+      iconBg: "bg-[#F3E8FF]",
+      iconColor: "text-[#7E22CE]",
       run: onViewAll,
     },
     {
       id: "generate-report",
       label: generatingReport ? "Building..." : "Generate Report",
       icon: BarChart3,
-      iconBg: "bg-[#F0F1EE]",
-      iconColor: "text-[#52606D]",
+      iconBg: "bg-[#E8EEFB]",
+      iconColor: "text-[#2F5FD0]",
       run: generatingReport ? undefined : onGenerateReport,
       busy: generatingReport,
     },
@@ -1040,50 +1048,52 @@ function QuickActionsPanel({
       id: "settings",
       label: "Asset Settings",
       icon: Settings2,
-      iconBg: "bg-[#F0F1EE]",
-      iconColor: "text-[#52606D]",
+      iconBg: "bg-[#FDF3D6]",
+      iconColor: "text-[#8A5A00]",
     },
   ];
 
   return (
-    <div className={`${PANEL_CLASS} flex h-full min-w-0 flex-col`}>
+    <div className={`${PANEL_CLASS} flex min-w-0 flex-col`}>
       <SectionTitle title="Quick Actions" />
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-        {actions.map((action) => {
-          const Icon = action.icon;
-          const disabled = !action.run;
+      <div className="p-5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {actions.map((action) => {
+            const Icon = action.icon;
+            const disabled = !action.run;
 
-          return (
-            <button
-              key={action.id}
-              type="button"
-              disabled={disabled}
-              onClick={action.run}
-              title={
-                disabled
-                  ? action.busy
-                    ? "Generating the report"
-                    : "Not available yet"
-                  : undefined
-              }
-              className={`flex min-w-0 items-center gap-2.5 rounded-lg border border-[#E4E6E1] px-3.5 py-3 text-left transition ${
-                disabled
-                  ? `cursor-not-allowed opacity-45 ${action.busy ? "animate-pulse" : ""}`
-                  : "hover:bg-[#F6F7F5] hover:border-[#CBD2D9] cursor-pointer group"
-              }`}
-            >
-              <span
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#F0F1EE] text-[#52606D] group-hover:bg-[#E8EEFB] group-hover:text-[#2F5FD0] transition-colors"
+            return (
+              <button
+                key={action.id}
+                type="button"
+                disabled={disabled}
+                onClick={action.run}
+                title={
+                  disabled
+                    ? action.busy
+                      ? "Generating the report"
+                      : "Not available yet"
+                    : undefined
+                }
+                className={`flex min-w-0 items-center gap-2.5 rounded-lg border border-[#E4E6E1] bg-white h-12 px-3 text-left transition ${
+                  disabled
+                    ? `cursor-not-allowed opacity-60 ${action.busy ? "animate-pulse" : ""}`
+                    : "hover:bg-[#F6F7F5] hover:border-[#CBD2D9] cursor-pointer group"
+                }`}
               >
-                <Icon className="h-5 w-5 shrink-0" />
-              </span>
-              <span className="min-w-0 text-xs font-medium leading-tight text-[#1F2933] truncate">
-                {action.label}
-              </span>
-            </button>
-          );
-        })}
+                <span
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${action.iconBg} ${action.iconColor}`}
+                >
+                  <Icon className="h-4 w-4 shrink-0" />
+                </span>
+                <span className="min-w-0 text-xs font-medium leading-tight text-[#1F2933] truncate">
+                  {action.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -1130,13 +1140,6 @@ function AssetAllocationPanel({
   const firstRow = total ? (currentPage - 1) * ALLOCATION_PAGE_SIZE + 1 : 0;
   const lastRow = Math.min(currentPage * ALLOCATION_PAGE_SIZE, total);
 
-  const tabClass = (value: AllocationTab) =>
-    `border-b-2 pb-2 text-sm font-medium transition cursor-pointer ${
-      tab === value
-        ? "border-[#2F5FD0] text-[#2F5FD0] font-semibold"
-        : "border-transparent text-[#52606D] hover:text-[#1F2933]"
-    }`;
-
   function resetFilters() {
     setSearch("");
     setCategoryFilter("");
@@ -1144,18 +1147,22 @@ function AssetAllocationPanel({
   }
 
   return (
-    <div className={`${PANEL_CLASS} flex h-full min-w-0 flex-col`}>
+    <div className={`${PANEL_CLASS} flex min-w-0 flex-col`}>
       <SectionTitle title="Asset Allocation" />
 
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 border-b border-[#E4E6E1] bg-white">
+        <div className="flex items-center gap-1 bg-[#F0F1EE] p-1 rounded-md">
           <button
             type="button"
             onClick={() => {
               setTab("employee");
               setPage(1);
             }}
-            className={tabClass("employee")}
+            className={`rounded-[6px] px-3 py-1.5 text-xs transition cursor-pointer ${
+              tab === "employee"
+                ? "bg-white text-[#2F5FD0] border border-[#E4E6E1] font-semibold shadow-sm"
+                : "text-[#52606D] hover:text-[#1F2933] font-medium"
+            }`}
           >
             By Employee
           </button>
@@ -1165,13 +1172,17 @@ function AssetAllocationPanel({
               setTab("department");
               setPage(1);
             }}
-            className={tabClass("department")}
+            className={`rounded-[6px] px-3 py-1.5 text-xs transition cursor-pointer ${
+              tab === "department"
+                ? "bg-white text-[#2F5FD0] border border-[#E4E6E1] font-semibold shadow-sm"
+                : "text-[#52606D] hover:text-[#1F2933] font-medium"
+            }`}
           >
             By Department
           </button>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2.5">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7B8794]" />
             <input
@@ -1182,7 +1193,7 @@ function AssetAllocationPanel({
                 setPage(1);
               }}
               placeholder={tab === "employee" ? "Search employee..." : "Search department..."}
-              className="h-10 w-44 rounded-md border border-[#E4E6E1] bg-white pl-9 pr-3 text-xs text-[#1F2933] transition hover:border-[#CBD2D9] focus:border-[#2F5FD0] focus:outline-none"
+              className="h-10 w-44 rounded-[6px] border border-[#E4E6E1] bg-white pl-9 pr-3 text-xs text-[#1F2933] transition hover:border-[#CBD2D9] focus:border-[#2F5FD0] focus:outline-none"
             />
           </div>
 
@@ -1194,7 +1205,7 @@ function AssetAllocationPanel({
                 setPage(1);
               }}
               aria-label="Filter allocation by asset category"
-              className={`${FILTER_CONTROL_CLASS} w-28`}
+              className={`${FILTER_CONTROL_CLASS} w-32`}
             >
               <option value="">All Assets</option>
               {ASSET_CATEGORIES.map((category) => (
@@ -1214,31 +1225,23 @@ function AssetAllocationPanel({
         empty={rows.length === 0}
         emptyMessage="No records match the current filters."
       >
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          <table className="w-full table-fixed text-left text-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-[#E4E6E1] text-xs font-medium uppercase tracking-wide text-[#7B8794]">
+              <tr className="h-11 bg-[#FAFAF8] border-b border-[#E4E6E1] text-xs font-medium uppercase tracking-wider text-[#7B8794]">
                 {tab === "employee" ? (
                   <>
-                    <th className="w-[26%] px-2 py-3 leading-tight">
-                      Employee ID
-                    </th>
-                    <th className="w-[34%] px-2 py-3 leading-tight">Employee Name</th>
-                    <th className="w-[20%] px-2 py-3 leading-tight">Assets Assigned</th>
-                    <th className="w-[20%] px-2 py-3 text-right leading-tight">
-                      View
-                    </th>
+                    <th className="whitespace-nowrap px-5 py-3">Employee ID</th>
+                    <th className="whitespace-nowrap px-5 py-3">Employee Name</th>
+                    <th className="whitespace-nowrap px-5 py-3">Assets Assigned</th>
+                    <th className="whitespace-nowrap px-5 py-3 text-right">View</th>
                   </>
                 ) : (
                   <>
-                    <th className="w-[36%] px-2 py-3 leading-tight">
-                      Department
-                    </th>
-                    <th className="w-[21%] px-2 py-3 leading-tight">Employees</th>
-                    <th className="w-[28%] px-2 py-3 leading-tight">Assets Assigned</th>
-                    <th className="w-[15%] px-2 py-3 text-right leading-tight">
-                      View
-                    </th>
+                    <th className="whitespace-nowrap px-5 py-3">Department</th>
+                    <th className="whitespace-nowrap px-5 py-3">Employees</th>
+                    <th className="whitespace-nowrap px-5 py-3">Assets Assigned</th>
+                    <th className="whitespace-nowrap px-5 py-3 text-right">View</th>
                   </>
                 )}
               </tr>
@@ -1246,32 +1249,32 @@ function AssetAllocationPanel({
 
             <tbody>
               {rows.map((row) => (
-                <tr key={row.id} className="border-b border-[#E4E6E1]/50 last:border-0 hover:bg-[#F6F7F5]/50 transition-colors">
+                <tr key={row.id} className="min-h-[52px] border-b border-[#E4E6E1]/50 last:border-0 hover:bg-[#FAFAF8] transition-colors">
                   {tab === "employee" ? (
                     <>
-                      <td className="truncate px-2 py-3 font-semibold text-[#2F5FD0]">
+                      <td className="whitespace-nowrap px-5 py-3.5 text-sm font-semibold text-[#2F5FD0]">
                         {row.id}
                       </td>
-                      <td className="truncate px-2 py-3 font-semibold text-[#1F2933]">
+                      <td className="whitespace-nowrap px-5 py-3.5 text-sm font-medium text-[#1F2933]">
                         {row.name}
                       </td>
-                      <td className="truncate px-2 py-3 text-[#52606D]">{row.asset_count}</td>
+                      <td className="whitespace-nowrap px-5 py-3.5 text-sm text-[#52606D]">{row.asset_count}</td>
                     </>
                   ) : (
                     <>
-                      <td className="truncate px-2 py-3 font-semibold text-[#1F2933]">
+                      <td className="whitespace-nowrap px-5 py-3.5 text-sm font-semibold text-[#1F2933]">
                         {row.name}
                       </td>
-                      <td className="truncate px-2 py-3 text-[#52606D]">{row.employees}</td>
-                      <td className="truncate px-2 py-3 text-[#52606D]">{row.asset_count}</td>
+                      <td className="whitespace-nowrap px-5 py-3.5 text-sm text-[#52606D]">{row.employees}</td>
+                      <td className="whitespace-nowrap px-5 py-3.5 text-sm text-[#52606D]">{row.asset_count}</td>
                     </>
                   )}
 
-                  <td className="px-2 py-3 text-right">
+                  <td className="whitespace-nowrap px-5 py-3.5 text-sm text-right">
                     <button
                       type="button"
                       onClick={() => onViewAllocation({ view: tab, row })}
-                      className="rounded-md bg-[#E8EEFB] border border-[#2F5FD0]/20 px-3 py-1 text-xs font-semibold text-[#2F5FD0] transition hover:bg-[#D7E3FA] cursor-pointer"
+                      className="h-8 px-3 py-0 text-[13px] font-medium rounded-md border border-[#E4E6E1] text-[#1F2933] bg-white hover:bg-[#F0F1EE] transition-colors cursor-pointer"
                     >
                       View
                     </button>
@@ -1287,20 +1290,21 @@ function AssetAllocationPanel({
         page={currentPage}
         pageCount={pageCount}
         onPageChange={setPage}
-        className="mt-4"
         summary={`Showing ${firstRow} to ${lastRow} of ${total} ${
           tab === "employee" ? "employees" : "departments"
         }`}
       />
 
       {error && (
-        <button
-          type="button"
-          onClick={resetFilters}
-          className="mt-2 text-xs font-semibold text-[#2563eb] hover:underline"
-        >
-          Reset filters
-        </button>
+        <div className="px-5 py-2">
+          <button
+            type="button"
+            onClick={resetFilters}
+            className="text-xs font-semibold text-[#2F5FD0] hover:underline cursor-pointer"
+          >
+            Reset filters
+          </button>
+        </div>
       )}
     </div>
   );
@@ -1334,13 +1338,13 @@ function AssetReturnRequestsPanel({
     (request.asset_status === "in_use" || request.asset_status === "pending_return");
 
   return (
-    <div className={`${PANEL_CLASS} flex h-full min-w-0 flex-col`}>
+    <div className={`${PANEL_CLASS} flex min-w-0 flex-col`}>
       <SectionTitle
         title="Asset Return Requests"
         action={
           <ViewAllLink
             onClick={() => setShowAll((previous) => !previous)}
-            label={showAll ? "Show Less ←" : "View All →"}
+            label={showAll ? "Show Less" : "View All"}
           />
         }
       />
@@ -1351,37 +1355,35 @@ function AssetReturnRequestsPanel({
         empty={requests.length === 0}
         emptyMessage="No return requests yet."
       >
-        <div className="min-h-0 flex-1">
-          <table className="w-full table-fixed text-left text-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-[#E4E6E1] text-xs font-medium uppercase tracking-wide text-[#7B8794]">
-                <th className="w-[22%] px-2 py-3 leading-tight">Request ID</th>
-                <th className="w-[24%] px-2 py-3 leading-tight">Asset Name</th>
-                <th className="w-[22%] px-2 py-3 leading-tight">Employee</th>
-                <th className="w-[15%] px-2 py-3 text-right leading-tight">Status</th>
-                <th className="w-[17%] px-2 py-3 text-right leading-tight">
-                  Action
-                </th>
+              <tr className="h-11 bg-[#FAFAF8] border-b border-[#E4E6E1] text-xs font-medium uppercase tracking-wider text-[#7B8794]">
+                <th className="whitespace-nowrap px-5 py-3">Request ID</th>
+                <th className="whitespace-nowrap px-5 py-3">Asset Name</th>
+                <th className="whitespace-nowrap px-5 py-3">Employee</th>
+                <th className="whitespace-nowrap px-5 py-3 text-right">Status</th>
+                <th className="whitespace-nowrap px-5 py-3 text-right">Action</th>
               </tr>
             </thead>
 
             <tbody>
               {requests.map((request) => (
-                <tr key={request.id} className="border-b border-[#E4E6E1]/50 last:border-0 hover:bg-[#F6F7F5]/50 transition-colors">
-                  <td className="truncate px-2 py-3 font-semibold text-[#2F5FD0]">
+                <tr key={request.id} className="min-h-[52px] border-b border-[#E4E6E1]/50 last:border-0 hover:bg-[#FAFAF8] transition-colors">
+                  <td className="whitespace-nowrap px-5 py-3.5 font-semibold text-[#2F5FD0]">
                     {request.request_tag}
                   </td>
-                  <td className="truncate px-2 py-3 font-semibold text-[#1F2933]">{request.asset_name}</td>
-                  <td className="truncate px-2 py-3 text-[#52606D]">{request.employee_name}</td>
-                  <td className="px-2 py-3 text-right">
+                  <td className="whitespace-nowrap px-5 py-3.5 font-medium text-[#1F2933]">{request.asset_name}</td>
+                  <td className="whitespace-nowrap px-5 py-3.5 text-sm text-[#52606D]">{request.employee_name}</td>
+                  <td className="whitespace-nowrap px-5 py-3.5 text-right">
                     <RequestStatusBadge status={request.status} />
                   </td>
-                  <td className="px-2 py-3 text-right">
+                  <td className="whitespace-nowrap px-5 py-3.5 text-right">
                     {canMarkReturned(request) ? (
                       <button
                         type="button"
                         onClick={() => onConfirmReturn(request)}
-                        className="inline-flex items-center gap-1.5 rounded-md bg-[#E3F5E1] border border-[#BCE8B5] px-2.5 py-1 text-xs font-semibold text-[#1E6B45] transition hover:bg-[#D5EED1] cursor-pointer"
+                        className="inline-flex items-center gap-1.5 rounded-md bg-[#E3F5E1] border border-[#BCE8B5] px-2.5 py-1 text-xs font-medium text-[#1E6B45] transition hover:bg-[#D5EED1] cursor-pointer"
                       >
                         <Check className="h-4 w-4 shrink-0" />
                         Mark Returned
@@ -1450,7 +1452,7 @@ function AssetIssueRequestsPanel({
   }
 
   return (
-    <div className={`${PANEL_CLASS} flex h-full min-w-0 flex-col`}>
+    <div className={`${PANEL_CLASS} flex min-w-0 flex-col`}>
       <SectionTitle
         title="Asset Issue Requests"
         action={
@@ -1464,7 +1466,7 @@ function AssetIssueRequestsPanel({
       {actionError && (
         <p
           role="alert"
-          className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700"
+          className="mx-5 mt-4 rounded-lg bg-[#FBE4E1] border border-[#FBE4E1] px-3.5 py-2.5 text-xs text-[#A12D22]"
         >
           {actionError}
         </p>
@@ -1476,44 +1478,42 @@ function AssetIssueRequestsPanel({
         empty={requests.length === 0}
         emptyMessage="No pending asset issue requests."
       >
-        <div className="min-h-0 flex-1 overflow-x-auto">
-          <table className="w-full table-fixed text-left text-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-[#E4E6E1] text-xs font-medium uppercase tracking-wide text-[#7B8794]">
-                <th className="w-[18%] px-2 py-3 leading-tight">Request</th>
-                <th className="w-[24%] px-2 py-3 leading-tight">Asset</th>
-                <th className="w-[22%] px-2 py-3 leading-tight">Employee</th>
-                <th className="w-[14%] px-2 py-3 text-right leading-tight">Status</th>
-                <th className="w-[22%] px-2 py-3 text-right leading-tight">
-                  Actions
-                </th>
+              <tr className="h-11 bg-[#FAFAF8] border-b border-[#E4E6E1] text-xs font-medium uppercase tracking-wider text-[#7B8794]">
+                <th className="whitespace-nowrap px-5 py-3">Request</th>
+                <th className="whitespace-nowrap px-5 py-3">Asset</th>
+                <th className="whitespace-nowrap px-5 py-3">Employee</th>
+                <th className="whitespace-nowrap px-5 py-3 text-right">Status</th>
+                <th className="whitespace-nowrap px-5 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {requests.map((request) => (
                 <tr
                   key={request.id}
-                  className="border-b border-[#E4E6E1]/50 last:border-0 hover:bg-[#F6F7F5]/50 transition-colors"
+                  className="min-h-[52px] border-b border-[#E4E6E1]/50 last:border-0 hover:bg-[#FAFAF8] transition-colors"
                 >
-                  <td className="truncate px-2 py-3 font-semibold text-[#2F5FD0]">
+                  <td className="whitespace-nowrap px-5 py-3.5 font-semibold text-[#2F5FD0]">
                     {request.request_tag}
                   </td>
-                  <td className="truncate px-2 py-3 font-semibold text-[#1F2933]">
+                  <td className="whitespace-nowrap px-5 py-3.5 font-medium text-[#1F2933]">
                     {request.asset_name}
                   </td>
-                  <td className="truncate px-2 py-3 text-[#52606D]">
+                  <td className="whitespace-nowrap px-5 py-3.5 text-sm text-[#52606D]">
                     {request.employee_name}
                   </td>
-                  <td className="px-2 py-3 text-right">
+                  <td className="whitespace-nowrap px-5 py-3.5 text-right">
                     <RequestStatusBadge status={request.status} />
                   </td>
-                  <td className="px-2 py-3 text-right">
+                  <td className="whitespace-nowrap px-5 py-3.5 text-right">
                     <div className="flex flex-wrap justify-end gap-1.5">
                       <button
                         type="button"
                         disabled={busyId !== null}
                         onClick={() => handleReview(request, "approved")}
-                        className="rounded-md bg-[#E3F5E1] border border-[#BCE8B5] px-2.5 py-1 text-xs font-semibold text-[#1E6B45] hover:bg-[#D5EED1] disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+                        className="h-8 px-3 py-0 text-[13px] font-medium rounded-md border border-[#BCE8B5] bg-[#E3F5E1] text-[#1E6B45] hover:bg-[#D5EED1] disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
                       >
                         {busyId === request.id ? "Saving…" : "Approve"}
                       </button>
@@ -1521,7 +1521,7 @@ function AssetIssueRequestsPanel({
                         type="button"
                         disabled={busyId !== null}
                         onClick={() => handleReview(request, "rejected")}
-                        className="rounded-md bg-[#FBE4E1] border border-[#FBE4E1] px-2.5 py-1 text-xs font-semibold text-[#A12D22] hover:bg-[#F7D5D1] disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+                        className="h-8 px-3 py-0 text-[13px] font-medium rounded-md border border-[#FBE4E1] bg-[#FBE4E1] text-[#A12D22] hover:bg-[#F7D5D1] disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
                       >
                         Reject
                       </button>
@@ -1774,7 +1774,7 @@ export default function AdminAssets() {
           so Asset Allocation takes exactly half the page and Return Requests /
           Quick Actions share the other half. */}
       <div className="flex flex-col gap-6">
-        <div className="grid grid-cols-1 items-stretch gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
           <div ref={overviewRef} className="min-w-0 scroll-mt-24">
             <AssetOverview
               filters={filters}
@@ -1789,7 +1789,7 @@ export default function AdminAssets() {
             />
           </div>
 
-          <div className="grid min-w-0 items-stretch gap-6 xl:grid-rows-[minmax(auto,1fr)_minmax(auto,1fr)]">
+          <div className="flex flex-col gap-6 min-w-0">
             <AssetCategoriesPanel
               categoryCounts={stats?.category_counts ?? []}
               total={stats?.total_assets ?? 0}
@@ -1798,25 +1798,22 @@ export default function AdminAssets() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 items-stretch gap-6 xl:grid-cols-2">
+        <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-2">
           <AssetAllocationPanel
             version={version}
             onViewAllocation={(target) => setModal({ kind: "allocation", target })}
           />
 
-          {/* Return Requests keeps its natural height, Quick Actions absorbs the
-              remainder so the pair matches Asset Allocation's height. `1fr` has a
-              min-content floor, so the band grows rather than clipping. */}
-          <div className="grid min-w-0 items-stretch gap-6 xl:grid-rows-[auto_auto_1fr]">
-          <AssetIssueRequestsPanel
-            version={version}
-            onReviewed={handleSaved}
-          />
-          <AssetReturnRequestsPanel
-            version={version}
-            onConfirmReturn={(request) => setModal({ kind: "markReturned", request })}
-          />
-          <QuickActionsPanel
+          <div className="flex flex-col gap-6 min-w-0">
+            <AssetIssueRequestsPanel
+              version={version}
+              onReviewed={handleSaved}
+            />
+            <AssetReturnRequestsPanel
+              version={version}
+              onConfirmReturn={(request) => setModal({ kind: "markReturned", request })}
+            />
+            <QuickActionsPanel
               onAdd={() => setModal({ kind: "form", asset: null })}
               onAssign={() => setModal({ kind: "assign" })}
               onReturn={() => setModal({ kind: "return" })}

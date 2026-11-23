@@ -818,13 +818,13 @@ export default function DeductionsTab() {
       />
 
       {/* Header */}
-      <div className="mb-5 flex items-center justify-between">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-[#17375e]">
+          <h2 className="text-base font-semibold text-[#1F2933]">
             Deductions & Contributions
           </h2>
 
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-[#7B8794]">
             Manage employee deductions and employer
             contributions.
           </p>
@@ -833,36 +833,36 @@ export default function DeductionsTab() {
         <button
           type="button"
           onClick={handleAddNew}
-          className="flex items-center gap-2 rounded-xl bg-[#17375e] px-4 py-3 text-sm font-medium text-white transition hover:bg-[#102b4a]"
+          className="flex h-10 items-center gap-2 rounded-md bg-[#2F5FD0] px-4 text-sm font-medium text-white transition hover:bg-[#264FB0]"
         >
-          <Plus size={17} />
+          <Plus size={16} className="shrink-0" />
           Add Component
         </button>
       </div>
 
       {/* Components Table */}
-      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-lg border border-[#E4E6E1] bg-white shadow-none">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px]">
+          <table className="w-full min-w-[760px] text-left text-sm">
             <thead>
-              <tr className="border-b border-gray-200 bg-gray-50">
-                <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+              <tr className="h-11 border-b border-[#E4E6E1] bg-[#FAFAF8] text-xs font-medium uppercase tracking-wider text-[#7B8794]">
+                <th className="px-5 py-3 text-left font-medium">
                   Component
                 </th>
 
-                <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                <th className="px-5 py-3 text-left font-medium">
                   Type
                 </th>
 
-                <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                <th className="px-5 py-3 text-left font-medium">
                   Calculation
                 </th>
 
-                <th className="px-5 py-4 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">
+                <th className="px-5 py-3 text-right font-medium">
                   Preview
                 </th>
 
-                <th className="px-5 py-4 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">
+                <th className="px-5 py-3 text-right font-medium">
                   Actions
                 </th>
               </tr>
@@ -873,7 +873,7 @@ export default function DeductionsTab() {
                 <tr>
                   <td
                     colSpan={5}
-                    className="px-5 py-12 text-center text-sm text-gray-500"
+                    className="px-5 py-8 text-center text-xs text-[#7B8794]"
                   >
                     No deductions or contributions
                     found.
@@ -893,23 +893,23 @@ export default function DeductionsTab() {
                   return (
                     <tr
                       key={component.id}
-                      className="border-b border-gray-100 last:border-0"
+                      className="min-h-[52px] border-b border-[#E4E6E1]/50 last:border-0 hover:bg-[#FAFAF8] transition-colors"
                     >
                       {/* Component */}
-                      <td className="px-5 py-4">
-                        <div className="font-medium text-[#17375e]">
+                      <td className="px-5 py-3.5">
+                        <div className="font-semibold text-[#1F2933]">
                           {component.name}
                         </div>
                       </td>
 
                       {/* Type */}
-                      <td className="px-5 py-4">
+                      <td className="px-5 py-3.5">
                         <span
-                          className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
+                          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border ${
                             component.type ===
                             "Deduction"
-                              ? "bg-red-50 text-red-600"
-                              : "bg-green-50 text-green-600"
+                              ? "bg-[#FDF3D6] text-[#8A5A00] border-[#F6DE95]"
+                              : "bg-[#E3F5E1] text-[#1E6B45] border-[#BCE8B5]"
                           }`}
                         >
                           {component.type}
@@ -917,26 +917,26 @@ export default function DeductionsTab() {
                       </td>
 
                       {/* Calculation */}
-                      <td className="px-5 py-4 text-sm text-gray-600">
+                      <td className="px-5 py-3.5 text-sm text-[#52606D]">
                         {calculationLabel(
                           component,
                         )}
                       </td>
 
                       {/* Preview */}
-                      <td className="px-5 py-4 text-right text-sm font-medium text-[#17375e]">
+                      <td className="px-5 py-3.5 text-right text-sm font-medium tabular-nums text-[#1F2933]">
                         {amount == null
                           ? "-"
                           : formatCurrency(amount)}
                       </td>
 
                       {/* Actions */}
-                      <td className="px-5 py-4">
-                        <div className="flex justify-end gap-2">
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center justify-end gap-1.5">
                           <button
                             type="button"
                             onClick={() => setApplyingComponent(component)}
-                            className="rounded-lg border border-blue-200 px-3 py-2 text-xs font-semibold text-blue-600 transition hover:bg-blue-50 cursor-pointer"
+                            className="flex h-8 items-center justify-center rounded-md border border-[#E4E6E1] bg-white px-3 text-[13px] font-medium text-[#2F5FD0] hover:bg-[#E8EEFB] transition cursor-pointer"
                             title="Apply to selected salary structures"
                           >
                             Apply
@@ -949,7 +949,7 @@ export default function DeductionsTab() {
                                 component,
                               )
                             }
-                            className="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 hover:text-[#17375e]"
+                            className="flex h-8 w-8 items-center justify-center rounded-md border border-[#E4E6E1] bg-white text-[#7B8794] hover:bg-[#F0F1EE] hover:text-[#1F2933] transition cursor-pointer"
                             title="Edit"
                           >
                             <Pencil size={16} />
@@ -962,7 +962,7 @@ export default function DeductionsTab() {
                                 component.id,
                               )
                             }
-                            className="rounded-lg p-2 text-gray-500 transition hover:bg-red-50 hover:text-red-600"
+                            className="flex h-8 w-8 items-center justify-center rounded-md border border-[#E4E6E1] bg-white text-[#7B8794] hover:bg-[#FBE4E1] hover:text-[#A12D22] transition cursor-pointer"
                             title="Delete"
                           >
                             <Trash2 size={16} />
@@ -979,18 +979,18 @@ export default function DeductionsTab() {
       </div>
 
       {/* Preview Calculator */}
-      <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+      <div className="mt-6 rounded-lg border border-[#E4E6E1] bg-white p-5 shadow-none">
         <div className="mb-5 flex items-start gap-3">
-          <div className="rounded-xl bg-slate-100 p-3 text-[#17375e]">
-            <Calculator size={20} />
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E8EEFB] text-[#2F5FD0] shrink-0">
+            <Calculator size={16} className="shrink-0" />
           </div>
 
           <div>
-            <h3 className="font-semibold text-[#17375e]">
+            <h3 className="text-base font-semibold text-[#1F2933]">
               Preview Calculation
             </h3>
 
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-0.5 text-xs text-[#7B8794]">
               Test deductions and contributions
               against a sample salary.
             </p>
@@ -1000,7 +1000,7 @@ export default function DeductionsTab() {
         {/* Inputs */}
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
+            <label className="mb-1.5 block text-xs font-medium text-[#7B8794]">
               Basic Salary
             </label>
 
@@ -1021,12 +1021,12 @@ export default function DeductionsTab() {
                 );
                 setPreviewResult(null);
               }}
-              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-[#17375e]"
+              className="h-10 w-full rounded-[6px] border border-[#E4E6E1] bg-white px-3.5 text-sm text-[#1F2933] outline-none transition hover:border-[#CBD2D9] focus:border-[#2F5FD0]"
             />
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
+            <label className="mb-1.5 block text-xs font-medium text-[#7B8794]">
               Annual Income
             </label>
 
@@ -1047,7 +1047,7 @@ export default function DeductionsTab() {
                 );
                 setPreviewResult(null);
               }}
-              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-[#17375e]"
+              className="h-10 w-full rounded-[6px] border border-[#E4E6E1] bg-white px-3.5 text-sm text-[#1F2933] outline-none transition hover:border-[#CBD2D9] focus:border-[#2F5FD0]"
             />
           </div>
         </div>
@@ -1061,9 +1061,9 @@ export default function DeductionsTab() {
               previewBasic === "" ||
               previewAnnualIncome === ""
             }
-            className="flex items-center gap-2 rounded-xl bg-[#17375e] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#102b4a] disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex h-10 items-center gap-2 rounded-md border border-[#E4E6E1] bg-white px-4 text-sm font-medium text-[#1F2933] transition hover:bg-[#F0F1EE] disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
           >
-            <Calculator size={17} />
+            <Calculator size={16} className="shrink-0" />
             {isCalculating
               ? "Calculating..."
               : "Calculate Preview"}
@@ -1071,8 +1071,8 @@ export default function DeductionsTab() {
         </div>
 
         {/* Preview Results */}
-        <div className="mt-5 overflow-hidden rounded-xl border border-gray-200">
-          <div className="grid grid-cols-3 bg-gray-50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
+        <div className="mt-5 overflow-hidden rounded-lg border border-[#E4E6E1] bg-white">
+          <div className="grid grid-cols-3 border-b border-[#E4E6E1] bg-[#FAFAF8] px-5 py-3 text-xs font-medium uppercase tracking-wider text-[#7B8794]">
             <div>Component</div>
             <div>Type</div>
             <div className="text-right">
@@ -1081,7 +1081,7 @@ export default function DeductionsTab() {
           </div>
 
           {previewRows.length === 0 ? (
-            <div className="px-4 py-8 text-center text-sm text-gray-500">
+            <div className="px-5 py-8 text-center text-xs text-[#7B8794]">
               Enter the salary details and click
               "Calculate Preview".
             </div>
@@ -1089,17 +1089,17 @@ export default function DeductionsTab() {
             previewRows.map((row) => (
               <div
                 key={row.id}
-                className="grid grid-cols-3 border-t border-gray-100 px-4 py-3 text-sm"
+                className="grid grid-cols-3 border-b border-[#E4E6E1]/50 last:border-0 px-5 py-3.5 text-sm hover:bg-[#FAFAF8] transition-colors"
               >
-                <div className="font-medium text-gray-700">
+                <div className="font-semibold text-[#1F2933]">
                   {row.name}
                 </div>
 
-                <div className="text-gray-500">
+                <div className="text-[#52606D]">
                   {row.type}
                 </div>
 
-                <div className="text-right font-medium text-[#17375e]">
+                <div className="text-right font-medium tabular-nums text-[#1F2933]">
                   {formatCurrency(row.calculated_amount)}
                 </div>
               </div>
@@ -1109,27 +1109,33 @@ export default function DeductionsTab() {
 
         {/* Totals */}
         <div className="mt-5 grid gap-4 md:grid-cols-2">
-          <div className="rounded-xl bg-red-50 p-4">
-            <p className="text-xs font-medium uppercase tracking-wide text-red-500">
-              Total Deductions
-            </p>
+          <div className="flex flex-col justify-between rounded-lg border border-[#E4E6E1] bg-white p-4 shadow-none">
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-[#A12D22]" />
+              <p className="text-xs font-medium uppercase tracking-wider text-[#7B8794]">
+                Total Deductions
+              </p>
+            </div>
 
-            <p className="mt-1 text-xl font-semibold text-red-600">
-                {previewResult == null
-                  ? "-"
-                  : formatCurrency(totalDeductions)}
+            <p className="mt-2 text-[20px] font-semibold tabular-nums text-[#1F2933]">
+              {previewResult == null
+                ? "-"
+                : formatCurrency(totalDeductions)}
             </p>
           </div>
 
-          <div className="rounded-xl bg-green-50 p-4">
-            <p className="text-xs font-medium uppercase tracking-wide text-green-600">
-              Total Contributions
-            </p>
+          <div className="flex flex-col justify-between rounded-lg border border-[#E4E6E1] bg-white p-4 shadow-none">
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-[#1E6B45]" />
+              <p className="text-xs font-medium uppercase tracking-wider text-[#7B8794]">
+                Total Contributions
+              </p>
+            </div>
 
-            <p className="mt-1 text-xl font-semibold text-green-600">
-                {previewResult == null
-                  ? "-"
-                  : formatCurrency(totalContributions)}
+            <p className="mt-2 text-[20px] font-semibold tabular-nums text-[#1F2933]">
+              {previewResult == null
+                ? "-"
+                : formatCurrency(totalContributions)}
             </p>
           </div>
         </div>
