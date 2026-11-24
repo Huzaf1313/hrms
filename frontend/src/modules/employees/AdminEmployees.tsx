@@ -5,6 +5,7 @@ import {
   Check,
   ChevronDown,
   Clock,
+  Download,
   RotateCcw,
   Search,
   Umbrella,
@@ -16,6 +17,8 @@ import AdminEmployeeDetailsPage from "./AdminEmployeeDetailsPage";
 import AdminEmployeeForm from "./AdminEmployeeForm";
 import AdminEmployeeTable from "./AdminEmployeeTable";
 import { TableSkeleton } from "../../components/ui";
+import { Button } from "../../components/ui/Button";
+import { ErrorState } from "../../components/ui/ErrorState";
 import { ApiError } from "../../services/api";
 import {
   salaryStructureService,
@@ -37,7 +40,7 @@ import type {
 } from "./types";
 import type { Shift } from "../shifts/types";
 
-const PAGE_SIZE = 5;
+const DEFAULT_PAGE_SIZE = 5;
 
 const SAMPLE_EMPLOYEES: Employee[] = [
   {
@@ -136,38 +139,38 @@ function CredentialsModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl sm:p-8">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(17,24,39,0.5)] px-4">
+      <div className="w-full max-w-md rounded-2xl border border-[#E5E7EB] bg-white p-6 shadow-2xl sm:p-8">
         <div className="mb-1 flex items-center gap-2">
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
             <Check aria-hidden="true" className="h-4 w-4" />
           </span>
-          <h3 className="text-lg font-bold text-gray-900">
+            <h3 className="text-[18px] font-semibold text-[#111827]">
             Employee Created
           </h3>
         </div>
 
-        <p className="mt-2 text-sm text-gray-500">
+        <p className="mt-2 text-[13px] text-[#6B7280]">
           Share these login credentials with{" "}
           <span className="font-semibold text-gray-800">{employeeName}</span>.
           The password won't be shown again.
         </p>
 
-        <div className="mt-5 space-y-3 rounded-2xl bg-[#f5f7fb] p-4">
+        <div className="mt-5 space-y-3 rounded-lg border border-[#E5E7EB] bg-[#F9FAFB] p-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+            <p className="text-[12px] font-medium text-[#6B7280]">
               Email
             </p>
-            <p className="mt-0.5 font-mono text-sm text-gray-900">
+            <p className="mt-0.5 font-mono text-[13px] text-[#111827]">
               {credentials.email}
             </p>
           </div>
 
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+            <p className="text-[12px] font-medium text-[#6B7280]">
               Temporary Password
             </p>
-            <p className="mt-0.5 font-mono text-sm text-gray-900">
+            <p className="mt-0.5 font-mono text-[13px] text-[#111827]">
               {credentials.temporary_password}
             </p>
           </div>
@@ -177,7 +180,7 @@ function CredentialsModal({
           <button
             type="button"
             onClick={copyCredentials}
-            className="rounded-full border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+            className="rounded-lg border border-[#E5E7EB] px-4 py-2.5 text-[13px] font-medium text-[#374151] transition hover:bg-[#F9FAFB]"
           >
             {copied ? (
               <>
@@ -192,7 +195,7 @@ function CredentialsModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full bg-[#0066ff] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0052cc]"
+            className="rounded-lg bg-[#2563EB] px-4 py-2.5 text-[13px] font-medium text-white transition hover:bg-[#1D4ED8]"
           >
             Done
           </button>
@@ -236,6 +239,7 @@ function AdminEmployees({
   const [departmentFilter, setDepartmentFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [page, setPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(DEFAULT_PAGE_SIZE);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -249,6 +253,7 @@ function AdminEmployees({
     name: string;
     credentials: EmployeeCredentials;
   } | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const lastHandledSearchRequest = useRef<number | null>(null);
@@ -496,6 +501,7 @@ function AdminEmployees({
       }
 
       closeForm();
+      setToastMessage(editingEmployee ? "Employee updated successfully." : "Employee created successfully.");
       await loadEmployees();
     } catch (err) {
       const message =
@@ -567,40 +573,61 @@ function AdminEmployees({
     }
   }
 
+  function exportCsv() {
+    if (filteredEmployees.length === 0) return;
+
+    const escapeCsv = (value: string) => `"${value.replace(/"/g, '""')}"`;
+    const headers = ["Employee ID", "Name", "Email", "Department", "Designation", "Status", "Joining Date"];
+    const rows = filteredEmployees.map((employee) => [
+      employee.employee_id,
+      `${employee.first_name} ${employee.last_name}`.trim(),
+      employee.email,
+      employee.department_id,
+      employee.designation || "-",
+      employee.status,
+      employee.joining_date || "-",
+    ]);
+    const csv = [headers, ...rows].map((row) => row.map(escapeCsv).join(",")).join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "employees.csv";
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
   // Active pool of employees (either live data or fallback sample data)
   const activePool = useMemo(() => {
     return employees.length > 0 ? employees : SAMPLE_EMPLOYEES;
   }, [employees]);
 
   // Client filtering
-  const filteredEmployees = useMemo(() => {
-    return activePool.filter((emp) => {
-      if (search.trim()) {
-        const q = search.toLowerCase();
-        const fullName = `${emp.first_name} ${emp.last_name}`.toLowerCase();
-        const email = emp.email.toLowerCase();
-        const empId = emp.employee_id.toLowerCase();
-        if (!fullName.includes(q) && !email.includes(q) && !empId.includes(q)) {
+  const filteredEmployees = activePool.filter((emp) => {
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      const fullName = `${emp.first_name} ${emp.last_name}`.toLowerCase();
+      const email = emp.email.toLowerCase();
+      const empId = emp.employee_id.toLowerCase();
+      if (!fullName.includes(q) && !email.includes(q) && !empId.includes(q)) {
+        return false;
+      }
+    }
+
+    if (departmentFilter) {
+      if (emp.department_id !== departmentFilter) {
+        const dept = departments.find((d) => d.id === departmentFilter);
+        if (dept && !emp.designation.toLowerCase().includes(dept.name.toLowerCase())) {
           return false;
         }
       }
+    }
 
-      if (departmentFilter) {
-        if (emp.department_id !== departmentFilter) {
-          const dept = departments.find((d) => d.id === departmentFilter);
-          if (dept && !emp.designation.toLowerCase().includes(dept.name.toLowerCase())) {
-            return false;
-          }
-        }
-      }
+    if (statusFilter && emp.status !== statusFilter) {
+      return false;
+    }
 
-      if (statusFilter && emp.status !== statusFilter) {
-        return false;
-      }
-
-      return true;
-    });
-  }, [activePool, search, departmentFilter, statusFilter, departments]);
+    return true;
+  });
 
   const totalEmployeesCount = metrics.totalEmployees ?? 24;
   const presentTodayCount = metrics.presentToday ?? 22;
@@ -609,11 +636,11 @@ function AdminEmployees({
   const onLeavePercent = metrics.onLeavePercent ?? 8.3;
   const pendingLeaveRequests = metrics.pendingLeaveRequests ?? 3;
 
-  const totalPages = Math.ceil(filteredEmployees.length / PAGE_SIZE) || 5;
+  const totalPages = Math.ceil(filteredEmployees.length / rowsPerPage) || 1;
   const paginatedEmployees = useMemo(() => {
-    const start = (page - 1) * PAGE_SIZE;
-    return filteredEmployees.slice(start, start + PAGE_SIZE);
-  }, [filteredEmployees, page]);
+    const start = (page - 1) * rowsPerPage;
+    return filteredEmployees.slice(start, start + rowsPerPage);
+  }, [filteredEmployees, page, rowsPerPage]);
 
   function toggleSelect(id: string) {
     setSelectedIds((prev) =>
@@ -663,175 +690,78 @@ function AdminEmployees({
   }
 
   return (
-    <div className="space-y-6 px-4 pb-12 pt-6 sm:px-6 lg:px-8">
+    <div className="space-y-5 pb-12">
       {/* 1. Header Row */}
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="flex flex-col gap-3 border-b border-[#E5E7EB] pb-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-3xl sm:text-[34px] font-extrabold tracking-tight text-[#0f172a] font-manrope">
+          <h1 className="text-[20px] font-semibold leading-tight text-[#111827]">
             Employees
           </h1>
-          <p className="mt-1 text-sm font-medium text-slate-500">
-            Manage and view your team.
+          <p className="mt-1 text-[13px] text-[#6B7280]">
+            Manage and view your team · {totalEmployeesCount} employees
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={openCreateForm}
-          className="inline-flex items-center gap-2 rounded-full bg-[#0066ff] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0052cc] active:scale-95"
-        >
-          <UserPlus className="h-4 w-4" />
-          <span>Add Employee</span>
-        </button>
-      </div>
-
-      {/* 2. Top 4 Metric KPI Cards (Matches Mockup) */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Total Employees */}
-        <div className="relative overflow-hidden rounded-3xl border border-slate-100 bg-white p-5 shadow-xs flex items-center justify-between">
-          <div className="flex items-center gap-3.5">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-50 text-[#0066ff]">
-              <Users className="h-6 w-6" />
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-slate-500">Total Employees</p>
-              <p className="text-2xl sm:text-3xl font-extrabold text-[#0f172a] font-manrope mt-0.5">
-                {totalEmployeesCount}
-              </p>
-            </div>
-          </div>
-          <div className="pointer-events-none absolute -bottom-6 -right-6 h-20 w-24 rounded-full bg-blue-50/60 blur-xl" />
-        </div>
-
-        {/* Present Today */}
-        <div className="relative overflow-hidden rounded-3xl border border-slate-100 bg-white p-5 shadow-xs flex items-center justify-between">
-          <div className="flex items-center gap-3.5">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-[#16a34a]">
-              <CalendarCheck className="h-6 w-6" />
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-slate-500">Present Today</p>
-              <p className="text-2xl sm:text-3xl font-extrabold text-[#0f172a] font-manrope mt-0.5">
-                {presentTodayCount}
-              </p>
-            </div>
-          </div>
-          <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-bold text-emerald-700 border border-emerald-100">
-            {presentPercent}%
-          </span>
-          <div className="pointer-events-none absolute -bottom-6 -right-6 h-20 w-24 rounded-full bg-emerald-50/60 blur-xl" />
-        </div>
-
-        {/* On Leave */}
-        <div className="relative overflow-hidden rounded-3xl border border-slate-100 bg-white p-5 shadow-xs flex items-center justify-between">
-          <div className="flex items-center gap-3.5">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-orange-50 text-[#ea580c]">
-              <Umbrella className="h-6 w-6" />
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-slate-500">On Leave</p>
-              <p className="text-2xl sm:text-3xl font-extrabold text-[#0f172a] font-manrope mt-0.5">
-                {onLeaveCount}
-              </p>
-            </div>
-          </div>
-          <span className="rounded-full bg-orange-50 px-2.5 py-0.5 text-xs font-bold text-orange-700 border border-orange-100">
-            {onLeavePercent}%
-          </span>
-          <div className="pointer-events-none absolute -bottom-6 -right-6 h-20 w-24 rounded-full bg-orange-50/60 blur-xl" />
-        </div>
-
-        {/* Pending Leave Requests */}
-        <div className="relative overflow-hidden rounded-3xl border border-slate-100 bg-white p-5 shadow-xs flex items-center justify-between">
-          <div className="flex items-center gap-3.5">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-purple-50 text-[#7c3aed]">
-              <Clock className="h-6 w-6" />
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-slate-500">
-                Pending Leave Requests
-              </p>
-              <p className="text-2xl sm:text-3xl font-extrabold text-[#0f172a] font-manrope mt-0.5">
-                {pendingLeaveRequests}
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => navigate("/dashboard/leave")}
-            className="inline-flex items-center gap-1 text-xs font-bold text-[#0066ff] hover:underline"
-          >
-            View →
-          </button>
-          <div className="pointer-events-none absolute -bottom-6 -right-6 h-20 w-24 rounded-full bg-purple-50/60 blur-xl" />
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" size="sm" onClick={exportCsv} leftIcon={<Download className="h-4 w-4" />}>
+            Export CSV
+          </Button>
+          <Button variant="primary" size="sm" onClick={openCreateForm} leftIcon={<UserPlus className="h-4 w-4" />}>
+            Add Employee
+          </Button>
         </div>
       </div>
 
-      {/* 3. Search & Filter Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-white p-3 shadow-xs">
-        {/* Search Input */}
-        <div className="relative min-w-[280px] flex-1 sm:min-w-[340px]">
-          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={(event) => {
-              setPage(1);
-              setSearch(event.target.value);
-            }}
-            placeholder="Search by name, email, or employee ID..."
-            className="w-full rounded-xl border border-slate-200/80 bg-slate-50/60 py-2 pl-10 pr-4 text-xs font-medium text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-[#0066ff] focus:bg-white"
-          />
+      {/* 2. KPI Cards */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="flex min-h-[128px] flex-col rounded-xl border border-[#E5E7EB] bg-white p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[12px] font-medium text-[#6B7280]">Total Employees</p>
+              <p className="mt-2 text-[28px] font-semibold leading-none text-[#111827]">{totalEmployeesCount}</p>
+            </div>
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#F3F4F6] text-[#4B5563]">
+              <Users className="h-[18px] w-[18px]" />
+            </span>
+          </div>
+          <p className="mt-auto pt-3 text-[12px] text-[#6B7280]">Across all departments</p>
         </div>
-
-        {/* Dropdowns & Reset */}
-        <div className="flex flex-wrap items-center gap-2.5">
-          {/* Department Filter */}
-          <div className="relative">
-            <select
-              value={departmentFilter}
-              onChange={(event) => {
-                setPage(1);
-                setDepartmentFilter(event.target.value);
-              }}
-              className="cursor-pointer appearance-none rounded-xl border border-slate-200/80 bg-slate-50/60 py-2 pl-3.5 pr-8 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 focus:border-[#0066ff] focus:bg-white"
-            >
-              <option value="">All Departments</option>
-              {departments.map((department) => (
-                <option key={department.id} value={department.id}>
-                  {department.name}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+        <div className="flex min-h-[128px] flex-col rounded-xl border border-[#E5E7EB] bg-white p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[12px] font-medium text-[#6B7280]">Present Today</p>
+              <p className="mt-2 text-[28px] font-semibold leading-none text-[#111827]">{presentTodayCount}</p>
+            </div>
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#ECFDF5] text-[#047857]">
+              <CalendarCheck className="h-[18px] w-[18px]" />
+            </span>
           </div>
-
-          {/* Status Filter */}
-          <div className="relative">
-            <select
-              value={statusFilter}
-              onChange={(event) => {
-                setPage(1);
-                setStatusFilter(event.target.value);
-              }}
-              className="cursor-pointer appearance-none rounded-xl border border-slate-200/80 bg-slate-50/60 py-2 pl-3.5 pr-8 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 focus:border-[#0066ff] focus:bg-white"
-            >
-              <option value="">All Statuses</option>
-              <option value="active">Active</option>
-              <option value="on_leave">On Leave</option>
-              <option value="inactive">Inactive</option>
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+          <p className="mt-auto pt-3 text-[12px] text-[#6B7280]">{presentPercent}% on time</p>
+        </div>
+        <div className="flex min-h-[128px] flex-col rounded-xl border border-[#E5E7EB] bg-white p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[12px] font-medium text-[#6B7280]">On Leave</p>
+              <p className="mt-2 text-[28px] font-semibold leading-none text-[#111827]">{onLeaveCount}</p>
+            </div>
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#EFF6FF] text-[#2563EB]">
+              <Umbrella className="h-[18px] w-[18px]" />
+            </span>
           </div>
-
-          {/* Clear Filters */}
-          <button
-            type="button"
-            onClick={clearFilters}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-2xs transition hover:bg-slate-50 hover:text-slate-900"
-          >
-            <RotateCcw className="h-3.5 w-3.5 text-slate-500" />
-            <span>Clear Filters</span>
+          <p className="mt-auto pt-3 text-[12px] text-[#6B7280]">{onLeavePercent}% approved leaves</p>
+        </div>
+        <div className="flex min-h-[128px] flex-col rounded-xl border border-[#E5E7EB] bg-white p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[12px] font-medium text-[#6B7280]">Pending Leave Requests</p>
+              <p className="mt-2 text-[28px] font-semibold leading-none text-[#111827]">{pendingLeaveRequests}</p>
+            </div>
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#FFFBEB] text-[#B45309]">
+              <Clock className="h-[18px] w-[18px]" />
+            </span>
+          </div>
+          <button type="button" onClick={() => navigate("/dashboard/leave")} className="mt-auto self-start pt-3 text-[12px] font-medium text-[#2563EB] hover:underline">
+            View
           </button>
         </div>
       </div>
@@ -858,16 +788,75 @@ function AdminEmployees({
         </div>
       )}
 
-      {/* 4. Table Card Container */}
-      <div className="rounded-3xl border border-slate-100 bg-white shadow-sm overflow-hidden">
+      {/* 3. Table Card */}
+      <div className="overflow-hidden rounded-xl border border-[#E5E7EB] bg-white">
+        <div className="flex flex-col gap-3 border-b border-[#E5E7EB] p-4 lg:flex-row lg:items-center">
+          <div className="relative min-w-0 flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9CA3AF]" />
+            <input
+              type="text"
+              value={search}
+              onChange={(event) => {
+                setPage(1);
+                setSearch(event.target.value);
+              }}
+              placeholder="Search employees by name or code..."
+              className="h-9 w-full rounded-lg border border-[#E5E7EB] bg-white pl-9 pr-3 text-[13px] text-[#111827] outline-none placeholder:text-[#9CA3AF] focus:border-[#2563EB] focus:ring-2 focus:ring-[#DBEAFE]"
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative">
+              <select
+                value={departmentFilter}
+                onChange={(event) => {
+                  setPage(1);
+                  setDepartmentFilter(event.target.value);
+                }}
+                className="h-9 appearance-none rounded-lg border border-[#E5E7EB] bg-white pl-3 pr-8 text-[13px] text-[#374151] outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#DBEAFE]"
+              >
+                <option value="">All Departments</option>
+                {departments.map((department) => (
+                  <option key={department.id} value={department.id}>{department.name}</option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6B7280]" />
+            </div>
+            <div className="relative">
+              <select
+                value={statusFilter}
+                onChange={(event) => {
+                  setPage(1);
+                  setStatusFilter(event.target.value);
+                }}
+                className="h-9 appearance-none rounded-lg border border-[#E5E7EB] bg-white pl-3 pr-8 text-[13px] text-[#374151] outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#DBEAFE]"
+              >
+                <option value="">All Statuses</option>
+                <option value="active">Active</option>
+                <option value="on_leave">On Leave</option>
+                <option value="inactive">Inactive</option>
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6B7280]" />
+            </div>
+            <button type="button" onClick={clearFilters} className="inline-flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-[13px] text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#111827]">
+              <RotateCcw className="h-4 w-4" /> Clear Filters
+            </button>
+          </div>
+        </div>
+
+        {selectedIds.length > 0 && (
+          <div className="flex items-center gap-3 border-b border-[#DBEAFE] bg-[#EFF6FF] px-4 py-2.5 text-[12px] text-[#1E40AF]">
+            <strong>{selectedIds.length} selected</strong>
+            <button type="button" onClick={exportCsv} className="font-medium hover:underline">Export</button>
+            <button type="button" disabled className="font-medium text-[#9CA3AF]">Deactivate</button>
+          </div>
+        )}
+
         {isLoading && employees.length === 0 ? (
-          <div className="p-6">
-            <TableSkeleton rows={6} columns={7} />
+          <div className="p-4">
+            <TableSkeleton rows={5} columns={7} className="rounded-none border-0" />
           </div>
         ) : error && employees.length === 0 ? (
-          <div className="p-8 text-center text-sm text-rose-500">
-            {error}
-          </div>
+          <ErrorState title="Could not load employees" message={error} onRetry={() => void loadEmployees()} className="min-h-[220px] max-w-none p-6" />
         ) : (
           <>
             <AdminEmployeeTable
@@ -880,35 +869,50 @@ function AdminEmployees({
               selectedIds={selectedIds}
               onToggleSelect={toggleSelect}
               onToggleSelectAll={toggleSelectAll}
+              onClearFilters={clearFilters}
             />
 
             {/* Pagination Footer */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-100 px-6 py-4 text-xs font-medium text-slate-500">
+            <div className="flex flex-col gap-3 border-t border-[#E5E7EB] px-4 py-3 text-[12px] text-[#6B7280] md:flex-row md:items-center md:justify-between">
               <span>
-                Showing {(page - 1) * PAGE_SIZE + 1}-
-                {Math.min(page * PAGE_SIZE, filteredEmployees.length)} of{" "}
-                {totalEmployeesCount} employees
+                Showing {filteredEmployees.length === 0 ? 0 : (page - 1) * rowsPerPage + 1}-
+                {Math.min(page * rowsPerPage, filteredEmployees.length)} of {filteredEmployees.length} employees
               </span>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="flex items-center gap-2">
+                  Rows per page
+                  <select
+                    value={rowsPerPage}
+                    onChange={(event) => {
+                      setRowsPerPage(Number(event.target.value));
+                      setPage(1);
+                    }}
+                    className="h-8 rounded-lg border border-[#E5E7EB] bg-white px-2 text-[12px] text-[#374151] outline-none focus:border-[#2563EB]"
+                  >
+                    <option value={5}>5</option>
+                    <option value={10}>10</option>
+                    <option value={25}>25</option>
+                  </select>
+                </label>
                 <button
                   type="button"
                   onClick={() => setPage((current) => Math.max(1, current - 1))}
                   disabled={page === 1}
-                  className="px-2.5 py-1 text-slate-400 hover:text-slate-700 disabled:opacity-40"
+                  className="h-8 rounded-full px-3 text-[12px] text-[#6B7280] hover:bg-[#F3F4F6] disabled:bg-[#F3F4F6] disabled:text-[#D1D5DB]"
                 >
                   Previous
                 </button>
 
-                {[1, 2, 3, 4, 5].slice(0, Math.max(totalPages, 1)).map((p) => (
+                {Array.from({ length: Math.min(totalPages, 5) }, (_, index) => index + 1).map((p) => (
                   <button
                     key={p}
                     type="button"
                     onClick={() => setPage(p)}
-                    className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold transition ${
+                    className={`flex h-8 min-w-8 items-center justify-center rounded-full px-2 text-[12px] font-medium transition ${
                       page === p
-                        ? "bg-[#0066ff] text-white shadow-xs"
-                        : "text-slate-600 hover:bg-slate-100"
+                        ? "bg-[#2563EB] text-white"
+                        : "text-[#6B7280] hover:bg-[#F3F4F6]"
                     }`}
                   >
                     {p}
@@ -919,9 +923,9 @@ function AdminEmployees({
                   type="button"
                   onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
                   disabled={page >= totalPages}
-                  className="px-2.5 py-1 text-slate-800 font-semibold hover:text-[#0066ff] disabled:opacity-40"
+                  className="h-8 rounded-full px-3 text-[12px] text-[#6B7280] hover:bg-[#F3F4F6] disabled:bg-[#F3F4F6] disabled:text-[#D1D5DB]"
                 >
-                  Next &gt;
+                  Next
                 </button>
               </div>
             </div>
@@ -951,6 +955,24 @@ function AdminEmployees({
           employeeName={sharedCredentials.name}
           onClose={() => setSharedCredentials(null)}
         />
+      )}
+
+      {toastMessage && (
+        <div
+          role="status"
+          className="fixed bottom-5 right-5 z-[60] flex items-center gap-2 rounded-lg bg-[#111827] px-4 py-3 text-[13px] text-white shadow-lg"
+        >
+          <Check className="h-4 w-4 text-[#86EFAC]" />
+          {toastMessage}
+          <button
+            type="button"
+            onClick={() => setToastMessage(null)}
+            aria-label="Dismiss notification"
+            className="ml-2 text-white/70 hover:text-white"
+          >
+            ×
+          </button>
+        </div>
       )}
 
       {/* Delete Confirmation Modal */}

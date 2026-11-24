@@ -10,13 +10,12 @@ import {
   Megaphone,
   LifeBuoy,
   DoorOpen,
-  PanelLeftClose,
   Package,
+  X,
 } from "lucide-react";
 
 interface EmployeeSidebarProps {
   onLogout?: () => void;
-  /** Mobile drawer state. Desktop ignores this. */
   open?: boolean;
   onClose?: () => void;
   collapsed?: boolean;
@@ -36,14 +35,14 @@ interface NavSection {
 
 const sections: NavSection[] = [
   {
-    title: "MAIN",
+    title: "Main",
     items: [
       { label: "Dashboard", icon: LayoutGrid, path: "/employee/dashboard" },
       { label: "My Profile", icon: UserRound, path: "/employee/profile" },
     ],
   },
   {
-    title: "ATTENDANCE",
+    title: "Attendance",
     items: [
       {
         label: "My Attendance",
@@ -60,7 +59,7 @@ const sections: NavSection[] = [
     ],
   },
   {
-    title: "FINANCE & ASSETS",
+    title: "Finance & Assets",
     items: [
       {
         label: "My Payslip",
@@ -83,7 +82,7 @@ const sections: NavSection[] = [
     ],
   },
   {
-    title: "COMPANY",
+    title: "Company",
     items: [
       {
         label: "Announcements",
@@ -107,16 +106,16 @@ const sections: NavSection[] = [
   },
 ];
 
-function isItemActive(item: NavItem, pathname: string): boolean {
+function isItemActive(item: NavItem, currentPath: string): boolean {
   if (!item.path) return false;
-
-  return item.matchPrefix
-    ? pathname.startsWith(item.path)
-    : pathname === item.path;
+  if (item.path === currentPath) return true;
+  if (item.matchPrefix && currentPath.startsWith(item.path)) {
+    return true;
+  }
+  return false;
 }
 
-function EmployeeSidebar({
-  onLogout: _onLogout,
+export function EmployeeSidebar({
   open = false,
   onClose,
   collapsed = false,
@@ -132,94 +131,96 @@ function EmployeeSidebar({
 
   return (
     <>
-      {/* Tap-to-dismiss backdrop, mobile only */}
+      {/* Mobile backdrop */}
       {open && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-xs lg:hidden"
           onClick={onClose}
           aria-hidden="true"
         />
       )}
 
       <aside
-        className={`app-sidebar fixed inset-y-0 left-0 z-50 flex h-screen shrink-0 flex-col overflow-hidden bg-[#09142e] px-4 py-5 transition-[width,transform] duration-300 ease-in-out lg:static lg:h-full lg:z-auto lg:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"
-          } ${collapsed ? "w-[80px]" : "w-[260px]"}`}
+        aria-label="Employee Navigation"
+        className={`app-sidebar fixed inset-y-0 left-0 z-50 flex h-full shrink-0 flex-col border-r border-[#E4E6E1] bg-white transition-[width,transform] duration-200 ease-in-out lg:static lg:translate-x-0 ${
+          open ? "translate-x-0 shadow-lg" : "-translate-x-full"
+        } ${collapsed ? "w-[68px]" : "w-[240px]"}`}
       >
         {/* Brand Header */}
-        <button
-          type="button"
-          onClick={() => go("/employee/dashboard")}
-          title={collapsed ? "PeopleSync" : undefined}
-          className={`mb-6 flex items-center text-left transition-all duration-200 ${collapsed ? "justify-center p-0" : "gap-3 px-1 py-1"
-            }`}
-        >
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white p-1.5 shadow-md shadow-black/30">
-            <img
-              src="/peoplesync-logo.png"
-              alt="PeopleSync"
-              className="h-full w-full object-contain"
-            />
-          </div>
-
-          {!collapsed && (
-            <div className="min-w-0">
-              <span className="brand-wordmark block text-xl font-extrabold tracking-tight text-white leading-tight font-manrope">
-                People<span className="text-[#3884ff]">Sync</span>
-              </span>
-              <span className="block text-[10px] font-normal text-slate-400 tracking-tight leading-tight mt-0.5 truncate">
-                Employee Portal · Simplifying Work.
-              </span>
+        <div className="flex h-[60px] items-center justify-between px-4 border-b border-[#E4E6E1] shrink-0">
+          <button
+            type="button"
+            onClick={() => go("/employee/dashboard")}
+            className="flex items-center gap-2.5 min-w-0 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0] rounded"
+          >
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] bg-[#2F5FD0] text-white font-bold text-sm tracking-tight">
+              PS
             </div>
-          )}
-        </button>
+            {!collapsed && (
+              <div className="min-w-0">
+                <span className="block text-[15px] font-semibold tracking-tight text-[#1F2933] leading-tight">
+                  People<span className="text-[#2F5FD0]">Sync</span>
+                </span>
+                <span className="block text-[11px] text-[#7B8794] truncate">
+                  Employee Portal
+                </span>
+              </div>
+            )}
+          </button>
 
-        {/* Navigation Section */}
-        <nav className="sidebar-scrollbar min-h-0 flex-1 overflow-y-auto pr-0.5 space-y-4">
+          {open && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1 rounded text-[#7B8794] hover:text-[#1F2933] lg:hidden"
+              aria-label="Close navigation"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
+        {/* Navigation Items */}
+        <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-3.5">
           {sections.map((section) => (
-            <div key={section.title}>
+            <div key={section.title} className="space-y-0.5">
               {!collapsed ? (
-                <p className="mb-2 px-3 text-[11px] font-bold uppercase tracking-wider text-slate-400/70">
+                <p className="px-3 py-1 text-[12px] font-medium text-[#7B8794]">
                   {section.title}
                 </p>
               ) : (
-                <div
-                  className="mx-auto mb-2 h-px w-8 bg-white/10"
-                  aria-hidden="true"
-                />
+                <div className="my-1.5 h-px bg-[#E4E6E1]" aria-hidden="true" />
               )}
 
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col gap-0.5">
                 {section.items.map((item) => {
                   const Icon = item.icon;
                   const isActive = isItemActive(item, location.pathname);
-                  const isDisabled = !item.path;
 
                   return (
                     <button
                       key={item.label}
                       type="button"
-                      disabled={isDisabled}
                       onClick={() => go(item.path)}
                       title={collapsed ? item.label : undefined}
                       aria-label={collapsed ? item.label : undefined}
-                      className={`flex h-10 w-full shrink-0 items-center rounded-xl text-left transition-all duration-150 ${collapsed ? "justify-center px-0" : "gap-3 px-3.5"
-                        } text-sm ${isActive
-                          ? "bg-[#0066ff] font-semibold text-white shadow-lg shadow-blue-600/30"
-                          : isDisabled
-                            ? "cursor-not-allowed text-slate-600"
-                            : "font-medium text-slate-300 hover:bg-white/[0.08] hover:text-white"
-                        }`}
+                      aria-current={isActive ? "page" : undefined}
+                      className={`group flex h-10 w-full items-center rounded-[6px] text-sm transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-[#2F5FD0] cursor-pointer ${
+                        collapsed ? "justify-center px-0" : "gap-3 px-3"
+                      } ${
+                        isActive
+                          ? "bg-[#E8EEFB] text-[#2F5FD0] font-medium"
+                          : "font-normal text-[#52606D] hover:bg-[#F0F1EE] hover:text-[#1F2933]"
+                      }`}
                     >
                       <Icon
-                        className={`h-4.5 w-4.5 shrink-0 ${isActive
-                          ? "text-white"
-                          : isDisabled
-                            ? "text-slate-600"
-                            : "text-slate-400"
-                          }`}
+                        className={`w-5 h-5 stroke-[1.75] shrink-0 transition-colors ${
+                          isActive
+                            ? "text-[#2F5FD0]"
+                            : "text-[#52606D] group-hover:text-[#1F2933]"
+                        }`}
                       />
-
-                      {!collapsed && <span>{item.label}</span>}
+                      {!collapsed && <span className="truncate">{item.label}</span>}
                     </button>
                   );
                 })}
@@ -227,94 +228,6 @@ function EmployeeSidebar({
             </div>
           ))}
         </nav>
-
-        {/* Bottom Section */}
-        <div className="mt-auto pt-3 shrink-0">
-          {!collapsed && (
-            <div className="mb-3">
-              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#122452] via-[#142a66] to-[#1c3e8e] p-4 text-white shadow-lg border border-white/10">
-                <div className="relative z-10 max-w-[110px]">
-                  <p className="text-sm font-extrabold leading-tight tracking-tight text-white font-manrope">
-                    Together
-                    <br />
-                    We Grow
-                  </p>
-                </div>
-
-                {/* Team silhouette with warm orange & blue swoosh */}
-                <div className="pointer-events-none absolute -bottom-1 -right-1 h-20 w-28 opacity-90">
-                  <svg
-                    viewBox="0 0 120 80"
-                    fill="none"
-                    className="h-full w-full"
-                  >
-                    <circle
-                      cx="85"
-                      cy="35"
-                      r="10"
-                      fill="#3b82f6"
-                      fillOpacity="0.8"
-                    />
-                    <path
-                      d="M68 65 C68 50, 102 50, 102 65 Z"
-                      fill="#3b82f6"
-                      fillOpacity="0.8"
-                    />
-                    <circle
-                      cx="62"
-                      cy="42"
-                      r="8"
-                      fill="#60a5fa"
-                      fillOpacity="0.7"
-                    />
-                    <path
-                      d="M48 68 C48 56, 76 56, 76 68 Z"
-                      fill="#60a5fa"
-                      fillOpacity="0.7"
-                    />
-                    <circle
-                      cx="102"
-                      cy="44"
-                      r="7"
-                      fill="#60a5fa"
-                      fillOpacity="0.6"
-                    />
-                    <path
-                      d="M90 68 C90 58, 114 58, 114 68 Z"
-                      fill="#60a5fa"
-                      fillOpacity="0.6"
-                    />
-                    <path
-                      d="M10 75 Q60 55 120 70"
-                      stroke="#f97316"
-                      strokeWidth="4"
-                      strokeLinecap="round"
-                    />
-                    <path
-                      d="M20 78 Q70 62 120 74"
-                      stroke="#ffedd5"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      opacity="0.6"
-                    />
-                  </svg>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Mobile Close Button */}
-        {!collapsed && (
-          <button
-            type="button"
-            onClick={() => onClose?.()}
-            className="mt-2 flex items-center gap-2 px-3 py-2 text-xs text-slate-400 transition hover:text-white lg:hidden"
-          >
-            <PanelLeftClose className="h-4 w-4" />
-            Close Menu
-          </button>
-        )}
       </aside>
     </>
   );

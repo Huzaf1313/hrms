@@ -9,13 +9,13 @@ import type { Employee } from "../modules/employees/types";
 import { adminNotificationService } from "../modules/dashboard/adminNotificationService";
 import { adminProfileService } from "../modules/employees/adminProfileService";
 import { SESSION_USER_UPDATED_EVENT } from "../lib/session";
+import { Avatar } from "./ui/Avatar";
 
 interface HeaderProps {
   onLogout: () => void;
   onToggleSidebar?: () => void;
   pageTitle?: string;
   collapsed?: boolean;
-  /** Mobile: opens the drawer. Desktop has no use for it. */
   onOpenSidebar?: () => void;
   onSearchEmployee?: (query: string) => void;
   onSelectEmployee?: (employeeId: string) => void;
@@ -24,10 +24,7 @@ interface HeaderProps {
 function readUser() {
   try {
     const raw = localStorage.getItem("user");
-
-    return raw
-      ? (JSON.parse(raw) as { full_name?: string; role?: string })
-      : null;
+    return raw ? (JSON.parse(raw) as { full_name?: string; role?: string }) : null;
   } catch {
     return null;
   }
@@ -38,13 +35,13 @@ function roleDisplay(role?: string): string {
     case "super_admin":
       return "Super Admin";
     case "hr_admin":
-      return "HR";
+      return "HR Admin";
     case "manager":
       return "Manager";
     case "employee":
       return "Employee";
     default:
-      return role ? role.charAt(0).toUpperCase() + role.slice(1) : "";
+      return role ? role.replace("_", " ") : "";
   }
 }
 
@@ -52,12 +49,11 @@ function employeeFullName(employee: Employee) {
   return `${employee.first_name} ${employee.last_name}`.trim();
 }
 
-/** Only admin-level roles may create or edit holidays. */
 function isAdminRole(role?: string): boolean {
   return role === "super_admin" || role === "hr_admin" || role === "manager";
 }
 
-function Header({
+export function Header({
   onLogout,
   onToggleSidebar,
   pageTitle = "Dashboard",
@@ -70,34 +66,25 @@ function Header({
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [employeeSearch, setEmployeeSearch] = useState("");
   const [allEmployees, setAllEmployees] = useState<Employee[]>([]);
-  const [showEmployeeSuggestions, setShowEmployeeSuggestions] =
-    useState(false);
+  const [showEmployeeSuggestions, setShowEmployeeSuggestions] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   const [user, setUser] = useState(() => readUser());
 
-  // A profile save renames the cached session user; pick that up live.
   useEffect(() => {
     const refresh = () => setUser(readUser());
-
     window.addEventListener(SESSION_USER_UPDATED_EVENT, refresh);
-
     return () => window.removeEventListener(SESSION_USER_UPDATED_EVENT, refresh);
   }, []);
 
   useEffect(() => {
     let cancelled = false;
-
     employeeService
       .listAll()
       .then((employees) => {
-        if (!cancelled) {
-          setAllEmployees(employees);
-        }
+        if (!cancelled) setAllEmployees(employees);
       })
-      .catch((error) => {
-        console.error("Failed to load employee search suggestions", error);
-      });
+      .catch(() => { });
 
     return () => {
       cancelled = true;
@@ -106,15 +93,12 @@ function Header({
 
   useEffect(() => {
     let cancelled = false;
-
-    void adminProfileService
+    adminProfileService
       .getProfile()
       .then((profile) => {
-        if (!cancelled) setAvatarUrl(profile.avatar_url);
+        if (!cancelled && profile.avatar_url) setAvatarUrl(profile.avatar_url);
       })
-      .catch((error) => {
-        console.error("Failed to load header profile photo", error);
-      });
+      .catch(() => { });
 
     return () => {
       cancelled = true;
@@ -136,7 +120,7 @@ function Header({
           lastName.startsWith(normalizedQuery)
         );
       })
-      .slice(0, 8)
+      .slice(0, 6)
     : [];
 
   function selectEmployee(employee: Employee) {
@@ -145,9 +129,7 @@ function Header({
     onSelectEmployee?.(employee.id);
   }
 
-  function handleEmployeeSearchKeyDown(
-    event: React.KeyboardEvent<HTMLInputElement>,
-  ) {
+  function handleEmployeeSearchKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
     if (event.key === "Escape") {
       setShowEmployeeSuggestions(false);
       return;
@@ -156,7 +138,6 @@ function Header({
     if (event.key !== "Enter") return;
 
     event.preventDefault();
-
     const query = employeeSearch.trim();
     if (!query) return;
 
@@ -167,38 +148,36 @@ function Header({
       onSearchEmployee?.(query);
     }
   }
-  const [showNotificationDropdown, setShowNotificationDropdown] =
-    useState(false);
+
+  const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const notificationRef = useRef<HTMLDivElement>(null);
-  // Wraps the avatar button and its menu, so a click inside either keeps it open.
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
-  // A newly created employee has no `created_by` on file yet, so notifications
-  // route to every active admin until their creator is known.
   const refreshUnreadCount = useCallback(async () => {
     try {
       setUnreadCount(await adminNotificationService.getUnreadCount());
-    } catch (error) {
-      console.error("Failed to load admin unread count:", error);
+    } catch {
+      // Ignored
     }
   }, []);
 
   useEffect(() => {
-    // Polling an external source on mount and on an interval. The setState
-    // happens after the await, so this is not a synchronous cascade.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void refreshUnreadCount();
+    let cancelled = false;
+    adminNotificationService.getUnreadCount().then((count) => {
+      if (!cancelled) setUnreadCount(count);
+    }).catch(() => { });
 
     const interval = window.setInterval(() => {
-      // Paused while the tab is hidden so a backgrounded dashboard does not keep
-      // hitting the API.
       if (document.visibilityState === "visible") {
         void refreshUnreadCount();
       }
     }, 30_000);
 
-    return () => window.clearInterval(interval);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
   }, [refreshUnreadCount]);
 
   useEffect(() => {
@@ -218,8 +197,6 @@ function Header({
       }
     }
 
-    // Escape closes the profile menu only; the notification dropdown keeps
-    // its existing click-outside behaviour.
     function closeOnEscape(event: KeyboardEvent) {
       if (event.key === "Escape") setShowProfileMenu(false);
     }
@@ -232,121 +209,128 @@ function Header({
     };
   }, []);
 
-  const fullName = user?.full_name ?? "Admin";
-  const initials = fullName
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
+  const fullName = user?.full_name ?? "Admin User";
 
   return (
-    <header className="sticky top-0 z-30 flex h-[72px] items-center justify-between gap-4 border-b border-slate-100 bg-white px-6">
-      <div className="flex min-w-0 items-center gap-4">
+    <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between gap-4 border-b border-[#E4E6E1] bg-white px-6">
+      {/* Skip link for keyboard users */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-2 focus:bg-white focus:text-[#2F5FD0] focus:ring-2 focus:ring-[#2F5FD0] rounded"
+      >
+        Skip to main content
+      </a>
+
+      {/* Left: Hamburger & Page Title */}
+      <div className="flex min-w-0 items-center gap-3">
         <button
           type="button"
           onClick={() => {
             if (onOpenSidebar) onOpenSidebar();
             else onToggleSidebar?.();
           }}
-          className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-700 transition hover:bg-slate-100 lg:hidden"
-          aria-label="Open menu"
+          className="flex h-8 w-8 items-center justify-center rounded-[6px] text-[#52606D] hover:bg-[#F0F1EE] transition-colors lg:hidden focus:outline-none focus:ring-2 focus:ring-[#2F5FD0]"
+          aria-label="Toggle navigation"
         >
-          <Menu className="h-5 w-5" />
+          <Menu className="h-4 w-4" />
         </button>
 
         {onToggleSidebar && (
           <button
             type="button"
             onClick={onToggleSidebar}
-            className="hidden h-10 w-10 items-center justify-center rounded-xl text-slate-700 transition hover:bg-slate-100 lg:flex"
-            aria-label="Toggle menu"
-            aria-expanded={!collapsed}
+            className="hidden h-8 w-8 items-center justify-center rounded-[6px] text-[#52606D] hover:bg-[#F0F1EE] transition-colors lg:flex focus:outline-none focus:ring-2 focus:ring-[#2F5FD0]"
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
-            <Menu className="h-5 w-5" />
+            <Menu className="h-4 w-4" />
           </button>
         )}
 
-        <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0f172a] font-manrope">
-          {pageTitle}
-        </h1>
+        {/* Sole page title on screen */}
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-[13px] text-[#7B8794] font-medium hidden sm:inline">Workspace /</span>
+          <h1 className="text-[20px] font-semibold text-[#1F2933] truncate">
+            {pageTitle}
+          </h1>
+        </div>
       </div>
 
-      {/* Center Search Pill */}
-      <div className="relative hidden md:block flex-1 max-w-xs lg:max-w-sm mx-4">
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-
+      {/* Center: Global Search */}
+      <div className="relative hidden md:block flex-1 max-w-xs lg:max-w-sm mx-2">
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-[18px] w-[18px] text-[#7B8794] pointer-events-none shrink-0" />
         <input
           type="text"
           value={employeeSearch}
-          onChange={(event) => {
-            setEmployeeSearch(event.target.value);
+          onChange={(e) => {
+            setEmployeeSearch(e.target.value);
             setShowEmployeeSuggestions(true);
           }}
           onFocus={() => setShowEmployeeSuggestions(true)}
-          onBlur={() => setShowEmployeeSuggestions(false)}
+          onBlur={() => setTimeout(() => setShowEmployeeSuggestions(false), 200)}
           onKeyDown={handleEmployeeSearchKeyDown}
-          placeholder="Search employees..."
-          aria-label="Search employees"
-          className="w-full rounded-full bg-[#f1f4f9] py-2 pl-10 pr-4 text-xs text-slate-800 outline-none transition placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-blue-500/20 border border-transparent focus:border-slate-200"
+          placeholder="Search employees by name or code..."
+          autoComplete="off"
+          className="w-full h-10 rounded-[6px] bg-[#F6F7F5] py-2.5 pl-10 pr-3.5 text-sm text-[#1F2933] placeholder:text-[#7B8794] border border-[#E4E6E1] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#2F5FD0] focus:border-[#2F5FD0] transition-colors"
         />
 
         {showEmployeeSuggestions && normalizedQuery && (
-          <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
+          <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-md border border-slate-200 bg-white shadow-md">
             {employeeSuggestions.length > 0 ? (
-              <ul role="listbox" className="max-h-80 overflow-y-auto py-2">
+              <ul className="max-h-60 overflow-y-auto py-1 text-xs">
                 {employeeSuggestions.map((employee) => (
-                  <li key={employee.id} role="option" aria-selected={false}>
+                  <li key={employee.id}>
                     <button
                       type="button"
-                      onMouseDown={(event) => event.preventDefault()}
+                      onMouseDown={(e) => e.preventDefault()}
                       onClick={() => selectEmployee(employee)}
-                      className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-blue-50"
+                      className="flex w-full items-center gap-2.5 px-3 py-2 text-left hover:bg-slate-50 transition-colors"
                     >
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-700">
-                        {employee.first_name.charAt(0).toUpperCase()}
-                      </span>
-
-                      <span className="min-w-0">
-                        <span className="block truncate text-sm font-medium text-slate-900">
+                      <Avatar name={employeeFullName(employee)} size="xs" />
+                      <div className="min-w-0">
+                        <span className="font-medium text-slate-900 block truncate">
                           {employeeFullName(employee)}
                         </span>
-                        <span className="block text-xs text-slate-500">
-                          {employee.employee_id || "Employee"}
+                        <span className="text-xs text-slate-400 block font-mono">
+                          {employee.employee_id} • {employee.designation || "General"}
                         </span>
-                      </span>
+                      </div>
                     </button>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="px-4 py-4 text-sm text-slate-500">
-                No matching employees found.
+              <p className="px-3 py-3 text-xs text-slate-400 text-center">
+                No employees match "{employeeSearch}"
               </p>
             )}
           </div>
         )}
       </div>
 
-      {/* Right Navbar Controls */}
-      <div className="flex items-center gap-3 sm:gap-4">
-        {/* Notification Bell with Badge */}
+      {/* Right Controls */}
+      <div className="flex items-center gap-4">
+        {/* Date Badge */}
+        <DatePicker canManageHolidays={isAdminRole(user?.role)} />
+
+        {/* Notification Bell */}
         <div ref={notificationRef} className="relative">
           <button
             type="button"
-            onClick={() => setShowNotificationDropdown((current) => !current)}
-            className="relative flex h-10 w-10 items-center justify-center rounded-full text-slate-700 transition hover:bg-slate-100"
+            onClick={() => setShowNotificationDropdown((prev) => !prev)}
+            className={`relative flex h-8 w-8 items-center justify-center rounded-md text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${showNotificationDropdown ? "bg-slate-100 text-slate-900" : ""
+              }`}
             aria-label="Notifications"
             aria-expanded={showNotificationDropdown}
           >
-            <Bell className="h-5 w-5" />
-
+            <Bell className="h-[18px] w-[18px] shrink-0" />
             {unreadCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-[#ef4444] px-1 text-[10px] font-bold text-white ring-2 ring-white shadow-sm">
+              <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-xs font-bold text-white">
                 {unreadCount > 99 ? "99+" : unreadCount}
               </span>
             )}
           </button>
+
           {showNotificationDropdown && (
             <AdminNotificationDropdown
               onClose={() => setShowNotificationDropdown(false)}
@@ -356,59 +340,48 @@ function Header({
           )}
         </div>
 
-        {/* Date Badge */}
-        <DatePicker canManageHolidays={isAdminRole(user?.role)} />
-
-        {/* User Profile Pill */}
+        {/* User Profile */}
         <div className="relative" ref={profileMenuRef}>
           <button
             type="button"
-            onClick={() => setShowProfileMenu((previous) => !previous)}
-            className="flex items-center gap-2.5 rounded-full p-1 transition hover:bg-slate-100/80"
+            onClick={() => setShowProfileMenu((prev) => !prev)}
+            className="flex items-center gap-2.5 p-1 rounded-[6px] hover:bg-[#F0F1EE] transition-colors focus:outline-none focus:ring-2 focus:ring-[#2F5FD0] max-w-[200px]"
           >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#0066ff] text-xs font-extrabold text-white shadow-sm">
-              {avatarUrl ? (
-                <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
-              ) : (
-                initials
-              )}
-            </span>
-
-            <span className="hidden min-w-0 max-w-[160px] text-left sm:block">
-              <span className="block truncate text-xs font-extrabold leading-tight text-slate-900 tracking-wider uppercase">
+            <Avatar name={fullName} src={avatarUrl} size="sm" />
+            <div className="hidden sm:block text-left min-w-0 flex-1">
+              <span className="block truncate text-sm font-medium text-[#1F2933] leading-tight">
                 {fullName}
               </span>
-              <span className="block truncate text-[11px] leading-tight text-slate-500 capitalize font-medium">
+              <span className="block truncate text-[12px] text-[#7B8794] leading-tight">
                 {roleDisplay(user?.role)}
               </span>
-            </span>
-
-            <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+            </div>
+            <ChevronDown className="h-4 w-4 text-[#7B8794] shrink-0" />
           </button>
 
           {showProfileMenu && (
-            <div className="absolute right-0 top-12 z-50 w-44 overflow-hidden rounded-2xl border border-slate-100 bg-white py-1 shadow-xl">
+            <div className="absolute right-0 top-11 z-50 w-44 rounded-md border border-slate-200 bg-white py-1 shadow-md text-xs">
               <button
                 type="button"
                 onClick={() => {
                   setShowProfileMenu(false);
                   navigate("/dashboard/profile");
                 }}
-                className="w-full px-4 py-2.5 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                className="w-full px-3 py-2 text-left font-medium text-slate-700 hover:bg-slate-50 transition-colors"
               >
                 My Profile
               </button>
-
+              <div className="my-1 border-t border-slate-100" />
               <button
                 type="button"
                 onClick={() => {
                   setShowProfileMenu(false);
                   onLogout();
                 }}
-                className="w-full px-4 py-2.5 text-left text-sm font-medium text-red-600 transition hover:bg-red-50 flex items-center gap-2"
+                className="w-full px-3 py-2 text-left font-medium text-rose-600 hover:bg-rose-50 flex items-center gap-1.5 transition-colors"
               >
-                <LogOut className="h-4 w-4" />
-                Log out
+                <LogOut className="h-3.5 w-3.5" />
+                Sign Out
               </button>
             </div>
           )}

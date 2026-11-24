@@ -139,7 +139,7 @@ export default function AttendanceTodayTable({
                       <p className="font-bold text-[#0f172a] leading-tight">
                         {fullName}
                       </p>
-                      <p className="text-[11px] font-normal text-slate-400 mt-0.5 truncate">
+                      <p className="text-xs font-normal text-slate-400 mt-0.5 truncate">
                         {employeeCode}
                       </p>
                     </div>
@@ -169,17 +169,17 @@ export default function AttendanceTodayTable({
                 {/* Status */}
                 <td className="py-4 px-4 whitespace-nowrap">
                   {record.status === "on_leave" ? (
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700 border border-amber-200/70">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 border border-amber-200/70">
                       <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
                       On Leave
                     </span>
                   ) : record.status === "absent" ? (
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-2.5 py-0.5 text-[11px] font-semibold text-rose-700 border border-rose-200/70">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-semibold text-rose-700 border border-rose-200/70">
                       <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
                       Absent
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 border border-emerald-100">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 border border-emerald-100">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                       Present
                     </span>

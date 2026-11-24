@@ -1,6 +1,15 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
-import { AlertCircle, Check, Loader2, Mail, ShieldCheck } from "lucide-react";
+import {
+  AlertCircle,
+  Check,
+  Loader2,
+  LockKeyhole,
+  Mail,
+  RefreshCw,
+  ShieldCheck,
+  X,
+} from "lucide-react";
 
 import type { Department } from "../departments/types";
 import type { Employee, EmployeeCreate } from "./types";
@@ -14,6 +23,7 @@ import {
 import type { ManagerAccount } from "../auth/userService";
 import { employeeService } from "./employeeService";
 import { ApiError } from "../../services/api";
+import { Button } from "../../components/ui/Button";
 
 interface AdminEmployeeFormProps {
   departments: Department[];
@@ -182,6 +192,8 @@ function AdminEmployeeForm({
   }, [isCreating]);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const modalRef = useRef<HTMLDivElement | null>(null);
+  const formRef = useRef<HTMLFormElement | null>(null);
 
   const [lastInitialEmployee, setLastInitialEmployee] =
     useState(initialEmployee);
@@ -204,6 +216,63 @@ function AdminEmployeeForm({
   }
 
   const isEditMode = Boolean(initialEmployee);
+  const isDirty =
+    JSON.stringify(form) !== JSON.stringify(toFormState(initialEmployee)) ||
+    Boolean(photoFile) ||
+    photoRemoved;
+
+  const requestClose = useCallback(() => {
+    if (isDirty && !window.confirm("Discard your unsaved changes?")) {
+      return;
+    }
+    onCancel();
+  }, [isDirty, onCancel]);
+
+  useEffect(() => {
+    function handleKeyboard(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        requestClose();
+        return;
+      }
+
+      if (event.key !== "Tab" || !modalRef.current) return;
+      const focusable = Array.from(
+        modalRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyboard);
+    return () => document.removeEventListener("keydown", handleKeyboard);
+  }, [requestClose]);
+
+  function focusFirstError() {
+    requestAnimationFrame(() => {
+      formRef.current
+        ?.querySelector<HTMLElement>('[aria-invalid="true"]')
+        ?.focus();
+    });
+  }
+
+  function generatePassword() {
+    const value = `Temp@${Math.floor(1000 + Math.random() * 9000)}`;
+    updateField("password", value);
+    setShowPassword(true);
+    setPasswordError(null);
+  }
 
   const isEmailVerified =
     isEditMode ||
@@ -502,6 +571,7 @@ function AdminEmployeeForm({
     event.preventDefault();
 
     if (!validateIdentityFields()) {
+      focusFirstError();
       return;
     }
 
@@ -521,6 +591,7 @@ function AdminEmployeeForm({
 
       if (failedRule) {
         setPasswordError(`Password needs ${failedRule.label}.`);
+        focusFirstError();
         return;
       }
     }
@@ -528,11 +599,13 @@ function AdminEmployeeForm({
     setPasswordError(null);
 
     if (!validateSalary()) {
+      focusFirstError();
       return;
     }
 
     if (!isEditMode && !isEmailVerified) {
       setOtpError("Email verification is required before adding an employee.");
+      focusFirstError();
       return;
     }
 
@@ -560,19 +633,27 @@ function AdminEmployeeForm({
   const initials =
     `${form.first_name?.charAt(0) ?? ""}${form.last_name?.charAt(0) ?? ""}`
       .toUpperCase();
+  const passwordValue = form.password ?? "";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4 py-6">
-      <div className="relative max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-3xl bg-white shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(17,24,39,0.5)] p-4 sm:p-6" role="presentation">
+      <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="employee-form-title"
+        aria-describedby="employee-form-description"
+        className="relative flex max-h-[calc(100vh-32px)] w-full max-w-[720px] flex-col overflow-hidden rounded-none bg-white shadow-2xl"
+      >
 
         {/* HEADER */}
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-100 bg-white px-8 py-6">
+        <div className="sticky top-0 z-10 flex shrink-0 items-center justify-between border-b border-[#E5E7EB] bg-white px-6 py-5">
           <div>
-            <h2 className="text-3xl font-semibold text-[#17375e]">
+            <h2 id="employee-form-title" className="text-[18px] font-semibold text-[#111827]">
               {isEditMode ? "Edit Employee" : "Add Employee"}
             </h2>
 
-            <p className="mt-1 text-sm text-gray-500">
+            <p id="employee-form-description" className="mt-1 text-[13px] text-[#6B7280]">
               {isEditMode
                 ? "Update employee information."
                 : "Add a new employee to your organization."}
@@ -581,33 +662,40 @@ function AdminEmployeeForm({
 
           <button
             type="button"
-            onClick={onCancel}
-            aria-label="Close"
-            className="flex h-10 w-10 items-center justify-center rounded-full text-2xl text-gray-500 transition hover:bg-gray-100 hover:text-gray-800"
+            onClick={requestClose}
+            aria-label="Close employee form"
+            className="flex h-8 w-8 items-center justify-center rounded-md text-[#6B7280] transition hover:bg-[#F3F4F6] hover:text-[#111827] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]"
           >
-            ×
+            <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* FORM */}
         <form
           onSubmit={handleSubmit}
-          className="grid grid-cols-1 gap-5 px-8 pb-8 pt-6 md:grid-cols-2"
+          ref={formRef}
+          className="min-h-0 flex-1 overflow-y-auto grid grid-cols-1 gap-x-4 gap-y-5 px-6 py-6 md:grid-cols-2"
         >
 
           {/* PHOTO */}
-          <div className="col-span-1 flex items-center gap-5 md:col-span-2">
+          <section aria-labelledby="profile-section-title" className="order-1 col-span-1 md:col-span-2">
+            <div className="mb-4 flex items-center gap-3">
+              <h3 id="profile-section-title" className="text-[13px] font-semibold text-[#111827]">Profile</h3>
+              <div className="h-px flex-1 bg-[#E5E7EB]" />
+            </div>
+          <div className="flex items-center gap-4">
             <div className="relative">
 
               {photoPreview ? (
                 <img
                   src={photoPreview}
                   alt="Employee preview"
-                  className="h-24 w-24 rounded-full object-cover ring-4 ring-gray-100"
+                  onError={() => setPhotoPreview(null)}
+                  className="h-[72px] w-[72px] rounded-full border border-[#E5E7EB] object-cover"
                 />
               ) : (
-                <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[#dce8df] text-2xl font-semibold text-[#2563eb] ring-4 ring-gray-100">
-                  {initials || "?"}
+                <div className="flex h-[72px] w-[72px] items-center justify-center rounded-full bg-[#DBEAFE] text-[20px] font-semibold text-[#1D4ED8]">
+                  {initials || "EM"}
                 </div>
               )}
 
@@ -624,12 +712,12 @@ function AdminEmployeeForm({
             </div>
 
             <div>
-              <h3 className="font-semibold text-gray-800">
+                <h3 className="text-[13px] font-semibold text-[#111827]">
                 Employee Photo
               </h3>
 
-              <p className="mb-3 text-sm text-gray-500">
-                Upload a profile photo or use the initials avatar.
+              <p className="mb-3 text-[12px] text-[#6B7280]">
+                JPG or PNG, max 2 MB
               </p>
 
               <input
@@ -643,32 +731,49 @@ function AdminEmployeeForm({
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="rounded-full border border-[#2563eb] px-4 py-2 text-sm font-medium text-[#2563eb] transition hover:bg-[#2563eb] hover:text-white"
+                className="rounded-lg border border-[#D1D5DB] bg-white px-3 py-2 text-[12px] font-medium text-[#2563EB] transition hover:bg-[#EFF6FF]"
               >
                 {photoPreview ? "Change Photo" : "Upload Photo"}
               </button>
             </div>
           </div>
+          </section>
 
           {/* EMPLOYEE ID */}
-          <div>
+          <section aria-labelledby="basic-section-title" className="order-2 col-span-1 md:col-span-2">
+            <div className="mb-0 flex items-center gap-3">
+              <h3 id="basic-section-title" className="text-[13px] font-semibold text-[#111827]">Basic Information</h3>
+              <div className="h-px flex-1 bg-[#E5E7EB]" />
+            </div>
+          </section>
+          <div className="order-3">
             <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
               Employee ID
             </label>
 
-            <input
-              readOnly
-              // Create mode shows the server's preview. Nothing is reserved,
-              // so the saved ID can differ if another employee is added first.
-              value={isEditMode ? form.employee_id : nextEmployeeId}
-              placeholder={isEditMode ? "AAR001" : "Generated on save"}
-              title="Employee IDs are assigned automatically and cannot be changed."
-              className="w-full cursor-default rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700 outline-none"
-            />
+            <div className="relative">
+              <LockKeyhole className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9CA3AF]" />
+              <input
+                readOnly
+                // Create mode shows the server's preview. Nothing is reserved,
+                // so the saved ID can differ if another employee is added first.
+                value={isEditMode ? form.employee_id : nextEmployeeId}
+                placeholder={isEditMode ? "AAR001" : "Generated on save"}
+                title="Employee IDs are assigned automatically and cannot be changed."
+                className="h-10 w-full cursor-default rounded-lg border border-[#E5E7EB] bg-[#F9FAFB] pl-9 pr-3 text-[14px] text-[#6B7280] outline-none"
+              />
+            </div>
           </div>
 
+          <section aria-labelledby="job-section-title" className="order-11 col-span-1 md:col-span-2">
+            <div className="mb-0 flex items-center gap-3">
+              <h3 id="job-section-title" className="text-[13px] font-semibold text-[#111827]">Job Details</h3>
+              <div className="h-px flex-1 bg-[#E5E7EB]" />
+            </div>
+          </section>
+
           {/* EMPLOYMENT TYPE */}
-          <div>
+          <div className="order-12">
             <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
               Employment Type <span className="ml-1 text-red-500">*</span>
             </label>
@@ -693,7 +798,7 @@ function AdminEmployeeForm({
           </div>
 
 {/* SHIFT */}
-            <div>
+            <div className="order-15">
               <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
                 Shift
               </label>
@@ -735,7 +840,7 @@ function AdminEmployeeForm({
             </div>
 
           {/* FIRST NAME */}
-          <div>
+          <div className="order-4">
             <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
               First Name <span className="ml-1 text-red-500">*</span>
             </label>
@@ -769,7 +874,7 @@ function AdminEmployeeForm({
           </div>
 
           {/* LAST NAME */}
-          <div>
+          <div className="order-5">
             <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
               Last Name <span className="ml-1 text-red-500">*</span>
             </label>
@@ -803,7 +908,7 @@ function AdminEmployeeForm({
           </div>
 
           {/* EMAIL */}
-          <div className={!isEditMode && otpSent && !isEmailVerified ? "col-span-1 md:col-span-2" : ""}>
+          <div className={`order-6 ${!isEditMode && otpSent && !isEmailVerified ? "col-span-1 md:col-span-2" : ""}`}>
             <div className="mb-1.5 flex items-center justify-between">
               <label className="block text-sm font-medium text-[#17375e]">
                 Email Address <span className="ml-1 text-red-500">*</span>
@@ -966,7 +1071,7 @@ function AdminEmployeeForm({
           </div>
 
           {/* PHONE */}
-          <div>
+          <div className="order-7">
             <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
               Phone <span className="ml-1 text-red-500">*</span>
             </label>
@@ -1018,7 +1123,7 @@ function AdminEmployeeForm({
           </div>
 
           {/* REPORTING MANAGER */}
-          <div>
+          <div className="order-16">
             <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
               Reporting Manager
             </label>
@@ -1054,13 +1159,18 @@ function AdminEmployeeForm({
 
           {/* LOGIN CREDENTIALS - create mode only */}
           {!isEditMode && (
-            <div className="md:col-span-2">
+            <section aria-labelledby="access-section-title" className="order-20 md:col-span-2">
+              <div className="mb-4 flex items-center gap-3">
+                <h3 id="access-section-title" className="text-[13px] font-semibold text-[#111827]">Account Access</h3>
+                <div className="h-px flex-1 bg-[#E5E7EB]" />
+              </div>
               <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
                 Temporary Password{" "}
               </label>
 
               <div className="relative">
                 <input
+                  id="temporary-password"
                   type={showPassword ? "text" : "password"}
                   value={form.password ?? ""}
                   onChange={(event) => {
@@ -1069,7 +1179,8 @@ function AdminEmployeeForm({
                   }}
                   placeholder="Employee login password"
                   autoComplete="new-password"
-                  className={`w-full rounded-xl border px-4 py-3 pr-12 text-sm outline-none transition focus:ring-2 ${
+                  aria-invalid={Boolean(passwordError)}
+                  className={`h-10 w-full rounded-lg border px-3 py-2 pr-12 text-[14px] outline-none transition focus:ring-[3px] ${
                     passwordError
                       ? "border-red-400 focus:border-red-400 focus:ring-red-400/10"
                       : "border-gray-200 focus:border-[#2563eb] focus:ring-[#2563eb]/10"
@@ -1082,7 +1193,7 @@ function AdminEmployeeForm({
                   aria-label={
                     showPassword ? "Hide password" : "Show password"
                   }
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold text-[#2563eb] hover:underline"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] font-medium text-[#2563EB] hover:underline"
                 >
                   {showPassword ? "Hide" : "Show"}
                 </button>
@@ -1099,11 +1210,33 @@ function AdminEmployeeForm({
                   you can share it with the employee.
                 </p>
               )}
-            </div>
+              <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 rounded-lg bg-[#F9FAFB] p-3 sm:grid-cols-5">
+                {[
+                   ["8+ characters", passwordValue.length >= 8],
+                   ["Uppercase", /[A-Z]/.test(passwordValue)],
+                   ["Lowercase", /[a-z]/.test(passwordValue)],
+                   ["Number", /[0-9]/.test(passwordValue)],
+                   ["Special character", /[^A-Za-z0-9]/.test(passwordValue)],
+                ].map(([label, valid]) => (
+                  <span key={String(label)} className={`flex items-center gap-1.5 text-[12px] ${valid ? "text-[#15803D]" : "text-[#6B7280]"}`}>
+                    <span className={`h-1.5 w-1.5 rounded-full ${valid ? "bg-[#22C55E]" : "bg-[#D1D5DB]"}`} />
+                    {label}
+                  </span>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={generatePassword}
+                className="mt-2 inline-flex items-center gap-1.5 text-[12px] font-medium text-[#2563EB] hover:underline"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                Generate password
+              </button>
+            </section>
           )}
 
           {/* DEPARTMENT */}
-          <div>
+          <div className="order-13">
             <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
               Department
             </label>
@@ -1136,7 +1269,7 @@ function AdminEmployeeForm({
           </div>
 
           {/* DESIGNATION */}
-          <div>
+          <div className="order-14">
             <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
               Designation
             </label>
@@ -1153,7 +1286,7 @@ function AdminEmployeeForm({
           </div>
 
           {/* JOINING DATE */}
-          <div>
+          <div className="order-17">
             <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
               Joining Date
             </label>
@@ -1170,7 +1303,7 @@ function AdminEmployeeForm({
           </div>
 
           {/* DATE OF BIRTH */}
-          <div>
+          <div className="order-8">
             <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
               Date of Birth <span className="ml-1 text-red-500">*</span>
             </label>
@@ -1187,7 +1320,7 @@ function AdminEmployeeForm({
           </div>
 
           {/* GENDER */}
-          <div>
+          <div className="order-9">
             <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
               Gender <span className="ml-1 text-red-500">*</span>
             </label>
@@ -1208,7 +1341,7 @@ function AdminEmployeeForm({
           </div>
 
           {/* WORK LOCATION */}
-          <div>
+          <div className="order-18">
             <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
               Work Location
             </label>
@@ -1224,7 +1357,7 @@ function AdminEmployeeForm({
           </div>
 
           {/* SALARY STRUCTURE */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:col-span-2">
+          <div className="order-19 grid grid-cols-1 gap-4 sm:grid-cols-2 md:col-span-2">
             <div>
               <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
                 Salary Structure
@@ -1307,7 +1440,7 @@ function AdminEmployeeForm({
           </div>
 
           {/* ADDRESS */}
-          <div className="col-span-1 md:col-span-2">
+          <div className="order-10 col-span-1 md:col-span-2">
             <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
               Address
             </label>
@@ -1325,40 +1458,38 @@ function AdminEmployeeForm({
 
           {/* ERROR */}
           {errorMessage && (
-            <div className="col-span-1 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600 md:col-span-2">
+            <div className="order-21 col-span-1 rounded-lg bg-[#FEF2F2] px-4 py-3 text-[12px] text-[#B91C1C] md:col-span-2">
               {errorMessage}
             </div>
           )}
 
           {/* BUTTONS */}
-          <div className="col-span-1 mt-2 flex justify-end gap-3 border-t border-gray-100 pt-5 md:col-span-2">
-            <button
+          <div className="sticky bottom-0 z-10 order-22 col-span-1 mt-2 flex justify-end gap-2 border-t border-[#E5E7EB] bg-white px-0 pt-4 md:col-span-2">
+            <Button
               type="button"
-              onClick={onCancel}
+              variant="outline"
+              size="md"
+              className="!rounded-none"
+              onClick={requestClose}
               disabled={isSubmitting}
-              className="rounded-full border border-gray-200 px-6 py-3 text-sm font-medium text-gray-600 transition hover:bg-gray-50 disabled:opacity-50"
             >
               Cancel
-            </button>
-
-            
-
-            <button
+            </Button>
+            <Button
               type="submit"
+              variant="primary"
+              size="md"
+              className="!rounded-none"
+              isLoading={isSubmitting}
               disabled={isSubmitting || (!isEditMode && !isEmailVerified)}
               title={
                 !isEditMode && !isEmailVerified
                   ? "Verify employee email to enable"
                   : undefined
               }
-              className="rounded-full bg-[#2563eb] px-7 py-3 text-sm font-semibold text-white transition hover:bg-[#385b45] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isSubmitting
-                ? "Saving…"
-                : isEditMode
-                  ? "Save Changes"
-                  : "Add Employee"}
-            </button>
+              {isEditMode ? "Save Changes" : "Add Employee"}
+            </Button>
           </div>
         </form>
       </div>

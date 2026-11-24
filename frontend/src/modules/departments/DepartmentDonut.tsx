@@ -3,6 +3,7 @@ import { ChevronRight, Users } from "lucide-react";
 
 import {
   type DepartmentShare,
+  DEPARTMENT_COLORS,
 } from "../dashboard/dashboardData";
 import type { DepartmentCount } from "../dashboard/useDashboardMetrics";
 import {
@@ -63,11 +64,11 @@ export default function DepartmentDonut({
       ? counts.map((count, index) => ({
           label: count.label,
           value: count.value,
-          color: index === 0 ? "#0066ff" : index === 1 ? "#8b5cf6" : "#f97316",
+           color: DEPARTMENT_COLORS[index % DEPARTMENT_COLORS.length],
         }))
       : [
-          { label: "Dev", value: 1, color: "#0066ff" },
-          { label: "HR", value: 1, color: "#8b5cf6" },
+           { label: "Dev", value: 1, color: DEPARTMENT_COLORS[0] },
+           { label: "HR", value: 1, color: DEPARTMENT_COLORS[1] },
         ];
 
   const total = shares.reduce((sum, share) => sum + share.value, 0);
@@ -90,13 +91,13 @@ export default function DepartmentDonut({
 
   return (
     <div
-      className={`rounded-3xl border border-slate-100 bg-white p-6 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between ${className}`}
+      className={`flex h-full flex-col rounded-xl border border-[#E5E7EB] bg-white p-5 shadow-none ${className}`}
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Users className="h-4.5 w-4.5 text-[#0066ff]" />
-          <h2 className="text-base font-bold text-[#0f172a] font-manrope">
+          <Users className="h-[18px] w-[18px] text-[#2563EB]" />
+          <h2 className="text-[14px] font-semibold text-[#111827]">
             Employee by Department
           </h2>
         </div>
@@ -104,7 +105,7 @@ export default function DepartmentDonut({
         <button
           type="button"
           onClick={onViewAll}
-          className="inline-flex items-center gap-1 text-xs font-semibold text-[#0066ff] hover:underline"
+          className="inline-flex items-center gap-1 text-[12px] font-medium text-[#2563EB] hover:underline"
         >
           View All
           <ChevronRight className="h-3.5 w-3.5" />
@@ -184,6 +185,13 @@ export default function DepartmentDonut({
             </li>
           ))}
         </ul>
+      </div>
+
+      <div className="mt-4 flex items-center justify-between border-t border-[#F3F4F6] pt-3">
+        <span className="text-[11px] text-[#6B7280]">Employee snapshot</span>
+        <span className="text-[11px] font-medium text-[#374151]">
+          {total} employees across {shares.length} departments
+        </span>
       </div>
     </div>
   );

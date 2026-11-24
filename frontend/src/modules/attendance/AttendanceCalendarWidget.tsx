@@ -112,7 +112,7 @@ export default function AttendanceCalendarWidget({
         {WEEKDAYS.map((day) => (
           <span
             key={day}
-            className="text-[11px] font-semibold text-slate-400"
+            className="text-xs font-semibold text-slate-400"
           >
             {day}
           </span>
@@ -161,7 +161,7 @@ export default function AttendanceCalendarWidget({
       </div>
 
       {/* Legend */}
-      <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-center gap-4 text-[11px] font-medium text-slate-500">
+      <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-center gap-4 text-xs font-medium text-slate-500">
         <span className="flex items-center gap-1.5">
           <span className="h-2 w-2 rounded-full bg-emerald-500" />
           Present

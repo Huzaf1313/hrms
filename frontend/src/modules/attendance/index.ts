@@ -5,5 +5,7 @@ export { default as AdminRegularizationRequests } from "./AdminRegularizationReq
 export { default as EmployeeAttendanceRegularizationModal } from "./EmployeeAttendanceRegularizationModal";
 export { default as AttendanceTrendChart } from "./AttendanceTrendChart";
 export { default as RegularizationRequestsCard } from "./RegularizationRequestsCard";
+export { AttendanceReportsView } from "./components/AttendanceReportsView";
 export { attendanceService, employeeAttendance } from "./attendanceService";
+export { regularizationService } from "./services/regularizationService";
 export * from "./types";

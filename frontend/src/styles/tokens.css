@@ -1,0 +1,56 @@
+:root {
+  /* Surfaces & Page */
+  --bg-page: #F6F7F5;
+  --bg-panel: #FFFFFF;
+  --bg-subtle: #F0F1EE;
+  --border: #E4E6E1;
+
+  /* Typography Colors */
+  --text: #1F2933;
+  --text-2: #52606D;
+  --text-muted: #7B8794;
+
+  /* Brand Colors */
+  --brand: #2F5FD0;
+  --brand-hover: #264FB0;
+  --brand-tint: #E8EEFB;
+
+  /* Semantic Status Colors */
+  --ok-bg: #E3F3EA;
+  --ok-fg: #1E6B45;
+  --warn-bg: #FBF0D9;
+  --warn-fg: #8A5A00;
+  --bad-bg: #FBE4E1;
+  --bad-fg: #A12D22;
+  --leave-bg: #E6EEFB;
+  --leave-fg: #274C9E;
+  --off-bg: #EEEFEC;
+  --off-fg: #5F6B76;
+
+  /* Leave-Type Accents (ONLY for leave types) */
+  --lt-casual: #2F5FD0;
+  --lt-sick: #C2410C;
+  --lt-earned: #1E6B45;
+  --lt-comp: #6D4AB5;
+  --lt-unpaid: #7B8794;
+
+  /* Layout, Radius & Controls */
+  --radius-panel: 8px;
+  --radius-control: 6px;
+  --height-control: 34px;
+  --height-row: 48px;
+  --height-header-row: 40px;
+}
+
+html {
+  font-size: 16px;
+}
+
+body,
+#root {
+  background: var(--bg-page);
+  color: var(--text);
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}

@@ -18,6 +18,7 @@ export const queryKeys = {
   admin: {
     dashboard: () => ["admin", "dashboard"] as const,
     dashboardMetrics: () => ["admin", "dashboardMetrics"] as const,
+    announcements: () => ["admin", "announcements"] as const,
     attendanceSummary: (date: string, deptId?: string) =>
       ["admin", "attendance", "summary", { date, deptId: deptId || "" }] as const,
     attendanceTrend: (startDate: string, endDate: string, deptId?: string) =>

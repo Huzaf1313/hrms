@@ -170,7 +170,7 @@ async def get_announcement(
         if hasattr(announcement, "model_dump")
         else announcement,
         ttl=ADMIN_ANNOUNCEMENT_DETAIL_CACHE_TTL,
-    )
+    )  
 
     return APIResponse(
         success=True,

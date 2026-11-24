@@ -144,6 +144,12 @@ class Permission(str, Enum):
 # HR sees and does everything.
 ADMIN_PERMISSIONS = set(Permission)
 
+# HR can administer employee records but cannot perform destructive hard
+# deletes. Deactivation remains available through EMPLOYEES_UPDATE.
+HR_ADMIN_PERMISSIONS = ADMIN_PERMISSIONS - {
+    Permission.EMPLOYEES_DELETE,
+}
+
 # Managers run a team day to day. Hiring, payroll and payslips stay with HR:
 # they are organisation-wide, carry compensation data, and are not
 # team-scoped - a manager has no business seeing another team's pay.
@@ -225,7 +231,7 @@ ROLE_PERMISSIONS: dict[UserRole, set[Permission]] = {
     # permission but account control: only it can create, deactivate or
     # unlock HR and manager accounts (see require_super_admin).
     UserRole.SUPER_ADMIN: ADMIN_PERMISSIONS,
-    UserRole.HR_ADMIN: ADMIN_PERMISSIONS,
+    UserRole.HR_ADMIN: HR_ADMIN_PERMISSIONS,
     UserRole.MANAGER: MANAGER_PERMISSIONS,
     UserRole.EMPLOYEE: EMPLOYEE_PERMISSIONS,
 }

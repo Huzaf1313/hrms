@@ -220,6 +220,7 @@ function Attendance() {
 
   useEffect(() => {
     let isCurrent = true;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsLoading(true);
     setError("");
 

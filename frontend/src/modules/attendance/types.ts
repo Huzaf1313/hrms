@@ -93,6 +93,7 @@ export interface EmployeeAttendanceRecord {
   is_overtime?: boolean;
   is_late?: boolean;
   is_overnight?: boolean;
+  is_regularized?: boolean;
   created_at: string | null;
   updated_at: string | null;
 }

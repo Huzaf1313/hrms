@@ -3,7 +3,7 @@ import { ArrowRight } from "lucide-react";
 
 /** Shared panel styling for every admin dashboard card. */
 export const DASHBOARD_CARD_CLASS =
-  "rounded-2xl border border-gray-100 bg-white p-5 shadow-sm";
+  "h-full rounded-xl border border-[#E5E7EB] bg-white p-5 shadow-none";
 
 interface DashboardCardProps {
   title: string;
@@ -25,10 +25,10 @@ export default function DashboardCard({
     <div className={`${DASHBOARD_CARD_CLASS} ${className}`}>
       <div className="mb-4 flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="text-[15px] font-bold text-gray-900">{title}</h2>
+          <h2 className="text-[14px] font-semibold text-[#111827]">{title}</h2>
 
           {eyebrow && (
-            <p className="mt-0.5 text-[11px] text-gray-400">{eyebrow}</p>
+            <p className="mt-0.5 text-[12px] text-[#6B7280]">{eyebrow}</p>
           )}
         </div>
 
