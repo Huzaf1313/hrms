@@ -100,44 +100,33 @@ function formatNotificationTime(createdAt: string) {
 }
 
 function getNotificationTarget(notification: EmployeeNotification) {
-  // Normalize support-ticket notifications to the actual Help & Support route.
-  if (
-    notification.type.toLowerCase().includes("support_ticket") ||
-    notification.target === "/employee/help-support"
-  ) {
+  const type = notification.type.toLowerCase();
+
+  if (type.includes("support_ticket")) {
     return "/employee/help";
   }
 
-  if (notification.target) {
-    return notification.target;
+  if (type.includes("leave")) {
+    return "/employee/leave";
   }
 
-  switch (notification.type.toLowerCase()) {
-    case "announcement":
-    case "announcement_created":
-      return "/employee/announcements";
-
-    case "leave":
-    case "leave_approved":
-    case "leave_rejected":
-      return "/employee/leave";
-
-    case "attendance_regularization":
-    case "regularization_approved":
-    case "regularization_rejected":
-      return "/employee/attendance";
-
-    case "document":
-    case "document_uploaded":
-      return "/employee/documents";
-
-    case "payroll":
-    case "payslip":
-      return "/employee/payroll";
-
-    default:
-      return null;
+  if (type.includes("regularization")) {
+    return "/employee/attendance";
   }
+
+  if (type.includes("announcement")) {
+    return "/employee/announcements";
+  }
+
+  if (type.includes("document")) {
+    return "/employee/documents";
+  }
+
+  if (type.includes("payroll") || type.includes("payslip")) {
+    return "/employee/payroll";
+  }
+
+  return notification.target || null;
 }
 
 function EmployeeNotificationDropdown({
@@ -197,16 +186,20 @@ function EmployeeNotificationDropdown({
           previous.map((item) =>
             item.id === notification.id
               ? {
-                  ...item,
-                  is_read: true,
-                  read_at: new Date().toISOString(),
-                }
+                ...item,
+                is_read: true,
+                read_at: new Date().toISOString(),
+              }
               : item,
           ),
         );
 
-        updateUnreadCount(Math.max(0, unreadCount - 1));
-      }      
+        setUnreadCount((previous) => {
+          const updated = Math.max(0, previous - 1);
+          onUnreadCountChange?.(updated);
+          return updated;
+        });
+      }
       console.log("Clicked notification:", {
         type: notification.type,
         target: notification.target,
@@ -270,9 +263,8 @@ function EmployeeNotificationDropdown({
 
             <p className="text-[11px] text-gray-500">
               {unreadCount > 0
-                ? `${unreadCount} unread notification${
-                    unreadCount === 1 ? "" : "s"
-                  }`
+                ? `${unreadCount} unread notification${unreadCount === 1 ? "" : "s"
+                }`
                 : "You're all caught up"}
             </p>
           </div>
@@ -339,11 +331,10 @@ function EmployeeNotificationDropdown({
                 type="button"
                 onClick={() => handleNotificationClick(notification)}
                 disabled={isProcessing}
-                className={`group flex w-full gap-3 border-b border-gray-100 px-4 py-3.5 text-left transition last:border-b-0 ${
-                  notification.is_read
+                className={`group flex w-full gap-3 border-b border-gray-100 px-4 py-3.5 text-left transition last:border-b-0 ${notification.is_read
                     ? "bg-white hover:bg-gray-50"
                     : "bg-blue-50/40 hover:bg-blue-50/70"
-                } disabled:cursor-wait`}
+                  } disabled:cursor-wait`}
               >
                 {/* Icon */}
                 <div
@@ -358,11 +349,10 @@ function EmployeeNotificationDropdown({
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
                     <h4
-                      className={`line-clamp-1 text-sm ${
-                        notification.is_read
+                      className={`line-clamp-1 text-sm ${notification.is_read
                           ? "font-medium text-gray-700"
                           : "font-semibold text-gray-900"
-                      }`}
+                        }`}
                     >
                       {notification.title}
                     </h4>

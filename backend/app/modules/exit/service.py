@@ -330,8 +330,8 @@ class ExitRequestService:
                 notification_type="resignation_submitted",
                 title="Resignation submitted",
                 message=(
-                    f"Notice period {notice_period_days} days, "
-                    f"last working day {last_working_day}."
+                    f"Notice period {payload.notice_period_days} days, "
+                    f"last working day {payload.last_working_day}."
                 ),
                 target="/dashboard/exit-requests",
                 target_id=str(created.get("_id")),

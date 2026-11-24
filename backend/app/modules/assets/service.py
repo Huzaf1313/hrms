@@ -1,6 +1,5 @@
 import re
 from datetime import date, datetime, timezone
-
 from pymongo.errors import DuplicateKeyError
 
 from app.core.exceptions import AppException
@@ -20,9 +19,12 @@ from app.utils.pagination import PaginationParams
 
 # Mongo/BSON stores datetime, never a bare date. Every date-only field on an
 # asset is therefore written at midnight and read back as a date.
-def to_datetime(value: date | None) -> datetime | None:
+def to_datetime(value: date | str | None) -> datetime | None:
     if value is None:
         return None
+
+    if isinstance(value, str):
+        value = date.fromisoformat(value)
 
     return datetime(value.year, value.month, value.day)
 

@@ -121,7 +121,11 @@ class AdminNotificationService:
         employee = await self._load_employee(employee_id)
 
         recipients = await self._recipients_for(employee)
-
+        print("ADMIN NOTIFICATION DEBUG")
+        print("Employee ID:", employee_id)
+        print("Employee found:", employee is not None)
+        print("Created by:", employee.get("created_by") if employee else None)
+        print("Resolved admin recipients:", recipients)         
         if not recipients:
             return []
 
@@ -142,7 +146,7 @@ class AdminNotificationService:
         ]
 
         created = await self.repository.create_many(documents)
-
+        print("Notifications created:", len(created))
         return [self._serialize(item) for item in created]
 
     async def get_for_admin(

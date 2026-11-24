@@ -28,7 +28,7 @@ function EmployeeAttendanceRegularizationModal({
   attendanceRecords,
 }: EmployeeAttendanceRegularizationModalProps) {
   const [selectedDate, setSelectedDate] = useState("");
-  const [issueType, setIssueType] = useState("Missing Check-Out");
+  const [issueType, setIssueType] = useState("Missing Punch Out");
   const [requestedTime, setRequestedTime] = useState("");
   const [reason, setReason] = useState("");
   const [attachment, setAttachment] = useState<File | null>(null);
@@ -39,7 +39,7 @@ function EmployeeAttendanceRegularizationModal({
     if (isSubmitting) return;
 
     setSelectedDate("");
-    setIssueType("Missing Check-Out");
+    setIssueType("Missing Punch Out");
     setRequestedTime("");
     setReason("");
     setAttachment(null);
@@ -135,8 +135,8 @@ function EmployeeAttendanceRegularizationModal({
 
     if (!record) {
       // No attendance document means the employee is requesting
-      // a missing check-in.
-      setIssueType("Missing Check-In");
+      // a Missing Punch In.
+      setIssueType("Missing Punch In");
       return;
     }
 
@@ -144,9 +144,9 @@ function EmployeeAttendanceRegularizationModal({
     const checkOut = resolveCheckOut(record);
 
     if (!checkIn && checkOut) {
-      setIssueType("Missing Check-In");
+      setIssueType("Missing Punch In");
     } else if (checkIn && !checkOut) {
-      setIssueType("Missing Check-Out");
+      setIssueType("Missing Punch Out");
     } else {
       setIssueType("");
     }
@@ -212,10 +212,10 @@ function EmployeeAttendanceRegularizationModal({
       return;
     }
 
-    // Missing Check-Out requires an existing attendance record.
-    if (issueType === "Missing Check-Out" && !selectedAttendance) {
+    // Missing Punch Out requires an existing attendance record.
+    if (issueType === "Missing Punch Out" && !selectedAttendance) {
       setFormError(
-        "An attendance record is required for a Missing Check-Out request.",
+        "An attendance record is required for a Missing Punch Out request.",
       );
       return;
     }
@@ -226,21 +226,21 @@ function EmployeeAttendanceRegularizationModal({
       const checkOut = resolveCheckOut(selectedAttendance);
 
       if (
-        issueType === "Missing Check-In" &&
+        issueType === "Missing Punch In" &&
         (checkIn || !checkOut)
       ) {
         setFormError(
-          "The selected attendance record is not eligible for a Missing Check-In request.",
+          "The selected attendance record is not eligible for a Missing Punch In request.",
         );
         return;
       }
 
       if (
-        issueType === "Missing Check-Out" &&
+        issueType === "Missing Punch Out" &&
         (!checkIn || checkOut)
       ) {
         setFormError(
-          "The selected attendance record is not eligible for a Missing Check-Out request.",
+          "The selected attendance record is not eligible for a Missing Punch Out request.",
         );
         return;
       }
@@ -254,11 +254,11 @@ function EmployeeAttendanceRegularizationModal({
         date: selectedDate,
         issue_type: issueType,
         requested_check_in:
-          issueType === "Missing Check-In"
+          issueType === "Missing Punch In"
             ? `${selectedDate}T${requestedTime}:00+05:30`
             : null,
         requested_check_out:
-          issueType === "Missing Check-Out"
+          issueType === "Missing Punch Out"
             ? `${selectedDate}T${requestedTime}:00+05:30`
             : null,
         reason: reason.trim(),
@@ -372,16 +372,16 @@ function EmployeeAttendanceRegularizationModal({
                     (!selectedAttendance ||
                       (!resolveCheckIn(selectedAttendance) &&
                         resolveCheckOut(selectedAttendance))) && (
-                      <option value="Missing Check-In">
-                        Missing Check-In
+                      <option value="Missing Punch In">
+                        Missing Punch In
                       </option>
                     )}
 
                   {selectedAttendance &&
                     resolveCheckIn(selectedAttendance) &&
                     !resolveCheckOut(selectedAttendance) && (
-                      <option value="Missing Check-Out">
-                        Missing Check-Out
+                      <option value="Missing Punch Out">
+                        Missing Punch Out
                       </option>
                     )}
                 </select>
@@ -402,7 +402,7 @@ function EmployeeAttendanceRegularizationModal({
               ) : !selectedAttendance ? (
                 <p className="mt-3 text-sm text-gray-500">
                   No attendance record exists for this date.
-                  You can request a Missing Check-In correction.
+                  You can request a Missing Punch In correction.
                 </p>
               ) : (
                 <div className="mt-4 grid gap-4 sm:grid-cols-3">
@@ -461,7 +461,7 @@ function EmployeeAttendanceRegularizationModal({
             <div className="mt-5">
 
               <label className="text-sm font-semibold text-gray-700">
-                {issueType === "Missing Check-In"
+                {issueType === "Missing Punch In"
                   ? "Requested Check-In Time"
                   : "Requested Check-Out Time"}{" "}
                 <span className="text-red-500">*</span>
