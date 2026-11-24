@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { Package, X } from "lucide-react";
 
 import { ASSET_CATEGORY_ICONS } from "./assetData";
@@ -14,18 +15,18 @@ const MONTHS = [
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
 
-function formatDate(value: string | null): string {
-  if (!value) return "-";
+function formatDate(value: string | null | undefined): string | null {
+  if (!value) return null;
 
   const [year, month, day] = value.split("T")[0].split("-").map(Number);
 
-  if (!year || !month || !day || !MONTHS[month - 1]) return "-";
+  if (!year || !month || !day || !MONTHS[month - 1]) return null;
 
   return `${String(day).padStart(2, "0")} ${MONTHS[month - 1]} ${year}`;
 }
 
-function formatMoney(value: number | null): string {
-  if (value == null) return "-";
+function formatMoney(value: number | null | undefined): string | null {
+  if (value == null) return null;
 
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
@@ -34,18 +35,64 @@ function formatMoney(value: number | null): string {
   }).format(value);
 }
 
+function getWarrantyStatus(
+  dateStr: string | null | undefined,
+): { label: string; className: string } | null {
+  if (!dateStr) return null;
+
+  const parts = dateStr.split("T")[0].split("-").map(Number);
+  if (parts.length < 3 || isNaN(parts[0]) || isNaN(parts[1]) || isNaN(parts[2])) {
+    return null;
+  }
+
+  const expiryDate = new Date(parts[0], parts[1] - 1, parts[2]);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const diffMs = expiryDate.getTime() - today.getTime();
+  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 0) {
+    return {
+      label: "Expired",
+      className: "bg-[#FEF2F2] text-[#B91C1C]",
+    };
+  }
+  if (diffDays <= 60) {
+    return {
+      label: "Expiring soon",
+      className: "bg-[#FFFBEB] text-[#B45309]",
+    };
+  }
+  return {
+    label: "Active",
+    className: "bg-[#ECFDF5] text-[#047857]",
+  };
+}
+
 const statusStyles: Record<AssetStatus, string> = {
-  in_use: "bg-emerald-500/15 text-emerald-300",
-  available: "bg-blue-500/15 text-blue-300",
-  pending_return: "bg-orange-500/15 text-orange-300",
-  maintenance: "bg-violet-500/15 text-violet-300",
+  available: "bg-[#E8EEFB] text-[#2F5FD0] border border-[#CBDCF8]",
+  in_use: "bg-[#E3F5E1] text-[#1E6B45] border border-[#BCE8B5]",
+  pending_return: "bg-[#FEF3EB] text-[#B95000] border border-[#FAD8B8]",
+  maintenance: "bg-[#F3EEFA] text-[#693893] border border-[#DAC9EE]",
 };
 
-function Row({ label, value }: { label: string; value: string }) {
+interface RowProps {
+  label: string;
+  value: React.ReactNode;
+}
+
+function Row({ label, value }: RowProps) {
+  const isEmpty = value == null || value === "" || value === "-";
+
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-slate-100 py-2.5 last:border-0">
-      <span className="shrink-0 text-sm font-bold text-slate-900">{label}</span>
-      <span className="min-w-0 break-words text-right text-sm text-slate-400">{value}</span>
+    <div className="flex flex-col justify-center py-2 md:py-0 md:min-h-[42px] md:flex-row md:items-center border-b border-[#F0F1F3] last:border-0 text-left">
+      <span className="text-[12px] font-normal text-[#6B7280] md:w-[180px] md:shrink-0 md:text-[13px]">
+        {label}
+      </span>
+      <div className="mt-0.5 md:mt-0 min-w-0 flex-1 text-left text-[13px] font-medium text-[#111827] break-words">
+        {isEmpty ? <span className="text-[#9CA3AF]">—</span> : value}
+      </div>
     </div>
   );
 }
@@ -53,105 +100,198 @@ function Row({ label, value }: { label: string; value: string }) {
 /**
  * Full record for one asset.
  *
- * Split into a dark identity panel and a light detail panel: the left carries
- * what the item *is* (category, tag, holder, status) and stays fixed while the
- * right column scrolls, so the asset is still identifiable part-way down a long
- * procurement history.
+ * Split into a light neutral summary panel and a detail panel.
  */
 export default function AssetDetailModal({ asset, onClose }: AssetDetailModalProps) {
   const Icon = ASSET_CATEGORY_ICONS[asset.category] ?? Package;
+  const modalRef = useRef<HTMLDivElement | null>(null);
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+  const previousActiveElement = useRef<HTMLElement | null>(null);
+
+  const warrantyStatus = getWarrantyStatus(asset.warranty_expiry);
+  const formattedWarrantyDate = formatDate(asset.warranty_expiry);
+
+  useEffect(() => {
+    previousActiveElement.current = document.activeElement as HTMLElement | null;
+    closeButtonRef.current?.focus();
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+
+      if (event.key === "Tab" && modalRef.current) {
+        const focusableElements = modalRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        );
+        if (!focusableElements.length) return;
+
+        const first = focusableElements[0];
+        const last = focusableElements[focusableElements.length - 1];
+
+        if (event.shiftKey) {
+          if (document.activeElement === first) {
+            last.focus();
+            event.preventDefault();
+          }
+        } else {
+          if (document.activeElement === last) {
+            first.focus();
+            event.preventDefault();
+          }
+        }
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = originalOverflow;
+      previousActiveElement.current?.focus();
+    };
+  }, [onClose]);
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4 py-6 backdrop-blur-[2px]"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-[2px]"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div className="flex max-h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl sm:flex-row">
-        {/* Identity panel */}
-        <aside className="flex shrink-0 flex-col bg-slate-900 px-6 py-6 text-white sm:w-60">
-          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/15">
-            <Icon className="h-6 w-6 text-white" />
-          </span>
+      <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="asset-detail-title"
+        className="flex max-h-[calc(100vh-48px)] w-full max-w-[720px] mx-4 flex-col overflow-hidden rounded bg-white shadow-[0_12px_32px_rgba(16,24,40,0.18)] md:flex-row"
+      >
+        {/* Left summary panel */}
+        <aside className="flex shrink-0 flex-col bg-[#F9FAFB] border-b md:border-b-0 md:border-r border-[#E5E7EB] p-5 md:p-6 md:w-[240px]">
+          <div className="flex items-center gap-3.5 md:block">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-[#E8EEFB] text-[#2F5FD0]">
+              <Icon className="h-5 w-5 shrink-0" />
+            </span>
 
-          <h2 className="mt-4 text-lg font-bold leading-snug">{asset.name}</h2>
-          <p className="mt-1 text-sm font-medium text-slate-400">{asset.asset_tag}</p>
-
-          <span
-            className={`mt-4 inline-flex w-fit items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium ${statusStyles[asset.status]}`}
-          >
-            <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
-            {ASSET_STATUS_LABELS[asset.status]}
-          </span>
-
-          <div className="mt-6 border-t border-white/10 pt-4">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-              Assigned To
-            </p>
-            <p className="mt-1 truncate text-sm font-semibold text-white">
-              {asset.assigned_to_name ?? "Unassigned"}
-            </p>
-            {asset.department_name && (
-              <p className="mt-0.5 truncate text-xs text-slate-400">
-                {asset.department_name}
-              </p>
-            )}
+            <div className="min-w-0 flex-1 md:mt-4">
+              <h2 className="text-[16px] font-semibold text-[#111827] truncate leading-tight">
+                {asset.name}
+              </h2>
+              <div className="flex items-center gap-2 mt-0.5 md:block">
+                <p className="text-[13px] text-[#6B7280]">{asset.asset_tag}</p>
+                <span className="inline-block md:hidden text-[#D1D5DB]">•</span>
+                <div className="md:mt-3">
+                  <span
+                    className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] md:text-[12px] font-medium ${statusStyles[asset.status]}`}
+                  >
+                    <span className="h-1.5 w-1.5 rounded-full bg-current opacity-80" />
+                    {ASSET_STATUS_LABELS[asset.status]}
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="mt-4 border-t border-white/10 pt-4">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-              Issue Date
-            </p>
-            <p className="mt-1 text-sm font-semibold text-slate-200">
-              {formatDate(asset.issue_date)}
-            </p>
+          <div className="mt-4 pt-3 border-t border-[#E5E7EB] grid grid-cols-2 gap-4 md:block md:mt-6 md:pt-4">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[#6B7280]">
+                Assigned To
+              </p>
+              <p
+                className="mt-1 truncate text-[13px] font-medium text-[#111827]"
+                title={asset.assigned_to_name ?? "Unassigned"}
+              >
+                {asset.assigned_to_name ?? "Unassigned"}
+              </p>
+              {asset.department_name && (
+                <p className="mt-0.5 truncate text-[12px] text-[#6B7280]" title={asset.department_name}>
+                  {asset.department_name}
+                </p>
+              )}
+            </div>
+
+            <div className="md:mt-4 md:border-t md:border-[#E5E7EB] md:pt-4">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[#6B7280]">
+                Issue Date
+              </p>
+              <p className="mt-1 text-[13px] font-medium text-[#111827]">
+                {formatDate(asset.issue_date) ?? <span className="text-[#9CA3AF]">—</span>}
+              </p>
+            </div>
           </div>
         </aside>
 
-        {/* Detail panel */}
-        <div className="flex min-w-0 flex-1 flex-col">
-          <div className="flex items-center justify-end border-b border-slate-200 px-6 py-3">
+        {/* Right detail panel */}
+        <div className="flex min-w-0 flex-1 flex-col bg-white">
+          <div className="flex h-[56px] shrink-0 items-center justify-between border-b border-[#E5E7EB] px-6">
+            <h1 id="asset-detail-title" className="text-[16px] font-semibold text-[#111827]">
+              Asset details
+            </h1>
             <button
+              ref={closeButtonRef}
               type="button"
               onClick={onClose}
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100"
+              className="flex h-8 w-8 items-center justify-center rounded text-[#6B7280] transition-colors hover:bg-[#F3F4F6] hover:text-[#111827] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0] cursor-pointer"
               aria-label="Close"
             >
-              <X className="h-5 w-5" />
+              <X className="h-4 w-4" />
             </button>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[#6B7280]">
+              General
+            </p>
             <div>
               <Row label="Category" value={asset.category} />
-              <Row label="Brand / Model" value={asset.brand_model ?? "-"} />
-              <Row label="Serial Number" value={asset.serial_number ?? "-"} />
-              <Row label="Assigned To" value={asset.assigned_to_name ?? "Not assigned"} />
-              <Row label="Department" value={asset.department_name ?? "-"} />
+              <Row label="Brand / Model" value={asset.brand_model} />
+              <Row label="Serial Number" value={asset.serial_number} />
+              <Row label="Assigned To" value={asset.assigned_to_name ?? "Unassigned"} />
+              <Row label="Department" value={asset.department_name} />
               <Row label="Issue Date" value={formatDate(asset.issue_date)} />
               <Row label="Returned On" value={formatDate(asset.returned_at)} />
             </div>
 
-            <p className="mb-2 mt-6 text-xs font-bold uppercase tracking-wide text-slate-400">
+            <p className="mb-2 mt-4 text-[11px] font-semibold uppercase tracking-wider text-[#6B7280]">
               Procurement
             </p>
             <div>
               <Row label="Purchase Date" value={formatDate(asset.purchase_date)} />
               <Row label="Purchase Cost" value={formatMoney(asset.purchase_cost)} />
-              <Row label="Vendor" value={asset.vendor ?? "-"} />
-              <Row label="Warranty Expiry" value={formatDate(asset.warranty_expiry)} />
+              <Row label="Vendor" value={asset.vendor} />
+              <Row
+                label="Warranty Expiry"
+                value={
+                  formattedWarrantyDate ? (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span>{formattedWarrantyDate}</span>
+                      {warrantyStatus && (
+                        <span
+                          className={`inline-flex items-center h-5 px-2 text-[11px] font-medium rounded-full ${warrantyStatus.className}`}
+                        >
+                          {warrantyStatus.label}
+                        </span>
+                      )}
+                    </div>
+                  ) : null
+                }
+              />
             </div>
 
             {asset.notes && (
-              <>
-                <p className="mb-2 mt-6 text-xs font-bold uppercase tracking-wide text-slate-400">
+              <div className="mt-4">
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[#6B7280]">
                   Notes
                 </p>
-                <p className="rounded-xl bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-600">
+                <div className="rounded bg-[#F9FAFB] border border-[#E5E7EB] p-3 text-[13px] leading-relaxed text-[#4B5563]">
                   {asset.notes}
-                </p>
-              </>
+                </div>
+              </div>
             )}
           </div>
         </div>

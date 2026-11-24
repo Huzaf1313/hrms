@@ -515,7 +515,7 @@ export default function AdminPayroll() {
           return (
             <div
               key={card.label}
-              className="rounded-lg border border-[#E4E6E1] bg-white p-[16px_20px] min-h-[96px] shadow-none flex flex-col justify-between min-w-0"
+              className="rounded-lg border border-[#E4E6E1] bg-white p-[16px_20px] min-h-[96px] shadow-kpi flex flex-col justify-between min-w-0"
             >
               <div className="flex items-center justify-between gap-2 min-w-0">
                 <span className="text-[13px] font-medium text-[#7B8794] truncate">

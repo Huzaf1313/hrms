@@ -128,10 +128,10 @@ export const OtpInput: React.FC<OtpInputProps> = ({
           onFocus={(event) => event.target.select()}
           disabled={disabled}
           aria-label={`Digit ${index + 1} of 6`}
-          className={`font-mono technical-label h-12 w-11 rounded-xl border text-center text-xl font-bold transition-all sm:h-14 sm:w-12 outline-none disabled:cursor-not-allowed disabled:bg-slate-50 ${
+          className={`h-10 w-10 sm:h-10 sm:w-10 rounded border text-center text-base font-semibold transition-all outline-none disabled:cursor-not-allowed disabled:bg-slate-50 ${
             char
-              ? "border-brand-600 bg-brand-50/40 text-brand-900 shadow-sm"
-              : "border-line bg-surface text-ink-900 focus:border-brand-600 focus:ring-2 focus:ring-brand-500/20"
+              ? "border-[#2F5FD0] bg-[#E8EEFB]/40 text-[#111827]"
+              : "border-[#D1D5DB] bg-white text-[#111827] focus:border-[#2F5FD0] focus:ring-[3px] focus:ring-[#2F5FD0]/20"
           }`}
         />
       ))}

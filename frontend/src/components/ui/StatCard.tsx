@@ -24,8 +24,8 @@ export const StatCard: React.FC<StatCardProps> = ({
   return (
     <div
       onClick={onClick}
-      className={`rounded-lg border border-slate-200 bg-white p-3.5 transition-colors ${
-        onClick ? "cursor-pointer hover:border-slate-300" : ""
+      className={`rounded-lg border border-slate-200 bg-white p-3.5 shadow-kpi transition-colors ${
+        onClick ? "cursor-pointer hover:border-slate-300 shadow-kpi-hover" : ""
       } ${className}`}
     >
       <div className="flex items-center justify-between gap-2">

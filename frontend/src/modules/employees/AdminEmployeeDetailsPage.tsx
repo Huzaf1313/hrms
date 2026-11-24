@@ -982,7 +982,7 @@ function AdminEmployeeDetailsPage({
       {/* EDIT MODAL */}
       {editSection && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
-          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-white p-6 shadow-xl">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded bg-white p-6 shadow-xl">
             {/* MODAL HEADER */}
             <div className="flex items-center justify-between border-b border-gray-100 pb-4">
               <div>
@@ -1001,7 +1001,7 @@ function AdminEmployeeDetailsPage({
                 type="button"
                 onClick={closeEditModal}
                 disabled={isSaving}
-                className="flex h-9 w-9 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex h-9 w-9 items-center justify-center rounded text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
                 aria-label="Close"
               >
                 <X size={18} />
@@ -1026,7 +1026,7 @@ function AdminEmployeeDetailsPage({
                           name: event.target.value,
                         }))
                       }
-                      className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition focus:border-[#2563eb]"
+                      className="w-full rounded border border-gray-200 px-4 py-2.5 text-sm outline-none transition focus:border-[#2563eb]"
                       placeholder="Enter contact name"
                     />
                   </div>
@@ -1046,7 +1046,7 @@ function AdminEmployeeDetailsPage({
                           relationship: event.target.value,
                         }))
                       }
-                      className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition focus:border-[#2563eb]"
+                      className="w-full rounded border border-gray-200 px-4 py-2.5 text-sm outline-none transition focus:border-[#2563eb]"
                       placeholder="e.g. Spouse, Father, Mother, Sibling"
                     />
                   </div>
@@ -1067,7 +1067,7 @@ function AdminEmployeeDetailsPage({
                           phone: event.target.value.replace(/\D/g, "").slice(0, 10),
                         }))
                       }
-                      className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition focus:border-[#2563eb]"
+                      className="w-full rounded border border-gray-200 px-4 py-2.5 text-sm outline-none transition focus:border-[#2563eb]"
                       placeholder="10-digit phone number"
                     />
                   </div>
@@ -1088,7 +1088,7 @@ function AdminEmployeeDetailsPage({
                           alternate_phone: event.target.value.replace(/\D/g, "").slice(0, 10),
                         }))
                       }
-                      className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition focus:border-[#2563eb]"
+                      className="w-full rounded border border-gray-200 px-4 py-2.5 text-sm outline-none transition focus:border-[#2563eb]"
                       placeholder="Optional alternate phone number"
                     />
                   </div>
@@ -1108,14 +1108,14 @@ function AdminEmployeeDetailsPage({
                           address: event.target.value,
                         }))
                       }
-                      className="w-full resize-none rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition focus:border-[#2563eb]"
+                      className="w-full resize-none rounded border border-gray-200 px-4 py-2.5 text-sm outline-none transition focus:border-[#2563eb]"
                       placeholder="Emergency contact address"
                     />
                   </div>
 
                   {/* ERROR */}
                   {saveError && (
-                    <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
+                    <div className="rounded bg-red-50 px-4 py-3 text-sm text-red-600">
                       {saveError}
                     </div>
                   )}
@@ -1126,7 +1126,7 @@ function AdminEmployeeDetailsPage({
                       type="button"
                       onClick={closeEditModal}
                       disabled={isSaving}
-                      className="rounded-full border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="rounded border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       Cancel
                     </button>
@@ -1135,7 +1135,7 @@ function AdminEmployeeDetailsPage({
                       type="button"
                       onClick={handleSaveEmergency}
                       disabled={isSaving}
-                      className="rounded-full bg-[#2563eb] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:opacity-50"
+                      className="rounded bg-[#2563eb] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {isSaving ? "Saving..." : "Save Changes"}
                     </button>
@@ -1159,7 +1159,7 @@ function AdminEmployeeDetailsPage({
                           bank_name: event.target.value,
                         }))
                       }
-                      className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition focus:border-[#2563eb]"
+                      className="w-full rounded border border-gray-200 px-4 py-2.5 text-sm outline-none transition focus:border-[#2563eb]"
                       placeholder="Enter bank name"
                     />
                   </div>
@@ -1179,7 +1179,7 @@ function AdminEmployeeDetailsPage({
                           account_holder_name: event.target.value,
                         }))
                       }
-                      className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition focus:border-[#2563eb]"
+                      className="w-full rounded border border-gray-200 px-4 py-2.5 text-sm outline-none transition focus:border-[#2563eb]"
                       placeholder="Enter account holder name"
                     />
                   </div>
@@ -1205,7 +1205,7 @@ function AdminEmployeeDetailsPage({
                           account_number: value,
                         }));
                       }}
-                      className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm outline-none transition focus:border-[#2563eb]"
+                      className="w-full rounded border border-gray-200 px-4 py-2.5 text-sm outline-none transition focus:border-[#2563eb]"
                       placeholder="Enter account number"
                     />
                   </div>
@@ -1229,14 +1229,14 @@ function AdminEmployeeDetailsPage({
                             .slice(0, 11),
                         }))
                       }
-                      className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm uppercase outline-none transition focus:border-[#2563eb]"
+                      className="w-full rounded border border-gray-200 px-4 py-2.5 text-sm uppercase outline-none transition focus:border-[#2563eb]"
                       placeholder="e.g. SBIN0001234"
                     />
                   </div>
 
                   {/* ERROR */}
                   {saveError && (
-                    <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
+                    <div className="rounded bg-red-50 px-4 py-3 text-sm text-red-600">
                       {saveError}
                     </div>
                   )}
@@ -1247,7 +1247,7 @@ function AdminEmployeeDetailsPage({
                       type="button"
                       onClick={closeEditModal}
                       disabled={isSaving}
-                      className="rounded-full border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="rounded border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       Cancel
                     </button>
@@ -1256,7 +1256,7 @@ function AdminEmployeeDetailsPage({
                       type="button"
                       onClick={handleSaveBank}
                       disabled={isSaving}
-                      className="rounded-full bg-[#2563eb] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:opacity-50"
+                      className="rounded bg-[#2563eb] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {isSaving ? "Saving..." : "Save Changes"}
                     </button>

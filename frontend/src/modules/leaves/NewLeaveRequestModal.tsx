@@ -22,7 +22,7 @@ const MAX_ATTACHMENT_SIZE = 5 * 1024 * 1024;
 const ATTACHMENT_TYPES = ["image/jpeg", "image/png", "application/pdf"];
 
 const FIELD_CLASS =
-  "h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 " +
+  "h-11 w-full rounded border border-slate-200 bg-white px-3 text-sm text-slate-700 " +
   "outline-none transition placeholder:text-slate-400 focus:border-blue-500 " +
   "focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50";
 
@@ -222,10 +222,10 @@ export default function NewLeaveRequestModal({
         if (event.target === event.currentTarget && !busy) onClose();
       }}
     >
-      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded bg-white shadow-2xl">
         <header className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
           <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50">
+            <span className="flex h-10 w-10 items-center justify-center rounded bg-blue-50">
               <ClipboardPlus className="h-5 w-5 text-[#2563eb]" />
             </span>
 
@@ -241,7 +241,7 @@ export default function NewLeaveRequestModal({
             type="button"
             onClick={onClose}
             disabled={busy}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-9 w-9 items-center justify-center rounded text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
             aria-label="Close"
           >
             <X className="h-5 w-5" />
@@ -251,7 +251,7 @@ export default function NewLeaveRequestModal({
         <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
           <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-5">
             {/* The signed-in applicant */}
-            <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-4">
+            <div className="rounded border border-blue-100 bg-blue-50 px-4 py-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">Leave applicant</p>
               <div className="mt-3 grid gap-3 sm:grid-cols-3">
                 <ProfileValue
@@ -345,7 +345,7 @@ export default function NewLeaveRequestModal({
             </div>
 
             {/* Working days */}
-            <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3">
+            <div className="rounded border border-blue-100 bg-blue-50 px-4 py-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-slate-600">Working Days</span>
 
@@ -385,7 +385,7 @@ export default function NewLeaveRequestModal({
                 disabled={busy}
                 onChange={(event) => setReason(event.target.value)}
                 placeholder="Enter the reason for this leave..."
-                className="w-full resize-none rounded-xl border border-slate-200 px-3 py-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50"
+                className="w-full resize-none rounded border border-slate-200 px-3 py-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50"
               />
             </div>
 
@@ -401,7 +401,7 @@ export default function NewLeaveRequestModal({
 
               <label
                 htmlFor="leave-attachment"
-                className={`flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50/50 px-4 py-6 transition ${
+                className={`flex flex-col items-center justify-center rounded border border-dashed border-slate-300 bg-slate-50/50 px-4 py-6 transition ${
                   busy ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:border-blue-400 hover:bg-blue-50/30"
                 }`}
               >
@@ -447,7 +447,7 @@ export default function NewLeaveRequestModal({
             </div>
 
             {error && (
-              <div role="alert" className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+              <div role="alert" className="rounded border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
                 {error}
               </div>
             )}
@@ -458,7 +458,7 @@ export default function NewLeaveRequestModal({
               type="button"
               onClick={onClose}
               disabled={busy || loadingProfile}
-              className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-11 items-center justify-center rounded border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Cancel
             </button>
@@ -466,7 +466,7 @@ export default function NewLeaveRequestModal({
             <button
               type="submit"
               disabled={busy}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#2563eb] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded bg-[#2563eb] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {busy ? (
                 <>

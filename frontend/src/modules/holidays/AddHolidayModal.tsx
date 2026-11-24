@@ -128,7 +128,7 @@ function AddHolidayModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
-      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white shadow-xl">
+      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded bg-white shadow-xl">
         <div className="flex items-start justify-between border-b border-gray-100 px-6 py-5">
           <div>
             <h2 className="text-lg font-bold text-[#17213a]">
@@ -145,7 +145,7 @@ function AddHolidayModal({
           <button
             type="button"
             onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-xl text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
+            className="flex h-9 w-9 items-center justify-center rounded text-xl text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
             aria-label="Close"
           >
             &times;
@@ -169,7 +169,7 @@ function AddHolidayModal({
                 onChange={(event) => setName(event.target.value)}
                 maxLength={120}
                 placeholder="e.g. Independence Day"
-                className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/15"
+                className="mt-2 w-full rounded border border-gray-200 px-3 py-2.5 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/15"
               />
             </div>
 
@@ -186,7 +186,7 @@ function AddHolidayModal({
                 type="date"
                 value={date}
                 onChange={(event) => setDate(event.target.value)}
-                className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/15"
+                className="mt-2 w-full rounded border border-gray-200 px-3 py-2.5 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/15"
               />
             </div>
 
@@ -204,7 +204,7 @@ function AddHolidayModal({
                 onChange={(event) =>
                   setType(event.target.value as HolidayType)
                 }
-                className="mt-2 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/15"
+                className="mt-2 w-full rounded border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/15"
               >
                 {holidayTypes.map((option) => (
                   <option key={option} value={option}>
@@ -231,7 +231,7 @@ function AddHolidayModal({
                 id="holiday-dept"
                 value={departmentId}
                 onChange={(event) => setDepartmentId(event.target.value)}
-                className="mt-2 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/15"
+                className="mt-2 w-full rounded border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/15"
               >
                 <option value="">All Departments (Organization-wide)</option>
                 {departments.map((dept) => (
@@ -261,14 +261,14 @@ function AddHolidayModal({
                 rows={3}
                 maxLength={500}
                 placeholder="Optional note shown as a tooltip on the calendar"
-                className="mt-2 w-full resize-y rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/15"
+                className="mt-2 w-full resize-y rounded border border-gray-200 px-3 py-2.5 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/15"
               />
             </div>
 
             {error && (
               <p
                 role="alert"
-                className="rounded-lg bg-red-50 px-3 py-2.5 text-sm text-red-600"
+                className="rounded bg-red-50 px-3 py-2.5 text-sm text-red-600"
               >
                 {error}
               </p>
@@ -281,7 +281,7 @@ function AddHolidayModal({
                 type="button"
                 onClick={handleDelete}
                 disabled={isDeleting || isSaving}
-                className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-50"
               >
                 <Trash2 className="h-4 w-4" />
                 {isDeleting ? "Deleting..." : "Delete"}
@@ -294,7 +294,7 @@ function AddHolidayModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-lg px-4 py-2 text-sm font-semibold text-gray-600 transition hover:bg-gray-100"
+                className="rounded px-4 py-2 text-sm font-semibold text-gray-600 transition hover:bg-gray-100"
               >
                 Cancel
               </button>
@@ -302,7 +302,7 @@ function AddHolidayModal({
               <button
                 type="submit"
                 disabled={isSaving || isDeleting}
-                className="rounded-lg bg-[#2563eb] px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+                className="rounded bg-[#2563eb] px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
               >
                 {isSaving
                   ? "Saving..."

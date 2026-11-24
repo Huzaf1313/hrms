@@ -217,7 +217,7 @@ export const RegularizationRequestsCard: React.FC<{ onReviewed?: () => void }> =
             No pending regularization requests requiring review.
           </div>
         ) : (
-          <table className="w-full text-left text-sm border-collapse">
+          <table className="w-full min-w-[650px] text-left text-sm border-collapse">
             <thead className="bg-[#F6F7F5] text-xs font-medium text-[#7B8794] normal-case tracking-[0.02em] border-b border-[#E4E6E1]">
               <tr className="h-11">
                 <th className="px-6 py-3 font-medium bg-[#F6F7F5] align-middle">Employee</th>

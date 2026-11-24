@@ -499,7 +499,7 @@ function EmployeeDashboard() {
         {/* Today's Attendance */}
         <div
           onClick={() => navigate("/employee/attendance")}
-          className="group relative cursor-pointer overflow-hidden rounded-3xl border border-slate-100 bg-white p-5.5 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+          className="group relative cursor-pointer overflow-hidden rounded-3xl border border-slate-100 bg-white p-5.5 shadow-kpi shadow-kpi-hover transition-all duration-200 hover:-translate-y-0.5"
         >
           <div className="flex items-center justify-between">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 transition-colors group-hover:bg-emerald-100">
@@ -528,7 +528,7 @@ function EmployeeDashboard() {
         {/* Leave Balance */}
         <div
           onClick={() => navigate("/employee/leave")}
-          className="group relative cursor-pointer overflow-hidden rounded-3xl border border-slate-100 bg-white p-5.5 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+          className="group relative cursor-pointer overflow-hidden rounded-3xl border border-slate-100 bg-white p-5.5 shadow-kpi shadow-kpi-hover transition-all duration-200 hover:-translate-y-0.5"
         >
           <div className="flex items-center justify-between">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 transition-colors group-hover:bg-amber-100">
@@ -557,7 +557,7 @@ function EmployeeDashboard() {
         {/* Pending Requests */}
         <div
           onClick={() => navigate("/employee/leave")}
-          className="group relative cursor-pointer overflow-hidden rounded-3xl border border-slate-100 bg-white p-5.5 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+          className="group relative cursor-pointer overflow-hidden rounded-3xl border border-slate-100 bg-white p-5.5 shadow-kpi shadow-kpi-hover transition-all duration-200 hover:-translate-y-0.5"
         >
           <div className="flex items-center justify-between">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-purple-50 text-purple-600 transition-colors group-hover:bg-purple-100">
@@ -585,7 +585,7 @@ function EmployeeDashboard() {
         {/* My Payslip */}
         <div
           onClick={() => navigate("/employee/payroll")}
-          className="group relative cursor-pointer overflow-hidden rounded-3xl border border-slate-100 bg-white p-5.5 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+          className="group relative cursor-pointer overflow-hidden rounded-3xl border border-slate-100 bg-white p-5.5 shadow-kpi shadow-kpi-hover transition-all duration-200 hover:-translate-y-0.5"
         >
           <div className="flex items-center justify-between">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-[#0066ff] transition-colors group-hover:bg-blue-100">

@@ -659,7 +659,7 @@ function AdminRecruitment() {
         {kpiCards.map((card) => (
           <div
             key={card.label}
-            className={`flex items-center gap-4 rounded-2xl border border-gray-100 p-5 shadow-sm ${card.tone}`}
+            className={`flex items-center gap-4 rounded-2xl border border-gray-100 p-5 shadow-kpi ${card.tone}`}
           >
             <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white">
               {card.icon}
@@ -898,14 +898,14 @@ function AdminRecruitment() {
             <EmptyText>No job positions yet. Click "Add Job" to create one.</EmptyText>
           ) : (
             <div className="max-h-[360px] overflow-auto overscroll-contain">
-              <table className="w-full text-left text-sm">
+              <table className="w-full min-w-[550px] text-left text-sm">
                 <thead className="sticky top-0 bg-white text-slate-500 shadow-[0_1px_0_0_#e2e8f0]">
                   <tr>
                     <th className="py-2 pr-3 font-medium">Title</th>
                     <th className="py-2 pr-3 font-medium">Department</th>
                     <th className="py-2 pr-3 font-medium">Location</th>
                     <th className="py-2 pr-3 font-medium">Status</th>
-                    <th className="py-2 font-medium">Actions</th>
+                    <th className="py-2 pr-4 font-medium text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -927,7 +927,7 @@ function AdminRecruitment() {
                           {job.status === "active" ? "Active" : "Closed"}
                         </span>
                       </td>
-                      <td className="space-x-3 whitespace-nowrap py-3 text-xs">
+                      <td className="space-x-3 whitespace-nowrap py-3 pr-4 text-right text-xs">
                         <button
                           type="button"
                           className="font-medium text-blue-600 hover:underline"
@@ -1160,13 +1160,13 @@ function AdminRecruitment() {
             <EmptyText>No resumes uploaded yet.</EmptyText>
           ) : (
             <div className="max-h-[320px] overflow-auto overscroll-contain">
-              <table className="w-full text-left text-sm">
+              <table className="w-full min-w-[550px] text-left text-sm">
                 <thead className="sticky top-0 bg-white text-slate-500 shadow-[0_1px_0_0_#e2e8f0]">
                   <tr>
                     <th className="py-2 pr-3 font-medium">Candidate</th>
                     <th className="py-2 pr-3 font-medium">File</th>
                     <th className="py-2 pr-3 font-medium">Uploaded</th>
-                    <th className="py-2 font-medium">Actions</th>
+                    <th className="py-2 pr-4 font-medium text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -1188,7 +1188,7 @@ function AdminRecruitment() {
                             ? formatDate(candidate.resume_uploaded_at)
                             : "-"}
                         </td>
-                        <td className="whitespace-nowrap py-3">
+                        <td className="whitespace-nowrap py-3 pr-4 text-right">
                           <button
                             type="button"
                             disabled={!canView}
@@ -1350,7 +1350,7 @@ function AdminRecruitment() {
           <div
             role="alertdialog"
             aria-modal="true"
-            className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl"
+            className="w-full max-w-sm rounded bg-white p-6 shadow-xl"
             onClick={(event) => event.stopPropagation()}
           >
             <h3 className="text-base font-semibold text-slate-900">
@@ -1365,7 +1365,7 @@ function AdminRecruitment() {
                 type="button"
                 disabled={deleting}
                 onClick={() => setPendingDelete(null)}
-                className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
+                className="rounded border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
               >
                 Cancel
               </button>
@@ -1373,7 +1373,7 @@ function AdminRecruitment() {
                 type="button"
                 disabled={deleting}
                 onClick={() => void handleConfirmDelete()}
-                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-60"
+                className="rounded bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-60"
               >
                 {deleting ? "Deleting..." : "Delete"}
               </button>

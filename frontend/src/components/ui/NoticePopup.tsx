@@ -100,7 +100,7 @@ export default function NoticePopup({
         aria-modal="true"
         aria-label={title}
         onClick={(event) => event.stopPropagation()}
-        className="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-xl"
+        className="w-full max-w-sm rounded bg-white p-6 text-center shadow-xl"
       >
         <span
           className={`mx-auto flex h-12 w-12 items-center justify-center rounded-full ${tone.iconWrap}`}
@@ -122,7 +122,7 @@ export default function NoticePopup({
           type="button"
           onClick={onDismiss}
           autoFocus
-          className={`mt-6 inline-flex h-10 w-full items-center justify-center rounded-xl px-5 text-sm font-semibold text-white shadow-sm transition ${tone.button}`}
+          className={`mt-6 inline-flex h-10 w-full items-center justify-center rounded px-5 text-sm font-semibold text-white shadow-sm transition ${tone.button}`}
         >
           OK
         </button>

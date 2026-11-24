@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Building2, User, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Building2, PackageOpen, User, X } from "lucide-react";
 
 import { assetService } from "./assetService";
 import { ASSET_STATUS_LABELS } from "./types";
@@ -31,10 +31,10 @@ function formatDate(value: string | null): string {
 }
 
 const statusStyles: Record<Asset["status"], string> = {
-  in_use: "bg-emerald-50 text-emerald-600",
-  available: "bg-blue-50 text-blue-600",
-  pending_return: "bg-orange-50 text-orange-500",
-  maintenance: "bg-violet-50 text-violet-600",
+  in_use: "bg-[#E3F5E1] text-[#1E6B45] border border-[#BCE8B5]",
+  available: "bg-[#E8EEFB] text-[#2F5FD0] border border-[#2F5FD0]/20",
+  pending_return: "bg-[#FDF3D6] text-[#8A5A00] border border-[#F6DE95]",
+  maintenance: "bg-[#F3E8FF] text-[#7E22CE] border border-[#E9D5FF]",
 };
 
 /**
@@ -53,6 +53,55 @@ export default function AssetAllocationDetailModal({
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const modalRef = useRef<HTMLDivElement | null>(null);
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+  const previousActiveElement = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    previousActiveElement.current = document.activeElement as HTMLElement | null;
+    closeButtonRef.current?.focus();
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+
+      if (event.key === "Tab" && modalRef.current) {
+        const focusableElements = modalRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        );
+        if (!focusableElements.length) return;
+
+        const first = focusableElements[0];
+        const last = focusableElements[focusableElements.length - 1];
+
+        if (event.shiftKey) {
+          if (document.activeElement === first) {
+            last.focus();
+            event.preventDefault();
+          }
+        } else {
+          if (document.activeElement === last) {
+            first.focus();
+            event.preventDefault();
+          }
+        }
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = originalOverflow;
+      previousActiveElement.current?.focus();
+    };
+  }, [onClose]);
 
   useEffect(() => {
     let active = true;
@@ -88,110 +137,156 @@ export default function AssetAllocationDetailModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4 py-6 backdrop-blur-[2px]"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-[2px]"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div className="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
-        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
-          <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50">
-              <Icon className="h-5 w-5 text-[#2563eb]" />
+      <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="allocation-modal-title"
+        className="flex max-h-[calc(100vh-48px)] w-full max-w-[calc(100vw-32px)] sm:max-w-[560px] flex-col overflow-hidden rounded bg-white shadow-[0_12px_32px_rgba(16,24,40,0.18)]"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-[#E5E7EB] px-4 sm:px-5 py-4 sm:py-5">
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-[#E8EEFB] text-[#2F5FD0]">
+              <Icon className="h-5 w-5" />
             </span>
             <div className="min-w-0">
-              <h2 className="truncate text-xl font-bold text-slate-900">{row.name}</h2>
-              <p className="mt-1 text-sm text-slate-500">
-                {row.id}
-                {view === "employee" && row.department ? ` - ${row.department}` : ""}
+              <h2
+                id="allocation-modal-title"
+                title={row.name}
+                className="truncate text-[16px] font-semibold text-[#111827] leading-tight"
+              >
+                {row.name}
+              </h2>
+              <p className="mt-0.5 text-[13px] text-[#6B7280] leading-none">
+                {view === "department" ? "Department" : "Employee"}
               </p>
             </div>
           </div>
 
           <button
+            ref={closeButtonRef}
             type="button"
             onClick={onClose}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-[#6B7280] transition-colors hover:bg-[#F3F4F6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0] cursor-pointer"
             aria-label="Close"
           >
-            <X className="h-5 w-5" />
+            <X className="h-4 w-4" />
           </button>
         </div>
 
-        <div className="flex items-center gap-4 border-b border-slate-100 bg-slate-50/60 px-6 py-3 text-sm">
-          <span className="text-slate-500">
-            <span className="font-bold text-slate-900">{assets.length}</span> asset
-            {assets.length === 1 ? "" : "s"} allocated
-          </span>
+        {/* Summary strip */}
+        <div className="flex items-center border-b border-[#E5E7EB] bg-[#F9FAFB] px-4 sm:px-5 py-3 text-sm">
+          {/* Stat 1: Assets allocated */}
+          <div className="flex flex-1 items-baseline gap-1.5">
+            <span className="text-[16px] font-semibold text-[#111827] tabular-nums">
+              {assets.length}
+            </span>
+            <span className="text-[12px] text-[#6B7280]">
+              {assets.length === 1 ? "asset allocated" : "assets allocated"}
+            </span>
+          </div>
 
           {view === "department" && (
-            <span className="text-slate-500">
-              <span className="font-bold text-slate-900">{row.employees}</span> employee
-              {row.employees === 1 ? "" : "s"}
-            </span>
+            <>
+              <div className="mx-4 h-5 w-px bg-[#E5E7EB] shrink-0" aria-hidden="true" />
+
+              {/* Stat 2: Employees */}
+              <div className="flex flex-1 items-baseline gap-1.5">
+                <span className="text-[16px] font-semibold text-[#111827] tabular-nums">
+                  {row.employees ?? 0}
+                </span>
+                <span className="text-[12px] text-[#6B7280]">
+                  {row.employees === 1 ? "employee" : "employees"}
+                </span>
+              </div>
+            </>
           )}
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+        {/* Body content */}
+        <div className="min-h-0 min-h-[200px] flex-1 overflow-y-auto">
           {loading && (
-            <p className="py-10 text-center text-sm text-slate-400">Loading...</p>
+            <div className="flex min-h-[200px] flex-col items-center justify-center p-6 text-center">
+              <p className="text-[13px] text-[#9CA3AF]">Loading assets...</p>
+            </div>
           )}
 
-          {error && <p className="py-10 text-center text-sm text-rose-500">{error}</p>}
+          {error && (
+            <div className="flex min-h-[200px] flex-col items-center justify-center p-6 text-center">
+              <p className="text-[13px] text-[#DC2626]">{error}</p>
+            </div>
+          )}
 
           {!loading && !error && assets.length === 0 && (
-            <p className="py-10 text-center text-sm text-slate-500">
-              No assets are allocated to {row.name}.
-            </p>
+            <div className="flex min-h-[200px] flex-col items-center justify-center p-6 text-center">
+              <PackageOpen className="h-6 w-6 text-[#9CA3AF] stroke-[1.5] mb-2" />
+              <p className="max-w-[360px] text-[13px] text-[#6B7280] leading-normal">
+                No assets are allocated to {row.name}.
+              </p>
+            </div>
           )}
 
           {!loading && !error && assets.length > 0 && (
-            <table className="w-full table-fixed text-left text-[13px]">
-              <thead>
-                <tr className="border-b border-slate-100 text-xs font-bold uppercase tracking-wide text-slate-500">
-                  <th className="w-[22%] px-2 py-2">Asset ID</th>
-                  <th className="w-[32%] px-2 py-2">Asset Name</th>
-                  <th className="hidden px-2 py-2 sm:table-cell">Category</th>
-                  <th className="w-[18%] px-2 py-2 text-right">Issue Date</th>
-                  <th className="w-[18%] rounded-r-xl px-2 py-2 text-right">Status</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {assets.map((asset) => (
-                  <tr key={asset.id} className="border-b border-slate-50 last:border-0">
-                    <td className="px-2 py-3 font-semibold text-[#2563eb]">
-                      {asset.asset_tag}
-                    </td>
-                    <td className="truncate px-2 py-3 font-semibold text-slate-900">
-                      {asset.name}
-                    </td>
-                    <td className="hidden truncate px-2 py-3 text-slate-600 sm:table-cell">
-                      {asset.category}
-                    </td>
-                    <td className="px-2 py-3 text-right text-slate-600">
-                      {formatDate(asset.issue_date)}
-                    </td>
-                    <td className="px-2 py-3 text-right">
-                      <span
-                        className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[10px] font-semibold ${statusStyles[asset.status]}`}
-                      >
-                        <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
-                        {ASSET_STATUS_LABELS[asset.status]}
-                      </span>
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[500px] table-fixed text-left text-[13px]">
+                <thead>
+                  <tr className="h-10 border-b border-[#E5E7EB] bg-[#FAFAF8] text-[11px] font-medium uppercase tracking-wider text-[#6B7280]">
+                    <th scope="col" className="w-[110px] pl-4 sm:pl-5 pr-3 py-2.5 whitespace-nowrap">Asset ID</th>
+                    <th scope="col" className="px-3 py-2.5 whitespace-nowrap">Asset Name</th>
+                    <th scope="col" className="w-[110px] px-3 py-2.5 whitespace-nowrap hidden sm:table-cell">Category</th>
+                    <th scope="col" className="w-[110px] px-3 py-2.5 whitespace-nowrap text-right">Issue Date</th>
+                    <th scope="col" className="w-[125px] pl-3 pr-4 sm:pr-5 py-2.5 whitespace-nowrap text-right">Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+
+                <tbody>
+                  {assets.map((asset) => (
+                    <tr
+                      key={asset.id}
+                      className="h-11 sm:h-12 border-b border-[#E4E6E1]/60 last:border-b-0 hover:bg-[#FAFAF8] transition-colors"
+                    >
+                      <td className="pl-4 sm:pl-5 pr-3 py-2 font-semibold text-[#2F5FD0] whitespace-nowrap text-[13px]">
+                        {asset.asset_tag}
+                      </td>
+                      <td className="px-3 py-2 font-medium text-[#111827] truncate text-[13px]" title={asset.name}>
+                        {asset.name}
+                      </td>
+                      <td className="px-3 py-2 text-[#4B5563] truncate hidden sm:table-cell text-[13px]" title={asset.category}>
+                        {asset.category}
+                      </td>
+                      <td className="px-3 py-2 text-right text-[#4B5563] whitespace-nowrap tabular-nums text-[13px]">
+                        {formatDate(asset.issue_date)}
+                      </td>
+                      <td className="pl-3 pr-4 sm:pr-5 py-2 text-right whitespace-nowrap">
+                        <span
+                          className={`inline-flex h-5 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 text-[11px] font-medium ${
+                            statusStyles[asset.status] ?? "bg-[#F3F4F6] text-[#4B5563] border border-[#E5E7EB]"
+                          }`}
+                        >
+                          <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
+                          {ASSET_STATUS_LABELS[asset.status] ?? asset.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
 
-        <div className="flex items-center justify-end border-t border-slate-200 bg-slate-50/50 px-6 py-4">
+        {/* Footer */}
+        <div className="flex items-center justify-end border-t border-[#E5E7EB] bg-white px-4 sm:px-5 py-3 sm:py-4">
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+            className="inline-flex h-9 w-full sm:w-auto items-center justify-center rounded border border-[#E5E7EB] bg-white px-4 text-[13px] font-medium text-[#374151] transition-colors hover:bg-[#F9FAFB] hover:text-[#111827] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0] cursor-pointer"
           >
             Close
           </button>

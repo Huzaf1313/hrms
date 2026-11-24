@@ -54,7 +54,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         </div>
       </div>
       <div className="mt-5 flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
-        <Button variant="outline" size="sm" onClick={onClose} disabled={isLoading}>
+        <Button variant="outline" size="sm" onClick={onClose} disabled={isLoading} className="rounded">
           {cancelLabel}
         </Button>
         <Button
@@ -62,6 +62,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           size="sm"
           onClick={onConfirm}
           isLoading={isLoading}
+          className="rounded"
         >
           {confirmLabel}
         </Button>

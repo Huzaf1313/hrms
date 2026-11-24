@@ -49,12 +49,12 @@ export const AuthField: React.FC<AuthFieldProps> = ({
           placeholder={isFocused ? placeholder : ""}
           aria-invalid={Boolean(error)}
           aria-describedby={error ? `${id}-error` : undefined}
-          className={`peer w-full rounded-xl border bg-surface px-4 pt-5 pb-2 text-sm font-medium text-ink-900 outline-none transition-all duration-150 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-ink-300 ${
-            icon ? "pr-11" : ""
+          className={`peer w-full h-10 rounded border border-[#D1D5DB] bg-white px-3 text-sm text-[#111827] placeholder:text-[#6B7280] outline-none transition-all duration-150 disabled:cursor-not-allowed disabled:bg-slate-50 ${
+            icon ? "pr-10" : ""
           } ${
             error
-              ? "border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-500/20"
-              : "border-line focus:border-brand-600 focus:ring-2 focus:ring-brand-500/20"
+              ? "border-[#DC2626] focus:border-[#DC2626] focus:ring-[3px] focus:ring-[#DC2626]/20"
+              : "focus:border-[#2F5FD0] focus:ring-[3px] focus:ring-[#2F5FD0]/20"
           }`}
         />
 

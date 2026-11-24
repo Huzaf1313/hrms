@@ -34,8 +34,8 @@ export const AdminLeavePage: React.FC = () => {
         value: pendingCount,
         subtext: pendingCount === 0 ? "Inbox clear" : `${pendingCount} requests waiting`,
         icon: Clock,
-        iconBg: "bg-[#FDF3D6]",
-        iconColor: "text-[#8A5A00]",
+        iconBg: "bg-[#FEF3C7]",
+        iconColor: "text-[#92400E]",
       },
       {
         label: "On Leave Today",
@@ -58,8 +58,8 @@ export const AdminLeavePage: React.FC = () => {
         value: "94.2%",
         subtext: "Above minimum threshold",
         icon: TrendingUp,
-        iconBg: "bg-[#E3F5E1]",
-        iconColor: "text-[#1E6B45]",
+        iconBg: "bg-[#DEF7EC]",
+        iconColor: "text-[#03543F]",
       },
     ];
   }, [approvalRequests, teamLeaves]);
@@ -103,12 +103,12 @@ export const AdminLeavePage: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col gap-6 w-full">
-      {/* Page Header Card */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-[20px_24px] rounded-lg border border-[#E4E6E1] shadow-none">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-[20px] font-semibold text-[#1F2933]">Leave Management</h1>
-          <p className="text-sm text-[#7B8794]">
+    <div className="flex flex-col gap-6 w-full max-w-[1280px] mx-auto px-4 sm:px-6 py-4">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-5 rounded-lg border border-[#E5E7EB] shadow-none">
+        <div className="flex flex-col gap-0.5">
+          <h1 className="text-[18px] font-semibold text-[#111827]">Leave Management</h1>
+          <p className="text-xs text-[#4B5563]">
             Review employee time-off requests, monitor team coverage, and audit balance records.
           </p>
         </div>
@@ -124,65 +124,71 @@ export const AdminLeavePage: React.FC = () => {
         </div>
       </div>
 
-      {/* KPI Stats - 4 separate cards in a grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-        {stats.map((item, idx) => {
-          const Icon = item.icon;
-          return (
-            <div
-              key={idx}
-              className="rounded-lg border border-[#E4E6E1] bg-white p-[16px_20px] min-h-[96px] shadow-none flex flex-col justify-between min-w-0"
-            >
-              <div className="flex items-center justify-between gap-2 min-w-0">
-                <span className="text-[13px] font-medium text-[#7B8794] truncate">
-                  {item.label}
-                </span>
-                {Icon && (
-                  <div
-                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${item.iconBg}`}
-                  >
-                    <Icon className={`h-5 w-5 shrink-0 ${item.iconColor}`} />
-                  </div>
-                )}
+      {/* Organization Overview Stat Strip */}
+      <div className="flex flex-col gap-2.5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h2 className="text-[11px] font-semibold uppercase tracking-wider text-[#6B7280]">
+              Organization Overview
+            </h2>
+            <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#F3F4F6] text-[#4B5563] font-medium border border-[#E5E7EB]">
+              Company-wide
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+          {stats.map((item, idx) => {
+            const Icon = item.icon;
+            return (
+              <div
+                key={idx}
+                className="rounded-lg border border-[#E5E7EB] bg-white p-4 h-[104px] shadow-kpi flex flex-col justify-between min-w-0"
+              >
+                <div className="flex items-center justify-between gap-2 min-w-0">
+                  <span className="text-xs font-medium text-[#4B5563] truncate">
+                    {item.label}
+                  </span>
+                  {Icon && (
+                    <div
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md ${item.iconBg}`}
+                    >
+                      <Icon className={`h-4 w-4 shrink-0 ${item.iconColor}`} />
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <span className="text-[24px] font-semibold text-[#111827] tabular-nums tracking-tight leading-none block">
+                    {item.value}
+                  </span>
+                  {item.subtext && (
+                    <span className="text-[11px] text-[#6B7280] mt-1 truncate block leading-none">
+                      {item.subtext}
+                    </span>
+                  )}
+                </div>
               </div>
-              <div className="mt-2">
-                <span className="text-[28px] font-semibold text-[#1F2933] tracking-tight leading-[1.1] block">
-                  {item.value}
-                </span>
-              </div>
-              {item.subtext && (
-                <span className="text-xs text-[#7B8794] mt-1 truncate block m-0">
-                  {item.subtext}
-                </span>
-              )}
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
       {/* Tabs & Content */}
       <div className="flex flex-col gap-4">
-        {/* Tabs: gap 4px between tabs, each tab padding 8px 16px, icon-to-label gap 8px, 14px font */}
-        <div className="flex items-center gap-1 border-b border-[#E4E6E1]">
+        {/* Navigation Tabs */}
+        <div className="flex items-center gap-2 border-b border-[#E5E7EB]">
           <button
             type="button"
             onClick={() => setActiveTab("approvals")}
-            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors cursor-pointer border-b-2 -mb-[1px] ${
-              activeTab === "approvals"
-                ? "border-[#2F5FD0] text-[#2F5FD0] font-semibold bg-white"
-                : "border-transparent text-[#52606D] hover:text-[#1F2933] hover:bg-[#F6F7F5]"
-            }`}
+            className={`flex items-center gap-1.5 px-3.5 py-2.5 text-[13px] font-medium transition-colors cursor-pointer border-b-2 -mb-[1px] ${activeTab === "approvals"
+                ? "border-[#2F5FD0] text-[#2F5FD0]"
+                : "border-transparent text-[#4B5563] hover:text-[#111827] hover:border-[#D1D5DB]"
+              }`}
           >
-            <CheckCircle2 className="w-[18px] h-[18px] shrink-0" />
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
             <span>Pending Approvals</span>
             {approvalRequests.length > 0 && (
-              <span
-                className={`ml-2 px-2 py-0.5 text-xs font-semibold rounded-full ${
-                  activeTab === "approvals"
-                    ? "bg-[#E8EEFB] text-[#2F5FD0]"
-                    : "bg-[#FBF0D9] text-[#8A5A00]"
-                }`}
-              >
+              <span className="ml-1.5 px-2 py-0.5 text-[11px] font-medium rounded-full bg-[#FEF3C7] text-[#92400E] border border-[#FCD34D]">
                 {approvalRequests.length}
               </span>
             )}
@@ -191,26 +197,24 @@ export const AdminLeavePage: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveTab("records")}
-            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors cursor-pointer border-b-2 -mb-[1px] ${
-              activeTab === "records"
-                ? "border-[#2F5FD0] text-[#2F5FD0] font-semibold bg-white"
-                : "border-transparent text-[#52606D] hover:text-[#1F2933] hover:bg-[#F6F7F5]"
-            }`}
+            className={`flex items-center gap-1.5 px-3.5 py-2.5 text-[13px] font-medium transition-colors cursor-pointer border-b-2 -mb-[1px] ${activeTab === "records"
+                ? "border-[#2F5FD0] text-[#2F5FD0]"
+                : "border-transparent text-[#4B5563] hover:text-[#111827] hover:border-[#D1D5DB]"
+              }`}
           >
-            <History className="w-[18px] h-[18px] shrink-0" />
+            <History className="w-4 h-4 shrink-0" />
             <span>All Leave Records & Balances</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab("calendar")}
-            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors cursor-pointer border-b-2 -mb-[1px] ${
-              activeTab === "calendar"
-                ? "border-[#2F5FD0] text-[#2F5FD0] font-semibold bg-white"
-                : "border-transparent text-[#52606D] hover:text-[#1F2933] hover:bg-[#F6F7F5]"
-            }`}
+            className={`flex items-center gap-1.5 px-3.5 py-2.5 text-[13px] font-medium transition-colors cursor-pointer border-b-2 -mb-[1px] ${activeTab === "calendar"
+                ? "border-[#2F5FD0] text-[#2F5FD0]"
+                : "border-transparent text-[#4B5563] hover:text-[#111827] hover:border-[#D1D5DB]"
+              }`}
           >
-            <CalendarDays className="w-[18px] h-[18px] shrink-0" />
+            <CalendarDays className="w-4 h-4 shrink-0" />
             <span>Team Calendar</span>
           </button>
         </div>
@@ -227,11 +231,24 @@ export const AdminLeavePage: React.FC = () => {
         )}
 
         {activeTab === "records" && (
-          <LeaveBalanceHistory
-            balances={balances}
-            requests={allRequests}
-            onCancelRequest={cancelRequest}
-          />
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between bg-white px-5 py-3 rounded-lg border border-[#E5E7EB]">
+              <div className="flex items-center gap-2">
+                <span className="text-[13px] font-semibold text-[#111827]">Your Leave Records & Balances</span>
+                <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#E8EEFB] text-[#2F5FD0] font-medium border border-[#2F5FD0]/20">
+                  Personal (Sarah Jenkins • EMP001)
+                </span>
+              </div>
+              <span className="text-[11px] text-[#6B7280]">
+                Logged-in employee entitlement & request history
+              </span>
+            </div>
+            <LeaveBalanceHistory
+              balances={balances}
+              requests={allRequests}
+              onCancelRequest={cancelRequest}
+            />
+          </div>
         )}
 
         {activeTab === "calendar" && (

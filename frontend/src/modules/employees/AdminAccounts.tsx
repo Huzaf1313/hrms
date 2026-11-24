@@ -133,7 +133,7 @@ function StatCard({
   iconBg: string;
 }) {
   return (
-    <div className="flex items-center gap-4.5 rounded-3xl border border-slate-100 bg-white p-5.5 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
+    <div className="flex items-center gap-4.5 rounded-3xl border border-slate-100 bg-white p-5.5 shadow-kpi transition-all duration-200 hover:-translate-y-0.5">
       <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${iconBg}`}>
         {icon}
       </span>
@@ -179,7 +179,7 @@ function ConfirmDeleteDialog({
       onClick={working ? undefined : onCancel}
     >
       <div
-        className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl"
+        className="w-full max-w-sm rounded bg-white p-6 shadow-xl"
         onClick={(event) => event.stopPropagation()}
         role="alertdialog"
         aria-modal="true"
@@ -204,7 +204,7 @@ function ConfirmDeleteDialog({
             type="button"
             onClick={onCancel}
             disabled={working}
-            className="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-60"
+            className="inline-flex h-10 items-center rounded border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-60"
           >
             Cancel
           </button>
@@ -213,7 +213,7 @@ function ConfirmDeleteDialog({
             onClick={onConfirm}
             disabled={working}
             autoFocus
-            className="inline-flex h-10 items-center rounded-xl bg-rose-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-10 items-center rounded bg-rose-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {working ? "Deleting..." : "Delete account"}
           </button>
@@ -730,11 +730,10 @@ export default function AdminAccounts() {
             setCreating(false);
             setNotice({
               type: "success",
-              text: `${roleLabel(account.role)} account created for ${account.full_name}. ${
-                account.welcome_email_sent
-                  ? `A welcome email was sent to ${account.email}.`
-                  : "The welcome email could not be sent, so share the sign-in details yourself."
-              }`,
+              text: `${roleLabel(account.role)} account created for ${account.full_name}. ${account.welcome_email_sent
+                ? `A welcome email was sent to ${account.email}.`
+                : "The welcome email could not be sent, so share the sign-in details yourself."
+                }`,
             });
           }}
         />

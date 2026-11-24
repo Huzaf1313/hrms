@@ -67,7 +67,7 @@ export default function ResumeViewerModal({
       onClick={onClose}
     >
       <div
-        className="flex h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl"
+        className="flex h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded bg-white shadow-xl"
         role="dialog"
         aria-modal="true"
         aria-label={`Resume of ${candidate.full_name}`}
@@ -87,7 +87,7 @@ export default function ResumeViewerModal({
             <button
               type="button"
               onClick={onDownload}
-              className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
+              className="flex items-center gap-1.5 rounded border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
             >
               <Download className="h-4 w-4" />
               Download
@@ -96,7 +96,7 @@ export default function ResumeViewerModal({
               type="button"
               onClick={onClose}
               aria-label="Close"
-              className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100"
+              className="rounded p-1.5 text-slate-500 hover:bg-slate-100"
             >
               <X className="h-5 w-5" />
             </button>

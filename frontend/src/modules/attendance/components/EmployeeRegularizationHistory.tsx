@@ -129,7 +129,7 @@ export const EmployeeRegularizationHistory: React.FC<EmployeeRegularizationHisto
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="w-full min-w-[850px] text-left text-xs">
               <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold sticky top-0">
                 <tr>
                   <th className="py-2.5 px-3">Attendance Date</th>
@@ -191,7 +191,7 @@ export const EmployeeRegularizationHistory: React.FC<EmployeeRegularizationHisto
       {/* Detail & Status Timeline Drawer / Modal */}
       {selectedRequest && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
-          <div className="bg-white rounded-lg border border-slate-200 max-w-lg w-full p-5 space-y-4">
+          <div className="bg-white rounded border border-slate-200 max-w-lg w-full p-5 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
                 <h3 className="text-sm font-semibold text-slate-900">
@@ -210,7 +210,7 @@ export const EmployeeRegularizationHistory: React.FC<EmployeeRegularizationHisto
             </div>
 
             {/* Side-by-side Punches */}
-            <div className="grid grid-cols-2 gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 text-xs">
+            <div className="grid grid-cols-2 gap-3 p-3 rounded border border-slate-100 bg-slate-50 text-xs">
               <div>
                 <span className="text-xs text-slate-400 block font-medium">Original Logged Times</span>
                 <span className="font-mono text-slate-600 mt-1 block">
@@ -303,7 +303,7 @@ export const EmployeeRegularizationHistory: React.FC<EmployeeRegularizationHisto
             </div>
 
             <div className="flex justify-end pt-2 border-t border-slate-100">
-              <Button variant="outline" size="sm" onClick={() => setSelectedRequest(null)}>
+              <Button variant="outline" size="sm" onClick={() => setSelectedRequest(null)} className="rounded">
                 Close
               </Button>
             </div>

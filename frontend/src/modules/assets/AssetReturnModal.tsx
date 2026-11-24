@@ -12,7 +12,7 @@ interface AssetReturnModalProps {
 }
 
 const FIELD_CLASS =
-  "h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 " +
+  "h-11 w-full rounded border border-slate-200 bg-white px-3 text-sm text-slate-700 " +
   "outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 " +
   "focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50";
 
@@ -112,10 +112,10 @@ export default function AssetReturnModal({
         if (event.target === event.currentTarget && !isSubmitting) onClose();
       }}
     >
-      <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
+      <div className="w-full max-w-lg overflow-hidden rounded bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
           <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50">
+            <span className="flex h-10 w-10 items-center justify-center rounded bg-orange-50">
               <RotateCcw className="h-5 w-5 text-orange-500" />
             </span>
             <div>
@@ -130,7 +130,7 @@ export default function AssetReturnModal({
             type="button"
             onClick={onClose}
             disabled={isSubmitting}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-9 w-9 items-center justify-center rounded text-slate-400 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
             aria-label="Close"
           >
             <X className="h-5 w-5" />
@@ -166,7 +166,7 @@ export default function AssetReturnModal({
                 </select>
               </div>
             ) : selectedAsset ? (
-              <div className="mb-5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+              <div className="mb-5 rounded border border-slate-200 bg-slate-50 px-4 py-3">
                 <p className="text-sm font-semibold text-slate-800">
                   {selectedAsset.asset_tag} - {selectedAsset.name}
                 </p>
@@ -194,11 +194,11 @@ export default function AssetReturnModal({
                 disabled={isSubmitting}
                 onChange={(event) => setReason(event.target.value)}
                 placeholder="e.g. Employee resigned, device upgrade..."
-                className="w-full resize-none rounded-xl border border-slate-200 px-3 py-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50"
+                className="w-full resize-none rounded border border-slate-200 px-3 py-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50"
               />
             </div>
 
-            <div className="rounded-xl border border-amber-100 bg-amber-50 px-4 py-3">
+            <div className="rounded border border-amber-100 bg-amber-50 px-4 py-3">
               <p className="text-xs leading-5 text-amber-700">
                 This marks the asset as <strong>Pending Return</strong>. The employee keeps
                 holding it until an admin confirms the item has physically been received,
@@ -207,7 +207,7 @@ export default function AssetReturnModal({
             </div>
 
             {error && (
-              <div className="mt-5 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+              <div className="mt-5 rounded border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
                 {error}
               </div>
             )}
@@ -218,7 +218,7 @@ export default function AssetReturnModal({
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-11 items-center justify-center rounded border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Cancel
             </button>
@@ -226,7 +226,7 @@ export default function AssetReturnModal({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#2563eb] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded bg-[#2563eb] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSubmitting ? (
                 <>

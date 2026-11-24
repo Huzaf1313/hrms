@@ -148,7 +148,7 @@ export function StatCards({
       {cards.map((card) => (
         <div
           key={card.label}
-          className="flex min-w-0 items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4"
+          className="flex min-w-0 items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-kpi"
         >
           <span
             className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${card.iconBg}`}

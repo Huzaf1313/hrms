@@ -78,7 +78,7 @@ export default function DashboardKpiRow({
         return (
           <div
             key={card.id}
-            className="group relative rounded-3xl border border-slate-100 bg-white p-5 shadow-sm hover:shadow-md transition-all duration-200 flex items-center justify-between"
+            className="group relative rounded-3xl border border-slate-100 bg-white p-5 shadow-kpi shadow-kpi-hover transition-all duration-200 flex items-center justify-between"
           >
             <div className="flex items-center gap-4">
               <div

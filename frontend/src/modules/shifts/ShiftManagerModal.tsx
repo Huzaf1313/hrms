@@ -195,7 +195,7 @@ export default function ShiftManagerModal({ onClose, onChanged }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="flex max-h-[85vh] w-full max-w-2xl flex-col rounded-2xl bg-white shadow-lg">
+      <div className="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded bg-white shadow-lg">
         <div className="flex items-start justify-between border-b border-gray-100 p-6">
           <div>
             <h2 className="text-xl font-bold text-gray-900">Manage Shifts</h2>
@@ -207,7 +207,7 @@ export default function ShiftManagerModal({ onClose, onChanged }: Props) {
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full p-1.5 text-gray-400 hover:bg-gray-50 hover:text-gray-600"
+            className="rounded p-1.5 text-gray-400 hover:bg-gray-50 hover:text-gray-600"
             aria-label="Close"
           >
             <X className="h-5 w-5" />
@@ -216,7 +216,7 @@ export default function ShiftManagerModal({ onClose, onChanged }: Props) {
 
         <div className="flex-1 overflow-y-auto p-6">
           {error && (
-            <div className="mb-4 rounded-lg bg-rose-50 p-3 text-sm text-rose-600">
+            <div className="mb-4 rounded bg-rose-50 p-3 text-sm text-rose-600">
               {error}
             </div>
           )}
@@ -234,11 +234,10 @@ export default function ShiftManagerModal({ onClose, onChanged }: Props) {
               {shifts.map((shift) => (
                 <li
                   key={shift.id}
-                  className={`rounded-2xl border p-4 ${
-                    shift.is_active
-                      ? "border-gray-100"
-                      : "border-gray-100 bg-gray-50 opacity-70"
-                  }`}
+                  className={`rounded border p-4 ${shift.is_active
+                    ? "border-gray-100"
+                    : "border-gray-100 bg-gray-50 opacity-70"
+                    }`}
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -286,7 +285,7 @@ export default function ShiftManagerModal({ onClose, onChanged }: Props) {
                       <button
                         type="button"
                         onClick={() => openEdit(shift)}
-                        className="rounded-full p-2 text-gray-400 hover:bg-gray-50 hover:text-gray-700"
+                        className="rounded p-2 text-gray-400 hover:bg-gray-50 hover:text-gray-700"
                         aria-label={`Edit ${shift.name}`}
                       >
                         <Pencil className="h-4 w-4" />
@@ -295,7 +294,7 @@ export default function ShiftManagerModal({ onClose, onChanged }: Props) {
                         type="button"
                         onClick={() => handleDelete(shift)}
                         disabled={deletingId === shift.id}
-                        className="rounded-full p-2 text-gray-400 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-40"
+                        className="rounded p-2 text-gray-400 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-40"
                         aria-label={`Delete ${shift.name}`}
                       >
                         <Trash2 className="h-4 w-4" />
@@ -312,7 +311,7 @@ export default function ShiftManagerModal({ onClose, onChanged }: Props) {
           {isFormOpen ? (
             <div className="space-y-4">
               {formError && (
-                <div className="rounded-lg bg-rose-50 p-3 text-sm text-rose-600">
+                <div className="rounded bg-rose-50 p-3 text-sm text-rose-600">
                   {formError}
                 </div>
               )}
@@ -328,7 +327,7 @@ export default function ShiftManagerModal({ onClose, onChanged }: Props) {
                     setForm((prev) => ({ ...prev, name: e.target.value }))
                   }
                   placeholder="e.g. Part-time"
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#2563eb] focus:outline-none"
+                  className="w-full rounded border border-gray-200 px-3 py-2 text-sm focus:border-[#2563eb] focus:outline-none"
                 />
               </div>
 
@@ -346,7 +345,7 @@ export default function ShiftManagerModal({ onClose, onChanged }: Props) {
                         start_time: e.target.value,
                       }))
                     }
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#2563eb] focus:outline-none"
+                    className="w-full rounded border border-gray-200 px-3 py-2 text-sm focus:border-[#2563eb] focus:outline-none"
                   />
                 </div>
                 <div>
@@ -362,7 +361,7 @@ export default function ShiftManagerModal({ onClose, onChanged }: Props) {
                         end_time: e.target.value,
                       }))
                     }
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#2563eb] focus:outline-none"
+                    className="w-full rounded border border-gray-200 px-3 py-2 text-sm focus:border-[#2563eb] focus:outline-none"
                   />
                 </div>
               </div>
@@ -393,7 +392,7 @@ export default function ShiftManagerModal({ onClose, onChanged }: Props) {
                       }))
                     }
                     placeholder="15"
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#2563eb] focus:outline-none"
+                    className="w-full rounded border border-gray-200 px-3 py-2 text-sm focus:border-[#2563eb] focus:outline-none"
                   />
                   <p className="mt-1 text-[11px] text-gray-400">
                     Delay allowed before marked as late
@@ -410,7 +409,7 @@ export default function ShiftManagerModal({ onClose, onChanged }: Props) {
                       setForm((prev) => ({ ...prev, notes: e.target.value }))
                     }
                     placeholder="e.g. Regular day shift"
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#2563eb] focus:outline-none"
+                    className="w-full rounded border border-gray-200 px-3 py-2 text-sm focus:border-[#2563eb] focus:outline-none"
                   />
                 </div>
               </div>
@@ -439,7 +438,7 @@ export default function ShiftManagerModal({ onClose, onChanged }: Props) {
                     setForm(emptyForm);
                     setFormError("");
                   }}
-                  className="flex-1 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  className="flex-1 rounded border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
                 >
                   Cancel
                 </button>
@@ -447,7 +446,7 @@ export default function ShiftManagerModal({ onClose, onChanged }: Props) {
                   type="button"
                   onClick={handleSave}
                   disabled={isSaving}
-                  className="flex-1 rounded-lg bg-[#2563eb] px-4 py-2 text-sm font-medium text-white hover:bg-[#1d4ed8] disabled:opacity-50"
+                  className="flex-1 rounded bg-[#2563eb] px-4 py-2 text-sm font-medium text-white hover:bg-[#1d4ed8] disabled:opacity-50"
                 >
                   {isSaving
                     ? "Saving..."
@@ -462,14 +461,14 @@ export default function ShiftManagerModal({ onClose, onChanged }: Props) {
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                className="flex-1 rounded border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
               >
                 Close
               </button>
               <button
                 type="button"
                 onClick={openCreate}
-                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#2563eb] px-4 py-2 text-sm font-medium text-white hover:bg-[#1d4ed8]"
+                className="flex flex-1 items-center justify-center gap-2 rounded bg-[#2563eb] px-4 py-2 text-sm font-medium text-white hover:bg-[#1d4ed8]"
               >
                 <Plus className="h-4 w-4" />
                 Add Shift

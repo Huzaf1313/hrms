@@ -138,7 +138,7 @@ export default function ExitDetailModal({
         if (event.target === event.currentTarget && !acting) onClose();
       }}
     >
-      <div className="flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+      <div className="flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded bg-white shadow-2xl">
         <header className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5">
           <div className="flex min-w-0 items-center gap-3">
             <EmployeeAvatar name={selected.employee_name} />
@@ -162,7 +162,7 @@ export default function ExitDetailModal({
               type="button"
               onClick={onClose}
               aria-label="Close"
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100"
+              className="flex h-9 w-9 items-center justify-center rounded text-slate-400 hover:bg-slate-100"
             >
               <X className="h-5 w-5" />
             </button>
@@ -225,7 +225,7 @@ export default function ExitDetailModal({
               <p className="mb-1.5 text-xs font-bold uppercase tracking-wide text-slate-400">
                 Remarks
               </p>
-              <p className="rounded-lg bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-600">
+              <p className="rounded bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-600">
                 {selected.remarks}
               </p>
             </div>
@@ -236,7 +236,7 @@ export default function ExitDetailModal({
               <p className="mb-1.5 text-xs font-bold uppercase tracking-wide text-slate-400">
                 HR note
               </p>
-              <p className="rounded-lg bg-blue-50 px-4 py-3 text-sm leading-6 text-blue-800">
+              <p className="rounded bg-blue-50 px-4 py-3 text-sm leading-6 text-blue-800">
                 {selected.admin_note}
               </p>
             </div>
@@ -248,11 +248,11 @@ export default function ExitDetailModal({
             </h3>
 
             {selected.handover_tasks.length === 0 ? (
-              <p className="rounded-lg bg-slate-50 px-4 py-3 text-sm text-slate-500">
+              <p className="rounded bg-slate-50 px-4 py-3 text-sm text-slate-500">
                 No handover tasks were listed for this request.
               </p>
             ) : (
-              <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200">
+              <ul className="divide-y divide-slate-100 rounded border border-slate-200">
                 {selected.handover_tasks.map((task, index) => (
                   <li
                     key={`${task.task}-${index}`}
@@ -308,13 +308,13 @@ export default function ExitDetailModal({
                       }}
                       placeholder="Enter a clearance step"
                       aria-label="Custom clearance step"
-                      className="h-9 min-w-0 flex-1 rounded-lg border border-slate-200 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                      className="h-9 min-w-0 flex-1 rounded border border-slate-200 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                     />
                     <button
                       type="button"
                       onClick={() => void addHandoverTask()}
                       disabled={acting || !taskDraft.trim()}
-                      className="h-9 rounded-lg bg-blue-600 px-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="h-9 rounded bg-blue-600 px-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       Add
                     </button>
@@ -327,7 +327,7 @@ export default function ExitDetailModal({
                       }}
                       disabled={acting}
                       aria-label="Cancel adding clearance step"
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded border border-slate-200 text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <X className="h-4 w-4" />
                     </button>
@@ -366,7 +366,7 @@ export default function ExitDetailModal({
           {actionable && (
             <div className="mt-6 border-t border-slate-100 pt-5">
               <textarea
-                className="h-20 w-full resize-none rounded-lg border border-slate-200 p-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                className="h-20 w-full resize-none rounded border border-slate-200 p-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                 maxLength={500}
                 placeholder="Note to the employee (required when rejecting)"
                 value={note}
@@ -378,7 +378,7 @@ export default function ExitDetailModal({
                   type="button"
                   disabled={acting}
                   onClick={() => void changeStatus("Rejected")}
-                  className="rounded-lg border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-600 transition hover:bg-rose-50 disabled:opacity-50"
+                  className="rounded border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-600 transition hover:bg-rose-50 disabled:opacity-50"
                 >
                   Reject
                 </button>
@@ -388,7 +388,7 @@ export default function ExitDetailModal({
                     type="button"
                     disabled={acting}
                     onClick={() => void changeStatus("In Progress")}
-                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+                    className="rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
                   >
                     Approve &amp; Start Clearance
                   </button>
@@ -397,7 +397,7 @@ export default function ExitDetailModal({
                     type="button"
                     disabled={acting}
                     onClick={() => void changeStatus("Completed")}
-                    className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+                    className="rounded bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
                   >
                     Mark Completed
                   </button>
@@ -407,14 +407,14 @@ export default function ExitDetailModal({
           )}
 
           {!actionable && (
-            <p className="mt-6 flex items-center gap-2 rounded-lg bg-slate-50 px-4 py-3 text-sm text-slate-500">
+            <p className="mt-6 flex items-center gap-2 rounded bg-slate-50 px-4 py-3 text-sm text-slate-500">
               <ExternalLink className="h-4 w-4 shrink-0" />
               This request is {selected.status.toLowerCase()} and can no longer be actioned.
             </p>
           )}
 
           {actionError && (
-            <p className="mt-4 rounded-lg border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-600">
+            <p className="mt-4 rounded border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-600">
               {actionError}
             </p>
           )}

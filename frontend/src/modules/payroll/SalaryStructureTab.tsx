@@ -321,7 +321,7 @@ function EditStructureModal({
         if (event.target === event.currentTarget && !saving) onClose();
       }}
     >
-      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white shadow-2xl">
+      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
           <h2 className="text-lg font-bold text-slate-900">
             {isCreating ? "Add Salary Structure" : "Edit Salary Structure"}
@@ -329,7 +329,7 @@ function EditStructureModal({
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100"
+            className="flex h-8 w-8 items-center justify-center rounded text-slate-400 hover:bg-slate-100"
             aria-label="Close"
           >
             <X className="h-4 w-4" />
@@ -338,7 +338,7 @@ function EditStructureModal({
 
         <div className="space-y-4 px-6 py-5">
           {displayError && (
-            <div className="flex items-start gap-2.5 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">
+            <div className="flex items-start gap-2.5 rounded border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-500" />
               <span>{displayError}</span>
             </div>
@@ -356,7 +356,7 @@ function EditStructureModal({
                 setModalError(null);
               }}
               placeholder="e.g. Standard, Executive Band"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             />
           </div>
 
@@ -372,7 +372,7 @@ function EditStructureModal({
                 setModalError(null);
               }}
               placeholder="e.g. 15,000 - 30,000 (optional)"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             />
             <p className="mt-1 text-[11px] text-slate-400">
               Display label. If left empty, it will be automatically derived from the band limits below.
@@ -393,7 +393,7 @@ function EditStructureModal({
                   setModalError(null);
                 }}
                 placeholder="Min salary"
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="w-full rounded border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
               <span className="text-sm font-medium text-slate-400">to</span>
               <input
@@ -405,7 +405,7 @@ function EditStructureModal({
                   setModalError(null);
                 }}
                 placeholder="Max salary (optional)"
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="w-full rounded border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
             </div>
             <p className="mt-1 text-[11px] text-slate-400">
@@ -435,7 +435,7 @@ function EditStructureModal({
                     value={earning.label}
                     onChange={(event) => updateLabel(index, event.target.value)}
                     placeholder="Component Label"
-                    className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    className="flex-1 rounded border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   />
                   <div className="relative w-32">
                     <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">
@@ -447,14 +447,14 @@ function EditStructureModal({
                       value={earning.amount === 0 ? "" : earning.amount}
                       onChange={(event) => updateAmount(index, event.target.value)}
                       placeholder="0"
-                      className="w-full rounded-lg border border-slate-200 py-2 pl-7 pr-3 text-sm outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      className="w-full rounded border border-slate-200 py-2 pl-7 pr-3 text-sm outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
                   </div>
                   <button
                     type="button"
                     onClick={() => removeRow(index)}
                     disabled={earnings.length <= 1}
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-rose-500 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:text-slate-300 disabled:hover:bg-transparent"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded text-rose-500 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:text-slate-300 disabled:hover:bg-transparent"
                     aria-label="Remove component"
                     title={earnings.length <= 1 ? "At least one component required" : "Remove component"}
                   >
@@ -466,7 +466,7 @@ function EditStructureModal({
           </div>
 
           <div className="space-y-1.5">
-            <div className="flex items-center justify-between rounded-lg bg-slate-50 px-4 py-3">
+            <div className="flex items-center justify-between rounded bg-slate-50 px-4 py-3">
               <span className="text-sm font-bold text-slate-900">Total Gross Salary</span>
               <span
                 className={`text-sm font-bold ${
@@ -489,7 +489,7 @@ function EditStructureModal({
             type="button"
             onClick={onClose}
             disabled={saving}
-            className="flex-1 rounded-lg border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            className="flex-1 rounded border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
           >
             Cancel
           </button>
@@ -497,7 +497,7 @@ function EditStructureModal({
             type="button"
             onClick={handleSave}
             disabled={saving || !name.trim() || Boolean(limitError)}
-            className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
+            className="flex flex-1 items-center justify-center gap-2 rounded bg-blue-600 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
           >
             {saving ? (
               <>
@@ -728,14 +728,14 @@ function SalaryStructureTab() {
             }
           }}
         >
-          <div className="relative w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-2xl">
+          <div className="relative w-full max-w-sm rounded bg-white p-6 text-center shadow-2xl">
             <button
               type="button"
               onClick={() => {
                 setShowCreateSuccessModal(false);
                 setCreatedStructureName(null);
               }}
-              className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100"
+              className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded text-slate-400 hover:bg-slate-100"
               aria-label="Close"
             >
               <X className="h-4 w-4" />
@@ -762,7 +762,7 @@ function SalaryStructureTab() {
                   setShowCreateSuccessModal(false);
                   setCreatedStructureName(null);
                 }}
-                className="w-full rounded-xl bg-blue-600 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+                className="w-full rounded bg-blue-600 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
               >
                 OK
               </button>
@@ -781,7 +781,7 @@ function SalaryStructureTab() {
             }
           }}
         >
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
+          <div className="w-full max-w-sm rounded bg-white p-6 shadow-2xl">
             <div className="flex items-start gap-3.5">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-amber-50 text-amber-600 ring-4 ring-amber-50/50">
                 <AlertTriangle className="h-5 w-5 text-amber-600" />
@@ -800,7 +800,7 @@ function SalaryStructureTab() {
             </div>
 
             {deleteModalError && (
-              <div className="mt-4 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">
+              <div className="mt-4 flex items-start gap-2 rounded border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-500" />
                 <span>{deleteModalError}</span>
               </div>
@@ -814,7 +814,7 @@ function SalaryStructureTab() {
                   setDeleteModalError(null);
                 }}
                 disabled={isDeleting}
-                className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
+                className="flex-1 rounded border border-slate-200 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
               >
                 Cancel
               </button>
@@ -822,7 +822,7 @@ function SalaryStructureTab() {
                 type="button"
                 onClick={handleConfirmDelete}
                 disabled={isDeleting}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-rose-600 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-700 disabled:opacity-60"
+                className="flex flex-1 items-center justify-center gap-2 rounded bg-rose-600 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-700 disabled:opacity-60"
               >
                 {isDeleting ? (
                   <>

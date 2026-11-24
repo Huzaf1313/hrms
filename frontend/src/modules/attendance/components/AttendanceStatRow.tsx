@@ -81,7 +81,7 @@ export const AttendanceStatRow: React.FC<AttendanceStatRowProps> = ({
         return (
           <div
             key={idx}
-            className="rounded-lg border border-[#E4E6E1] bg-white p-[16px_20px] min-h-[96px] shadow-none flex flex-col justify-between min-w-0"
+            className="rounded-lg border border-[#E4E6E1] bg-white p-[16px_20px] min-h-[96px] shadow-kpi flex flex-col justify-between min-w-0"
           >
             {/* Top row: Label on left, Icon badge on right */}
             <div className="flex items-center justify-between gap-2 min-w-0">

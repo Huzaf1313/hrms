@@ -40,6 +40,10 @@
   --height-control: 34px;
   --height-row: 48px;
   --height-header-row: 40px;
+
+  /* Shadows */
+  --shadow-kpi: 0 4px 20px rgba(16, 24, 40, 0.08), 0 1px 4px rgba(16, 24, 40, 0.04);
+  --shadow-kpi-hover: 0 8px 28px rgba(16, 24, 40, 0.12), 0 2px 6px rgba(16, 24, 40, 0.05);
 }
 
 html {

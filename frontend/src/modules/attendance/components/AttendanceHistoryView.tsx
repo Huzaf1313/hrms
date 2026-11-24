@@ -216,7 +216,7 @@ export const AttendanceHistoryView: React.FC<AttendanceHistoryViewProps> = ({
       ) : (
         /* List View */
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm border-collapse">
+          <table className="w-full min-w-[650px] text-left text-sm border-collapse">
             <thead className="bg-[#F6F7F5] border-b border-[#E4E6E1] text-[#7B8794] font-semibold text-[12px] normal-case tracking-normal h-[40px]">
               <tr className="h-[40px]">
                 <th className="px-4 py-0 bg-[#F6F7F5]">Date</th>

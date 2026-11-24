@@ -238,7 +238,7 @@ function ComponentModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded bg-white shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-200 px-6 py-5">
           <div>
@@ -256,7 +256,7 @@ function ComponentModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100"
+            className="rounded p-2 text-gray-500 transition hover:bg-gray-100"
           >
             <X size={20} />
           </button>
@@ -281,7 +281,7 @@ function ComponentModal({
                 updateField("name", event.target.value)
               }
               placeholder="e.g. Provident Fund"
-              className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#17375e]"
+              className="w-full rounded border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#17375e]"
             />
           </div>
 
@@ -299,7 +299,7 @@ function ComponentModal({
                   event.target.value as ComponentType,
                 )
               }
-              className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#17375e]"
+              className="w-full rounded border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#17375e]"
             >
               <option value="Deduction">
                 Deduction
@@ -325,7 +325,7 @@ function ComponentModal({
                   event.target.value as CalculationType,
                 )
               }
-              className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#17375e]"
+              className="w-full rounded border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#17375e]"
             >
               <option value="percentage_of_basic">
                 Percentage of Basic
@@ -369,7 +369,7 @@ function ComponentModal({
                         : Number(event.target.value),
                     )
                   }
-                  className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 pr-12 text-sm outline-none transition focus:border-[#17375e]"
+                  className="w-full rounded border border-gray-200 bg-white px-4 py-3 pr-12 text-sm outline-none transition focus:border-[#17375e]"
                 />
 
                 <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-500">
@@ -401,7 +401,7 @@ function ComponentModal({
                   )
                 }
                 placeholder="Enter amount"
-                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#17375e]"
+                className="w-full rounded border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#17375e]"
               />
             </div>
           )}
@@ -422,7 +422,7 @@ function ComponentModal({
                     event.target.value as "old" | "new",
                   )
                 }
-                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#17375e]"
+                className="w-full rounded border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#17375e]"
               >
                 <option value="new">
                   New Tax Regime
@@ -446,7 +446,7 @@ function ComponentModal({
                 <button
                   type="button"
                   onClick={addSlab}
-                  className="rounded-lg bg-[#17375e] px-3 py-2 text-xs font-medium text-white transition hover:bg-[#102b4a]"
+                  className="rounded bg-[#17375e] px-3 py-2 text-xs font-medium text-white transition hover:bg-[#102b4a]"
                 >
                   Add Slab
                 </button>
@@ -457,7 +457,7 @@ function ComponentModal({
                   (slab, index) => (
                     <div
                       key={index}
-                      className="grid grid-cols-[1fr_1fr_auto] gap-3 rounded-xl border border-gray-200 p-3"
+                      className="grid grid-cols-[1fr_1fr_auto] gap-3 rounded border border-gray-200 p-3"
                     >
                       <div>
                         <label className="mb-1 block text-xs text-gray-500">
@@ -482,7 +482,7 @@ function ComponentModal({
                             )
                           }
                           placeholder="e.g. 500000"
-                          className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#17375e]"
+                          className="w-full rounded border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#17375e]"
                         />
                       </div>
 
@@ -507,7 +507,7 @@ function ComponentModal({
                             )
                           }
                           placeholder="Amount"
-                          className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#17375e]"
+                          className="w-full rounded border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#17375e]"
                         />
                       </div>
 
@@ -516,7 +516,7 @@ function ComponentModal({
                         onClick={() =>
                           removeSlab(index)
                         }
-                        className="mt-5 rounded-lg p-2 text-red-500 transition hover:bg-red-50"
+                        className="mt-5 rounded p-2 text-red-500 transition hover:bg-red-50"
                       >
                         <Trash2 size={16} />
                       </button>
@@ -525,7 +525,7 @@ function ComponentModal({
                 )}
 
                 {(form.slabs ?? []).length === 0 && (
-                  <div className="rounded-xl border border-dashed border-gray-300 px-4 py-6 text-center text-sm text-gray-500">
+                  <div className="rounded border border-dashed border-gray-300 px-4 py-6 text-center text-sm text-gray-500">
                     No slabs added yet.
                   </div>
                 )}
@@ -538,14 +538,14 @@ function ComponentModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl border border-gray-200 px-5 py-3 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
+              className="rounded border border-gray-200 px-5 py-3 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
             >
               Cancel
             </button>
 
             <button
               type="submit"
-              className="rounded-xl bg-[#17375e] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#102b4a]"
+              className="rounded bg-[#17375e] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#102b4a]"
             >
               {isCreating
                 ? "Create Component"

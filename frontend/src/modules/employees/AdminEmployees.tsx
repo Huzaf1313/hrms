@@ -137,7 +137,7 @@ function CredentialsModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl sm:p-8">
+      <div className="w-full max-w-md rounded bg-white p-6 shadow-xl sm:p-8">
         <div className="mb-1 flex items-center gap-2">
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
             <Check aria-hidden="true" className="h-4 w-4" />
@@ -153,7 +153,7 @@ function CredentialsModal({
           The password won't be shown again.
         </p>
 
-        <div className="mt-5 space-y-3 rounded-2xl bg-[#f5f7fb] p-4">
+        <div className="mt-5 space-y-3 rounded bg-[#f5f7fb] p-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
               Email
@@ -177,7 +177,7 @@ function CredentialsModal({
           <button
             type="button"
             onClick={copyCredentials}
-            className="rounded-full border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+            className="rounded border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
           >
             {copied ? (
               <>
@@ -192,7 +192,7 @@ function CredentialsModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full bg-[#0066ff] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0052cc]"
+            className="rounded bg-[#0066ff] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0052cc]"
           >
             Done
           </button>
@@ -688,7 +688,7 @@ function AdminEmployees({
       {/* 2. Top 4 Metric KPI Cards (Matches Mockup) */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {/* Total Employees */}
-        <div className="relative overflow-hidden rounded-3xl border border-slate-100 bg-white p-5 shadow-xs flex items-center justify-between">
+        <div className="relative overflow-hidden rounded-3xl border border-slate-100 bg-white p-5 shadow-kpi flex items-center justify-between">
           <div className="flex items-center gap-3.5">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-50 text-[#0066ff]">
               <Users className="h-6 w-6" />
@@ -704,7 +704,7 @@ function AdminEmployees({
         </div>
 
         {/* Present Today */}
-        <div className="relative overflow-hidden rounded-3xl border border-slate-100 bg-white p-5 shadow-xs flex items-center justify-between">
+        <div className="relative overflow-hidden rounded-3xl border border-slate-100 bg-white p-5 shadow-kpi flex items-center justify-between">
           <div className="flex items-center gap-3.5">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-[#16a34a]">
               <CalendarCheck className="h-6 w-6" />
@@ -723,7 +723,7 @@ function AdminEmployees({
         </div>
 
         {/* On Leave */}
-        <div className="relative overflow-hidden rounded-3xl border border-slate-100 bg-white p-5 shadow-xs flex items-center justify-between">
+        <div className="relative overflow-hidden rounded-3xl border border-slate-100 bg-white p-5 shadow-kpi flex items-center justify-between">
           <div className="flex items-center gap-3.5">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-orange-50 text-[#ea580c]">
               <Umbrella className="h-6 w-6" />
@@ -742,7 +742,7 @@ function AdminEmployees({
         </div>
 
         {/* Pending Leave Requests */}
-        <div className="relative overflow-hidden rounded-3xl border border-slate-100 bg-white p-5 shadow-xs flex items-center justify-between">
+        <div className="relative overflow-hidden rounded-3xl border border-slate-100 bg-white p-5 shadow-kpi flex items-center justify-between">
           <div className="flex items-center gap-3.5">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-purple-50 text-[#7c3aed]">
               <Clock className="h-6 w-6" />
@@ -844,8 +844,8 @@ function AdminEmployees({
               {specialFilter === "new_joiners"
                 ? "New Joiners (Last 30 Days)"
                 : specialFilter === "missing_salary_structure"
-                ? "Employees Missing Salary Structure"
-                : specialFilter}
+                  ? "Employees Missing Salary Structure"
+                  : specialFilter}
             </span>
           </span>
           <button
@@ -905,11 +905,10 @@ function AdminEmployees({
                     key={p}
                     type="button"
                     onClick={() => setPage(p)}
-                    className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold transition ${
-                      page === p
-                        ? "bg-[#0066ff] text-white shadow-xs"
-                        : "text-slate-600 hover:bg-slate-100"
-                    }`}
+                    className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold transition ${page === p
+                      ? "bg-[#0066ff] text-white shadow-xs"
+                      : "text-slate-600 hover:bg-slate-100"
+                      }`}
                   >
                     {p}
                   </button>
@@ -956,7 +955,7 @@ function AdminEmployees({
       {/* Delete Confirmation Modal */}
       {pendingDeleteId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-xl sm:p-7">
+          <div className="w-full max-w-sm rounded bg-white p-6 shadow-xl sm:p-7">
             <h3 className="text-lg font-bold text-slate-900">
               Delete employee?
             </h3>
@@ -968,7 +967,7 @@ function AdminEmployees({
               <button
                 type="button"
                 onClick={() => setPendingDeleteId(null)}
-                className="rounded-full border border-slate-200 px-5 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                className="rounded border border-slate-200 px-5 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
               >
                 Cancel
               </button>
@@ -976,7 +975,7 @@ function AdminEmployees({
               <button
                 type="button"
                 onClick={confirmDelete}
-                className="rounded-full bg-rose-600 px-5 py-2.5 text-xs font-semibold text-white shadow-sm hover:bg-rose-700"
+                className="rounded bg-rose-600 px-5 py-2.5 text-xs font-semibold text-white shadow-sm hover:bg-rose-700"
               >
                 Delete
               </button>

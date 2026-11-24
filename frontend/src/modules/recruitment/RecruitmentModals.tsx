@@ -5,7 +5,7 @@ import { recruitmentService } from "./recruitmentService";
 import type { Candidate, JobPosition } from "./types";
 
 const inputClass =
-  "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500";
+  "w-full rounded border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -24,14 +24,14 @@ function ModalShell({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded bg-white p-6 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-slate-800">{title}</h3>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="rounded-lg p-1 text-slate-500 hover:bg-slate-100"
+            className="rounded p-1 text-slate-500 hover:bg-slate-100"
           >
             <X className="h-5 w-5" />
           </button>
@@ -181,7 +181,7 @@ export function JobModal({ job, departments, onClose, onSaved }: JobModalProps) 
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
+            className="rounded border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
           >
             Cancel
           </button>
@@ -189,7 +189,7 @@ export function JobModal({ job, departments, onClose, onSaved }: JobModalProps) 
             type="button"
             disabled={saving}
             onClick={() => void handleSave()}
-            className="rounded-lg bg-[#2563eb] px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+            className="rounded bg-[#2563eb] px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
           >
             {saving ? "Saving..." : "Save"}
           </button>
@@ -285,7 +285,7 @@ export function CandidateModal({ jobs, onClose, onSaved }: CandidateModalProps) 
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
+              className="rounded border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
             >
               Close
             </button>
@@ -368,7 +368,7 @@ export function CandidateModal({ jobs, onClose, onSaved }: CandidateModalProps) 
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
+              className="rounded border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
             >
               Cancel
             </button>
@@ -376,7 +376,7 @@ export function CandidateModal({ jobs, onClose, onSaved }: CandidateModalProps) 
               type="button"
               disabled={saving}
               onClick={() => void handleSave()}
-              className="rounded-lg bg-[#2563eb] px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+              className="rounded bg-[#2563eb] px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
             >
               {saving ? "Saving..." : "Add Candidate"}
             </button>
@@ -454,7 +454,7 @@ export function OfferModal({ candidate, onClose, onSaved }: OfferModalProps) {
   return (
     <ModalShell title={`Issue Job Offer — ${candidate.full_name}`} onClose={onClose}>
       <div className="space-y-4">
-        <div className="rounded-xl border border-blue-100 bg-blue-50/70 p-3 text-xs text-blue-900">
+        <div className="rounded border border-blue-100 bg-blue-50/70 p-3 text-xs text-blue-900">
           <p className="font-semibold text-blue-800">{candidate.full_name}</p>
           <p className="text-blue-600">
             {candidate.job_title} · {candidate.department} · {candidate.email}
@@ -538,7 +538,7 @@ export function OfferModal({ candidate, onClose, onSaved }: OfferModalProps) {
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
+            className="rounded border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
           >
             Cancel
           </button>
@@ -546,7 +546,7 @@ export function OfferModal({ candidate, onClose, onSaved }: OfferModalProps) {
             type="button"
             disabled={saving}
             onClick={() => void handleSave()}
-            className="rounded-lg bg-[#2563eb] px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+            className="rounded bg-[#2563eb] px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
           >
             {saving ? "Issuing Offer..." : "Issue & Send Offer"}
           </button>
@@ -611,7 +611,7 @@ export function OnboardCandidateModal({
   return (
     <ModalShell title={`Onboard as Employee — ${candidate.full_name}`} onClose={onClose}>
       <div className="space-y-4">
-        <div className="rounded-xl border border-emerald-100 bg-emerald-50/70 p-3 text-xs text-emerald-900">
+        <div className="rounded border border-emerald-100 bg-emerald-50/70 p-3 text-xs text-emerald-900">
           <p className="font-semibold text-emerald-800 flex items-center gap-1.5">
             <UserCheck className="h-4 w-4 text-emerald-600" />
             {candidate.full_name}
@@ -694,7 +694,7 @@ export function OnboardCandidateModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
+            className="rounded border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
           >
             Cancel
           </button>
@@ -702,7 +702,7 @@ export function OnboardCandidateModal({
             type="button"
             disabled={saving}
             onClick={() => void handleOnboard()}
-            className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60"
+            className="rounded bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60"
           >
             {saving ? "Onboarding..." : "Confirm & Create Employee"}
           </button>
@@ -762,14 +762,14 @@ export function RejectionModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
+            className="rounded border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={() => onConfirm(sendEmail, reason.trim())}
-            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+            className="rounded bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
           >
             Confirm Rejection
           </button>

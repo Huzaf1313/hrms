@@ -16,7 +16,7 @@ function KpiCard({
   children,
 }: KpiCardProps) {
   return (
-    <div className="relative h-[210px] rounded-[28px] bg-white p-7 shadow-sm">
+    <div className="relative h-[210px] rounded-[28px] bg-white p-7 shadow-kpi">
       {/* Title */}
       <p className="text-sm font-medium tracking-wide text-gray-700">
         {title}

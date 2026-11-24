@@ -3,6 +3,7 @@ import {
   AlertCircle,
   AlertTriangle,
   CheckCircle2,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Clock3,
@@ -272,7 +273,7 @@ function AdminSupportTickets() {
     <main className="px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-[1500px]">
         {/* Page header */}
-        <section className="mb-6 flex flex-wrap items-start justify-between gap-4">
+        <section className="mb-4 flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
               Support Tickets
@@ -287,7 +288,7 @@ function AdminSupportTickets() {
             type="button"
             onClick={() => loadTickets(currentPage)}
             disabled={isLoading}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-600 shadow-sm transition hover:bg-gray-50 disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-600 shadow-sm transition hover:bg-gray-50 disabled:opacity-50 cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#2F5FD0]"
           >
             <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
             Refresh
@@ -295,8 +296,8 @@ function AdminSupportTickets() {
         </section>
 
         {/* KPI row */}
-        <section className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+        <section className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-kpi">
             <div className="flex items-start justify-between">
               <Tile icon={Layers} tone="bg-blue-50 text-[#2563eb]" />
               <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[11px] font-semibold text-gray-600">
@@ -312,7 +313,7 @@ function AdminSupportTickets() {
             </p>
           </div>
 
-          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-kpi">
             <div className="flex items-start justify-between">
               <Tile icon={Inbox} tone="bg-amber-50 text-amber-600" />
               {analytics && analytics.urgent_open_count > 0 && (
@@ -330,7 +331,7 @@ function AdminSupportTickets() {
             </p>
           </div>
 
-          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-kpi">
             <div className="flex items-start justify-between">
               <Tile icon={Timer} tone="bg-emerald-50 text-emerald-600" />
             </div>
@@ -346,7 +347,7 @@ function AdminSupportTickets() {
             </p>
           </div>
 
-          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-kpi">
             <div className="flex items-start justify-between">
               <Tile icon={Gauge} tone="bg-purple-50 text-purple-600" />
             </div>
@@ -364,7 +365,7 @@ function AdminSupportTickets() {
         </section>
 
         {/* Breakdown + aging */}
-        <section className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <section className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {/* Status distribution */}
           <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
             <div className="flex items-center gap-3">
@@ -563,64 +564,90 @@ function AdminSupportTickets() {
         </section>
 
         {/* Filters */}
-        <section className="mb-6 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative min-w-[240px] flex-1">
-              <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-
+        <section className="mb-4 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+          <div className="flex flex-col gap-2 min-[900px]:flex-row min-[900px]:items-center">
+            <div className="relative w-full min-[900px]:flex-1">
+              <Search
+                className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#6B7280]"
+                strokeWidth={1.5}
+              />
               <input
                 type="text"
                 value={search}
-onChange={(event) => changeFilter(setSearch, event.target.value)}
-              placeholder="Search subject, description or employee..."
-                className="h-11 w-full rounded-xl border border-gray-200 pl-10 pr-3 text-sm text-gray-800 outline-none transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                onChange={(event) => changeFilter(setSearch, event.target.value)}
+                placeholder="Search subject, description or employee..."
+                aria-label="Search subject, description or employee"
+                className="h-8 w-full rounded-[6px] border border-[#E5E7EB] bg-white pl-8 pr-3 text-[13px] text-[#111827] placeholder:text-[#9CA3AF] transition hover:border-[#CBD2D9] focus:border-[#2F5FD0] focus:ring-1 focus:ring-[#2F5FD0] focus:outline-none"
               />
             </div>
 
-            <select
-              value={statusFilter}
-              onChange={(event) => changeFilter(setStatusFilter, event.target.value)}
-              className="h-11 rounded-xl border border-gray-200 bg-white px-3.5 text-sm text-gray-700 outline-none focus:border-blue-500"
-            >
-              <option value="">All statuses</option>
-              {TICKET_STATUSES.map((status) => (
-                <option key={status} value={status}>
-                  {status}
-                </option>
-              ))}
-            </select>
+            <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-3 min-[900px]:flex min-[900px]:w-auto min-[900px]:items-center">
+              <div className="relative w-full min-[900px]:w-[160px] min-[900px]:shrink-0">
+                <select
+                  value={statusFilter}
+                  onChange={(event) => changeFilter(setStatusFilter, event.target.value)}
+                  aria-label="Filter by status"
+                  className="h-8 w-full appearance-none rounded-[6px] border border-[#E5E7EB] bg-white pl-3 pr-8 text-[13px] text-[#111827] transition hover:border-[#CBD2D9] focus:border-[#2F5FD0] focus:ring-1 focus:ring-[#2F5FD0] focus:outline-none cursor-pointer truncate"
+                >
+                  <option value="">All statuses</option>
+                  {TICKET_STATUSES.map((status) => (
+                    <option key={status} value={status}>
+                      {status}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown
+                  className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#6B7280]"
+                  strokeWidth={1.5}
+                />
+              </div>
 
-            <select
-              value={categoryFilter}
-              onChange={(event) => changeFilter(setCategoryFilter, event.target.value)}
-              className="h-11 rounded-xl border border-gray-200 bg-white px-3.5 text-sm text-gray-700 outline-none focus:border-blue-500"
-            >
-              <option value="">All categories</option>
-              {TICKET_CATEGORIES.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-            </select>
+              <div className="relative w-full min-[900px]:w-[160px] min-[900px]:shrink-0">
+                <select
+                  value={categoryFilter}
+                  onChange={(event) => changeFilter(setCategoryFilter, event.target.value)}
+                  aria-label="Filter by category"
+                  className="h-8 w-full appearance-none rounded-[6px] border border-[#E5E7EB] bg-white pl-3 pr-8 text-[13px] text-[#111827] transition hover:border-[#CBD2D9] focus:border-[#2F5FD0] focus:ring-1 focus:ring-[#2F5FD0] focus:outline-none cursor-pointer truncate"
+                >
+                  <option value="">All categories</option>
+                  {TICKET_CATEGORIES.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown
+                  className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#6B7280]"
+                  strokeWidth={1.5}
+                />
+              </div>
 
-            <select
-              value={priorityFilter}
-              onChange={(event) => changeFilter(setPriorityFilter, event.target.value)}
-              className="h-11 rounded-xl border border-gray-200 bg-white px-3.5 text-sm text-gray-700 outline-none focus:border-blue-500"
-            >
-              <option value="">All priorities</option>
-              {TICKET_PRIORITIES.map((priority) => (
-                <option key={priority} value={priority}>
-                  {priority}
-                </option>
-              ))}
-            </select>
+              <div className="relative w-full min-[900px]:w-[160px] min-[900px]:shrink-0">
+                <select
+                  value={priorityFilter}
+                  onChange={(event) => changeFilter(setPriorityFilter, event.target.value)}
+                  aria-label="Filter by priority"
+                  className="h-8 w-full appearance-none rounded-[6px] border border-[#E5E7EB] bg-white pl-3 pr-8 text-[13px] text-[#111827] transition hover:border-[#CBD2D9] focus:border-[#2F5FD0] focus:ring-1 focus:ring-[#2F5FD0] focus:outline-none cursor-pointer truncate"
+                >
+                  <option value="">All priorities</option>
+                  {TICKET_PRIORITIES.map((priority) => (
+                    <option key={priority} value={priority}>
+                      {priority}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown
+                  className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#6B7280]"
+                  strokeWidth={1.5}
+                />
+              </div>
+            </div>
 
             {hasFilters && (
               <button
                 type="button"
                 onClick={clearFilters}
-                className="h-11 rounded-xl px-3.5 text-sm font-semibold text-gray-500 transition hover:bg-gray-100"
+                className="h-8 shrink-0 rounded-[6px] border border-[#E5E7EB] bg-white px-2.5 text-[12px] font-medium text-[#4B5563] transition hover:bg-[#F9FAFB] hover:text-[#111827] focus:outline-none focus:ring-1 focus:ring-[#2F5FD0] cursor-pointer"
               >
                 Clear
               </button>
@@ -629,8 +656,8 @@ onChange={(event) => changeFilter(setSearch, event.target.value)}
         </section>
 
         {/* Ticket queue */}
-        <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm sm:p-6">
-          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <section className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+          <div className="mb-4 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <Tile icon={Ticket} tone="bg-indigo-50 text-indigo-600" />
               <div>
@@ -645,99 +672,147 @@ onChange={(event) => changeFilter(setSearch, event.target.value)}
               </div>
             </div>
 
-            <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600">
+            <span className="inline-flex h-6 items-center rounded-full bg-gray-100 px-2.5 text-[12px] font-semibold text-gray-600">
               {totalTickets} {totalTickets === 1 ? "ticket" : "tickets"}
             </span>
           </div>
 
           {isLoading ? (
-            <div className="flex items-center justify-center gap-2 py-12 text-sm text-gray-500">
-              <LoaderCircle className="h-5 w-5 animate-spin text-blue-600" />
-              Loading tickets...
+            <div className="space-y-2" aria-busy="true" aria-label="Loading tickets">
+              {[1, 2, 3].map((key) => (
+                <div
+                  key={key}
+                  className="rounded-xl border border-[#E5E7EB] bg-white p-4 animate-pulse space-y-3"
+                >
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0 flex-1 space-y-2.5">
+                      <div className="flex items-center gap-2">
+                        <div className="h-4 w-16 rounded bg-gray-200" />
+                        <div className="h-4 w-14 rounded bg-gray-200" />
+                        <div className="h-5 w-12 rounded-full bg-gray-200" />
+                      </div>
+                      <div className="h-4 w-3/5 rounded bg-gray-200" />
+                      <div className="h-3 w-4/5 rounded bg-gray-200" />
+                      <div className="flex items-center gap-2 pt-1">
+                        <div className="h-5 w-20 rounded-full bg-gray-200" />
+                        <div className="h-5 w-16 rounded-full bg-gray-200" />
+                        <div className="h-4 w-28 rounded bg-gray-200" />
+                      </div>
+                    </div>
+                    <div className="shrink-0 space-y-1 sm:text-right">
+                      <div className="h-3 w-10 rounded bg-gray-200 sm:ml-auto" />
+                      <div className="h-4 w-16 rounded bg-gray-200 sm:ml-auto" />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           ) : error ? (
-            <div className="rounded-xl border border-red-100 bg-red-50 p-5 text-center">
-              <p className="text-sm text-red-700">{error}</p>
+            <div
+              role="alert"
+              className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-center sm:text-left"
+            >
+              <div className="flex items-center gap-2 text-sm text-red-700">
+                <AlertCircle className="h-4 w-4 shrink-0 text-red-600" />
+                <span>{error}</span>
+              </div>
               <button
                 type="button"
                 onClick={() => loadTickets(currentPage)}
-                className="mt-3 text-sm font-semibold text-blue-700 hover:underline"
+                className="inline-flex items-center justify-center rounded-[6px] border border-red-300 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 shadow-sm transition hover:bg-red-50 focus:outline-none focus:ring-1 focus:ring-red-500 shrink-0 cursor-pointer"
               >
-                Try again
+                Retry
               </button>
             </div>
           ) : tickets.length === 0 ? (
             <div className="rounded-xl border border-dashed border-gray-200 px-4 py-12 text-center">
               <Ticket className="mx-auto h-8 w-8 text-gray-300" />
               <h3 className="mt-3 text-sm font-semibold text-gray-700">
-                No tickets found
+                {hasFilters ? "No tickets match your filters" : "No tickets found"}
               </h3>
               <p className="mt-1 text-xs leading-5 text-gray-500">
                 {hasFilters
                   ? "Try adjusting or clearing the filters."
                   : "When an employee raises a request, it appears here."}
               </p>
+              {hasFilters && (
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="mt-3 inline-flex items-center gap-1.5 rounded-[6px] border border-[#E5E7EB] bg-white px-3 py-1.5 text-[12px] font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition focus:outline-none focus:ring-1 focus:ring-[#2F5FD0] cursor-pointer"
+                >
+                  Clear filters
+                </button>
+              )}
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {tickets.map((ticket) => (
                 <button
                   key={ticket.id}
                   type="button"
                   onClick={() => openTicket(ticket)}
-                  className="block w-full rounded-xl border border-gray-100 p-4 text-left transition hover:border-blue-100 hover:bg-gray-50/50"
+                  className="group block w-full rounded-xl border border-[#E5E7EB] bg-white p-4 text-left transition hover:border-[#D1D5DB] hover:bg-[#F9FAFB] focus:outline-none focus:ring-2 focus:ring-[#2F5FD0] focus:ring-offset-1 cursor-pointer"
                 >
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-mono text-xs font-semibold text-blue-700">
+                        <span className="text-[12px] font-medium tabular-nums text-blue-700">
                           #{ticket.id.slice(-8).toUpperCase()}
                         </span>
 
-                        <span className="text-xs text-gray-400">
+                        <span className="text-[12px] text-[#6B7280]">
                           {ticket.employee_id}
                         </span>
 
-                        <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-[11px] font-medium text-gray-600">
+                        <span className="inline-flex h-5 items-center rounded-full bg-gray-100 px-2 text-[11px] font-medium text-gray-600">
                           {ticket.category}
                         </span>
                       </div>
 
-                      <h3 className="mt-2 break-words text-sm font-semibold text-gray-900">
+                      <h3 className="mt-1.5 break-words text-[14px] font-semibold text-[#2563eb] group-hover:underline">
                         {ticket.subject}
                       </h3>
 
-                      <p className="mt-1 line-clamp-2 whitespace-pre-wrap break-words text-xs leading-5 text-gray-500">
+                      <p
+                        title={ticket.description}
+                        className="mt-1 truncate text-[13px] text-[#4B5563]"
+                      >
                         {ticket.description}
                       </p>
 
-                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <div className="mt-2.5 flex flex-wrap items-center gap-2">
                         <span
-                          className={`rounded-full px-2.5 py-1 text-xs font-medium ${getPriorityStyle(ticket.priority)}`}
+                          className={`inline-flex h-5 items-center justify-center rounded-full px-2 text-[11px] font-medium leading-none ${getPriorityStyle(ticket.priority)}`}
                         >
                           {ticket.priority} priority
                         </span>
 
                         <span
-                          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${getStatusStyle(ticket.status)}`}
+                          className={`inline-flex h-5 items-center justify-center gap-1 rounded-full px-2 text-[11px] font-medium leading-none ring-1 ring-inset ${getStatusStyle(ticket.status)}`}
                         >
-                          <Clock3 className="h-3 w-3" />
-                          {ticket.status}
+                          <Clock3 className="h-3 w-3 shrink-0" />
+                          <span>{ticket.status}</span>
                         </span>
 
                         {ticket.handled_by && (
-                          <span className="text-[11px] text-gray-400">
+                          <span
+                            title={`Handled by ${ticket.handled_by}`}
+                            className="max-w-[200px] truncate text-[12px] text-[#6B7280]"
+                          >
                             handled by {ticket.handled_by}
                           </span>
                         )}
                       </div>
                     </div>
 
-                    <div className="shrink-0 text-xs text-gray-400 sm:text-right">
-                      <p>Created</p>
-                      <p className="mt-1 font-medium text-gray-600">
+                    <div className="mt-1 shrink-0 text-left whitespace-nowrap sm:mt-0 sm:self-start sm:text-right">
+                      <span className="block text-[11px] leading-tight text-[#6B7280]">
+                        Created
+                      </span>
+                      <span className="mt-0.5 block text-[12px] font-medium leading-tight text-[#111827]">
                         {formatDate(ticket.created_at)}
-                      </p>
+                      </span>
                     </div>
                   </div>
                 </button>
@@ -754,7 +829,7 @@ onChange={(event) => changeFilter(setSearch, event.target.value)}
                       type="button"
                       disabled={currentPage <= 1 || isLoading}
                       onClick={() => setCurrentPage((page) => page - 1)}
-                      className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                      className="inline-flex items-center gap-1 rounded-[6px] border border-[#E5E7EB] bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 focus:outline-none focus:ring-1 focus:ring-[#2F5FD0]"
                     >
                       <ChevronLeft className="h-4 w-4" />
                       Previous
@@ -764,7 +839,7 @@ onChange={(event) => changeFilter(setSearch, event.target.value)}
                       type="button"
                       disabled={currentPage >= totalPages || isLoading}
                       onClick={() => setCurrentPage((page) => page + 1)}
-                      className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                      className="inline-flex items-center gap-1 rounded-[6px] border border-[#E5E7EB] bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 focus:outline-none focus:ring-1 focus:ring-[#2F5FD0]"
                     >
                       Next
                       <ChevronRight className="h-4 w-4" />
@@ -780,7 +855,7 @@ onChange={(event) => changeFilter(setSearch, event.target.value)}
       {/* Reply drawer */}
       {selectedTicket && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
-          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-xl">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded bg-white shadow-xl">
             <div className="flex items-start justify-between gap-3 border-b border-gray-100 px-6 py-5">
               <div className="min-w-0">
                 <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -816,7 +891,7 @@ onChange={(event) => changeFilter(setSearch, event.target.value)}
               <button
                 type="button"
                 onClick={closeTicket}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gray-200 text-gray-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-gray-200 text-gray-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
                 aria-label="Close ticket"
               >
                 <X className="h-4 w-4" />
@@ -829,7 +904,7 @@ onChange={(event) => changeFilter(setSearch, event.target.value)}
                   Employee&apos;s message
                 </p>
 
-                <p className="mt-2 whitespace-pre-wrap rounded-xl bg-gray-50 px-4 py-3 text-sm leading-6 text-gray-700">
+                <p className="mt-2 whitespace-pre-wrap rounded bg-gray-50 px-4 py-3 text-sm leading-6 text-gray-700">
                   {selectedTicket.description}
                 </p>
               </div>
@@ -843,7 +918,7 @@ onChange={(event) => changeFilter(setSearch, event.target.value)}
                       : ""}
                   </p>
 
-                  <p className="mt-2 whitespace-pre-wrap rounded-xl bg-emerald-50 px-4 py-3 text-sm leading-6 text-gray-700">
+                  <p className="mt-2 whitespace-pre-wrap rounded bg-emerald-50 px-4 py-3 text-sm leading-6 text-gray-700">
                     {selectedTicket.resolution_note}
                   </p>
                 </div>
@@ -866,7 +941,7 @@ onChange={(event) => changeFilter(setSearch, event.target.value)}
                         event.target.value as SupportTicketStatus,
                       )
                     }
-                    className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-3 text-sm text-gray-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    className="w-full rounded border border-gray-200 bg-white px-3.5 py-3 text-sm text-gray-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                   >
                     {TICKET_STATUSES.map((status) => (
                       <option key={status} value={status}>
@@ -891,7 +966,7 @@ onChange={(event) => changeFilter(setSearch, event.target.value)}
                     rows={4}
                     maxLength={2000}
                     placeholder="Shown to the employee on their ticket, and sent as a notification."
-                    className="w-full resize-y rounded-xl border border-gray-200 px-3.5 py-3 text-sm leading-6 text-gray-800 outline-none transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    className="w-full resize-y rounded border border-gray-200 px-3.5 py-3 text-sm leading-6 text-gray-800 outline-none transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                   />
 
                   <div className="mt-1 flex justify-between text-xs text-gray-400">
@@ -903,7 +978,7 @@ onChange={(event) => changeFilter(setSearch, event.target.value)}
                 {replyError && (
                   <div
                     role="alert"
-                    className="flex items-start gap-2 rounded-xl border border-red-100 bg-red-50 p-3.5 text-sm text-red-700"
+                    className="flex items-start gap-2 rounded border border-red-100 bg-red-50 p-3.5 text-sm text-red-700"
                   >
                     <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                     <span>{replyError}</span>
@@ -920,7 +995,7 @@ onChange={(event) => changeFilter(setSearch, event.target.value)}
                     <button
                       type="button"
                       onClick={closeTicket}
-                      className="rounded-lg px-4 py-2.5 text-sm font-semibold text-gray-600 transition hover:bg-gray-100"
+                      className="rounded px-4 py-2.5 text-sm font-semibold text-gray-600 transition hover:bg-gray-100"
                     >
                       Cancel
                     </button>
@@ -928,7 +1003,7 @@ onChange={(event) => changeFilter(setSearch, event.target.value)}
                     <button
                       type="submit"
                       disabled={isSaving}
-                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#2563eb] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="inline-flex items-center justify-center gap-2 rounded bg-[#2563eb] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {isSaving && (
                         <LoaderCircle className="h-4 w-4 animate-spin" />

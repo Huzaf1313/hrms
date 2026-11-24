@@ -148,8 +148,7 @@ export function EmployeeLayout({ onLogout }: { onLogout: () => void }) {
             </button>
 
             {/* Sole page title */}
-            <div className="flex items-center gap-2">
-              <span className="text-[12px] text-[#7B8794] font-medium hidden sm:inline">Self Service /</span>
+            <div className="flex items-center min-w-0">
               <h1 className="text-[20px] font-semibold text-[#1F2933] truncate">
                 {pageTitle}
               </h1>

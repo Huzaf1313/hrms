@@ -216,13 +216,13 @@ function DatePicker({ canManageHolidays = false }: DatePickerProps) {
             ? "Showing today"
             : "Filtering every page by this date"
         }
-        className={`flex items-center gap-2 rounded-[6px] border h-[34px] px-3 text-[13.5px] font-medium transition ${
+        className={`flex items-center gap-2 rounded-[6px] border h-9 px-3 text-[13px] font-medium transition ${
           isDefault
             ? "border-[#E4E6E1] bg-white text-[#1F2933] hover:bg-[#F0F1EE]"
             : "border-[#2F5FD0]/30 bg-[#E8EEFB] text-[#2F5FD0] hover:bg-[#E8EEFB]/80"
         }`}
       >
-        <CalendarDays className="h-[18px] w-[18px] text-[#7B8794] shrink-0" />
+        <CalendarDays className="h-4 w-4 text-[#7B8794] shrink-0" />
         <span className="hidden sm:inline">{formatDate(selectedDate)}</span>
         {!isDefault && (
           <span

@@ -18,6 +18,47 @@ export interface LeaveApprovalsProps {
   className?: string;
 }
 
+function formatDays(count: number): string {
+  const rounded = Math.round(count * 10) / 10;
+  return `${rounded} ${rounded === 1 ? "day" : "days"}`;
+}
+
+function formatDate(dateStr: string): string {
+  if (!dateStr) return "-";
+  const clean = dateStr.slice(0, 10);
+  const parts = clean.split("-");
+  if (parts.length !== 3) return dateStr;
+  const year = parts[0];
+  const monthIdx = parseInt(parts[1], 10) - 1;
+  const day = parseInt(parts[2], 10);
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  return `${day} ${months[monthIdx]} ${year}`;
+}
+
+function formatDateRange(startStr: string, endStr: string): string {
+  if (!startStr) return "-";
+  if (!endStr || startStr === endStr) return formatDate(startStr);
+  const sParts = startStr.slice(0, 10).split("-");
+  const eParts = endStr.slice(0, 10).split("-");
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+  if (sParts.length === 3 && eParts.length === 3) {
+    const sDay = parseInt(sParts[2], 10);
+    const sMonth = months[parseInt(sParts[1], 10) - 1];
+    const sYear = sParts[0];
+
+    const eDay = parseInt(eParts[2], 10);
+    const eMonth = months[parseInt(eParts[1], 10) - 1];
+    const eYear = eParts[0];
+
+    if (sYear === eYear) {
+      return `${sDay} ${sMonth} - ${eDay} ${eMonth} ${sYear}`;
+    }
+    return `${sDay} ${sMonth} ${sYear} - ${eDay} ${eMonth} ${eYear}`;
+  }
+  return `${startStr} - ${endStr}`;
+}
+
 export const LeaveApprovals: React.FC<LeaveApprovalsProps> = ({
   requests,
   teamLeaves = [],
@@ -89,12 +130,12 @@ export const LeaveApprovals: React.FC<LeaveApprovalsProps> = ({
   };
 
   return (
-    <div className={`rounded-lg border border-[#E4E6E1] bg-white overflow-hidden shadow-none ${className}`}>
+    <div className={`rounded-lg border border-[#E5E7EB] bg-white overflow-hidden shadow-none ${className}`}>
       {/* Header Toolbar inside the card */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-[#E4E6E1]">
+      <div className="flex items-center justify-between px-6 py-3.5 border-b border-[#E5E7EB]">
         <div className="flex items-center gap-2">
-          <h3 className="text-[14px] font-semibold text-[#1F2933]">Pending Leave Approvals</h3>
-          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-[#FBF0D9] text-[#8A5A00]">
+          <h3 className="text-[13px] font-semibold text-[#111827]">Pending Leave Approvals</h3>
+          <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-[#FEF3C7] text-[#92400E] border border-[#FCD34D]">
             {pendingRequests.length}
           </span>
         </div>
@@ -104,7 +145,7 @@ export const LeaveApprovals: React.FC<LeaveApprovalsProps> = ({
             variant="primary"
             onClick={handleBulkApprove}
             isLoading={isSubmitting}
-            className="h-8 px-3.5 py-0 text-[13px] font-medium gap-2 shrink-0"
+            className="h-8 px-3.5 py-0 text-xs font-medium gap-2 shrink-0"
           >
             Bulk Approve ({selectedIds.size})
           </Button>
@@ -113,47 +154,47 @@ export const LeaveApprovals: React.FC<LeaveApprovalsProps> = ({
 
       {/* Main Table */}
       <div className="overflow-x-auto w-full">
-        <table className="min-w-[960px] w-full border-collapse text-left text-sm">
-          <thead className="bg-[#F6F7F5] border-b border-[#E4E6E1] text-[#7B8794] font-medium text-xs normal-case tracking-[0.02em]">
-            <tr className="h-11">
-              <th style={{ width: "48px" }} className="w-[48px] min-w-[48px] px-6 py-0 bg-[#F6F7F5] text-center align-middle font-medium">
+        <table className="min-w-[960px] w-full border-collapse text-left text-[12px]">
+          <thead className="bg-[#F9FAFB] border-b border-[#E5E7EB] text-[#4B5563] font-semibold text-[11px] uppercase tracking-wider">
+            <tr className="h-10">
+              <th style={{ width: "48px" }} className="w-[48px] min-w-[48px] px-6 py-0 bg-[#F9FAFB] text-center align-middle font-semibold">
                 <div className="flex items-center justify-center">
                   <input
                     type="checkbox"
                     checked={pendingRequests.length > 0 && selectedIds.size === pendingRequests.length}
                     onChange={toggleSelectAll}
-                    className="h-4 w-4 rounded text-[#2F5FD0] border-[#E4E6E1] focus:ring-[#2F5FD0] cursor-pointer"
+                    className="h-4 w-4 rounded text-[#2F5FD0] border-[#E5E7EB] focus:ring-[#2F5FD0] cursor-pointer"
                     aria-label="Select all pending requests"
                   />
                 </div>
               </th>
-              <th style={{ width: "240px" }} className="w-[240px] min-w-[240px] px-6 py-0 bg-[#F6F7F5] align-middle font-medium">
+              <th style={{ width: "240px" }} className="w-[240px] min-w-[240px] px-6 py-0 bg-[#F9FAFB] align-middle font-semibold">
                 Employee
               </th>
-              <th style={{ width: "160px" }} className="w-[160px] min-w-[160px] px-6 py-0 bg-[#F6F7F5] align-middle font-medium">
+              <th style={{ width: "160px" }} className="w-[160px] min-w-[160px] px-6 py-0 bg-[#F9FAFB] align-middle font-semibold">
                 Leave Type
               </th>
-              <th style={{ width: "220px" }} className="w-[220px] min-w-[220px] px-6 py-0 bg-[#F6F7F5] align-middle font-medium">
+              <th style={{ width: "220px" }} className="w-[220px] min-w-[220px] px-6 py-0 bg-[#F9FAFB] align-middle font-semibold">
                 Duration
               </th>
-              <th className="min-w-[280px] px-6 py-0 bg-[#F6F7F5] align-middle font-medium">
+              <th className="min-w-[280px] px-6 py-0 bg-[#F9FAFB] align-middle font-semibold">
                 Reason & Team Impact
               </th>
-              <th style={{ width: "180px" }} className="w-[180px] min-w-[180px] px-6 py-0 bg-[#F6F7F5] text-right align-middle font-medium">
+              <th style={{ width: "180px" }} className="w-[180px] min-w-[180px] px-6 py-0 bg-[#F9FAFB] text-right align-middle font-semibold">
                 Decision
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#E4E6E1] bg-white text-[#1F2933]">
+          <tbody className="divide-y divide-[#E5E7EB] bg-white text-[#111827]">
             {isLoading ? (
               <tr>
-                <td colSpan={6} className="py-8 text-center text-xs text-[#7B8794]">
+                <td colSpan={6} className="py-8 text-center text-xs text-[#6B7280]">
                   Loading pending leave requests...
                 </td>
               </tr>
             ) : pendingRequests.length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-8 text-center text-xs text-[#7B8794]">
+                <td colSpan={6} className="py-8 text-center text-xs text-[#6B7280]">
                   No pending leave applications requiring approval.
                 </td>
               </tr>
@@ -163,57 +204,57 @@ export const LeaveApprovals: React.FC<LeaveApprovalsProps> = ({
                 const overlaps = getOverlaps(req);
 
                 return (
-                  <tr key={req.id} className="min-h-[64px] h-[64px] hover:bg-[#FAFAF8] transition-colors">
-                    <td className="w-[48px] min-w-[48px] px-6 py-3 text-center align-middle">
+                  <tr key={req.id} className="min-h-[56px] h-[56px] hover:bg-[#F9FAFB] transition-colors">
+                    <td className="w-[48px] min-w-[48px] px-6 py-2 text-center align-middle">
                       <div className="flex items-center justify-center">
                         <input
                           type="checkbox"
                           checked={selectedIds.has(req.id)}
                           onChange={() => toggleSelect(req.id)}
-                          className="h-4 w-4 rounded text-[#2F5FD0] border-[#E4E6E1] focus:ring-[#2F5FD0] cursor-pointer"
+                          className="h-4 w-4 rounded text-[#2F5FD0] border-[#E5E7EB] focus:ring-[#2F5FD0] cursor-pointer"
                         />
                       </div>
                     </td>
 
-                    <td className="w-[240px] min-w-[240px] px-6 py-3 align-middle">
-                      <div className="flex items-center gap-3">
-                        <Avatar name={req.employee_name || "Employee"} className="!w-9 !h-9 text-xs shrink-0" />
+                    <td className="w-[240px] min-w-[240px] px-6 py-2 align-middle">
+                      <div className="flex items-center gap-2.5">
+                        <Avatar name={req.employee_name || "Employee"} className="!w-8 !h-8 text-[11px] shrink-0" />
                         <div className="min-w-0">
-                          <span className="font-medium text-[#1F2933] block truncate text-sm leading-tight">
+                          <span className="font-medium text-[#111827] block truncate text-[12px] leading-tight">
                             {req.employee_name || req.employee_id}
                           </span>
-                          <span className="text-xs text-[#7B8794] block mt-0.5 leading-tight">
+                          <span className="text-[11px] text-[#6B7280] block mt-0.5 leading-tight">
                             {req.department_name ?? "General"}
                           </span>
                         </div>
                       </div>
                     </td>
 
-                    <td className="w-[160px] min-w-[160px] px-6 py-3 align-middle">
-                      <StatusPill variant={meta.badgeVariant} dot className="py-1 px-3 gap-1.5 h-auto text-xs leading-normal font-medium">
+                    <td className="w-[160px] min-w-[160px] px-6 py-2 align-middle">
+                      <StatusPill variant={meta.badgeVariant} dot className="py-0.5 px-2.5 gap-1.5 h-5 text-[11px] leading-normal font-medium">
                         {req.leave_type}
                       </StatusPill>
                     </td>
 
-                    <td className="w-[220px] min-w-[220px] px-6 py-3 align-middle font-mono">
+                    <td className="w-[220px] min-w-[220px] px-6 py-2 align-middle">
                       <div>
-                        <span className="text-[13px] font-mono text-[#1F2933] block leading-tight">
-                          {req.start_date} to {req.end_date}
+                        <span className="text-[12px] font-medium text-[#111827] block leading-tight">
+                          {formatDateRange(req.start_date, req.end_date)}
                         </span>
-                        <span className="text-xs text-[#7B8794] block mt-0.5 leading-tight font-sans">
-                          {req.total_days ?? 1} working {Number(req.total_days) === 1 ? "day" : "days"}
+                        <span className="text-[11px] text-[#6B7280] block mt-0.5 leading-tight tabular-nums">
+                          {formatDays(req.total_days ?? 1)}
                         </span>
                       </div>
                     </td>
 
-                    <td className="min-w-[280px] px-6 py-3 align-middle">
+                    <td className="min-w-[280px] px-6 py-2 align-middle">
                       <div className="max-w-md">
-                        <span className="text-sm text-[#52606D] block truncate" title={req.reason || ""}>
+                        <span className="text-[12px] text-[#4B5563] block truncate" title={req.reason || ""}>
                           {req.reason || "-"}
                         </span>
                         {overlaps.length > 0 && (
-                          <div className="flex items-center gap-1.5 text-xs text-[#8A5A00] font-medium mt-1">
-                            <AlertTriangle className="w-4 h-4 shrink-0" />
+                          <div className="flex items-center gap-1.5 text-[11px] text-[#92400E] font-medium mt-1">
+                            <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
                             <span>
                               {overlaps.length} other team {overlaps.length === 1 ? "member" : "members"} on leave ({overlaps.map((o) => o.employee_name).join(", ")})
                             </span>
@@ -222,14 +263,14 @@ export const LeaveApprovals: React.FC<LeaveApprovalsProps> = ({
                       </div>
                     </td>
 
-                    <td className="w-[180px] min-w-[180px] px-6 py-3 align-middle text-right">
+                    <td className="w-[180px] min-w-[180px] px-6 py-2 align-middle text-right">
                       <div className="inline-flex items-center gap-2 justify-end">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => onApprove(req.id)}
-                          className="h-8 px-3.5 py-0 text-[13px] font-medium gap-1.5 text-[#1E6B45] hover:bg-[#E3F3EA] border-[#E4E6E1]"
-                          leftIcon={<Check className="w-4 h-4 shrink-0 text-[#1E6B45]" />}
+                          className="h-7 px-2.5 py-0 text-[12px] font-medium gap-1 text-[#03543F] hover:bg-[#DEF7EC] border-[#BCF0DA]"
+                          leftIcon={<Check className="w-3.5 h-3.5 shrink-0 text-[#03543F]" />}
                         >
                           Approve
                         </Button>
@@ -241,8 +282,8 @@ export const LeaveApprovals: React.FC<LeaveApprovalsProps> = ({
                             setRejectComment("");
                             setActionError(null);
                           }}
-                          className="h-8 px-3.5 py-0 text-[13px] font-medium gap-1.5 text-[#A12D22] hover:bg-[#FBE4E1] border-[#E4E6E1]"
-                          leftIcon={<X className="w-4 h-4 shrink-0 text-[#A12D22]" />}
+                          className="h-7 px-2.5 py-0 text-[12px] font-medium gap-1 text-[#9B1C1C] hover:bg-[#FDE8E8] border-[#F8B4B4]"
+                          leftIcon={<X className="w-3.5 h-3.5 shrink-0 text-[#9B1C1C]" />}
                         >
                           Reject
                         </Button>

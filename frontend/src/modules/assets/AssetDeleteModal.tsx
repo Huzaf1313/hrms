@@ -51,10 +51,10 @@ export default function AssetDeleteModal({
         if (event.target === event.currentTarget && !isSubmitting) onClose();
       }}
     >
-      <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl">
+      <div className="w-full max-w-md overflow-hidden rounded bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
           <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-50">
+            <span className="flex h-10 w-10 items-center justify-center rounded bg-rose-50">
               <Trash2 className="h-5 w-5 text-rose-600" />
             </span>
             <div>
@@ -69,7 +69,7 @@ export default function AssetDeleteModal({
             type="button"
             onClick={onClose}
             disabled={isSubmitting}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-9 w-9 items-center justify-center rounded text-slate-400 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
             aria-label="Close"
           >
             <X className="h-5 w-5" />
@@ -77,7 +77,7 @@ export default function AssetDeleteModal({
         </div>
 
         <div className="px-6 py-6">
-          <dl className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+          <dl className="rounded border border-slate-200 bg-slate-50 px-4 py-3">
             <div className="flex items-start justify-between gap-4 py-1">
               <dt className="shrink-0 text-sm font-semibold text-slate-500">Asset</dt>
               <dd className="min-w-0 break-words text-right text-sm font-bold text-slate-900">
@@ -98,7 +98,7 @@ export default function AssetDeleteModal({
             </div>
           </dl>
 
-          <div className="mt-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3">
+          <div className="mt-4 rounded border border-red-100 bg-red-50 px-4 py-3">
             <p className="text-xs leading-5 text-red-700">
               The asset record and its purchase details will be deleted
               permanently. This cannot be undone.
@@ -106,7 +106,7 @@ export default function AssetDeleteModal({
           </div>
 
           {error && (
-            <div className="mt-5 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+            <div className="mt-5 rounded border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
               {error}
             </div>
           )}
@@ -117,7 +117,7 @@ export default function AssetDeleteModal({
             type="button"
             onClick={onClose}
             disabled={isSubmitting}
-            className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex h-11 items-center justify-center rounded border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Cancel
           </button>
@@ -126,7 +126,7 @@ export default function AssetDeleteModal({
             type="button"
             onClick={() => void handleConfirm()}
             disabled={isSubmitting}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-rose-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded bg-rose-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSubmitting ? (
               <>

@@ -304,10 +304,10 @@ interface ViewAllModalProps {
 function ViewAllModal({ icon, title, countLabel, subtitle, summary, onClose, children }: ViewAllModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-      <div className="flex max-h-[85vh] w-full max-w-2xl flex-col rounded-2xl bg-white shadow-lg">
+      <div className="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded bg-white shadow-lg">
         <div className="flex items-start justify-between border-b border-gray-100 p-6">
           <div className="flex items-start gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg">{icon}</span>
+            <span className="flex h-8 w-8 items-center justify-center rounded">{icon}</span>
             <div>
               <div className="flex items-center gap-2.5">
                 <h2 className="text-xl font-bold text-gray-900">{title}</h2>
@@ -321,7 +321,7 @@ function ViewAllModal({ icon, title, countLabel, subtitle, summary, onClose, chi
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full p-1.5 text-gray-400 hover:bg-gray-50 hover:text-gray-600"
+            className="rounded p-1.5 text-gray-400 hover:bg-gray-50 hover:text-gray-600"
             aria-label="Close"
           >
             <X className="h-5 w-5" />
@@ -335,7 +335,7 @@ function ViewAllModal({ icon, title, countLabel, subtitle, summary, onClose, chi
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition"
+            className="rounded bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition"
           >
             Close
           </button>

@@ -108,7 +108,7 @@ export default function AdminEmployeeTable({
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full border-collapse text-left">
+      <table className="w-full min-w-[850px] border-collapse text-left">
         <thead>
           <tr className="border-b border-slate-100 bg-transparent text-xs font-bold text-slate-800">
             <th className="py-4 pl-6 pr-3 w-10">

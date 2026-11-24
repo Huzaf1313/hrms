@@ -153,20 +153,6 @@ export function Login() {
     }
   };
 
-  const handleSocialLogin = (provider: "Facebook" | "Google") => {
-    setError("");
-    if (provider === "Google") {
-      // In enterprise SSO environments, initiate Google SSO or notify user
-      setError(
-        "Google Workspace Single Sign-On (SSO) is enabled. Please enter your work email above to sign in or contact your IT admin.",
-      );
-    } else {
-      setError(
-        "Corporate SSO for Meta Workplace is routed through your organization identity provider. Please sign in with your corporate email.",
-      );
-    }
-  };
-
   const handleForgotPasswordStart = () => {
     setIsForgotPassword(true);
     setForgotStep("email");
@@ -372,7 +358,7 @@ export function Login() {
             aria-modal="true"
             aria-labelledby="deactivated-title"
             aria-describedby="deactivated-description"
-            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200"
+            className="w-full max-w-md rounded bg-white p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200"
           >
             <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
               <svg
@@ -410,7 +396,7 @@ export function Login() {
             <button
               type="button"
               onClick={() => setShowDeactivatedModal(false)}
-              className="mt-7 w-full rounded-xl bg-brand-600 py-3 text-sm font-semibold text-white shadow-md transition-colors hover:bg-brand-700"
+              className="mt-7 w-full h-10 rounded bg-[#2F5FD0] hover:bg-[#264FB0] text-sm font-semibold text-white transition-colors"
             >
               Okay, Got It
             </button>
@@ -422,26 +408,26 @@ export function Login() {
         /* ------------------------------------------------------------- */
         /* Exact Reference Layout: Welcome Back Login Form               */
         /* ------------------------------------------------------------- */
-        <div className="w-full max-w-[360px] sm:max-w-[380px] mx-auto flex flex-col justify-center">
+        <div className="w-full max-w-[360px] mx-auto flex flex-col justify-center">
           {/* Top Brand Logo & Wordmark (Matching Reference Image) */}
-          <div className="flex items-center gap-2.5 mb-5 sm:mb-6">
+          <div className="flex items-center gap-2.5 mb-6">
             <img
               src="/peoplesync-logo.png"
               alt="PeopleSync Logo"
-              className="h-8 w-auto object-contain"
+              className="h-[28px] w-auto object-contain"
             />
-            <span className="text-2xl font-bold tracking-tight text-slate-900 font-manrope">
-              People<span className="text-[#3b66f5]">Sync</span>
+            <span className="text-2xl font-bold tracking-tight text-[#111827]">
+              People<span className="text-[#2F5FD0]">Sync</span>
             </span>
           </div>
 
           {/* Heading */}
           <div className="mb-6">
-            <h1 className="text-[28px] sm:text-[30px] font-extrabold tracking-tight text-[#0f172a] leading-tight">
-              Welcome Back
+            <h1 className="text-[24px] font-semibold tracking-tight text-[#111827] leading-tight">
+              Welcome back
             </h1>
-            <p className="mt-1 text-xs sm:text-sm text-slate-400 font-normal">
-              Please Login to your account
+            <p className="mt-1 text-sm text-[#4B5563] font-normal">
+              Sign in to your account
             </p>
           </div>
 
@@ -449,9 +435,9 @@ export function Login() {
           {successMessage && (
             <div
               role="status"
-              className="mb-4 flex items-start gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50/90 p-3 text-xs font-medium text-emerald-800"
+              className="mb-4 flex items-start gap-2.5 rounded border border-[#A7F3D0] bg-[#ECFDF5] p-3 text-[13px] font-medium text-[#065F46]"
             >
-              <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 mt-0.5" />
+              <CheckCircle2 className="h-4 w-4 shrink-0 text-[#059669] mt-0.5" />
               <span>{successMessage}</span>
             </div>
           )}
@@ -461,64 +447,78 @@ export function Login() {
             <div
               role="alert"
               aria-live="polite"
-              className="mb-4 flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50/90 p-3 text-xs font-medium text-red-800"
+              className="mb-4 flex items-start gap-2.5 rounded border border-[#FECACA] bg-[#FEF2F2] p-3 text-[13px] font-medium text-[#B91C1C]"
             >
-              <AlertCircle className="h-4 w-4 shrink-0 text-red-600 mt-0.5" />
+              <AlertCircle className="h-4 w-4 shrink-0 text-[#B91C1C] mt-0.5" />
               <span>{error}</span>
             </div>
           )}
 
           {/* Login Form */}
-          <form onSubmit={handleLogin} className="space-y-4">
-            {/* Email Field */}
-            <div className="relative">
-              <input
-                id="login-email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Email"
-                autoComplete="email"
-                disabled={isLoading}
-                autoFocus
-                className="w-full rounded-xl bg-[#f8fafc] border border-slate-200/80 px-4 py-3.5 text-sm text-slate-900 placeholder:text-slate-400 placeholder:font-normal focus:bg-white focus:border-[#4068f6] focus:ring-4 focus:ring-blue-500/10 transition-all outline-none disabled:opacity-60"
-              />
-            </div>
-
-            {/* Password Field */}
-            <div className="space-y-1.5">
-              <div className="relative">
-                <input
-                  id="login-password"
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Password"
-                  autoComplete="current-password"
-                  disabled={isLoading}
-                  className="w-full rounded-xl bg-[#f8fafc] border border-slate-200/80 pl-4 pr-11 py-3.5 text-sm text-slate-900 placeholder:text-slate-400 placeholder:font-normal focus:bg-white focus:border-[#4068f6] focus:ring-4 focus:ring-blue-500/10 transition-all outline-none disabled:opacity-60"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((prev) => !prev)}
-                  tabIndex={-1}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 transition-colors"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
+          <form onSubmit={handleLogin} className="space-y-6">
+            <div className="space-y-4">
+              {/* Email Field */}
+              <div>
+                <label
+                  htmlFor="login-email"
+                  className="block text-[13px] font-medium text-[#374151] mb-1.5"
                 >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
+                  Email address
+                </label>
+                <div className="relative">
+                  <input
+                    id="login-email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Email"
+                    autoComplete="username"
+                    disabled={isLoading}
+                    autoFocus
+                    className="w-full h-10 rounded border border-[#D1D5DB] bg-white px-3 text-sm text-[#111827] placeholder:text-[#6B7280] focus:border-[#2F5FD0] focus:ring-[3px] focus:ring-[#2F5FD0]/20 focus:outline-none transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                  />
+                </div>
               </div>
 
-              {/* Forgot Password Link (Right Aligned under Password) */}
-              <div className="flex justify-end pt-0.5">
-                <button
-                  type="button"
-                  onClick={handleForgotPasswordStart}
-                  tabIndex={-1}
-                  className="text-xs text-slate-400 hover:text-[#4068f6] font-medium transition-colors"
+              {/* Password Field */}
+              <div>
+                <label
+                  htmlFor="login-password"
+                  className="block text-[13px] font-medium text-[#374151] mb-1.5"
                 >
-                  Forgot Password
-                </button>
+                  Password
+                </label>
+                <div className="relative">
+                  <input
+                    id="login-password"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Password"
+                    autoComplete="current-password"
+                    disabled={isLoading}
+                    className="w-full h-10 rounded border border-[#D1D5DB] bg-white pl-3 pr-10 text-sm text-[#111827] placeholder:text-[#6B7280] focus:border-[#2F5FD0] focus:ring-[3px] focus:ring-[#2F5FD0]/20 focus:outline-none transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 flex h-7 w-7 items-center justify-center rounded text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#111827] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0]"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+
+                {/* Forgot Password Link (Right Aligned under Password) */}
+                <div className="flex justify-end pt-1">
+                  <button
+                    type="button"
+                    onClick={handleForgotPasswordStart}
+                    className="text-[13px] font-medium text-[#2F5FD0] hover:underline transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-[#2F5FD0] rounded"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -526,7 +526,7 @@ export function Login() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full rounded-xl bg-[#4068f6] hover:bg-[#325beb] py-3.5 text-sm font-semibold text-white shadow-md shadow-blue-500/20 transition-all duration-150 active:scale-[0.99] disabled:opacity-60 flex items-center justify-center gap-2 mt-2"
+              className="w-full h-10 rounded bg-[#2F5FD0] hover:bg-[#264FB0] text-sm font-semibold text-white transition-colors flex items-center justify-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0] focus-visible:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed mt-2"
             >
               {isLoading ? (
                 <>
@@ -550,79 +550,28 @@ export function Login() {
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                     />
                   </svg>
-                  <span>Logging in...</span>
+                  <span>Signing in...</span>
                 </>
               ) : (
-                <span>Login</span>
+                <span>Sign in</span>
               )}
             </button>
           </form>
-
-          {/* Divider: or Login with */}
-          <div className="relative flex items-center justify-center my-5">
-            <div className="w-full border-t border-slate-200" />
-            <span className="bg-white px-3 text-[11px] font-medium text-slate-400 whitespace-nowrap">
-              or Login with
-            </span>
-            <div className="w-full border-t border-slate-200" />
-          </div>
-
-          {/* Social / SSO Row: Facebook and Google (Pill Buttons) */}
-          <div className="flex items-center gap-3">
-            {/* Facebook Button */}
-            <button
-              type="button"
-              onClick={() => handleSocialLogin("Facebook")}
-              className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50/80 py-2.5 px-3 text-xs font-semibold text-slate-700 transition-all shadow-sm hover:border-slate-300"
-            >
-              <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="#1877F2">
-                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-              </svg>
-              <span>Facebook</span>
-            </button>
-
-            {/* Google Button */}
-            <button
-              type="button"
-              onClick={() => handleSocialLogin("Google")}
-              className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50/80 py-2.5 px-3 text-xs font-semibold text-slate-700 transition-all shadow-sm hover:border-slate-300"
-            >
-              <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24">
-                <path
-                  fill="#4285F4"
-                  d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"
-                />
-                <path
-                  fill="#34A853"
-                  d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.34 24 12 24z"
-                />
-                <path
-                  fill="#FBBC05"
-                  d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 10.03 0 12s.45 3.82 1.25 5.42l4.03-3.15z"
-                />
-                <path
-                  fill="#EA4335"
-                  d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
-                />
-              </svg>
-              <span>Google</span>
-            </button>
-          </div>
         </div>
       ) : (
         /* ------------------------------------------------------------- */
         /* Forgot Password Flow (Seamlessly Integrated)                  */
         /* ------------------------------------------------------------- */
-        <div className="w-full max-w-[360px] sm:max-w-[380px] mx-auto space-y-4">
+        <div className="w-full max-w-[360px] mx-auto space-y-4">
           {/* Header Back Button */}
           <button
             type="button"
             onClick={handleBackToLogin}
             disabled={isLoading}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 transition-colors hover:text-[#4068f6]"
+            className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[#2F5FD0] hover:underline transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-[#2F5FD0] rounded"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
-            Back to Sign In
+            Back to sign in
           </button>
 
           {/* Error Message */}
@@ -630,9 +579,9 @@ export function Login() {
             <div
               role="alert"
               aria-live="polite"
-              className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50/90 p-3 text-xs font-medium text-red-800"
+              className="flex items-start gap-2.5 rounded border border-[#FECACA] bg-[#FEF2F2] p-3 text-[13px] font-medium text-[#B91C1C]"
             >
-              <AlertCircle className="h-4 w-4 shrink-0 text-red-600 mt-0.5" />
+              <AlertCircle className="h-4 w-4 shrink-0 text-[#B91C1C] mt-0.5" />
               <span>{error}</span>
             </div>
           )}
@@ -640,15 +589,15 @@ export function Login() {
           {/* Step 1: Send OTP to Email */}
           {forgotStep === "email" && (
             <div className="space-y-4">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 border border-blue-100 shadow-sm">
+              <div className="flex h-10 w-10 items-center justify-center rounded bg-[#E8EEFB] text-[#2F5FD0] border border-[#C7D7F8]">
                 <KeyRound className="h-5 w-5" />
               </div>
 
               <div>
-                <h2 className="text-2xl font-bold tracking-tight text-slate-900">
+                <h2 className="text-[24px] font-semibold tracking-tight text-[#111827]">
                   Reset Password
                 </h2>
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-sm text-[#4B5563]">
                   Enter your registered work email to receive a 6-digit verification code.
                 </p>
               </div>
@@ -656,12 +605,12 @@ export function Login() {
               <div>
                 <label
                   htmlFor="forgot-email"
-                  className="block text-xs font-semibold text-slate-700 mb-1.5"
+                  className="block text-[13px] font-medium text-[#374151] mb-1.5"
                 >
                   Work Email
                 </label>
                 <div className="relative">
-                  <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9CA3AF]" />
                   <input
                     id="forgot-email"
                     type="email"
@@ -673,7 +622,7 @@ export function Login() {
                     onKeyDown={(e) => {
                       if (e.key === "Enter") handleSendOTP();
                     }}
-                    className="w-full rounded-xl bg-[#f8fafc] border border-slate-200/80 pl-10 pr-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition-all focus:bg-white focus:border-[#4068f6] focus:ring-4 focus:ring-blue-500/10"
+                    className="w-full h-10 rounded border border-[#D1D5DB] bg-white pl-10 pr-3 text-sm text-[#111827] placeholder:text-[#6B7280] focus:border-[#2F5FD0] focus:ring-[3px] focus:ring-[#2F5FD0]/20 focus:outline-none transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                   />
                 </div>
               </div>
@@ -682,7 +631,7 @@ export function Login() {
                 type="button"
                 onClick={handleSendOTP}
                 disabled={isLoading}
-                className="w-full rounded-xl bg-[#4068f6] hover:bg-[#325beb] py-3 text-sm font-semibold text-white shadow-md shadow-blue-500/20 transition-all duration-150 active:scale-[0.99] disabled:opacity-60"
+                className="w-full h-10 rounded bg-[#2F5FD0] hover:bg-[#264FB0] text-sm font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0] focus-visible:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
               >
                 {isLoading ? "Sending Code..." : "Send Verification Code"}
               </button>
@@ -692,24 +641,27 @@ export function Login() {
           {/* Step 2: Enter & Verify 6-digit OTP */}
           {forgotStep === "otp" && (
             <div className="space-y-4">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 border border-indigo-100 shadow-sm">
+              <div className="flex h-10 w-10 items-center justify-center rounded bg-[#E8EEFB] text-[#2F5FD0] border border-[#C7D7F8]">
                 <ShieldCheck className="h-5 w-5" />
               </div>
 
               <div>
-                <h2 className="text-2xl font-bold tracking-tight text-slate-900">
+                <h2 className="text-[24px] font-semibold tracking-tight text-[#111827]">
                   Enter Verification Code
                 </h2>
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-sm text-[#4B5563]">
                   We sent a 6-digit verification code to{" "}
-                  <span className="font-semibold text-slate-800">
+                  <span className="font-semibold text-[#111827]">
                     {forgotEmail}
                   </span>
                 </p>
               </div>
 
               {successMessage && (
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs font-medium text-emerald-800">
+                <div
+                  role="status"
+                  className="rounded border border-[#A7F3D0] bg-[#ECFDF5] p-3 text-[13px] font-medium text-[#065F46]"
+                >
                   {successMessage}
                 </div>
               )}
@@ -730,12 +682,12 @@ export function Login() {
                 type="button"
                 onClick={handleVerifyOTP}
                 disabled={isLoading || otp.length !== 6}
-                className="w-full rounded-xl bg-[#4068f6] hover:bg-[#325beb] py-3 text-sm font-semibold text-white shadow-md shadow-blue-500/20 transition-all duration-150 active:scale-[0.99] disabled:opacity-50"
+                className="w-full h-10 rounded bg-[#2F5FD0] hover:bg-[#264FB0] text-sm font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0] focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {isLoading ? "Verifying..." : "Verify Code"}
               </button>
 
-              <div className="flex items-center justify-between text-xs pt-1">
+              <div className="flex items-center justify-between text-[13px] pt-1">
                 <button
                   type="button"
                   onClick={() => {
@@ -745,7 +697,7 @@ export function Login() {
                     setSuccessMessage("");
                   }}
                   disabled={isLoading}
-                  className="font-medium text-slate-500 hover:text-slate-800"
+                  className="font-medium text-[#4B5563] hover:text-[#111827] transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-[#2F5FD0] rounded"
                 >
                   Change Email
                 </button>
@@ -754,7 +706,7 @@ export function Login() {
                   type="button"
                   onClick={handleSendOTP}
                   disabled={isLoading}
-                  className="font-semibold text-[#4068f6] hover:underline"
+                  className="font-semibold text-[#2F5FD0] hover:underline transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-[#2F5FD0] rounded"
                 >
                   Resend Code
                 </button>
@@ -765,16 +717,16 @@ export function Login() {
           {/* Step 3: Set New Password */}
           {forgotStep === "reset" && (
             <div className="space-y-4">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 border border-blue-100 shadow-sm">
+              <div className="flex h-10 w-10 items-center justify-center rounded bg-[#E8EEFB] text-[#2F5FD0] border border-[#C7D7F8]">
                 <Lock className="h-5 w-5" />
               </div>
 
               <div>
-                <h2 className="text-2xl font-bold tracking-tight text-slate-900">
+                <h2 className="text-[24px] font-semibold tracking-tight text-[#111827]">
                   Set New Password
                 </h2>
-                <p className="mt-1 text-xs text-slate-500">
-                  Choose a strong, secure password for your workspace account
+                <p className="mt-1 text-sm text-[#4B5563]">
+                  Your new password must be at least 8 characters long and include numbers and special characters.
                 </p>
               </div>
 
@@ -783,7 +735,7 @@ export function Login() {
                 <div>
                   <label
                     htmlFor="reset-new-password"
-                    className="block text-xs font-semibold text-slate-700 mb-1"
+                    className="block text-[13px] font-medium text-[#374151] mb-1.5"
                   >
                     New Password
                   </label>
@@ -793,16 +745,14 @@ export function Login() {
                       type={showNewPassword ? "text" : "password"}
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="At least 8 characters"
+                      placeholder="Enter new password"
                       disabled={isLoading}
-                      autoFocus
-                      className="w-full rounded-xl bg-[#f8fafc] border border-slate-200/80 pl-3 pr-10 py-2.5 text-sm text-slate-900 outline-none transition-all focus:bg-white focus:border-[#4068f6] focus:ring-4 focus:ring-blue-500/10"
+                      className="w-full h-10 rounded border border-[#D1D5DB] bg-white pl-3 pr-10 text-sm text-[#111827] placeholder:text-[#6B7280] focus:border-[#2F5FD0] focus:ring-[3px] focus:ring-[#2F5FD0]/20 focus:outline-none transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                     />
                     <button
                       type="button"
                       onClick={() => setShowNewPassword((p) => !p)}
-                      tabIndex={-1}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600"
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 flex h-7 w-7 items-center justify-center rounded text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#111827] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0]"
                       aria-label={showNewPassword ? "Hide password" : "Show password"}
                     >
                       {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -816,7 +766,7 @@ export function Login() {
                 <div>
                   <label
                     htmlFor="reset-confirm-password"
-                    className="block text-xs font-semibold text-slate-700 mb-1"
+                    className="block text-[13px] font-medium text-[#374151] mb-1.5"
                   >
                     Confirm New Password
                   </label>
@@ -828,13 +778,12 @@ export function Login() {
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="Re-enter your new password"
                       disabled={isLoading}
-                      className="w-full rounded-xl bg-[#f8fafc] border border-slate-200/80 pl-3 pr-10 py-2.5 text-sm text-slate-900 outline-none transition-all focus:bg-white focus:border-[#4068f6] focus:ring-4 focus:ring-blue-500/10"
+                      className="w-full h-10 rounded border border-[#D1D5DB] bg-white pl-3 pr-10 text-sm text-[#111827] placeholder:text-[#6B7280] focus:border-[#2F5FD0] focus:ring-[3px] focus:ring-[#2F5FD0]/20 focus:outline-none transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                     />
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword((p) => !p)}
-                      tabIndex={-1}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600"
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 flex h-7 w-7 items-center justify-center rounded text-[#6B7280] hover:bg-[#F3F4F6] hover:text-[#111827] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0]"
                       aria-label={
                         showConfirmPassword ? "Hide password" : "Show password"
                       }
@@ -849,7 +798,7 @@ export function Login() {
                 type="button"
                 onClick={handleResetPassword}
                 disabled={isLoading}
-                className="w-full rounded-xl bg-[#4068f6] hover:bg-[#325beb] py-3 text-sm font-semibold text-white shadow-md shadow-blue-500/20 transition-all duration-150 active:scale-[0.99] disabled:opacity-60"
+                className="w-full h-10 rounded bg-[#2F5FD0] hover:bg-[#264FB0] text-sm font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0] focus-visible:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
               >
                 {isLoading ? "Updating Password..." : "Update Password"}
               </button>
@@ -859,22 +808,24 @@ export function Login() {
           {/* Step 4: Success Message */}
           {forgotStep === "success" && (
             <div className="text-center py-3 space-y-4">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-100 shadow-sm">
-                <CheckCircle2 size={28} />
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded bg-[#ECFDF5] text-[#059669] border border-[#A7F3D0]">
+                <CheckCircle2 size={24} />
               </div>
 
               <div>
-                <h2 className="text-xl font-bold tracking-tight text-slate-900">
+                <h2 className="text-[24px] font-semibold tracking-tight text-[#111827]">
                   Password Reset Complete
                 </h2>
-                <p className="mt-1 text-xs leading-relaxed text-slate-500">
-                  Your password has been successfully updated. You can now sign in
-                  with your new credentials.
+                <p className="mt-1 text-sm text-[#4B5563]">
+                  Your password has been successfully updated. You can now sign in with your new credentials.
                 </p>
               </div>
 
               {successMessage && (
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs font-medium text-emerald-800">
+                <div
+                  role="status"
+                  className="rounded border border-[#A7F3D0] bg-[#ECFDF5] p-3 text-[13px] font-medium text-[#065F46]"
+                >
                   {successMessage}
                 </div>
               )}
@@ -882,7 +833,7 @@ export function Login() {
               <button
                 type="button"
                 onClick={handleBackToLogin}
-                className="w-full rounded-xl bg-[#4068f6] hover:bg-[#325beb] py-3 text-sm font-semibold text-white shadow-md shadow-blue-500/20 transition-all duration-150 active:scale-[0.99]"
+                className="w-full h-10 rounded bg-[#2F5FD0] hover:bg-[#264FB0] text-sm font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0] focus-visible:ring-offset-2 transition-colors"
               >
                 Return to Sign In
               </button>

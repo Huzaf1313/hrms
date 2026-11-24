@@ -339,7 +339,7 @@ export default function EmployeeAssets() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="rounded-2xl border border-slate-200 bg-white p-5">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-kpi">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-500">
@@ -355,7 +355,7 @@ export default function EmployeeAssets() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-5">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-kpi">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-500">
@@ -371,7 +371,7 @@ export default function EmployeeAssets() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-5">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-kpi">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-500">

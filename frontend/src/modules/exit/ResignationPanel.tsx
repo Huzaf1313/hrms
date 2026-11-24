@@ -80,39 +80,41 @@ export default function ResignationPanel({
             No clearance checklist has been recorded yet.
           </p>
         ) : (
-          <table className="w-full table-fixed text-left text-[13px]">
-            <thead>
-              <tr className="border-b border-slate-100 text-[11px] font-bold uppercase tracking-wide text-slate-500">
-                <th className="w-[6%] px-2 py-2.5">#</th>
-                <th className="w-[40%] px-2 py-2.5">Step</th>
-                <th className="w-[34%] px-2 py-2.5">Description</th>
-                <th className="w-[20%] px-2 py-2.5">Status</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {tasks.map((task, index) => (
-                <tr key={`${task.task}-${index}`} className="border-b border-slate-50 last:border-0">
-                  <td className="px-2 py-3 text-slate-400">{index + 1}.</td>
-                  <td className="truncate px-2 py-3 font-medium text-slate-900">
-                    {task.task}
-                  </td>
-                  <td className="truncate px-2 py-3 text-slate-600">
-                    {task.remarks ?? "—"}
-                  </td>
-                  <td className="px-2 py-3">
-                    <span
-                      className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
-                        CHECKLIST_TONE[task.status] ?? "bg-slate-100 text-slate-600"
-                      }`}
-                    >
-                      {task.status}
-                    </span>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[500px] table-fixed text-left text-[13px]">
+              <thead>
+                <tr className="border-b border-slate-100 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                  <th className="w-[6%] px-2 py-2.5">#</th>
+                  <th className="w-[40%] px-2 py-2.5">Step</th>
+                  <th className="w-[34%] px-2 py-2.5">Description</th>
+                  <th className="w-[20%] px-2 py-2.5">Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+
+              <tbody>
+                {tasks.map((task, index) => (
+                  <tr key={`${task.task}-${index}`} className="border-b border-slate-50 last:border-0">
+                    <td className="px-2 py-3 text-slate-400">{index + 1}.</td>
+                    <td className="truncate px-2 py-3 font-medium text-slate-900">
+                      {task.task}
+                    </td>
+                    <td className="truncate px-2 py-3 text-slate-600">
+                      {task.remarks ?? "—"}
+                    </td>
+                    <td className="px-2 py-3">
+                      <span
+                        className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
+                          CHECKLIST_TONE[task.status] ?? "bg-slate-100 text-slate-600"
+                        }`}
+                      >
+                        {task.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </Panel>
 
@@ -135,7 +137,7 @@ export default function ResignationPanel({
                   }`}
                 >
                   <Icon className="h-4 w-4 shrink-0" />
-                  <span className="min-w-0 flex-1 truncate">{action.label}</span>
+                  <span className="min-w-0 flex-1">{action.label}</span>
                 </button>
               );
             })}

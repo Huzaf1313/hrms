@@ -354,7 +354,7 @@ function Attendance() {
         {summaryCards.map((card) => {
           const Icon = card.icon;
           return (
-            <div key={card.label} className="rounded-3xl bg-white p-5 shadow-sm">
+            <div key={card.label} className="rounded-3xl bg-white p-5 shadow-kpi">
               <div className={`mb-4 flex h-10 w-10 items-center justify-center rounded-xl ${card.iconBg}`}>
                 <Icon className={`h-5 w-5 ${card.iconColor}`} />
               </div>

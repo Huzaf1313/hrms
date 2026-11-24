@@ -32,8 +32,8 @@ export const LeaveBalanceCards: React.FC<LeaveBalanceCardsProps> = ({
             <div
               key={b.leave_type}
               onClick={() => handleApply(b.leave_type)}
-              className={`rounded-[8px] bg-white border border-[#E4E6E1] p-[16px_20px] shadow-none transition-colors ${
-                onApply || onApplyType ? "cursor-pointer hover:border-[#2F5FD0]" : ""
+              className={`rounded-[8px] bg-white border border-[#E4E6E1] p-[16px_20px] shadow-kpi transition-colors ${
+                onApply || onApplyType ? "cursor-pointer hover:border-[#2F5FD0] shadow-kpi-hover" : ""
               }`}
             >
               {/* Header with Type label and Top Accent Indicator */}

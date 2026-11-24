@@ -1523,7 +1523,7 @@ const handleChangePassword = async (
           role="presentation"
         >
           <div
-            className="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-2xl"
+            className="w-full max-w-sm rounded bg-white p-6 text-center shadow-2xl"
             role="dialog"
             aria-modal="true"
             aria-labelledby="password-changed-title"
@@ -1542,7 +1542,7 @@ const handleChangePassword = async (
             <button
               type="button"
               onClick={finishPasswordChangeRedirect}
-              className="mt-5 inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700"
+              className="mt-5 inline-flex items-center gap-2 rounded bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700"
             >
               Go to Login
               <X className="h-4 w-4" />
@@ -1555,7 +1555,7 @@ const handleChangePassword = async (
     {/* Delete Profile Photo Confirmation Modal */}
     {showDeletePhotoModal && (
       <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-        <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+        <div className="w-full max-w-md rounded bg-white p-6 shadow-2xl">
           {/* Icon */}
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
             <Trash2 size={26} className="text-red-600" />
@@ -1579,7 +1579,7 @@ const handleChangePassword = async (
               type="button"
               onClick={() => setShowDeletePhotoModal(false)}
               disabled={isUploadingPhoto}
-              className="rounded-lg border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+              className="rounded border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
             >
               Cancel
             </button>
@@ -1588,7 +1588,7 @@ const handleChangePassword = async (
               type="button"
               onClick={handleDeleteProfilePhoto}
               disabled={isUploadingPhoto}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-red-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center justify-center gap-2 rounded bg-red-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isUploadingPhoto ? (
                 <>

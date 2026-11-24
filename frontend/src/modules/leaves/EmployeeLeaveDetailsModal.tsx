@@ -97,7 +97,7 @@ function EmployeeLeaveDetailsModal({
           }
         }}
       >
-        <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
+        <div className="w-full max-w-lg overflow-hidden rounded bg-white shadow-2xl">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
             <div>
@@ -114,7 +114,7 @@ function EmployeeLeaveDetailsModal({
               type="button"
               onClick={onClose}
               disabled={isCancelling}
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-9 w-9 items-center justify-center rounded text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
               aria-label="Close"
             >
               <X className="h-5 w-5" />
@@ -124,9 +124,9 @@ function EmployeeLeaveDetailsModal({
           {/* Content */}
           <div className="px-6 py-6">
             {/* Leave type + status */}
-            <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+            <div className="flex items-center justify-between rounded border border-slate-200 bg-slate-50/70 p-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50">
+                <div className="flex h-11 w-11 items-center justify-center rounded bg-blue-50">
                   <CalendarDays className="h-5 w-5 text-[#2563eb]" />
                 </div>
 
@@ -152,7 +152,7 @@ function EmployeeLeaveDetailsModal({
 
             {/* Details grid */}
             <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="rounded-xl border border-slate-200 p-4">
+              <div className="rounded border border-slate-200 p-4">
                 <p className="text-xs font-medium text-slate-400">
                   Date Applied
                 </p>
@@ -162,7 +162,7 @@ function EmployeeLeaveDetailsModal({
                 </p>
               </div>
 
-              <div className="rounded-xl border border-slate-200 p-4">
+              <div className="rounded border border-slate-200 p-4">
                 <p className="text-xs font-medium text-slate-400">
                   Duration
                 </p>
@@ -179,7 +179,7 @@ function EmployeeLeaveDetailsModal({
                 </div>
               </div>
 
-              <div className="rounded-xl border border-slate-200 p-4">
+              <div className="rounded border border-slate-200 p-4">
                 <p className="text-xs font-medium text-slate-400">
                   From Date
                 </p>
@@ -189,7 +189,7 @@ function EmployeeLeaveDetailsModal({
                 </p>
               </div>
 
-              <div className="rounded-xl border border-slate-200 p-4">
+              <div className="rounded border border-slate-200 p-4">
                 <p className="text-xs font-medium text-slate-400">
                   To Date
                 </p>
@@ -201,7 +201,7 @@ function EmployeeLeaveDetailsModal({
             </div>
 
             {/* Reason */}
-            <div className="mt-5 rounded-xl border border-slate-200 p-4">
+            <div className="mt-5 rounded border border-slate-200 p-4">
               <div className="flex items-center gap-2">
                 <FileText className="h-4 w-4 text-slate-400" />
 
@@ -255,7 +255,7 @@ function EmployeeLeaveDetailsModal({
                   type="button"
                   onClick={handleCancelClick}
                   disabled={isCancelling}
-                  className="inline-flex h-11 items-center justify-center rounded-xl border border-red-200 bg-white px-5 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex h-11 items-center justify-center rounded border border-red-200 bg-white px-5 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Cancel Leave
                 </button>
@@ -266,7 +266,7 @@ function EmployeeLeaveDetailsModal({
               type="button"
               onClick={onClose}
               disabled={isCancelling}
-              className="inline-flex h-11 items-center justify-center rounded-xl bg-[#2563eb] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-11 items-center justify-center rounded bg-[#2563eb] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Close
             </button>
@@ -277,11 +277,11 @@ function EmployeeLeaveDetailsModal({
       {/* Cancel Confirmation Modal */}
       {showCancelConfirmation && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/40 px-4 py-6 backdrop-blur-[2px]">
-          <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl">
+          <div className="w-full max-w-md overflow-hidden rounded bg-white shadow-2xl">
             {/* Confirmation Content */}
             <div className="px-6 py-6">
               <div className="flex items-start gap-4">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-50">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded bg-red-50">
                   <AlertTriangle className="h-5 w-5 text-red-500" />
                 </div>
 
@@ -349,7 +349,7 @@ function EmployeeLeaveDetailsModal({
                   setShowCancelConfirmation(false)
                 }
                 disabled={isCancelling}
-                className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex h-11 items-center justify-center rounded border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Keep Request
               </button>
@@ -358,7 +358,7 @@ function EmployeeLeaveDetailsModal({
                 type="button"
                 onClick={handleConfirmCancel}
                 disabled={isCancelling}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-red-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded bg-red-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isCancelling ? (
                   <>

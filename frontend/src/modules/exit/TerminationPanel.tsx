@@ -208,7 +208,7 @@ export default function TerminationPanel({
                   }`}
                 >
                   <Icon className="h-4 w-4 shrink-0" />
-                  <span className="min-w-0 flex-1 truncate">{action.label}</span>
+                  <span className="min-w-0 flex-1">{action.label}</span>
                 </button>
               );
             })}

@@ -174,7 +174,7 @@ export function Sidebar({
             return (
               <div key={section.title} className="space-y-0.5">
                 {!collapsed ? (
-                  <p className="mt-6 mb-2 px-3 text-[12px] font-medium text-[#7B8794]">
+                  <p className="mt-4 mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-[#7B8794]">
                     {section.title}
                   </p>
                 ) : (
@@ -196,7 +196,7 @@ export function Sidebar({
                         title={collapsed ? item.label : undefined}
                         aria-label={collapsed ? item.label : undefined}
                         aria-current={isActive ? "page" : undefined}
-                        className={`group flex min-h-[40px] h-10 w-full items-center rounded-[6px] text-sm transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-[#2F5FD0] cursor-pointer ${collapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2.5"
+                        className={`group flex min-h-[36px] h-9 w-full items-center rounded-[6px] text-[13px] transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-[#2F5FD0] cursor-pointer ${collapsed ? "justify-center px-0 py-2" : "gap-3 px-3 py-2"
                           } ${isActive
                             ? "bg-[#E8EEFB] text-[#2F5FD0] font-medium"
                             : isDisabled
@@ -205,7 +205,7 @@ export function Sidebar({
                           }`}
                       >
                         <Icon
-                          className={`w-5 h-5 stroke-[1.75] shrink-0 transition-colors ${isActive
+                          className={`w-4 h-4 stroke-[1.75] shrink-0 transition-colors ${isActive
                             ? "text-[#2F5FD0]"
                             : "text-[#52606D] group-hover:text-[#1F2933]"
                             }`}

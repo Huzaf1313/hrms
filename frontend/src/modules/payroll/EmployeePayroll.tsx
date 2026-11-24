@@ -383,7 +383,7 @@ function EmployeePayroll() {
         {/* Summary Cards */}
         <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {/* Net Salary */}
-          <div className="flex flex-col justify-between rounded-3xl border border-slate-100 bg-white p-5.5 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
+          <div className="flex flex-col justify-between rounded-3xl border border-slate-100 bg-white p-5.5 shadow-kpi transition-all duration-200 hover:-translate-y-0.5">
             <div>
               <div className="flex items-start justify-between">
                 <div>
@@ -432,7 +432,7 @@ function EmployeePayroll() {
             </div>
 
             {/* Pay Period */}
-            <div className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-kpi">
               <div>
                 <div className="flex items-start justify-between">
                   <div>
@@ -479,7 +479,7 @@ function EmployeePayroll() {
 
 
             {/* Bank Account */}
-            <div className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-kpi">
               <div>
                 <div className="flex items-start justify-between">
                   <div>
@@ -1012,7 +1012,7 @@ function EmployeePayroll() {
                 }
               }
             `}</style>
-            <div className="max-h-[94vh] w-full max-w-3xl overflow-y-auto rounded-xl bg-white shadow-2xl">
+            <div className="max-h-[94vh] w-full max-w-3xl overflow-y-auto rounded bg-white shadow-2xl">
               <div className="no-print flex items-center justify-between border-b border-slate-100 px-6 py-4">
                 <div className="flex items-center gap-3">
                   <h3 className="text-base font-bold text-slate-900">Official Payslip</h3>
@@ -1024,7 +1024,7 @@ function EmployeePayroll() {
                   <button
                     type="button"
                     onClick={() => window.print()}
-                    className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                    className="flex items-center gap-1.5 rounded border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
                     title="Print or Save as PDF"
                   >
                     <Printer className="h-3.5 w-3.5 text-slate-500" />
@@ -1033,7 +1033,7 @@ function EmployeePayroll() {
                   <button
                     type="button"
                     onClick={() => setSelectedPayslip(null)}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                    className="flex h-8 w-8 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-600"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -1138,8 +1138,8 @@ function EmployeePayroll() {
                   <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">
                     Salary Breakdown
                   </h4>
-                  <div className="overflow-hidden rounded-lg border border-slate-200 text-xs">
-                    <table className="w-full">
+                  <div className="overflow-x-auto rounded-lg border border-slate-200 text-xs">
+                    <table className="w-full min-w-[480px]">
                       <thead>
                         <tr className="border-b border-slate-200 bg-slate-100 font-bold text-slate-700">
                           <th className="px-4 py-2.5 text-left">Earnings</th>

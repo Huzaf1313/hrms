@@ -225,7 +225,7 @@ function EmployeeLeaveModal({
         }
       }}
     >
-      <div className="w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+      <div className="w-full max-w-2xl overflow-hidden rounded bg-white shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
           <div>
@@ -242,7 +242,7 @@ function EmployeeLeaveModal({
             type="button"
             onClick={onClose}
             disabled={isSubmitting}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-9 w-9 items-center justify-center rounded text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
             aria-label="Close"
           >
             <X className="h-5 w-5" />
@@ -269,7 +269,7 @@ function EmployeeLeaveModal({
                 onChange={(event) =>
                   setLeaveType(event.target.value)
                 }
-                className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50"
+                className="h-11 w-full rounded border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50"
               >
                 {leaveTypes.map((type) => (
                   <option key={type} value={type}>
@@ -301,7 +301,7 @@ function EmployeeLeaveModal({
                     onChange={(event) =>
                       setFromDate(event.target.value)
                     }
-                    className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 pr-10 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50"
+                    className="h-11 w-full rounded border border-slate-200 bg-white px-3 pr-10 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50"
                   />
 
                   <CalendarDays className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -334,7 +334,7 @@ function EmployeeLeaveModal({
                     onChange={(event) =>
                       setToDate(event.target.value)
                     }
-                    className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 pr-10 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50"
+                    className="h-11 w-full rounded border border-slate-200 bg-white px-3 pr-10 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50"
                   />
 
                   <CalendarDays className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -349,7 +349,7 @@ function EmployeeLeaveModal({
             </div>
 
             {/* Total Days */}
-            <div className="mt-5 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3">
+            <div className="mt-5 rounded border border-blue-100 bg-blue-50 px-4 py-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-slate-600">
                   Total Days
@@ -357,11 +357,10 @@ function EmployeeLeaveModal({
 
                 <span className="text-base font-bold text-[#2563eb]">
                   {totalDays > 0
-                    ? `${totalDays} ${
-                        totalDays === 1
-                          ? "Day"
-                          : "Days"
-                      }`
+                    ? `${totalDays} ${totalDays === 1
+                      ? "Day"
+                      : "Days"
+                    }`
                     : "—"}
                 </span>
               </div>
@@ -385,11 +384,10 @@ function EmployeeLeaveModal({
                 </label>
 
                 <span
-                  className={`text-xs ${
-                    reason.length >= 300
-                      ? "text-red-500"
-                      : "text-slate-400"
-                  }`}
+                  className={`text-xs ${reason.length >= 300
+                    ? "text-red-500"
+                    : "text-slate-400"
+                    }`}
                 >
                   {reason.length}/300
                 </span>
@@ -405,7 +403,7 @@ function EmployeeLeaveModal({
                   setReason(event.target.value)
                 }
                 placeholder="Enter the reason for your leave..."
-                className="w-full resize-none rounded-xl border border-slate-200 px-3 py-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50"
+                className="w-full resize-none rounded border border-slate-200 px-3 py-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50"
               />
             </div>
 
@@ -423,11 +421,10 @@ function EmployeeLeaveModal({
 
               <label
                 htmlFor="leave-attachment"
-                className={`flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50/50 px-4 py-6 transition ${
-                  isSubmitting
-                    ? "cursor-not-allowed opacity-60"
-                    : "cursor-pointer hover:border-blue-400 hover:bg-blue-50/30"
-                }`}
+                className={`flex flex-col items-center justify-center rounded border border-dashed border-slate-300 bg-slate-50/50 px-4 py-6 transition ${isSubmitting
+                  ? "cursor-not-allowed opacity-60"
+                  : "cursor-pointer hover:border-blue-400 hover:bg-blue-50/30"
+                  }`}
               >
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm">
                   <Upload className="h-5 w-5 text-[#2563eb]" />
@@ -487,7 +484,7 @@ function EmployeeLeaveModal({
 
             {/* Error */}
             {error && (
-              <div className="mt-5 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+              <div className="mt-5 rounded border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
                 {error}
               </div>
             )}
@@ -499,7 +496,7 @@ function EmployeeLeaveModal({
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-11 items-center justify-center rounded border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Cancel
             </button>
@@ -507,7 +504,7 @@ function EmployeeLeaveModal({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#2563eb] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded bg-[#2563eb] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSubmitting ? (
                 <>

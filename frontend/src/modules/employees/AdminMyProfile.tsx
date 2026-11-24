@@ -677,7 +677,7 @@ export default function AdminMyProfile() {
           onMouseDown={() => setUpdateConfirmation(false)}
         >
           <div
-            className="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-2xl"
+            className="w-full max-w-sm rounded bg-white p-6 text-center shadow-2xl"
             role="dialog"
             aria-modal="true"
             aria-labelledby="profile-update-title"
@@ -695,7 +695,7 @@ export default function AdminMyProfile() {
             <button
               type="button"
               onClick={() => setUpdateConfirmation(false)}
-              className="mt-5 inline-flex items-center gap-2 rounded-lg bg-[#2563eb] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1d4ed8]"
+              className="mt-5 inline-flex items-center gap-2 rounded bg-[#2563eb] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1d4ed8]"
             >
               Continue
               <X className="h-4 w-4" />
@@ -710,7 +710,7 @@ export default function AdminMyProfile() {
           role="presentation"
         >
           <div
-            className="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-2xl"
+            className="w-full max-w-sm rounded bg-white p-6 text-center shadow-2xl"
             role="dialog"
             aria-modal="true"
             aria-labelledby="password-changed-title"
@@ -729,7 +729,7 @@ export default function AdminMyProfile() {
             <button
               type="button"
               onClick={finishPasswordChangeRedirect}
-              className="mt-5 inline-flex items-center gap-2 rounded-lg bg-[#2563eb] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1d4ed8]"
+              className="mt-5 inline-flex items-center gap-2 rounded bg-[#2563eb] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1d4ed8]"
             >
               Go to Login
               <X className="h-4 w-4" />

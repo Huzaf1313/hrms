@@ -218,10 +218,10 @@ export default function CreateExitRequestModal({
         if (event.target === event.currentTarget && !submitting) onClose();
       }}
     >
-      <div className="flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+      <div className="flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded bg-white shadow-2xl">
         <header className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
           <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-50">
+            <span className="flex h-10 w-10 items-center justify-center rounded bg-rose-50">
               <LogOut className="h-5 w-5 text-rose-600" />
             </span>
             <div>
@@ -238,7 +238,7 @@ export default function CreateExitRequestModal({
             type="button"
             onClick={onClose}
             disabled={submitting}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 disabled:opacity-50"
+            className="flex h-9 w-9 items-center justify-center rounded text-slate-400 transition hover:bg-slate-100 disabled:opacity-50"
             aria-label="Close"
           >
             <X className="h-5 w-5" />
@@ -342,7 +342,7 @@ export default function CreateExitRequestModal({
                 value={remarks}
                 disabled={submitting}
                 onChange={(event) => setRemarks(event.target.value)}
-                className="w-full resize-none rounded-lg border border-slate-200 p-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                className="w-full resize-none rounded border border-slate-200 p-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               />
             </div>
 
@@ -446,7 +446,7 @@ export default function CreateExitRequestModal({
                     type="button"
                     onClick={addCustomTask}
                     disabled={submitting || isConfirming || !customTaskDraft.trim()}
-                    className="inline-flex h-9 shrink-0 items-center rounded-lg bg-blue-600 px-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="inline-flex h-9 shrink-0 items-center rounded bg-blue-600 px-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Add
                   </button>
@@ -459,7 +459,7 @@ export default function CreateExitRequestModal({
                     }}
                     disabled={submitting || isConfirming}
                     aria-label="Cancel adding clearance step"
-                    className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -479,7 +479,7 @@ export default function CreateExitRequestModal({
             </div>
 
             {error && (
-              <p className="rounded-lg border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-600">
+              <p className="rounded border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-600">
                 {error}
               </p>
             )}
@@ -490,7 +490,7 @@ export default function CreateExitRequestModal({
               type="button"
               onClick={onClose}
               disabled={submitting}
-              className="h-10 rounded-lg border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+              className="h-10 rounded border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
             >
               Cancel
             </button>
@@ -498,7 +498,7 @@ export default function CreateExitRequestModal({
             <button
               type="submit"
               disabled={submitting}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-60"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded bg-blue-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-60"
             >
               {submitting ? (
                 <>
@@ -528,10 +528,10 @@ export default function CreateExitRequestModal({
             role="alertdialog"
             aria-modal="true"
             aria-label="Confirm exit request"
-            className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl"
+            className="w-full max-w-md overflow-hidden rounded bg-white shadow-2xl"
           >
             <header className="flex items-start gap-3 border-b border-slate-200 px-6 py-5">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-amber-50">
                 <LogOut className="h-5 w-5 text-amber-600" />
               </span>
 
@@ -581,7 +581,7 @@ export default function CreateExitRequestModal({
                 type="button"
                 onClick={() => setIsConfirming(false)}
                 disabled={submitting}
-                className="h-10 rounded-lg border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+                className="h-10 rounded border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
               >
                 Back
               </button>
@@ -590,7 +590,7 @@ export default function CreateExitRequestModal({
                 type="button"
                 onClick={() => void confirmCreate()}
                 disabled={submitting}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-60"
+                className="inline-flex h-10 items-center justify-center gap-2 rounded bg-blue-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-60"
               >
                 {submitting ? (
                   <>

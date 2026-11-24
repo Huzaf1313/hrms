@@ -248,8 +248,7 @@ export function Header({
         )}
 
         {/* Sole page title on screen */}
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-[13px] text-[#7B8794] font-medium hidden sm:inline">Workspace /</span>
+        <div className="flex items-center min-w-0">
           <h1 className="text-[20px] font-semibold text-[#1F2933] truncate">
             {pageTitle}
           </h1>
@@ -258,7 +257,7 @@ export function Header({
 
       {/* Center: Global Search */}
       <div className="relative hidden md:block flex-1 max-w-xs lg:max-w-sm mx-2">
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-[18px] w-[18px] text-[#7B8794] pointer-events-none shrink-0" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#7B8794] pointer-events-none shrink-0" />
         <input
           type="text"
           value={employeeSearch}
@@ -271,7 +270,7 @@ export function Header({
           onKeyDown={handleEmployeeSearchKeyDown}
           placeholder="Search employees by name or code..."
           autoComplete="off"
-          className="w-full h-10 rounded-[6px] bg-[#F6F7F5] py-2.5 pl-10 pr-3.5 text-sm text-[#1F2933] placeholder:text-[#7B8794] border border-[#E4E6E1] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#2F5FD0] focus:border-[#2F5FD0] transition-colors"
+          className="w-full h-9 rounded-[6px] bg-[#F6F7F5] py-2 pl-9 pr-3 text-[13px] text-[#1F2933] placeholder:text-[#7B8794] border border-[#E4E6E1] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#2F5FD0] focus:border-[#2F5FD0] transition-colors"
         />
 
         {showEmployeeSuggestions && normalizedQuery && (

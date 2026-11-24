@@ -145,7 +145,7 @@ function PayslipDetailModal({ payslip, onClose, onStatusUpdated }: PayslipDetail
           }
         }
       `}</style>
-      <div className="max-h-[94vh] w-full max-w-3xl overflow-y-auto rounded-xl bg-white shadow-2xl">
+      <div className="max-h-[94vh] w-full max-w-3xl overflow-y-auto rounded bg-white shadow-2xl">
         <div className="no-print flex items-center justify-between border-b border-slate-100 px-6 py-4">
           <div className="flex items-center gap-3">
             <h3 className="text-base font-bold text-slate-900">Payslip Details</h3>
@@ -160,7 +160,7 @@ function PayslipDetailModal({ payslip, onClose, onStatusUpdated }: PayslipDetail
             <button
               type="button"
               onClick={handlePrint}
-              className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+              className="flex items-center gap-1.5 rounded border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
               title="Print or Save as PDF"
             >
               <Printer className="h-3.5 w-3.5 text-slate-500" />
@@ -170,7 +170,7 @@ function PayslipDetailModal({ payslip, onClose, onStatusUpdated }: PayslipDetail
               type="button"
               onClick={handleSendEmail}
               disabled={sendingEmail}
-              className="flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 shadow-sm hover:bg-blue-100 disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 shadow-sm hover:bg-blue-100 disabled:opacity-50"
               title="Email Payslip to Employee"
             >
               {sendingEmail ? (
@@ -185,7 +185,7 @@ function PayslipDetailModal({ payslip, onClose, onStatusUpdated }: PayslipDetail
                 type="button"
                 onClick={handleMarkAsPaid}
                 disabled={updating}
-                className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow hover:bg-emerald-700 disabled:opacity-50"
+                className="flex items-center gap-1.5 rounded bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow hover:bg-emerald-700 disabled:opacity-50"
               >
                 {updating ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -308,8 +308,8 @@ function PayslipDetailModal({ payslip, onClose, onStatusUpdated }: PayslipDetail
             <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">
               Salary Breakdown
             </h4>
-            <div className="overflow-hidden rounded-lg border border-slate-200 text-xs">
-              <table className="w-full">
+            <div className="overflow-x-auto rounded-lg border border-slate-200 text-xs">
+              <table className="w-full min-w-[480px]">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-100 font-bold text-slate-700">
                     <th className="px-4 py-2.5 text-left">Earnings</th>
@@ -413,20 +413,20 @@ function GeneratePayslipModal({ onClose, onGenerated, employees }: GenerateModal
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+      <div className="w-full max-w-md rounded bg-white p-6 shadow-xl">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <h3 className="text-base font-bold text-slate-900">Generate Payslip</h3>
           <button
             type="button"
             onClick={onClose}
-            className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100"
+            className="flex h-7 w-7 items-center justify-center rounded text-slate-400 hover:bg-slate-100"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
         {error && (
-          <div className="mt-3 flex items-center gap-2 rounded-lg bg-rose-50 p-3 text-xs text-rose-700">
+          <div className="mt-3 flex items-center gap-2 rounded bg-rose-50 p-3 text-xs text-rose-700">
             <AlertCircle className="h-4 w-4 shrink-0" />
             <span>{error}</span>
           </div>
@@ -438,7 +438,7 @@ function GeneratePayslipModal({ onClose, onGenerated, employees }: GenerateModal
             <select
               value={employeeId}
               onChange={(e) => setEmployeeId(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-slate-800 focus:border-blue-500 focus:outline-none"
+              className="w-full rounded border border-slate-200 px-3 py-2 text-slate-800 focus:border-blue-500 focus:outline-none"
               required
             >
               {employees.map((emp) => (
@@ -455,7 +455,7 @@ function GeneratePayslipModal({ onClose, onGenerated, employees }: GenerateModal
               <select
                 value={month}
                 onChange={(e) => setMonth(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-slate-800 focus:border-blue-500 focus:outline-none"
+                className="w-full rounded border border-slate-200 px-3 py-2 text-slate-800 focus:border-blue-500 focus:outline-none"
               >
                 {months.map((m) => (
                   <option key={m} value={m}>
@@ -472,7 +472,7 @@ function GeneratePayslipModal({ onClose, onGenerated, employees }: GenerateModal
                 onChange={(e) => setYear(Number(e.target.value))}
                 min={2020}
                 max={2030}
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-slate-800 focus:border-blue-500 focus:outline-none"
+                className="w-full rounded border border-slate-200 px-3 py-2 text-slate-800 focus:border-blue-500 focus:outline-none"
                 required
               />
             </div>
@@ -483,14 +483,14 @@ function GeneratePayslipModal({ onClose, onGenerated, employees }: GenerateModal
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="rounded-lg border border-slate-200 px-4 py-2 font-medium text-slate-700 hover:bg-slate-50"
+              className="rounded border border-slate-200 px-4 py-2 font-medium text-slate-700 hover:bg-slate-50"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white shadow hover:bg-blue-700 disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded bg-blue-600 px-4 py-2 font-semibold text-white shadow hover:bg-blue-700 disabled:opacity-50"
             >
               {loading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
               Generate
@@ -551,10 +551,10 @@ function BulkGeneratePayslipModal({ onClose, onCompleted, totalEmployees }: Bulk
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+      <div className="w-full max-w-md rounded bg-white p-6 shadow-xl">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+            <div className="flex h-8 w-8 items-center justify-center rounded bg-blue-50 text-blue-600">
               <Users className="h-4 w-4" />
             </div>
             <div>
@@ -565,21 +565,21 @@ function BulkGeneratePayslipModal({ onClose, onCompleted, totalEmployees }: Bulk
           <button
             type="button"
             onClick={onClose}
-            className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100"
+            className="flex h-7 w-7 items-center justify-center rounded text-slate-400 hover:bg-slate-100"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
         {error && (
-          <div className="mt-3 flex items-center gap-2 rounded-lg bg-rose-50 p-3 text-xs text-rose-700">
+          <div className="mt-3 flex items-center gap-2 rounded bg-rose-50 p-3 text-xs text-rose-700">
             <AlertCircle className="h-4 w-4 shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
         {result && (
-          <div className="mt-3 rounded-lg bg-emerald-50 p-3.5 text-xs text-emerald-800">
+          <div className="mt-3 rounded bg-emerald-50 p-3.5 text-xs text-emerald-800">
             <div className="flex items-center gap-2 font-bold">
               <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
               <span>Bulk Payroll Processing Complete</span>
@@ -607,7 +607,7 @@ function BulkGeneratePayslipModal({ onClose, onCompleted, totalEmployees }: Bulk
         )}
 
         <form onSubmit={handleRun} className="mt-4 space-y-4 text-xs">
-          <div className="rounded-lg bg-blue-50/60 p-3 text-slate-700">
+          <div className="rounded bg-blue-50/60 p-3 text-slate-700">
             <p className="font-medium">
               This will automatically calculate gross salary, apply tax/statutory deductions, deduct Loss of Pay (LOP) from attendance records, and generate payslips for all active employees.
             </p>
@@ -619,7 +619,7 @@ function BulkGeneratePayslipModal({ onClose, onCompleted, totalEmployees }: Bulk
               <select
                 value={month}
                 onChange={(e) => setMonth(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-slate-800 focus:border-blue-500 focus:outline-none"
+                className="w-full rounded border border-slate-200 px-3 py-2 text-slate-800 focus:border-blue-500 focus:outline-none"
               >
                 {months.map((m) => (
                   <option key={m} value={m}>
@@ -636,7 +636,7 @@ function BulkGeneratePayslipModal({ onClose, onCompleted, totalEmployees }: Bulk
                 onChange={(e) => setYear(Number(e.target.value))}
                 min={2020}
                 max={2030}
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-slate-800 focus:border-blue-500 focus:outline-none"
+                className="w-full rounded border border-slate-200 px-3 py-2 text-slate-800 focus:border-blue-500 focus:outline-none"
                 required
               />
             </div>
@@ -647,14 +647,14 @@ function BulkGeneratePayslipModal({ onClose, onCompleted, totalEmployees }: Bulk
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="rounded-lg border border-slate-200 px-4 py-2 font-medium text-slate-700 hover:bg-slate-50"
+              className="rounded border border-slate-200 px-4 py-2 font-medium text-slate-700 hover:bg-slate-50"
             >
               {result ? "Close" : "Cancel"}
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white shadow hover:bg-blue-700 disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded bg-blue-600 px-4 py-2 font-semibold text-white shadow hover:bg-blue-700 disabled:opacity-50"
             >
               {loading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
               {loading ? "Processing..." : "Run Payroll for All"}
@@ -698,10 +698,10 @@ function BulkEmailPayslipModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+      <div className="w-full max-w-md rounded bg-white p-6 shadow-xl">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+            <div className="flex h-8 w-8 items-center justify-center rounded bg-blue-50 text-blue-600">
               <Mail className="h-4 w-4" />
             </div>
             <div>
@@ -712,21 +712,21 @@ function BulkEmailPayslipModal({
           <button
             type="button"
             onClick={onClose}
-            className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100"
+            className="flex h-7 w-7 items-center justify-center rounded text-slate-400 hover:bg-slate-100"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
         {error && (
-          <div className="mt-3 flex items-center gap-2 rounded-lg bg-rose-50 p-3 text-xs text-rose-700">
+          <div className="mt-3 flex items-center gap-2 rounded bg-rose-50 p-3 text-xs text-rose-700">
             <AlertCircle className="h-4 w-4 shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
         {statusMsg && (
-          <div className="mt-3 flex items-center gap-2 rounded-lg bg-emerald-50 p-3 text-xs text-emerald-700">
+          <div className="mt-3 flex items-center gap-2 rounded bg-emerald-50 p-3 text-xs text-emerald-700">
             <CheckCircle2 className="h-4 w-4 shrink-0" />
             <span>{statusMsg}</span>
           </div>
@@ -742,7 +742,7 @@ function BulkEmailPayslipModal({
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="rounded-lg border border-slate-200 px-4 py-2 font-medium text-slate-700 hover:bg-slate-50"
+              className="rounded border border-slate-200 px-4 py-2 font-medium text-slate-700 hover:bg-slate-50"
             >
               Close
             </button>
@@ -750,7 +750,7 @@ function BulkEmailPayslipModal({
               type="button"
               onClick={handleSend}
               disabled={loading}
-              className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white shadow hover:bg-blue-700 disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded bg-blue-600 px-4 py-2 font-semibold text-white shadow hover:bg-blue-700 disabled:opacity-50"
             >
               {loading ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />

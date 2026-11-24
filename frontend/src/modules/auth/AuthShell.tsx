@@ -11,87 +11,72 @@ interface AuthShellProps {
 }
 
 export const AuthShell: React.FC<AuthShellProps> = ({
-  headline = "Simplify\nmanagement with\nour dashboard",
-  accent,
-  subcopy = "Simplify your workforce & talent operations with our user-friendly admin dashboard",
+  headline = "Smarter People.",
+  accent = "Stronger Business.",
+  subcopy = "A complete HRMS to manage your workforce, automate HR operations and build a productive, happy workplace.",
   features = [],
   children,
 }) => {
   return (
-    <div className="min-h-screen w-full bg-[#f1f3f7] flex items-center justify-center p-3 sm:p-6 lg:p-8 relative overflow-hidden font-sans selection:bg-blue-600 selection:text-white">
-      {/* Ambient Atmospheric Lighting (matching reference design) */}
-      <div
-        className="pointer-events-none absolute -top-28 -right-28 h-[460px] w-[460px] rounded-full bg-purple-400/20 blur-[110px]"
-        aria-hidden="true"
-      />
-      <div
-        className="pointer-events-none absolute -bottom-28 -left-28 h-[420px] w-[420px] rounded-full bg-blue-300/25 blur-[120px]"
-        aria-hidden="true"
-      />
-      {/* Subtle Dot Grid */}
-      <div
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:28px_28px] opacity-40"
-        aria-hidden="true"
-      />
+    <div className="min-h-screen w-full bg-[var(--bg-page)] flex items-center justify-center p-6 max-[480px]:p-0 font-sans selection:bg-[#2F5FD0] selection:text-white">
+      <style>{`
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover,
+        input:-webkit-autofill:focus,
+        input:-webkit-autofill:active {
+          -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
+          box-shadow: 0 0 0 1000px #ffffff inset !important;
+          -webkit-text-fill-color: #111827 !important;
+          caret-color: #111827 !important;
+        }
+      `}</style>
 
-      {/* Main Elevated Modal Card */}
-      <div className="relative z-10 w-full max-w-[1000px] rounded-[32px] bg-white p-4 sm:p-6 lg:p-7 shadow-[0_20px_60px_-15px_rgba(15,23,42,0.10)] border border-slate-100 my-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-stretch">
-          {/* Left Sub-Card: Vibrant Blue with 3D Workstation Illustration */}
-          <aside
-            className="hidden lg:flex lg:col-span-6 rounded-[26px] bg-gradient-to-b from-[#4068f6] via-[#385fed] to-[#284be3] p-8 lg:p-9 flex-col justify-between text-white relative overflow-hidden shadow-inner min-h-[580px]"
-            aria-label="Portal Overview"
-          >
-            {/* Soft Internal Lighting */}
-            <div
-              className="pointer-events-none absolute -top-24 -left-24 h-64 w-64 rounded-full bg-white/10 blur-2xl"
-              aria-hidden="true"
-            />
-            <div
-              className="pointer-events-none absolute -bottom-24 -right-24 h-64 w-64 rounded-full bg-indigo-950/30 blur-2xl"
-              aria-hidden="true"
-            />
+      {/* Main Elevated Login Card */}
+      <div className="relative z-10 w-full max-w-[440px] lg:max-w-[960px] min-h-[560px] bg-white border border-[#E5E7EB] rounded shadow-kpi overflow-hidden my-auto flex flex-col lg:flex-row max-[480px]:border-0 max-[480px]:shadow-none max-[480px]:bg-transparent max-[480px]:min-h-0">
+        {/* Left Brand Panel: Flat Solid Primary Blue, Flush against edges */}
+        <aside
+          className="hidden lg:flex lg:w-[45%] shrink-0 bg-[#2F5FD0] p-10 flex-col justify-between text-white relative"
+          aria-label="Portal Overview"
+        >
+          {/* Top Text Content */}
+          <div className="relative z-10">
+            <h2 className="text-[28px] font-semibold tracking-tight text-white leading-[1.25]">
+              {headline}
+              {accent && (
+                <>
+                  <br />
+                  <span className="text-white">{accent}</span>
+                </>
+              )}
+            </h2>
+            <p className="mt-3.5 max-w-[360px] text-sm font-normal text-white/90 leading-relaxed">
+              {subcopy}
+            </p>
 
-            {/* Top Text */}
-            <div className="relative z-10">
-              <h2 className="text-3xl lg:text-[34px] font-extrabold tracking-tight text-white leading-[1.22]">
-                {headline}
-                {accent && (
-                  <>
-                    <br />
-                    <span className="text-blue-200">{accent}</span>
-                  </>
-                )}
-              </h2>
-              <p className="mt-3.5 max-w-[320px] text-xs sm:text-sm font-normal text-blue-100/90 leading-relaxed">
-                {subcopy}
-              </p>
-
-              {features.length > 0 && (
-              <ul className="mt-5 space-y-3">
+            {features.length > 0 && (
+              <ul className="mt-6 space-y-3">
                 {features.map((feature) => (
-                  <li key={feature} className="flex items-center gap-2.5 text-sm text-blue-50">
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/20">
+                  <li key={feature} className="flex items-center gap-2.5 text-sm text-white font-normal">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/20 text-white">
                       <CheckCircle2 className="h-3.5 w-3.5" />
                     </span>
                     {feature}
                   </li>
                 ))}
               </ul>
-                )}
-            </div>
+            )}
+          </div>
 
-            {/* Workstation 3D Character Illustration */}
-            <div className="relative z-10 mt-auto pt-4 flex items-end justify-center">
-              <WorkstationIllustration className="w-full h-auto max-h-[310px] drop-shadow-md" />
-            </div>
-          </aside>
+          {/* Workstation 3D Character Illustration */}
+          <div className="relative z-10 mt-auto pt-6 flex items-end justify-center">
+            <WorkstationIllustration className="w-full max-w-[280px] h-auto drop-shadow-sm" />
+          </div>
+        </aside>
 
-          {/* Right Column: Form Container */}
-          <main className="flex flex-col justify-center px-2 sm:px-6 lg:px-8 py-3 sm:py-6 lg:col-span-6">
-            {children}
-          </main>
-        </div>
+        {/* Right Form Column */}
+        <main className="w-full lg:w-[55%] flex flex-col justify-center px-6 sm:px-12 py-10 sm:py-12 max-[480px]:px-4 max-[480px]:py-6">
+          {children}
+        </main>
       </div>
     </div>
   );

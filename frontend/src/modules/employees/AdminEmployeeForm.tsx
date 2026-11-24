@@ -563,7 +563,7 @@ function AdminEmployeeForm({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4 py-6">
-      <div className="relative max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-3xl bg-white shadow-2xl">
+      <div className="relative max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded bg-white shadow-2xl">
 
         {/* HEADER */}
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-100 bg-white px-8 py-6">
@@ -583,7 +583,7 @@ function AdminEmployeeForm({
             type="button"
             onClick={onCancel}
             aria-label="Close"
-            className="flex h-10 w-10 items-center justify-center rounded-full text-2xl text-gray-500 transition hover:bg-gray-100 hover:text-gray-800"
+            className="flex h-10 w-10 items-center justify-center rounded text-2xl text-gray-500 transition hover:bg-gray-100 hover:text-gray-800"
           >
             ×
           </button>
@@ -643,7 +643,7 @@ function AdminEmployeeForm({
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="rounded-full border border-[#2563eb] px-4 py-2 text-sm font-medium text-[#2563eb] transition hover:bg-[#2563eb] hover:text-white"
+                className="rounded border border-[#2563eb] px-4 py-2 text-sm font-medium text-[#2563eb] transition hover:bg-[#2563eb] hover:text-white"
               >
                 {photoPreview ? "Change Photo" : "Upload Photo"}
               </button>
@@ -663,7 +663,7 @@ function AdminEmployeeForm({
               value={isEditMode ? form.employee_id : nextEmployeeId}
               placeholder={isEditMode ? "AAR001" : "Generated on save"}
               title="Employee IDs are assigned automatically and cannot be changed."
-              className="w-full cursor-default rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700 outline-none"
+              className="w-full cursor-default rounded border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700 outline-none"
             />
           </div>
 
@@ -682,7 +682,7 @@ function AdminEmployeeForm({
                   event.target.value as EmployeeCreate["employment_type"],
                 );
               }}
-              className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
+              className="w-full rounded border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
             >
               {EMPLOYMENT_TYPES.map((type) => (
                 <option key={type.value} value={type.value}>
@@ -703,7 +703,7 @@ function AdminEmployeeForm({
                 onChange={(event) =>
                   updateField("shift_id", event.target.value)
                 }
-                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10 disabled:cursor-not-allowed disabled:bg-gray-50"
+                className="w-full rounded border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10 disabled:cursor-not-allowed disabled:bg-gray-50"
               >
                 <option value="">
                   {availableShifts.length === 0
@@ -754,7 +754,7 @@ function AdminEmployeeForm({
               }
               placeholder="First name"
               aria-invalid={Boolean(identityErrors.first_name)}
-              className={`w-full rounded-xl border px-4 py-3 text-sm outline-none transition focus:ring-2 ${
+              className={`w-full rounded border px-4 py-3 text-sm outline-none transition focus:ring-2 ${
                 identityErrors.first_name
                   ? "border-red-400 focus:border-red-400 focus:ring-red-400/10"
                   : "border-gray-200 focus:border-[#2563eb] focus:ring-[#2563eb]/10"
@@ -788,7 +788,7 @@ function AdminEmployeeForm({
               }
               placeholder="Last name"
               aria-invalid={Boolean(identityErrors.last_name)}
-              className={`w-full rounded-xl border px-4 py-3 text-sm outline-none transition focus:ring-2 ${
+              className={`w-full rounded border px-4 py-3 text-sm outline-none transition focus:ring-2 ${
                 identityErrors.last_name
                   ? "border-red-400 focus:border-red-400 focus:ring-red-400/10"
                   : "border-gray-200 focus:border-[#2563eb] focus:ring-[#2563eb]/10"
@@ -824,7 +824,7 @@ function AdminEmployeeForm({
                 value={form.email}
                 onChange={(event) => updateField("email", event.target.value)}
                 placeholder="employee@company.com"
-                className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
+                className="w-full rounded border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
               />
             ) : (
               <div className="space-y-2.5">
@@ -835,7 +835,7 @@ function AdminEmployeeForm({
                     value={form.email}
                     onChange={(event) => handleEmailChange(event.target.value)}
                     placeholder="employee@company.com"
-                    className={`w-full rounded-xl border px-4 py-3 pr-32 text-sm outline-none transition focus:ring-2 ${
+                    className={`w-full rounded border px-4 py-3 pr-32 text-sm outline-none transition focus:ring-2 ${
                       isEmailVerified
                         ? "border-emerald-300 bg-emerald-50/20 text-gray-900 focus:border-emerald-500 focus:ring-emerald-500/10"
                         : "border-gray-200 focus:border-[#2563eb] focus:ring-[#2563eb]/10"
@@ -851,7 +851,7 @@ function AdminEmployeeForm({
                       cooldownSeconds > 0 ||
                       isEmailVerified
                     }
-                    className="absolute right-2 rounded-lg bg-[#2563eb] px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
+                    className="absolute right-2 rounded bg-[#2563eb] px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
                   >
                     {isSendingOtp ? (
                       <span className="flex items-center gap-1">
@@ -872,7 +872,7 @@ function AdminEmployeeForm({
 
                 {/* OTP Verification Box */}
                 {otpSent && !isEmailVerified && (
-                  <div className="rounded-2xl border border-blue-100 bg-[#f8faff] p-3.5 transition-all">
+                  <div className="rounded border border-blue-100 bg-[#f8faff] p-3.5 transition-all">
                     <div className="mb-2 flex items-center justify-between">
                       <span className="flex items-center gap-1.5 text-xs font-semibold text-gray-700">
                         <Mail className="h-3.5 w-3.5 text-[#2563eb]" />
@@ -898,7 +898,7 @@ function AdminEmployeeForm({
                           setOtpError(null);
                         }}
                         placeholder="Enter 6-digit OTP"
-                        className="flex-1 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-sm font-mono tracking-widest outline-none focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
+                        className="flex-1 rounded border border-gray-200 bg-white px-3.5 py-2 text-sm font-mono tracking-widest outline-none focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
                       />
 
                       <button
@@ -909,7 +909,7 @@ function AdminEmployeeForm({
                           isSendingOtp ||
                           otpValue.trim().length !== 6
                         }
-                        className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex items-center gap-1.5 rounded bg-emerald-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {isVerifyingOtp ? (
                           <>
@@ -976,7 +976,7 @@ function AdminEmployeeForm({
                 value={countryCode}
                 onChange={(event) => setCountryCode(event.target.value)}
                 title={COUNTRY_CODES.find((c) => c.code === countryCode)?.label}
-                className="w-[150px] shrink-0 rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm text-[#17375e] outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
+                className="w-[150px] shrink-0 rounded border border-gray-200 bg-white px-3 py-3 text-sm text-[#17375e] outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
               >
                 {COUNTRY_CODES.map((country) => (
                   <option key={country.code} value={country.code}>
@@ -997,7 +997,7 @@ function AdminEmployeeForm({
                 }
                 placeholder="10-digit phone number"
                 aria-invalid={Boolean(identityErrors.phone)}
-                className={`min-w-0 flex-1 rounded-xl border px-4 py-3 text-sm outline-none transition focus:ring-2 ${
+                className={`min-w-0 flex-1 rounded border px-4 py-3 text-sm outline-none transition focus:ring-2 ${
                   identityErrors.phone
                     ? "border-red-400 focus:border-red-400 focus:ring-red-400/10"
                     : "border-gray-200 focus:border-[#2563eb] focus:ring-[#2563eb]/10"
@@ -1026,7 +1026,7 @@ function AdminEmployeeForm({
             <select
               value={form.manager_id || unmatchedManager || ""}
               onChange={(event) => handleManagerChange(event.target.value)}
-              className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
+              className="w-full rounded border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
             >
               <option value="">Select reporting manager</option>
 
@@ -1069,7 +1069,7 @@ function AdminEmployeeForm({
                   }}
                   placeholder="Employee login password"
                   autoComplete="new-password"
-                  className={`w-full rounded-xl border px-4 py-3 pr-12 text-sm outline-none transition focus:ring-2 ${
+                  className={`w-full rounded border px-4 py-3 pr-12 text-sm outline-none transition focus:ring-2 ${
                     passwordError
                       ? "border-red-400 focus:border-red-400 focus:ring-red-400/10"
                       : "border-gray-200 focus:border-[#2563eb] focus:ring-[#2563eb]/10"
@@ -1114,7 +1114,7 @@ function AdminEmployeeForm({
               onChange={(event) =>
                 updateField("department_id", event.target.value)
               }
-              className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
+              className="w-full rounded border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
             >
               <option value="">Select department</option>
 
@@ -1148,7 +1148,7 @@ function AdminEmployeeForm({
                 updateField("designation", event.target.value)
               }
               placeholder="e.g. Software Engineer"
-              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
+              className="w-full rounded border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
             />
           </div>
 
@@ -1165,7 +1165,7 @@ function AdminEmployeeForm({
               onChange={(event) =>
                 updateField("joining_date", event.target.value)
               }
-              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
+              className="w-full rounded border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
             />
           </div>
 
@@ -1182,7 +1182,7 @@ function AdminEmployeeForm({
               onChange={(event) =>
                 updateField("date_of_birth", event.target.value)
               }
-              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
+              className="w-full rounded border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
             />
           </div>
 
@@ -1198,7 +1198,7 @@ function AdminEmployeeForm({
               onChange={(event) =>
                 updateField("gender", event.target.value)
               }
-              className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
+              className="w-full rounded border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
             >
               <option value="">Select gender</option>
               <option value="Male">Male</option>
@@ -1219,7 +1219,7 @@ function AdminEmployeeForm({
                 updateField("work_location", event.target.value)
               }
               placeholder="e.g. Mumbai Office"
-              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
+              className="w-full rounded border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
             />
           </div>
 
@@ -1236,7 +1236,7 @@ function AdminEmployeeForm({
                   updateField("salary_structure", event.target.value);
                   updateField("salary", "");
                 }}
-                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#456b54] focus:ring-2 focus:ring-[#456b54]/10"
+                className="w-full rounded border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#456b54] focus:ring-2 focus:ring-[#456b54]/10"
               >
                 <option value="" disabled>
                   Select Salary Structure
@@ -1283,7 +1283,7 @@ function AdminEmployeeForm({
                 placeholder="Enter salary"
                 disabled={!form.salary_structure}
                 aria-invalid={Boolean(salaryError)}
-                className={`w-full rounded-xl border px-4 py-3 text-sm outline-none transition focus:ring-2 disabled:bg-gray-100 disabled:cursor-not-allowed ${
+                className={`w-full rounded border px-4 py-3 text-sm outline-none transition focus:ring-2 disabled:bg-gray-100 disabled:cursor-not-allowed ${
                   salaryError
                     ? "border-red-400 focus:border-red-500 focus:ring-red-500/10"
                     : "border-gray-200 focus:border-[#456b54] focus:ring-[#456b54]/10"
@@ -1319,13 +1319,13 @@ function AdminEmployeeForm({
               }
               rows={3}
               placeholder="Employee address"
-              className="w-full resize-none rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
+              className="w-full resize-none rounded border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
             />
           </div>
 
           {/* ERROR */}
           {errorMessage && (
-            <div className="col-span-1 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600 md:col-span-2">
+            <div className="col-span-1 rounded bg-red-50 px-4 py-3 text-sm text-red-600 md:col-span-2">
               {errorMessage}
             </div>
           )}
@@ -1336,7 +1336,7 @@ function AdminEmployeeForm({
               type="button"
               onClick={onCancel}
               disabled={isSubmitting}
-              className="rounded-full border border-gray-200 px-6 py-3 text-sm font-medium text-gray-600 transition hover:bg-gray-50 disabled:opacity-50"
+              className="rounded border border-gray-200 px-6 py-3 text-sm font-medium text-gray-600 transition hover:bg-gray-50 disabled:opacity-50"
             >
               Cancel
             </button>
@@ -1351,7 +1351,7 @@ function AdminEmployeeForm({
                   ? "Verify employee email to enable"
                   : undefined
               }
-              className="rounded-full bg-[#2563eb] px-7 py-3 text-sm font-semibold text-white transition hover:bg-[#385b45] disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded bg-[#2563eb] px-7 py-3 text-sm font-semibold text-white transition hover:bg-[#385b45] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isSubmitting
                 ? "Saving…"

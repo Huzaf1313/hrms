@@ -42,7 +42,7 @@ function ReportTable({ title, columns, rows, emptyMessage = "No records found" }
         {title}
       </h2>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full min-w-[600px] text-sm">
           <thead>
             <tr className="h-11 border-b border-[#E4E6E1] bg-[#FAFAF8] text-xs font-medium uppercase tracking-wider text-[#7B8794]">
               {columns.map((col) => (

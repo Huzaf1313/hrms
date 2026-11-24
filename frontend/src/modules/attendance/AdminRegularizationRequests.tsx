@@ -208,7 +208,7 @@ export const AdminRegularizationRequests: React.FC = () => {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="w-full min-w-[950px] text-left text-xs">
               <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold sticky top-0">
                 <tr>
                   <th className="py-2.5 px-3">Employee</th>
