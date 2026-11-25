@@ -1,6 +1,5 @@
 import re
 from datetime import date, datetime, timezone
-
 from pymongo.errors import DuplicateKeyError
 
 from app.core.exceptions import AppException

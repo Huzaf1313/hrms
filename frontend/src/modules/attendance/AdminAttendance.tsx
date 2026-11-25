@@ -348,7 +348,7 @@ function AdminAttendance() {
           ),
         );
       } catch {
-        // The form still works for today's missing check-in without history.
+        // The form still works for today's Missing Punch In without history.
         setMyAttendanceRecords([]);
       }
     }

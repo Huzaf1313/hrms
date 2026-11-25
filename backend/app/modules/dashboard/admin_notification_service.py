@@ -162,7 +162,7 @@ class AdminNotificationService:
         ]
 
         created = await self.repository.create_many(documents)
-
+        print("Notifications created:", len(created))
         return [self._serialize(item) for item in created]
 
     async def get_for_admin(
