@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Building2, PackageOpen, User, X } from "lucide-react";
 
+import { Button } from "../../components/ui/Button";
 import { assetService } from "./assetService";
 import { ASSET_STATUS_LABELS } from "./types";
 import type { AllocationRow, Asset } from "./types";
@@ -30,11 +31,23 @@ function formatDate(value: string | null): string {
   return `${String(day).padStart(2, "0")} ${MONTHS[month - 1]} ${year}`;
 }
 
-const statusStyles: Record<Asset["status"], string> = {
-  in_use: "bg-[#E3F5E1] text-[#1E6B45] border border-[#BCE8B5]",
-  available: "bg-[#E8EEFB] text-[#2F5FD0] border border-[#2F5FD0]/20",
-  pending_return: "bg-[#FDF3D6] text-[#8A5A00] border border-[#F6DE95]",
-  maintenance: "bg-[#F3E8FF] text-[#7E22CE] border border-[#E9D5FF]",
+const statusStyles: Record<Asset["status"], { pill: string; dot: string }> = {
+  in_use: {
+    pill: "bg-[#DEF7EC] text-[#03543F] border border-[#BCF0DA]",
+    dot: "bg-[#03543F]",
+  },
+  available: {
+    pill: "bg-[#E8EEFB] text-[#2F5FD0]",
+    dot: "bg-[#2F5FD0]",
+  },
+  pending_return: {
+    pill: "bg-[#FEF3C7] text-[#92400E] border border-[#FCD34D]",
+    dot: "bg-[#92400E]",
+  },
+  maintenance: {
+    pill: "bg-[#F3F4F6] text-[#4B5563] border border-[#E5E7EB]",
+    dot: "bg-[#7B8794]",
+  },
 };
 
 /**
@@ -147,7 +160,7 @@ export default function AssetAllocationDetailModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="allocation-modal-title"
-        className="flex max-h-[calc(100vh-48px)] w-full max-w-[calc(100vw-32px)] sm:max-w-[560px] flex-col overflow-hidden rounded bg-white shadow-[0_12px_32px_rgba(16,24,40,0.18)]"
+        className="flex max-h-[calc(100vh-48px)] w-full max-w-[calc(100vw-32px)] sm:max-w-[560px] flex-col overflow-hidden rounded border border-[#E5E7EB] bg-white shadow-[0_12px_32px_rgba(16,24,40,0.18)]"
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[#E5E7EB] px-4 sm:px-5 py-4 sm:py-5">
@@ -173,7 +186,7 @@ export default function AssetAllocationDetailModal({
             ref={closeButtonRef}
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-[#6B7280] transition-colors hover:bg-[#F3F4F6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0] cursor-pointer"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-[#6B7280] transition-colors hover:bg-[#F0F1EE] hover:text-[#111827] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0] cursor-pointer"
             aria-label="Close"
           >
             <X className="h-4 w-4" />
@@ -213,19 +226,19 @@ export default function AssetAllocationDetailModal({
         <div className="min-h-0 min-h-[200px] flex-1 overflow-y-auto">
           {loading && (
             <div className="flex min-h-[200px] flex-col items-center justify-center p-6 text-center">
-              <p className="text-[13px] text-[#9CA3AF]">Loading assets...</p>
+              <p className="text-[13px] text-[#6B7280]">Loading assets...</p>
             </div>
           )}
 
           {error && (
             <div className="flex min-h-[200px] flex-col items-center justify-center p-6 text-center">
-              <p className="text-[13px] text-[#DC2626]">{error}</p>
+              <p className="text-[13px] text-[#9B1C1C]">{error}</p>
             </div>
           )}
 
           {!loading && !error && assets.length === 0 && (
             <div className="flex min-h-[200px] flex-col items-center justify-center p-6 text-center">
-              <PackageOpen className="h-6 w-6 text-[#9CA3AF] stroke-[1.5] mb-2" />
+              <PackageOpen className="h-6 w-6 text-[#7B8794] stroke-[1.5] mb-2" />
               <p className="max-w-[360px] text-[13px] text-[#6B7280] leading-normal">
                 No assets are allocated to {row.name}.
               </p>
@@ -234,47 +247,48 @@ export default function AssetAllocationDetailModal({
 
           {!loading && !error && assets.length > 0 && (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[500px] table-fixed text-left text-[13px]">
+              <table className="w-full min-w-[500px] table-fixed text-left text-[12px]">
                 <thead>
-                  <tr className="h-10 border-b border-[#E5E7EB] bg-[#FAFAF8] text-[11px] font-medium uppercase tracking-wider text-[#6B7280]">
-                    <th scope="col" className="w-[110px] pl-4 sm:pl-5 pr-3 py-2.5 whitespace-nowrap">Asset ID</th>
-                    <th scope="col" className="px-3 py-2.5 whitespace-nowrap">Asset Name</th>
-                    <th scope="col" className="w-[110px] px-3 py-2.5 whitespace-nowrap hidden sm:table-cell">Category</th>
-                    <th scope="col" className="w-[110px] px-3 py-2.5 whitespace-nowrap text-right">Issue Date</th>
-                    <th scope="col" className="w-[125px] pl-3 pr-4 sm:pr-5 py-2.5 whitespace-nowrap text-right">Status</th>
+                  <tr className="h-10 border-b border-[#E5E7EB] bg-[#F9FAFB] text-[11px] font-semibold uppercase tracking-wider text-[#4B5563]">
+                    <th scope="col" className="w-[110px] pl-4 sm:pl-5 pr-3 py-0 bg-[#F9FAFB] align-middle whitespace-nowrap">Asset ID</th>
+                    <th scope="col" className="px-3 py-0 bg-[#F9FAFB] align-middle whitespace-nowrap">Asset Name</th>
+                    <th scope="col" className="w-[110px] px-3 py-0 bg-[#F9FAFB] align-middle whitespace-nowrap hidden sm:table-cell">Category</th>
+                    <th scope="col" className="w-[110px] px-3 py-0 bg-[#F9FAFB] align-middle whitespace-nowrap text-right">Issue Date</th>
+                    <th scope="col" className="w-[125px] pl-3 pr-4 sm:pr-5 py-0 bg-[#F9FAFB] align-middle whitespace-nowrap text-right">Status</th>
                   </tr>
                 </thead>
 
-                <tbody>
-                  {assets.map((asset) => (
-                    <tr
-                      key={asset.id}
-                      className="h-11 sm:h-12 border-b border-[#E4E6E1]/60 last:border-b-0 hover:bg-[#FAFAF8] transition-colors"
-                    >
-                      <td className="pl-4 sm:pl-5 pr-3 py-2 font-semibold text-[#2F5FD0] whitespace-nowrap text-[13px]">
-                        {asset.asset_tag}
-                      </td>
-                      <td className="px-3 py-2 font-medium text-[#111827] truncate text-[13px]" title={asset.name}>
-                        {asset.name}
-                      </td>
-                      <td className="px-3 py-2 text-[#4B5563] truncate hidden sm:table-cell text-[13px]" title={asset.category}>
-                        {asset.category}
-                      </td>
-                      <td className="px-3 py-2 text-right text-[#4B5563] whitespace-nowrap tabular-nums text-[13px]">
-                        {formatDate(asset.issue_date)}
-                      </td>
-                      <td className="pl-3 pr-4 sm:pr-5 py-2 text-right whitespace-nowrap">
-                        <span
-                          className={`inline-flex h-5 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 text-[11px] font-medium ${
-                            statusStyles[asset.status] ?? "bg-[#F3F4F6] text-[#4B5563] border border-[#E5E7EB]"
-                          }`}
-                        >
-                          <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
-                          {ASSET_STATUS_LABELS[asset.status] ?? asset.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                <tbody className="divide-y divide-[#E5E7EB] bg-white">
+                  {assets.map((asset) => {
+                    const tone = statusStyles[asset.status] ?? statusStyles.maintenance;
+                    return (
+                      <tr
+                        key={asset.id}
+                        className="h-12 hover:bg-[#F9FAFB] transition-colors"
+                      >
+                        <td className="pl-4 sm:pl-5 pr-3 py-2 font-medium text-[#2F5FD0] whitespace-nowrap text-[12px] tabular-nums">
+                          {asset.asset_tag}
+                        </td>
+                        <td className="px-3 py-2 font-medium text-[#111827] truncate text-[12px]" title={asset.name}>
+                          {asset.name}
+                        </td>
+                        <td className="px-3 py-2 text-[#4B5563] truncate hidden sm:table-cell text-[12px]" title={asset.category}>
+                          {asset.category}
+                        </td>
+                        <td className="px-3 py-2 text-right text-[#111827] whitespace-nowrap tabular-nums text-[12px]">
+                          {formatDate(asset.issue_date)}
+                        </td>
+                        <td className="pl-3 pr-4 sm:pr-5 py-2 text-right whitespace-nowrap">
+                          <span
+                            className={`inline-flex h-[22px] items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 text-[12px] font-medium ${tone.pill}`}
+                          >
+                            <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${tone.dot}`} />
+                            <span>{ASSET_STATUS_LABELS[asset.status] ?? asset.status}</span>
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -282,14 +296,15 @@ export default function AssetAllocationDetailModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end border-t border-[#E5E7EB] bg-white px-4 sm:px-5 py-3 sm:py-4">
-          <button
-            type="button"
+        <div className="flex items-center justify-end border-t border-[#E5E7EB] bg-[#F9FAFB] px-4 sm:px-5 py-3">
+          <Button
+            variant="outline"
+            size="sm"
             onClick={onClose}
-            className="inline-flex h-9 w-full sm:w-auto items-center justify-center rounded border border-[#E5E7EB] bg-white px-4 text-[13px] font-medium text-[#374151] transition-colors hover:bg-[#F9FAFB] hover:text-[#111827] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0] cursor-pointer"
+            className="h-8 px-3.5 text-[12px] font-medium rounded shadow-none"
           >
             Close
-          </button>
+          </Button>
         </div>
       </div>
     </div>

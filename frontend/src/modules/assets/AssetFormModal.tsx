@@ -1,7 +1,13 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Package, X } from "lucide-react";
 
-import { ASSET_CATEGORIES } from "./assetData";
+import { Button } from "../../components/ui/Button";
+import {
+  ASSET_CATEGORIES,
+  DIALOG_FIELD_CLASS,
+  DIALOG_LABEL_CLASS,
+  useAssetDialogA11y,
+} from "./assetData";
 import { assetService } from "./assetService";
 import type { Asset, AssetInput } from "./types";
 
@@ -11,13 +17,6 @@ interface AssetFormModalProps {
   onClose: () => void;
   onSaved: (message: string) => Promise<void>;
 }
-
-const FIELD_CLASS =
-  "h-11 w-full rounded border border-slate-200 bg-white px-3 text-sm text-slate-700 " +
-  "outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 " +
-  "focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50";
-
-const LABEL_CLASS = "mb-2 block text-sm font-semibold text-slate-700";
 
 export default function AssetFormModal({
   asset,
@@ -37,6 +36,9 @@ export default function AssetFormModal({
   const [notes, setNotes] = useState(asset?.notes ?? "");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const modalRef = useRef<HTMLDivElement | null>(null);
+  useAssetDialogA11y(modalRef, onClose, isSubmitting);
 
   const isEditing = asset !== null;
 
@@ -90,22 +92,28 @@ export default function AssetFormModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4 py-6 backdrop-blur-[2px]"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4 py-6 backdrop-blur-[2px]"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget && !isSubmitting) onClose();
       }}
     >
-      <div className="w-full max-w-2xl overflow-hidden rounded bg-white shadow-2xl">
-        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
+      <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="asset-form-title"
+        className="w-full max-w-2xl overflow-hidden rounded border border-[#E5E7EB] bg-white shadow-xl"
+      >
+        <div className="flex items-center justify-between border-b border-[#E5E7EB] px-6 py-4">
           <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded bg-blue-50">
-              <Package className="h-5 w-5 text-[#2563eb]" />
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-[#E8EEFB] text-[#2F5FD0]">
+              <Package className="h-4 w-4" />
             </span>
             <div>
-              <h2 className="text-xl font-bold text-slate-900">
+              <h2 id="asset-form-title" className="text-[16px] font-semibold text-[#111827]">
                 {isEditing ? "Edit Asset" : "Add Asset"}
               </h2>
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="mt-0.5 text-xs text-[#4B5563]">
                 {isEditing
                   ? `Updating ${asset.asset_tag}.`
                   : "Record a new asset in the inventory."}
@@ -117,19 +125,19 @@ export default function AssetFormModal({
             type="button"
             onClick={onClose}
             disabled={isSubmitting}
-            className="flex h-9 w-9 items-center justify-center rounded text-slate-400 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-8 w-8 items-center justify-center rounded text-[#6B7280] transition hover:bg-[#F0F1EE] hover:text-[#111827] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0] disabled:cursor-not-allowed disabled:opacity-50"
             aria-label="Close"
           >
-            <X className="h-5 w-5" />
+            <X className="h-4 w-4" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="max-h-[70vh] overflow-y-auto px-6 py-6">
-            <div className="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="max-h-[70vh] overflow-y-auto px-6 py-5">
+            <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
-                <label htmlFor="asset-name" className={LABEL_CLASS}>
-                  Asset Name <span className="ml-1 text-red-500">*</span>
+                <label htmlFor="asset-name" className={DIALOG_LABEL_CLASS}>
+                  Asset Name <span className="ml-0.5 text-[#9B1C1C]">*</span>
                 </label>
                 <input
                   id="asset-name"
@@ -138,13 +146,13 @@ export default function AssetFormModal({
                   disabled={isSubmitting}
                   onChange={(event) => setName(event.target.value)}
                   placeholder="e.g. Dell Laptop (15.6&quot;)"
-                  className={FIELD_CLASS}
+                  className={DIALOG_FIELD_CLASS}
                 />
               </div>
 
               <div>
-                <label htmlFor="asset-category" className={LABEL_CLASS}>
-                  Category <span className="ml-1 text-red-500">*</span>
+                <label htmlFor="asset-category" className={DIALOG_LABEL_CLASS}>
+                  Category <span className="ml-0.5 text-[#9B1C1C]">*</span>
                 </label>
                 <select
                   id="asset-category"
@@ -153,7 +161,7 @@ export default function AssetFormModal({
                   onChange={(event) =>
                     setCategory(event.target.value as AssetInput["category"])
                   }
-                  className={FIELD_CLASS}
+                  className={DIALOG_FIELD_CLASS}
                 >
                   {ASSET_CATEGORIES.map((entry) => (
                     <option key={entry.label} value={entry.label}>
@@ -164,7 +172,7 @@ export default function AssetFormModal({
               </div>
 
               <div>
-                <label htmlFor="asset-brand" className={LABEL_CLASS}>
+                <label htmlFor="asset-brand" className={DIALOG_LABEL_CLASS}>
                   Brand / Model
                 </label>
                 <input
@@ -174,12 +182,12 @@ export default function AssetFormModal({
                   disabled={isSubmitting}
                   onChange={(event) => setBrandModel(event.target.value)}
                   placeholder="e.g. Dell / Inspiron 15"
-                  className={FIELD_CLASS}
+                  className={DIALOG_FIELD_CLASS}
                 />
               </div>
 
               <div>
-                <label htmlFor="asset-serial" className={LABEL_CLASS}>
+                <label htmlFor="asset-serial" className={DIALOG_LABEL_CLASS}>
                   Serial Number
                 </label>
                 <input
@@ -189,12 +197,12 @@ export default function AssetFormModal({
                   disabled={isSubmitting}
                   onChange={(event) => setSerialNumber(event.target.value)}
                   placeholder="e.g. SN001234"
-                  className={FIELD_CLASS}
+                  className={DIALOG_FIELD_CLASS}
                 />
               </div>
 
               <div>
-                <label htmlFor="asset-cost" className={LABEL_CLASS}>
+                <label htmlFor="asset-cost" className={DIALOG_LABEL_CLASS}>
                   Purchase Cost
                 </label>
                 <input
@@ -206,12 +214,12 @@ export default function AssetFormModal({
                   disabled={isSubmitting}
                   onChange={(event) => setPurchaseCost(event.target.value)}
                   placeholder="0.00"
-                  className={FIELD_CLASS}
+                  className={DIALOG_FIELD_CLASS}
                 />
               </div>
 
               <div>
-                <label htmlFor="asset-purchase-date" className={LABEL_CLASS}>
+                <label htmlFor="asset-purchase-date" className={DIALOG_LABEL_CLASS}>
                   Purchase Date
                 </label>
                 <input
@@ -220,12 +228,12 @@ export default function AssetFormModal({
                   value={purchaseDate}
                   disabled={isSubmitting}
                   onChange={(event) => setPurchaseDate(event.target.value)}
-                  className={FIELD_CLASS}
+                  className={DIALOG_FIELD_CLASS}
                 />
               </div>
 
               <div>
-                <label htmlFor="asset-warranty" className={LABEL_CLASS}>
+                <label htmlFor="asset-warranty" className={DIALOG_LABEL_CLASS}>
                   Warranty Expiry
                 </label>
                 <input
@@ -234,12 +242,12 @@ export default function AssetFormModal({
                   value={warrantyExpiry}
                   disabled={isSubmitting}
                   onChange={(event) => setWarrantyExpiry(event.target.value)}
-                  className={FIELD_CLASS}
+                  className={DIALOG_FIELD_CLASS}
                 />
               </div>
 
               <div className="sm:col-span-2">
-                <label htmlFor="asset-vendor" className={LABEL_CLASS}>
+                <label htmlFor="asset-vendor" className={DIALOG_LABEL_CLASS}>
                   Vendor
                 </label>
                 <input
@@ -249,16 +257,16 @@ export default function AssetFormModal({
                   disabled={isSubmitting}
                   onChange={(event) => setVendor(event.target.value)}
                   placeholder="e.g. Amazon Business"
-                  className={FIELD_CLASS}
+                  className={DIALOG_FIELD_CLASS}
                 />
               </div>
 
               <div className="sm:col-span-2">
-                <div className="mb-2 flex items-center justify-between">
-                  <label htmlFor="asset-notes" className="text-sm font-semibold text-slate-700">
+                <div className="mb-1.5 flex items-center justify-between">
+                  <label htmlFor="asset-notes" className="text-[12px] font-medium text-[#4B5563]">
                     Notes
                   </label>
-                  <span className="text-xs text-slate-400">{notes.length}/500</span>
+                  <span className="text-[11px] text-[#6B7280] tabular-nums">{notes.length}/500</span>
                 </div>
                 <textarea
                   id="asset-notes"
@@ -268,44 +276,39 @@ export default function AssetFormModal({
                   disabled={isSubmitting}
                   onChange={(event) => setNotes(event.target.value)}
                   placeholder="Condition, accessories included, anything worth noting..."
-                  className="w-full resize-none rounded border border-slate-200 px-3 py-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50"
+                  className="w-full resize-none rounded border border-[#E5E7EB] bg-white px-3 py-2.5 text-[13px] text-[#111827] outline-none transition placeholder:text-[#7B8794] focus:border-[#2F5FD0] focus:ring-1 focus:ring-[#2F5FD0] disabled:cursor-not-allowed disabled:bg-[#F6F7F5]"
                 />
               </div>
             </div>
 
             {error && (
-              <div className="rounded border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+              <div className="rounded border border-[#F8B4B4] bg-[#FDE8E8] px-4 py-3 text-xs text-[#9B1C1C]">
                 {error}
               </div>
             )}
           </div>
 
-          <div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50/50 px-6 py-4">
-            <button
-              type="button"
+          <div className="flex items-center justify-end gap-2 border-t border-[#E5E7EB] bg-[#F9FAFB] px-6 py-3.5">
+            <Button
+              variant="outline"
+              size="sm"
               onClick={onClose}
               disabled={isSubmitting}
-              className="inline-flex h-11 items-center justify-center rounded border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="h-8 px-3.5 rounded text-[12px] font-medium shadow-none"
             >
               Cancel
-            </button>
+            </Button>
 
-            <button
+            <Button
               type="submit"
+              variant="primary"
+              size="sm"
               disabled={isSubmitting}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded bg-[#2563eb] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              isLoading={isSubmitting}
+              className="h-8 px-3.5 rounded text-[12px] font-medium shadow-none"
             >
-              {isSubmitting ? (
-                <>
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-                  Saving...
-                </>
-              ) : isEditing ? (
-                "Save Changes"
-              ) : (
-                "Add Asset"
-              )}
-            </button>
+              {isEditing ? "Save Changes" : "Add Asset"}
+            </Button>
           </div>
         </form>
       </div>

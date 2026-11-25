@@ -37,7 +37,7 @@ function earliestLastDay(noticeDays: number) {
 }
 
 const inputClass =
-  "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
+  "w-full rounded-md border border-[#E5E7EB] bg-white px-2.5 py-1.5 text-[12px] text-[#111827] placeholder:text-[#7B8794] outline-none focus:border-[#2F5FD0] focus:ring-1 focus:ring-[#2F5FD0]";
 
 function EmployeeResignation() {
   const navigate = useNavigate();
@@ -184,35 +184,35 @@ function EmployeeResignation() {
   };
 
   return (
-    <div className="grid gap-6 p-6 xl:grid-cols-[1fr_320px]">
-      <div className="space-y-6">
-        <div>
+    <div className="grid gap-6 w-full max-w-[1280px] mx-auto px-4 sm:px-6 py-4 xl:grid-cols-[1fr_340px]">
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-1 bg-white p-5 rounded-lg border border-[#E5E7EB] shadow-none">
           <Link
             to="/employee/exit"
-            className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800"
+            className="inline-flex items-center gap-1 text-xs font-medium text-[#4B5563] hover:text-[#111827] w-fit"
           >
-            <ChevronLeft className="h-4 w-4" /> Exit / Offboarding
+            <ChevronLeft className="h-3.5 w-3.5" /> Exit / Offboarding
           </Link>
-          <h1 className="mt-2 text-2xl font-semibold text-slate-900">Resignation Request</h1>
-          <p className="text-sm text-slate-500">
+          <h1 className="mt-1 text-[18px] font-semibold text-[#111827]">Resignation Request</h1>
+          <p className="text-xs text-[#4B5563]">
             Submit your resignation request and our HR team will review it.
           </p>
         </div>
 
         {hasActiveRequest && (
-          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+          <div className="rounded-lg border border-[#FCD34D] bg-[#FEF3C7] p-4 text-xs text-[#92400E]">
             You already have an active resignation request, so a new one can&apos;t be submitted.
           </div>
         )}
 
-        <section className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6">
-          <h2 className="text-lg font-semibold text-slate-900">Resignation Details</h2>
+        <section className="space-y-6 rounded-lg border border-[#E5E7EB] bg-white p-6 shadow-none">
+          <h2 className="text-[13px] font-semibold text-[#111827]">Resignation Details</h2>
 
-          <div className="grid gap-5 md:grid-cols-2">
-            <label className="block text-sm font-medium text-slate-700">
-              Notice Period <span className="text-red-500">*</span>
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="block text-[12px] font-medium text-[#4B5563]">
+              Notice Period <span className="text-[#9B1C1C]">*</span>
               <select
-                className={`${inputClass} mt-1`}
+                className={`${inputClass} mt-1.5 h-8`}
                 value={noticePeriod}
                 onChange={(e) => handleNoticeChange(Number(e.target.value))}
               >
@@ -222,21 +222,21 @@ function EmployeeResignation() {
               </select>
             </label>
 
-            <label className="block text-sm font-medium text-slate-700">
-              Last Working Day <span className="text-red-500">*</span>
+            <label className="block text-[12px] font-medium text-[#4B5563]">
+              Last Working Day <span className="text-[#9B1C1C]">*</span>
               <input
                 type="date"
-                className={`${inputClass} mt-1`}
+                className={`${inputClass} mt-1.5 h-8`}
                 value={lastWorkingDay}
                 min={minDay}
                 onChange={(e) => setLastWorkingDay(e.target.value)}
               />
             </label>
 
-            <label className="block text-sm font-medium text-slate-700">
-              Resignation Reason <span className="text-red-500">*</span>
+            <label className="block text-[12px] font-medium text-[#4B5563]">
+              Resignation Reason <span className="text-[#9B1C1C]">*</span>
               <select
-                className={`${inputClass} mt-1`}
+                className={`${inputClass} mt-1.5 h-8`}
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
               >
@@ -247,50 +247,51 @@ function EmployeeResignation() {
               </select>
             </label>
 
-            <label className="block text-sm font-medium text-slate-700">
-              Remarks <span className="font-normal text-slate-400">(Optional)</span>
+            <label className="block text-[12px] font-medium text-[#4B5563]">
+              Remarks <span className="font-normal text-[#7B8794]">(Optional)</span>
               <textarea
-                className={`${inputClass} mt-1 h-24 resize-none`}
+                className={`${inputClass} mt-1.5 h-24 resize-none`}
                 maxLength={500}
                 placeholder="Add any additional comments..."
                 value={remarks}
                 onChange={(e) => setRemarks(e.target.value)}
               />
-              <span className="block text-right text-xs text-slate-400">{remarks.length}/500</span>
+              <span className="block text-right text-[11px] text-[#6B7280] tabular-nums">{remarks.length}/500</span>
             </label>
           </div>
 
           <div>
-            <h3 className="font-semibold text-slate-900">Hand over / Important Tasks</h3>
-            <p className="text-sm text-slate-500">
+            <h3 className="text-[13px] font-semibold text-[#111827]">Hand over / Important Tasks</h3>
+            <p className="text-xs text-[#4B5563]">
               Help us plan the transition by sharing your handover details and important tasks.
             </p>
 
-            <div className="mt-3 overflow-x-auto rounded-xl border border-slate-200">
-              <table className="w-full min-w-[620px] text-sm">
-                <thead className="bg-slate-50 text-left text-xs font-semibold text-slate-600">
-                  <tr>
-                    <th className="px-4 py-3">Task / Handover Item</th>
-                    <th className="px-4 py-3">Remarks (Optional)</th>
-                    <th className="px-4 py-3">Status</th>
+            <div className="mt-3 overflow-x-auto rounded-lg border border-[#E5E7EB]">
+              <table className="w-full min-w-[620px] border-collapse text-[12px]">
+                <thead className="bg-[#F9FAFB] border-b border-[#E5E7EB] text-left text-[11px] font-semibold uppercase tracking-wider text-[#4B5563]">
+                  <tr className="h-10">
+                    <th className="px-4 py-0 bg-[#F9FAFB] align-middle">Task / Handover Item</th>
+                    <th className="px-4 py-0 bg-[#F9FAFB] align-middle">Remarks (Optional)</th>
+                    <th className="px-4 py-0 bg-[#F9FAFB] align-middle">Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-[#E5E7EB] bg-white">
                   {tasks.map((row, index) => (
-                    <tr key={row.task}>
+                    <tr key={row.task} className="hover:bg-[#F9FAFB] transition-colors">
                       <td className="px-4 py-3">
-                        <label className="flex items-center gap-3 text-slate-800">
+                        <label className="flex items-center gap-3 text-[#111827]">
                           <input
                             type="checkbox"
                             checked={row.checked}
                             onChange={(e) => updateTask(index, { checked: e.target.checked })}
+                            className="h-4 w-4 rounded border-[#E5E7EB] text-[#2F5FD0] focus:ring-[#2F5FD0]"
                           />
                           {row.task}
                         </label>
                       </td>
                       <td className="px-4 py-3">
                         <input
-                          className={inputClass}
+                          className={`${inputClass} h-8`}
                           maxLength={300}
                           placeholder={row.placeholder}
                           value={row.remarks}
@@ -299,7 +300,7 @@ function EmployeeResignation() {
                       </td>
                       <td className="px-4 py-3">
                         <select
-                          className={inputClass}
+                          className={`${inputClass} h-8`}
                           value={row.status}
                           onChange={(e) => updateTask(index, { status: e.target.value as HandoverStatus })}
                         >
@@ -316,27 +317,27 @@ function EmployeeResignation() {
           </div>
 
           <div>
-            <h3 className="font-semibold text-slate-900">
-              Attachment <span className="text-sm font-normal text-slate-400">(Optional)</span>
+            <h3 className="text-[13px] font-semibold text-[#111827]">
+              Attachment <span className="text-xs font-normal text-[#7B8794]">(Optional)</span>
             </h3>
 
             <div
               onDragOver={(e) => e.preventDefault()}
               onDrop={handleDrop}
-              className="mt-3 flex flex-col items-center gap-1 rounded-xl border-2 border-dashed border-blue-200 bg-blue-50/30 px-4 py-6 text-center"
+              className="mt-3 flex flex-col items-center gap-1 rounded-lg border-2 border-dashed border-[#E5E7EB] bg-[#F9FAFB] px-4 py-6 text-center"
             >
-              <UploadCloud className="h-6 w-6 text-blue-500" />
-              <p className="text-sm text-slate-700">
+              <UploadCloud className="h-6 w-6 text-[#2F5FD0]" />
+              <p className="text-xs text-[#4B5563]">
                 Drag and drop files here, or{" "}
                 <button
                   type="button"
-                  className="font-medium text-blue-600 hover:underline"
+                  className="font-medium text-[#2F5FD0] hover:underline"
                   onClick={() => fileInput.current?.click()}
                 >
                   click to browse
                 </button>
               </p>
-              <p className="text-xs text-slate-500">
+              <p className="text-[11px] text-[#6B7280]">
                 Allowed formats: PDF, DOC, DOCX, JPG, PNG (Max 10MB each, up to {MAX_ATTACHMENTS} files)
               </p>
               <input
@@ -354,17 +355,17 @@ function EmployeeResignation() {
                 {files.map((file, index) => (
                   <li
                     key={`${file.name}-${index}`}
-                    className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-700"
+                    className="flex items-center gap-2 rounded-md border border-[#E5E7EB] bg-white px-3 py-1.5 text-xs text-[#4B5563]"
                   >
-                    <FileText className="h-4 w-4 text-blue-500" />
+                    <FileText className="h-4 w-4 text-[#2F5FD0]" />
                     {file.name}
-                    <span className="text-slate-400">({formatFileSize(file.size)})</span>
+                    <span className="text-[#6B7280] tabular-nums">({formatFileSize(file.size)})</span>
                     <button
                       type="button"
                       aria-label={`Remove ${file.name}`}
                       onClick={() => setFiles((list) => list.filter((_, i) => i !== index))}
                     >
-                      <X className="h-3.5 w-3.5 text-slate-400 hover:text-red-500" />
+                      <X className="h-3.5 w-3.5 text-[#6B7280] hover:text-[#9B1C1C]" />
                     </button>
                   </li>
                 ))}
@@ -373,24 +374,25 @@ function EmployeeResignation() {
           </div>
 
           {error && (
-            <p className="rounded-lg border border-red-100 bg-red-50 px-4 py-2 text-sm text-red-700">{error}</p>
+            <p className="rounded-lg border border-[#F8B4B4] bg-[#FDE8E8] px-4 py-2.5 text-xs text-[#9B1C1C]">{error}</p>
           )}
 
-          <div className="flex flex-wrap items-center justify-between gap-4 border-t border-slate-100 pt-5">
-            <label className="flex items-center gap-2 text-sm text-slate-600">
+          <div className="flex flex-wrap items-center justify-between gap-4 border-t border-[#E5E7EB] pt-5">
+            <label className="flex items-center gap-2 text-xs text-[#4B5563]">
               <input
                 type="checkbox"
                 checked={confirmed}
                 onChange={(e) => setConfirmed(e.target.checked)}
+                className="h-4 w-4 rounded border-[#E5E7EB] text-[#2F5FD0] focus:ring-[#2F5FD0]"
               />
               I confirm that the information provided is true and correct.
             </label>
 
-            <div className="flex gap-3">
+            <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => navigate("/employee/exit")}
-                className="rounded-lg border border-blue-600 px-5 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50"
+                className="h-[34px] rounded-[6px] border border-[#E4E6E1] bg-white px-4 text-[13px] font-medium text-[#1F2933] hover:bg-[#F0F1EE]"
               >
                 Cancel
               </button>
@@ -398,9 +400,9 @@ function EmployeeResignation() {
                 type="button"
                 disabled={submitting || hasActiveRequest}
                 onClick={() => void handleSubmit()}
-                className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex h-[34px] items-center gap-2 rounded-[6px] bg-[#2F5FD0] px-4 text-[13px] font-medium text-white hover:bg-[#264FB0] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                <Send className="h-4 w-4" />
+                <Send className="h-3.5 w-3.5" />
                 {submitting ? "Submitting…" : "Submit Request"}
               </button>
             </div>
@@ -408,10 +410,12 @@ function EmployeeResignation() {
         </section>
       </div>
 
-      <aside className="space-y-6">
-        <section className="rounded-2xl border border-slate-200 bg-white p-5">
-          <h2 className="font-semibold text-slate-900">Resignation Process</h2>
-          <ol className="mt-4 space-y-4 text-sm">
+      <aside className="space-y-4">
+        <section className="rounded-lg border border-[#E5E7EB] bg-white overflow-hidden shadow-none">
+          <div className="border-b border-[#E5E7EB] bg-white px-5 py-3.5">
+            <h2 className="text-[13px] font-semibold text-[#111827]">Resignation Process</h2>
+          </div>
+          <ol className="space-y-4 p-5 text-[12px]">
             {[
               ["Submit Request", "Fill in the resignation form and submit."],
               ["HR Review", "HR will review your request and details."],
@@ -419,32 +423,36 @@ function EmployeeResignation() {
               ["Final Settlement", "Get your dues and final documents."],
             ].map(([title, text], i) => (
               <li key={title} className="flex gap-3">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-semibold text-blue-700">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#E8EEFB] text-xs font-semibold text-[#2F5FD0] tabular-nums">
                   {i + 1}
                 </span>
                 <span>
-                  <span className="block font-medium text-slate-900">{title}</span>
-                  <span className="text-slate-500">{text}</span>
+                  <span className="block font-medium text-[#111827]">{title}</span>
+                  <span className="text-[#6B7280]">{text}</span>
                 </span>
               </li>
             ))}
           </ol>
         </section>
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 text-sm">
-          <h2 className="font-semibold text-slate-900">Key Information</h2>
-          <p className="mt-3 font-medium text-slate-900">Notice Period</p>
-          <p className="text-slate-500">
-            Your last working day must be at least your notice period from today.
-          </p>
-          <p className="mt-3 font-medium text-slate-900">Final Settlement</p>
-          <p className="text-slate-500">Processed after clearance and exit formalities.</p>
-          <p className="mt-3 font-medium text-slate-900">Documents Required</p>
-          <ul className="list-disc pl-5 text-slate-500">
-            <li>Resignation letter</li>
-            <li>Handover summary</li>
-            <li>ID card / Access return</li>
-          </ul>
+        <section className="rounded-lg border border-[#E5E7EB] bg-white overflow-hidden shadow-none text-[12px]">
+          <div className="border-b border-[#E5E7EB] bg-white px-5 py-3.5">
+            <h2 className="text-[13px] font-semibold text-[#111827]">Key Information</h2>
+          </div>
+          <div className="p-5">
+            <p className="font-medium text-[#111827]">Notice Period</p>
+            <p className="text-[#6B7280]">
+              Your last working day must be at least your notice period from today.
+            </p>
+            <p className="mt-3 font-medium text-[#111827]">Final Settlement</p>
+            <p className="text-[#6B7280]">Processed after clearance and exit formalities.</p>
+            <p className="mt-3 font-medium text-[#111827]">Documents Required</p>
+            <ul className="list-disc pl-5 text-[#6B7280]">
+              <li>Resignation letter</li>
+              <li>Handover summary</li>
+              <li>ID card / Access return</li>
+            </ul>
+          </div>
         </section>
       </aside>
     </div>

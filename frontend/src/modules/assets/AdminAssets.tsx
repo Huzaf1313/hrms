@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { DependencyList, ReactNode } from "react";
-import { TableSkeleton } from "../../components/ui";
+import { Avatar, Button, TableSkeleton } from "../../components/ui";
 import {
   BarChart3,
   Check,
@@ -22,13 +22,10 @@ import {
   Trash2,
   UserPlus,
   Users,
+  X,
 } from "lucide-react";
 
-import {
-  ASSET_CATEGORIES,
-  ASSET_CATEGORY_ICONS,
-  initialsForAsset,
-} from "./assetData";
+import { ASSET_CATEGORIES, ASSET_CATEGORY_ICONS } from "./assetData";
 import AssetAllocationDetailModal, {
   type AllocationDetailTarget,
 } from "./AssetAllocationDetailModal";
@@ -54,15 +51,15 @@ import {
   type Paginated,
 } from "./types";
 
-const PANEL_CLASS = "rounded-lg border border-[#E4E6E1] bg-white overflow-hidden shadow-none";
+const PANEL_CLASS = "rounded-lg border border-[#E5E7EB] bg-white overflow-hidden shadow-none";
 
 // KPI cards share one row and clip rather than letting large numbers overflow.
 const KPI_CARD_CLASS =
-  "min-w-0 rounded-lg border border-[#E4E6E1] bg-white p-4 shadow-kpi flex flex-col justify-between";
+  "min-w-0 h-[104px] rounded-lg border border-[#E5E7EB] bg-white p-4 shadow-kpi flex flex-col justify-between";
 
 const FILTER_CONTROL_CLASS =
-  "h-8 w-full appearance-none rounded-[6px] border border-[#E4E6E1] bg-white px-3 pr-8 text-[13px] font-medium " +
-  "text-[#111827] transition hover:border-[#CBD2D9] focus:border-[#2F5FD0] focus:outline-none";
+  "h-8 w-full appearance-none rounded-[6px] border border-[#E5E7EB] bg-white px-2.5 pr-7 text-[12px] font-medium " +
+  "text-[#111827] transition hover:border-[#D1D5DB] focus:border-[#2F5FD0] focus:ring-1 focus:ring-[#2F5FD0] focus:outline-none cursor-pointer";
 
 const MONTHS = [
   "Jan",
@@ -248,14 +245,14 @@ function PanelState({
   }
 
   if (error) {
-    return <p className="py-8 px-5 text-center text-xs text-rose-500">{error}</p>;
+    return <p className="py-8 px-5 text-center text-xs text-[#9B1C1C]">{error}</p>;
   }
 
   if (empty) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center py-8 px-5 text-center min-h-[120px] gap-2">
-        <PackageOpen className="w-5 h-5 text-[#9CA3AF] stroke-[1.5]" />
-        <p className="text-[13px] text-[#6B7280]">{emptyMessage}</p>
+        <PackageOpen className="w-5 h-5 text-[#7B8794] stroke-[1.5]" />
+        <p className="text-xs text-[#6B7280]">{emptyMessage}</p>
       </div>
     );
   }
@@ -263,46 +260,66 @@ function PanelState({
   return <>{children}</>;
 }
 
-const assetStatusStyles: Record<AssetStatus, string> = {
-  in_use: "bg-[#E3F5E1] text-[#1E6B45] border border-[#BCE8B5]",
-  available: "bg-[#E8EEFB] text-[#2F5FD0] border border-[#2F5FD0]/20",
-  pending_return: "bg-[#FDF3D6] text-[#8A5A00] border border-[#F6DE95]",
-  maintenance: "bg-[#F0F1EE] text-[#52606D] border border-[#E4E6E1]",
+const assetStatusStyles: Record<AssetStatus, { pill: string; dot: string }> = {
+  in_use: {
+    pill: "bg-[#DEF7EC] text-[#03543F] border border-[#BCF0DA]",
+    dot: "bg-[#03543F]",
+  },
+  available: {
+    pill: "bg-[#E8EEFB] text-[#2F5FD0] border border-[#2F5FD0]/20",
+    dot: "bg-[#2F5FD0]",
+  },
+  pending_return: {
+    pill: "bg-[#FEF3C7] text-[#92400E] border border-[#FCD34D]",
+    dot: "bg-[#92400E]",
+  },
+  maintenance: {
+    pill: "bg-[#F3F4F6] text-[#4B5563] border border-[#E5E7EB]",
+    dot: "bg-[#7B8794]",
+  },
 };
 
-const requestStatusStyles: Record<AssetRequestStatus, string> = {
-  pending: "bg-[#FDF3D6] text-[#8A5A00] border border-[#F6DE95]",
-  approved: "bg-[#E3F5E1] text-[#1E6B45] border border-[#BCE8B5]",
-  rejected: "bg-[#FBE4E1] text-[#A12D22] border border-[#FBE4E1]",
+const requestStatusStyles: Record<AssetRequestStatus, { pill: string; dot: string }> = {
+  pending: {
+    pill: "bg-[#FEF3C7] text-[#92400E] border border-[#FCD34D]",
+    dot: "bg-[#92400E]",
+  },
+  approved: {
+    pill: "bg-[#DEF7EC] text-[#03543F] border border-[#BCF0DA]",
+    dot: "bg-[#03543F]",
+  },
+  rejected: {
+    pill: "bg-[#FDE8E8] text-[#9B1C1C] border border-[#F8B4B4]",
+    dot: "bg-[#9B1C1C]",
+  },
 };
 
 function AssetStatusBadge({ status }: { status: AssetStatus }) {
+  const style = assetStatusStyles[status];
   return (
     <span
-      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-medium border h-5 ${assetStatusStyles[status]}`}
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[12px] leading-normal font-medium h-[22px] ${style.pill}`}
     >
-      <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
+      <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${style.dot}`} />
       {ASSET_STATUS_LABELS[status]}
     </span>
   );
 }
 
 function RequestStatusBadge({ status }: { status: AssetRequestStatus }) {
+  const style = requestStatusStyles[status];
   return (
     <span
-      className={`inline-flex shrink-0 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-medium border h-5 capitalize ${requestStatusStyles[status]}`}
+      className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[12px] leading-normal font-medium h-[22px] capitalize ${style.pill}`}
     >
+      <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${style.dot}`} />
       {status}
     </span>
   );
 }
 
 function PersonAvatar({ name }: { name: string }) {
-  return (
-    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#E8EEFB] text-xs font-semibold text-[#2F5FD0]">
-      {initialsForAsset(name)}
-    </span>
-  );
+  return <Avatar name={name} className="!w-8 !h-8 text-[11px] shrink-0" />;
 }
 
 function SectionTitle({
@@ -316,9 +333,9 @@ function SectionTitle({
 }) {
   return (
     <div
-      className={`flex items-center justify-between px-4 py-3.5 border-b border-[#E4E6E1] bg-white shrink-0 ${className}`}
+      className={`flex items-center justify-between px-6 py-3.5 border-b border-[#E5E7EB] bg-white shrink-0 ${className}`}
     >
-      <h3 className="shrink-0 text-[14px] font-semibold text-[#111827]">{title}</h3>
+      <h3 className="shrink-0 text-[13px] font-semibold text-[#111827]">{title}</h3>
       {action}
     </div>
   );
@@ -363,7 +380,7 @@ function Pagination({
   pageCount,
   onPageChange,
   summary,
-  className = "px-4 py-3 border-t border-[#E4E6E1] bg-white",
+  className = "px-6 py-3 border-t border-[#E5E7EB] bg-white",
 }: {
   page: number;
   pageCount: number;
@@ -390,7 +407,7 @@ function Pagination({
           aria-label="Previous page"
           disabled={page === 1}
           onClick={() => onPageChange(page - 1)}
-          className="flex h-8 w-8 items-center justify-center rounded-md border border-[#E4E6E1] text-[#52606D] transition hover:bg-[#F0F1EE] disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+          className="flex h-8 w-8 items-center justify-center rounded-md border border-[#E5E7EB] text-[#4B5563] transition hover:bg-[#F0F1EE] disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
         >
           <ChevronLeft className="h-4 w-4 shrink-0" />
         </button>
@@ -406,10 +423,10 @@ function Pagination({
               type="button"
               onClick={() => onPageChange(entry)}
               aria-current={entry === page ? "page" : undefined}
-              className={`flex h-8 min-w-8 items-center justify-center rounded-md border px-2 text-xs font-semibold transition cursor-pointer ${
+              className={`flex h-8 min-w-8 items-center justify-center rounded-md border px-2 text-xs font-semibold tabular-nums transition cursor-pointer ${
                 entry === page
                   ? "border-[#2F5FD0] bg-[#2F5FD0] text-white"
-                  : "border-[#E4E6E1] text-[#52606D] hover:bg-[#F0F1EE] hover:text-[#1F2933]"
+                  : "border-[#E5E7EB] text-[#4B5563] hover:bg-[#F0F1EE] hover:text-[#111827]"
               }`}
             >
               {entry}
@@ -422,7 +439,7 @@ function Pagination({
           aria-label="Next page"
           disabled={page === pageCount}
           onClick={() => onPageChange(page + 1)}
-          className="flex h-8 w-8 items-center justify-center rounded-md border border-[#E4E6E1] text-[#52606D] transition hover:bg-[#F0F1EE] disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+          className="flex h-8 w-8 items-center justify-center rounded-md border border-[#E5E7EB] text-[#4B5563] transition hover:bg-[#F0F1EE] disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
         >
           <ChevronRight className="h-4 w-4 shrink-0" />
         </button>
@@ -557,7 +574,7 @@ function AssetOverview({
         }
       />
 
-      <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b border-[#E4E6E1] bg-white">
+      <div className="flex flex-wrap items-center gap-2 px-6 py-3 border-b border-[#E5E7EB] bg-white">
         <div className="relative flex-1 max-w-[360px] min-w-[200px]">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#7B8794]" />
           <input
@@ -565,7 +582,7 @@ function AssetOverview({
             value={search}
             onChange={(event) => setFilter("search", event.target.value)}
             placeholder="Search by name or ID..."
-            className="h-8 w-full rounded-[6px] border border-[#E4E6E1] bg-white pl-8 pr-3 text-[13px] text-[#111827] placeholder:text-[#9CA3AF] transition hover:border-[#CBD2D9] focus:border-[#2F5FD0] focus:outline-none"
+            className="h-8 w-full rounded-[6px] border border-[#E5E7EB] bg-white pl-8 pr-3 text-[12px] text-[#111827] placeholder:text-[#7B8794] transition hover:border-[#D1D5DB] focus:border-[#2F5FD0] focus:ring-1 focus:ring-[#2F5FD0] focus:outline-none"
           />
         </div>
 
@@ -614,22 +631,22 @@ function AssetOverview({
             : "No assets yet. Use Add Asset to record your first one."
         }
       >
-        <div className="overflow-x-auto">
-          <table className="w-full table-fixed text-left text-[13px]">
+        <div className="overflow-x-auto w-full">
+          <table className="min-w-[814px] w-full table-fixed border-collapse text-left text-[12px]">
             <thead>
-              <tr className="h-10 bg-[#FAFAF8] border-b border-[#E4E6E1] text-[11px] font-medium uppercase tracking-wider text-[#6B7280]">
-                <th scope="col" className="w-[96px] whitespace-nowrap pl-4 pr-3 py-2.5">Asset ID</th>
-                <th scope="col" className="w-[170px] whitespace-nowrap px-3 py-2.5">Asset Name</th>
-                <th scope="col" className="w-[110px] whitespace-nowrap px-3 py-2.5">Category</th>
-                <th scope="col" className="whitespace-nowrap px-3 py-2.5 truncate" title="Brand / Model">Brand / Model</th>
-                <th scope="col" className="w-[120px] whitespace-nowrap px-3 py-2.5">Assigned To</th>
-                <th scope="col" className="w-[110px] whitespace-nowrap px-3 py-2.5">Issue Date</th>
-                <th scope="col" className="w-[110px] whitespace-nowrap px-3 py-2.5">Status</th>
-                <th scope="col" className="w-[72px] sticky right-0 z-10 bg-[#FAFAF8] border-l border-[#E4E6E1] whitespace-nowrap pl-2 pr-4 py-2.5 text-right">Actions</th>
+              <tr className="h-10 bg-[#F9FAFB] border-b border-[#E5E7EB] text-[11px] font-semibold uppercase tracking-wider text-[#4B5563]">
+                <th scope="col" className="w-[84px] whitespace-nowrap pl-4 pr-2 py-0 align-middle font-semibold">Asset ID</th>
+                <th scope="col" className="w-[120px] whitespace-nowrap px-2 py-0 align-middle font-semibold">Asset Name</th>
+                <th scope="col" className="w-[90px] whitespace-nowrap px-2 py-0 align-middle font-semibold">Category</th>
+                <th scope="col" className="min-w-[132px] whitespace-nowrap px-2 py-0 align-middle font-semibold">Brand / Model</th>
+                <th scope="col" className="w-[108px] whitespace-nowrap px-2 py-0 align-middle font-semibold">Assigned To</th>
+                <th scope="col" className="w-[94px] whitespace-nowrap px-2 py-0 align-middle font-semibold">Issue Date</th>
+                <th scope="col" className="w-[114px] whitespace-nowrap px-2 py-0 align-middle font-semibold">Status</th>
+                <th scope="col" className="w-[72px] sticky right-0 z-10 bg-[#F9FAFB] border-l border-[#E5E7EB] whitespace-nowrap pl-2 pr-4 py-0 align-middle text-right font-semibold">Actions</th>
               </tr>
             </thead>
 
-            <tbody>
+            <tbody className="divide-y divide-[#E5E7EB] bg-white text-[#111827]">
               {visibleAssets.map((asset) => (
                 <AssetRow
                   key={asset.id}
@@ -663,7 +680,7 @@ function AssetOverview({
 
           <div
             style={{ top: menu.top, left: menu.left }}
-            className="fixed z-50 w-40 rounded-lg border border-[#E4E6E1] bg-white p-1 shadow-lg"
+            className="fixed z-50 w-40 rounded-lg border border-[#E5E7EB] bg-white p-1 shadow-lg"
           >
             {menuAsset && (
               <>
@@ -723,14 +740,15 @@ function AssetRow({
   onOpenMenu: (trigger: HTMLButtonElement) => void;
 }) {
   const Icon = ASSET_CATEGORY_ICONS[asset.category] ?? Package;
+  const brandModelText = asset.brand_model ?? "-";
 
   return (
-    <tr className="group h-12 border-b border-[#E4E6E1]/60 last:border-0 hover:bg-[#FAFAF8] transition-colors">
-      <td className="whitespace-nowrap pl-4 pr-3 py-2 text-[13px] font-semibold text-[#2F5FD0] truncate">
+    <tr className="group h-12 hover:bg-[#F9FAFB] transition-colors">
+      <td className="whitespace-nowrap pl-4 pr-2 py-2 text-[12px] font-semibold text-[#2F5FD0] truncate tabular-nums">
         {asset.asset_tag}
       </td>
 
-      <td className="px-3 py-2 text-[13px] truncate">
+      <td className="px-2 py-2 text-[12px] truncate">
         <div className="flex items-center gap-2 min-w-0" title={asset.name}>
           <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[#E8EEFB] text-[#2F5FD0]">
             <Icon className="h-3.5 w-3.5 shrink-0" />
@@ -739,27 +757,33 @@ function AssetRow({
         </div>
       </td>
 
-      <td className="px-3 py-2 text-[13px] text-[#4B5563] truncate" title={asset.category}>
+      <td className="px-2 py-2 text-[12px] text-[#4B5563] truncate" title={asset.category}>
         {asset.category}
       </td>
 
-      <td className="px-3 py-2 text-[13px] text-[#4B5563] truncate" title={asset.brand_model ?? "-"}>
-        {asset.brand_model ?? "-"}
+      <td
+        className="px-2 py-2 text-[12px] text-[#4B5563] truncate"
+        onMouseEnter={(event) => {
+          const el = event.currentTarget;
+          el.title = el.scrollWidth > el.clientWidth ? brandModelText : "";
+        }}
+      >
+        {brandModelText}
       </td>
 
-      <td className="px-3 py-2 text-[13px] text-[#4B5563] truncate" title={asset.assigned_to_name ?? "-"}>
+      <td className="px-2 py-2 text-[12px] text-[#4B5563] truncate" title={asset.assigned_to_name ?? "-"}>
         {asset.assigned_to_name ?? "-"}
       </td>
 
-      <td className="whitespace-nowrap px-3 py-2 text-[13px] text-[#4B5563]">
+      <td className="whitespace-nowrap px-2 py-2 text-[12px] text-[#4B5563] tabular-nums">
         {formatDate(asset.issue_date)}
       </td>
 
-      <td className="px-3 py-2 text-[13px]">
+      <td className="px-2 py-2 text-[12px]">
         <AssetStatusBadge status={asset.status} />
       </td>
 
-      <td className={`w-[72px] sticky right-0 z-10 border-l border-[#E4E6E1] pl-2 pr-4 py-2 text-[13px] text-right ${menuOpen ? "bg-[#FAFAF8]" : "bg-white group-hover:bg-[#FAFAF8]"}`}>
+      <td className={`w-[72px] sticky right-0 z-10 border-l border-[#E5E7EB] pl-2 pr-4 py-2 text-[12px] text-right ${menuOpen ? "bg-[#F9FAFB]" : "bg-white group-hover:bg-[#F9FAFB]"}`}>
         <div className="flex justify-end">
           <button
             type="button"
@@ -767,7 +791,7 @@ function AssetRow({
             aria-label="Row actions"
             aria-haspopup="menu"
             aria-expanded={menuOpen}
-            className="flex h-8 w-8 items-center justify-center rounded-[6px] text-[#6B7280] transition-colors hover:bg-[#F3F4F6] hover:text-[#111827] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0] cursor-pointer"
+            className="flex h-8 w-8 items-center justify-center rounded-[6px] text-[#4B5563] transition-colors hover:bg-[#F0F1EE] hover:text-[#111827] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0] cursor-pointer"
           >
             <MoreVertical className="h-4 w-4 shrink-0" />
           </button>
@@ -792,14 +816,14 @@ function MenuItem({
     <button
       type="button"
       onClick={onClick}
-      className={`flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left text-xs font-medium transition ${
+      className={`flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-left text-xs font-medium transition cursor-pointer ${
         tone === "danger"
-          ? "text-rose-600 hover:bg-rose-50 hover:text-rose-700"
-          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+          ? "text-[#9B1C1C] hover:bg-[#FDE8E8]"
+          : "text-[#4B5563] hover:bg-[#F0F1EE] hover:text-[#111827]"
       }`}
     >
       <Icon
-        className={`h-4 w-4 shrink-0 ${tone === "danger" ? "text-rose-400" : "text-gray-400"}`}
+        className={`h-4 w-4 shrink-0 ${tone === "danger" ? "text-[#9B1C1C]" : "text-[#6B7280]"}`}
       />
       {label}
     </button>
@@ -858,7 +882,7 @@ function AssetCategoriesPanel({
               <circle
                 r={DONUT_RADIUS}
                 fill="none"
-                stroke="#f8fafc"
+                stroke="#E5E7EB"
                 strokeWidth={DONUT_STROKE_WIDTH}
               />
 
@@ -875,7 +899,7 @@ function AssetCategoriesPanel({
               ))}
             </g>
 
-            <text x="80" y="76" textAnchor="middle" className="fill-[#111827] text-[22px] font-bold">
+            <text x="80" y="76" textAnchor="middle" className="fill-[#111827] text-[22px] font-semibold tabular-nums">
               {total}
             </text>
             <text x="80" y="94" textAnchor="middle" className="fill-[#6B7280] text-[11px] font-medium">
@@ -896,7 +920,7 @@ function AssetCategoriesPanel({
                     style={{ backgroundColor: segment.color }}
                   />
                   <span
-                    className={`whitespace-nowrap font-medium ${isZero ? "text-[#9CA3AF]" : "text-[#374151]"}`}
+                    className={`whitespace-nowrap font-medium ${isZero ? "text-[#7B8794]" : "text-[#4B5563]"}`}
                   >
                     {segment.label}
                   </span>
@@ -904,14 +928,14 @@ function AssetCategoriesPanel({
                 <div className="flex items-center gap-2 shrink-0">
                   <span
                     className={`w-6 text-right font-semibold tabular-nums text-[12px] ${
-                      isZero ? "text-[#9CA3AF]" : "text-[#111827]"
+                      isZero ? "text-[#7B8794]" : "text-[#111827]"
                     }`}
                   >
                     {segment.count}
                   </span>
                   <span
                     className={`w-11 text-right tabular-nums text-[11px] ${
-                      isZero ? "text-[#9CA3AF]" : "text-[#6B7280]"
+                      isZero ? "text-[#7B8794]" : "text-[#6B7280]"
                     }`}
                   >
                     {pct}%
@@ -977,7 +1001,7 @@ function RecentAllocationPanel({
             {allocations.map((asset) => (
               <li
                 key={asset.id}
-                className="flex items-center gap-3 rounded-lg border border-[#E4E6E1] p-3 hover:bg-[#F6F7F5]/50 transition-colors"
+                className="flex items-center gap-3 rounded-lg border border-[#E5E7EB] p-3 hover:bg-[#F9FAFB] transition-colors"
               >
                 <PersonAvatar name={asset.assigned_to_name ?? "?"} />
 
@@ -988,7 +1012,7 @@ function RecentAllocationPanel({
                   <p className="truncate text-[12px] text-[#4B5563]">
                     {asset.asset_tag} - {asset.name}
                   </p>
-                  <p className="mt-0.5 text-[11px] text-[#6B7280]">
+                  <p className="mt-0.5 text-[11px] text-[#6B7280] tabular-nums">
                     Allocated on {formatDate(asset.issue_date)}
                   </p>
                 </div>
@@ -1047,16 +1071,16 @@ function QuickActionsPanel({
       id: "assign",
       label: "Assign Asset",
       icon: UserPlus,
-      iconBg: "bg-[#E3F5E1]",
-      iconColor: "text-[#1E6B45]",
+      iconBg: "bg-[#DEF7EC]",
+      iconColor: "text-[#03543F]",
       run: onAssign,
     },
     {
       id: "return",
       label: "Request Return",
       icon: RotateCcw,
-      iconBg: "bg-[#FDF3D6]",
-      iconColor: "text-[#8A5A00]",
+      iconBg: "bg-[#FEF3C7]",
+      iconColor: "text-[#92400E]",
       run: onReturn,
     },
     {
@@ -1080,8 +1104,8 @@ function QuickActionsPanel({
       id: "settings",
       label: "Asset Settings",
       icon: Settings2,
-      iconBg: "bg-[#FDF3D6]",
-      iconColor: "text-[#8A5A00]",
+      iconBg: "bg-[#F3F4F6]",
+      iconColor: "text-[#7B8794]",
     },
   ];
 
@@ -1108,10 +1132,10 @@ function QuickActionsPanel({
                       : "Not available yet: this action is not wired up yet"
                     : undefined
                 }
-                className={`flex min-w-0 items-center gap-2.5 rounded-lg border border-[#E4E6E1] bg-white h-12 px-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0] ${
+                className={`flex min-w-0 items-center gap-2.5 rounded-lg border border-[#E5E7EB] h-12 px-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0] ${
                   disabled
-                    ? `cursor-not-allowed opacity-60 ${action.busy ? "animate-pulse" : ""}`
-                    : "hover:bg-[#F6F7F5] hover:border-[#CBD2D9] cursor-pointer group"
+                    ? `bg-[#F6F7F5] text-[#7B8794] cursor-not-allowed ${action.busy ? "animate-pulse" : ""}`
+                    : "bg-white text-[#111827] hover:bg-[#F0F1EE] cursor-pointer group"
                 }`}
               >
                 <span
@@ -1119,7 +1143,11 @@ function QuickActionsPanel({
                 >
                   <Icon className="h-4 w-4 shrink-0" />
                 </span>
-                <span className="min-w-0 text-[13px] font-medium leading-tight text-[#111827] whitespace-nowrap">
+                <span
+                  className={`min-w-0 text-[12px] font-medium leading-tight whitespace-nowrap ${
+                    disabled ? "text-[#7B8794]" : "text-[#111827]"
+                  }`}
+                >
                   {action.label}
                 </span>
               </button>
@@ -1184,18 +1212,18 @@ function AssetAllocationPanel({
     <div className={`${PANEL_CLASS} flex min-w-0 flex-col ${className}`}>
       <SectionTitle title="Asset Allocation" />
 
-      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b border-[#E4E6E1] bg-white">
-        <div className="flex items-center gap-1 bg-[#F0F1EE] p-0.5 rounded-[6px]">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-3 border-b border-[#E5E7EB] bg-white">
+        <div className="flex items-center gap-1 bg-[#F3F4F6] p-0.5 rounded-lg border border-[#E5E7EB]">
           <button
             type="button"
             onClick={() => {
               setTab("employee");
               setPage(1);
             }}
-            className={`rounded-[5px] px-2.5 py-1 text-[12px] transition cursor-pointer ${
+            className={`h-7 px-3 text-[12px] rounded-md whitespace-nowrap transition-colors cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-[#2F5FD0] ${
               tab === "employee"
-                ? "bg-white text-[#2F5FD0] border border-[#E4E6E1] font-semibold shadow-xs"
-                : "text-[#52606D] hover:text-[#111827] font-medium"
+                ? "bg-white text-[#2F5FD0] border border-[#E5E7EB] font-semibold shadow-xs"
+                : "text-[#4B5563] hover:text-[#111827] font-medium"
             }`}
           >
             By Employee
@@ -1206,10 +1234,10 @@ function AssetAllocationPanel({
               setTab("department");
               setPage(1);
             }}
-            className={`rounded-[5px] px-2.5 py-1 text-[12px] transition cursor-pointer ${
+            className={`h-7 px-3 text-[12px] rounded-md whitespace-nowrap transition-colors cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-[#2F5FD0] ${
               tab === "department"
-                ? "bg-white text-[#2F5FD0] border border-[#E4E6E1] font-semibold shadow-xs"
-                : "text-[#52606D] hover:text-[#111827] font-medium"
+                ? "bg-white text-[#2F5FD0] border border-[#E5E7EB] font-semibold shadow-xs"
+                : "text-[#4B5563] hover:text-[#111827] font-medium"
             }`}
           >
             By Department
@@ -1227,7 +1255,7 @@ function AssetAllocationPanel({
                 setPage(1);
               }}
               placeholder={tab === "employee" ? "Search employee..." : "Search department..."}
-              className="h-8 w-44 rounded-[6px] border border-[#E4E6E1] bg-white pl-8 pr-3 text-[13px] text-[#111827] placeholder:text-[#9CA3AF] transition hover:border-[#CBD2D9] focus:border-[#2F5FD0] focus:outline-none"
+              className="h-8 w-44 rounded-[6px] border border-[#E5E7EB] bg-white pl-8 pr-3 text-[12px] text-[#111827] placeholder:text-[#7B8794] transition hover:border-[#D1D5DB] focus:border-[#2F5FD0] focus:ring-1 focus:ring-[#2F5FD0] focus:outline-none"
             />
           </div>
 
@@ -1260,58 +1288,59 @@ function AssetAllocationPanel({
         emptyMessage="No records match the current filters."
       >
         <div className="overflow-x-auto flex-1">
-          <table className="w-full min-w-[500px] text-left text-[13px]">
+          <table className="w-full min-w-[500px] border-collapse text-left text-[12px]">
             <thead>
-              <tr className="h-10 bg-[#FAFAF8] border-b border-[#E4E6E1] text-[11px] font-medium uppercase tracking-wider text-[#6B7280]">
+              <tr className="h-10 bg-[#F9FAFB] border-b border-[#E5E7EB] text-[11px] font-semibold uppercase tracking-wider text-[#4B5563]">
                 {tab === "employee" ? (
                   <>
-                    <th scope="col" className="w-[120px] whitespace-nowrap px-4 py-2.5">Employee ID</th>
-                    <th scope="col" className="whitespace-nowrap px-4 py-2.5">Employee Name</th>
-                    <th scope="col" className="w-[140px] whitespace-nowrap px-4 py-2.5">Assets Assigned</th>
-                    <th scope="col" className="w-[80px] whitespace-nowrap px-4 py-2.5 text-right">View</th>
+                    <th scope="col" className="w-[120px] whitespace-nowrap pl-6 pr-3 py-0 align-middle font-semibold">Employee ID</th>
+                    <th scope="col" className="whitespace-nowrap px-3 py-0 align-middle font-semibold">Employee Name</th>
+                    <th scope="col" className="w-[140px] whitespace-nowrap px-3 py-0 align-middle font-semibold">Assets Assigned</th>
+                    <th scope="col" className="w-[80px] whitespace-nowrap pl-3 pr-6 py-0 align-middle text-right font-semibold">View</th>
                   </>
                 ) : (
                   <>
-                    <th scope="col" className="w-[180px] whitespace-nowrap px-4 py-2.5">Department</th>
-                    <th scope="col" className="w-[110px] whitespace-nowrap px-4 py-2.5">Employees</th>
-                    <th scope="col" className="w-[140px] whitespace-nowrap px-4 py-2.5">Assets Assigned</th>
-                    <th scope="col" className="w-[80px] whitespace-nowrap px-4 py-2.5 text-right">View</th>
+                    <th scope="col" className="w-[180px] whitespace-nowrap pl-6 pr-3 py-0 align-middle font-semibold">Department</th>
+                    <th scope="col" className="w-[110px] whitespace-nowrap px-3 py-0 align-middle font-semibold">Employees</th>
+                    <th scope="col" className="w-[140px] whitespace-nowrap px-3 py-0 align-middle font-semibold">Assets Assigned</th>
+                    <th scope="col" className="w-[80px] whitespace-nowrap pl-3 pr-6 py-0 align-middle text-right font-semibold">View</th>
                   </>
                 )}
               </tr>
             </thead>
 
-            <tbody>
+            <tbody className="divide-y divide-[#E5E7EB] bg-white text-[#111827]">
               {rows.map((row) => (
-                <tr key={row.id} className="h-12 border-b border-[#E4E6E1]/60 last:border-0 hover:bg-[#FAFAF8] transition-colors">
+                <tr key={row.id} className="h-12 hover:bg-[#F9FAFB] transition-colors">
                   {tab === "employee" ? (
                     <>
-                      <td className="whitespace-nowrap px-4 py-2.5 font-semibold text-[#2F5FD0]">
+                      <td className="whitespace-nowrap pl-6 pr-3 py-2.5 font-semibold text-[#2F5FD0] tabular-nums">
                         {row.id}
                       </td>
-                      <td className="whitespace-nowrap px-4 py-2.5 font-medium text-[#111827]">
+                      <td className="whitespace-nowrap px-3 py-2.5 font-medium text-[#111827]">
                         {row.name}
                       </td>
-                      <td className="whitespace-nowrap px-4 py-2.5 text-[#4B5563]">{row.asset_count}</td>
+                      <td className="whitespace-nowrap px-3 py-2.5 text-[#4B5563] tabular-nums">{row.asset_count}</td>
                     </>
                   ) : (
                     <>
-                      <td className="whitespace-nowrap px-4 py-2.5 font-semibold text-[#111827]">
+                      <td className="whitespace-nowrap pl-6 pr-3 py-2.5 font-semibold text-[#111827]">
                         {row.name}
                       </td>
-                      <td className="whitespace-nowrap px-4 py-2.5 text-[#4B5563]">{row.employees}</td>
-                      <td className="whitespace-nowrap px-4 py-2.5 text-[#4B5563]">{row.asset_count}</td>
+                      <td className="whitespace-nowrap px-3 py-2.5 text-[#4B5563] tabular-nums">{row.employees}</td>
+                      <td className="whitespace-nowrap px-3 py-2.5 text-[#4B5563] tabular-nums">{row.asset_count}</td>
                     </>
                   )}
 
-                  <td className="whitespace-nowrap px-4 py-2.5 text-right">
-                    <button
-                      type="button"
+                  <td className="whitespace-nowrap pl-3 pr-6 py-2.5 text-right">
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => onViewAllocation({ view: tab, row })}
-                      className="h-7 px-2.5 py-0 text-[12px] font-medium rounded-md border border-[#E4E6E1] text-[#111827] bg-white hover:bg-[#F3F4F6] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0]"
+                      className="h-7 px-2.5 py-0 text-[12px] font-medium shadow-none"
                     >
                       View
-                    </button>
+                    </Button>
                   </td>
                 </tr>
               ))}
@@ -1321,7 +1350,7 @@ function AssetAllocationPanel({
       </PanelState>
 
       <Pagination
-        className="mt-auto px-4 py-3 border-t border-[#E4E6E1] bg-white"
+        className="mt-auto px-6 py-3 border-t border-[#E5E7EB] bg-white"
         page={currentPage}
         pageCount={pageCount}
         onPageChange={setPage}
@@ -1391,42 +1420,43 @@ function AssetReturnRequestsPanel({
         emptyMessage="No return requests yet."
       >
         <div className="overflow-x-auto flex-1 flex flex-col">
-          <table className="w-full min-w-[520px] table-fixed text-left text-sm">
+          <table className="w-full min-w-[590px] table-fixed border-collapse text-left text-[12px]">
             <thead>
-              <tr className="h-10 bg-[#FAFAF8] border-b border-[#E4E6E1] text-[11px] font-medium uppercase tracking-wider text-[#6B7280]">
-                <th scope="col" className="w-[90px] whitespace-nowrap pl-4 pr-3 py-2.5">Request ID</th>
-                <th scope="col" className="whitespace-nowrap px-3 py-2.5">Asset Name</th>
-                <th scope="col" className="w-[130px] whitespace-nowrap px-3 py-2.5">Employee</th>
-                <th scope="col" className="w-[95px] whitespace-nowrap px-3 py-2.5 text-right">Status</th>
-                <th scope="col" className="w-[115px] whitespace-nowrap pl-2 pr-4 py-2.5 text-right">Action</th>
+              <tr className="h-10 bg-[#F9FAFB] border-b border-[#E5E7EB] text-[11px] font-semibold uppercase tracking-wider text-[#4B5563]">
+                <th scope="col" className="w-[90px] whitespace-nowrap pl-6 pr-3 py-0 align-middle font-semibold">Request ID</th>
+                <th scope="col" className="whitespace-nowrap px-3 py-0 align-middle font-semibold">Asset Name</th>
+                <th scope="col" className="w-[130px] whitespace-nowrap px-3 py-0 align-middle font-semibold">Employee</th>
+                <th scope="col" className="w-[100px] whitespace-nowrap px-3 py-0 align-middle text-right font-semibold">Status</th>
+                <th scope="col" className="w-[136px] whitespace-nowrap pl-2 pr-6 py-0 align-middle text-right font-semibold">Action</th>
               </tr>
             </thead>
 
-            <tbody>
+            <tbody className="divide-y divide-[#E5E7EB] bg-white text-[#111827]">
               {requests.map((request) => (
-                <tr key={request.id} className="h-12 border-b border-[#E4E6E1]/60 last:border-0 hover:bg-[#FAFAF8] transition-colors">
-                  <td className="whitespace-nowrap pl-4 pr-3 py-2 text-[13px] font-semibold text-[#2F5FD0]">
+                <tr key={request.id} className="h-12 hover:bg-[#F9FAFB] transition-colors">
+                  <td className="whitespace-nowrap pl-6 pr-3 py-2 text-[12px] font-semibold text-[#2F5FD0] tabular-nums">
                     {request.request_tag}
                   </td>
-                  <td className="truncate px-3 py-2 text-[13px] font-medium text-[#111827]" title={request.asset_name}>
+                  <td className="truncate px-3 py-2 text-[12px] font-medium text-[#111827]" title={request.asset_name}>
                     {request.asset_name}
                   </td>
-                  <td className="truncate px-3 py-2 text-[13px] text-[#4B5563]" title={request.employee_name}>
+                  <td className="truncate px-3 py-2 text-[12px] text-[#4B5563]" title={request.employee_name}>
                     {request.employee_name}
                   </td>
                   <td className="whitespace-nowrap px-3 py-2 text-right">
                     <RequestStatusBadge status={request.status} />
                   </td>
-                  <td className="whitespace-nowrap pl-2 pr-4 py-2 text-right">
+                  <td className="whitespace-nowrap pl-2 pr-6 py-2 text-right">
                     {canMarkReturned(request) ? (
-                      <button
-                        type="button"
+                      <Button
+                        variant="outline"
+                        size="sm"
                         onClick={() => onConfirmReturn(request)}
-                        className="h-7 px-2.5 py-0 text-[12px] font-medium rounded-md bg-[#E3F5E1] border border-[#BCE8B5] text-[#1E6B45] hover:bg-[#D5EED1] inline-flex items-center gap-1.5 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0]"
+                        className="h-7 px-2.5 py-0 text-[12px] font-medium gap-1 text-[#03543F] hover:bg-[#DEF7EC] border-[#BCF0DA] shadow-none"
+                        leftIcon={<Check className="w-3.5 h-3.5 shrink-0 text-[#03543F]" />}
                       >
-                        <Check className="h-3.5 w-3.5 shrink-0" />
                         Mark Returned
-                      </button>
+                      </Button>
                     ) : (
                       <span className="text-[12px] text-[#6B7280]">-</span>
                     )}
@@ -1505,7 +1535,7 @@ function AssetIssueRequestsPanel({
       {actionError && (
         <p
           role="alert"
-          className="mx-5 mt-4 rounded-lg bg-[#FBE4E1] border border-[#FBE4E1] px-3.5 py-2.5 text-xs text-[#A12D22]"
+          className="mx-6 mt-4 rounded-lg bg-[#FDE8E8] border border-[#F8B4B4] px-3.5 py-2.5 text-xs text-[#9B1C1C]"
         >
           {actionError}
         </p>
@@ -1518,52 +1548,56 @@ function AssetIssueRequestsPanel({
         emptyMessage="No pending asset issue requests."
       >
         <div className="overflow-x-auto flex-1 flex flex-col">
-          <table className="w-full min-w-[520px] table-fixed text-left text-sm">
+          <table className="w-full min-w-[590px] table-fixed border-collapse text-left text-[12px]">
             <thead>
-              <tr className="h-10 bg-[#FAFAF8] border-b border-[#E4E6E1] text-[11px] font-medium uppercase tracking-wider text-[#6B7280]">
-                <th scope="col" className="w-[90px] whitespace-nowrap pl-4 pr-3 py-2.5">Request</th>
-                <th scope="col" className="whitespace-nowrap px-3 py-2.5">Asset</th>
-                <th scope="col" className="w-[130px] whitespace-nowrap px-3 py-2.5">Employee</th>
-                <th scope="col" className="w-[95px] whitespace-nowrap px-3 py-2.5 text-right">Status</th>
-                <th scope="col" className="w-[140px] whitespace-nowrap pl-2 pr-4 py-2.5 text-right">Actions</th>
+              <tr className="h-10 bg-[#F9FAFB] border-b border-[#E5E7EB] text-[11px] font-semibold uppercase tracking-wider text-[#4B5563]">
+                <th scope="col" className="w-[90px] whitespace-nowrap pl-6 pr-3 py-0 align-middle font-semibold">Request</th>
+                <th scope="col" className="whitespace-nowrap px-3 py-0 align-middle font-semibold">Asset</th>
+                <th scope="col" className="w-[130px] whitespace-nowrap px-3 py-0 align-middle font-semibold">Employee</th>
+                <th scope="col" className="w-[100px] whitespace-nowrap px-3 py-0 align-middle text-right font-semibold">Status</th>
+                <th scope="col" className="w-[180px] whitespace-nowrap pl-2 pr-6 py-0 align-middle text-right font-semibold">Actions</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-[#E5E7EB] bg-white text-[#111827]">
               {requests.map((request) => (
                 <tr
                   key={request.id}
-                  className="h-12 border-b border-[#E4E6E1]/60 last:border-0 hover:bg-[#FAFAF8] transition-colors"
+                  className="h-12 hover:bg-[#F9FAFB] transition-colors"
                 >
-                  <td className="whitespace-nowrap pl-4 pr-3 py-2 text-[13px] font-semibold text-[#2F5FD0]">
+                  <td className="whitespace-nowrap pl-6 pr-3 py-2 text-[12px] font-semibold text-[#2F5FD0] tabular-nums">
                     {request.request_tag}
                   </td>
-                  <td className="truncate px-3 py-2 text-[13px] font-medium text-[#111827]" title={request.asset_name}>
+                  <td className="truncate px-3 py-2 text-[12px] font-medium text-[#111827]" title={request.asset_name}>
                     {request.asset_name}
                   </td>
-                  <td className="truncate px-3 py-2 text-[13px] text-[#4B5563]" title={request.employee_name}>
+                  <td className="truncate px-3 py-2 text-[12px] text-[#4B5563]" title={request.employee_name}>
                     {request.employee_name}
                   </td>
                   <td className="whitespace-nowrap px-3 py-2 text-right">
                     <RequestStatusBadge status={request.status} />
                   </td>
-                  <td className="whitespace-nowrap pl-2 pr-4 py-2 text-right">
-                    <div className="flex flex-wrap justify-end gap-1.5">
-                      <button
-                        type="button"
+                  <td className="whitespace-nowrap pl-2 pr-6 py-2 text-right">
+                    <div className="inline-flex items-center justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
                         disabled={busyId !== null}
                         onClick={() => handleReview(request, "approved")}
-                        className="h-7 px-2.5 py-0 text-[12px] font-medium rounded-md border border-[#BCE8B5] bg-[#E3F5E1] text-[#1E6B45] hover:bg-[#D5EED1] disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0]"
+                        className="h-7 px-2.5 py-0 text-[12px] font-medium gap-1 text-[#03543F] hover:bg-[#DEF7EC] border-[#BCF0DA] shadow-none"
+                        leftIcon={<Check className="w-3.5 h-3.5 shrink-0 text-[#03543F]" />}
                       >
                         {busyId === request.id ? "Saving…" : "Approve"}
-                      </button>
-                      <button
-                        type="button"
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
                         disabled={busyId !== null}
                         onClick={() => handleReview(request, "rejected")}
-                        className="h-7 px-2.5 py-0 text-[12px] font-medium rounded-md border border-[#FBE4E1] bg-[#FBE4E1] text-[#A12D22] hover:bg-[#F7D5D1] disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0]"
+                        className="h-7 px-2.5 py-0 text-[12px] font-medium gap-1 text-[#9B1C1C] hover:bg-[#FDE8E8] border-[#F8B4B4] shadow-none"
+                        leftIcon={<X className="w-3.5 h-3.5 shrink-0 text-[#9B1C1C]" />}
                       >
                         Reject
-                      </button>
+                      </Button>
                     </div>
                   </td>
                 </tr>
@@ -1714,7 +1748,7 @@ export default function AdminAssets() {
       label: "Total Assets",
       value: formatCount(counts.total),
       note: "↑ 5% from last month",
-      noteClass: "text-[#1E6B45]",
+      noteClass: "text-[#03543F]",
       icon: Laptop,
       iconBg: "bg-[#E8EEFB]",
       iconColor: "text-[#2F5FD0]",
@@ -1725,8 +1759,8 @@ export default function AdminAssets() {
       note: share(counts.assigned),
       noteClass: "text-[#6B7280]",
       icon: Users,
-      iconBg: "bg-[#E3F5E1]",
-      iconColor: "text-[#1E6B45]",
+      iconBg: "bg-[#DEF7EC]",
+      iconColor: "text-[#03543F]",
     },
     {
       label: "Available",
@@ -1743,8 +1777,8 @@ export default function AdminAssets() {
       note: share(counts.pendingReturn),
       noteClass: "text-[#6B7280]",
       icon: Clock,
-      iconBg: "bg-[#FDF3D6]",
-      iconColor: "text-[#8A5A00]",
+      iconBg: "bg-[#FEF3C7]",
+      iconColor: "text-[#92400E]",
     },
     {
       label: "Asset Categories",
@@ -1758,17 +1792,19 @@ export default function AdminAssets() {
   ];
 
   return (
-    <div className="flex flex-col gap-4 w-full max-w-[1280px] mx-auto px-4 sm:px-6 py-4">
-      {/* Page Title Treatment */}
-      <div className="flex flex-col gap-1">
-        <h1 className="text-[18px] font-semibold text-[#111827]">Asset Management</h1>
-        <p className="text-[13px] text-[#4B5563]">
-          Track, assign and manage company assets assigned to employees.
-        </p>
+    <div className="flex flex-col gap-6 w-full max-w-[1280px] mx-auto px-4 sm:px-6 py-4">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-5 rounded-lg border border-[#E5E7EB] shadow-none">
+        <div className="flex flex-col gap-0.5">
+          <h1 className="text-[18px] font-semibold text-[#111827]">Asset Management</h1>
+          <p className="text-xs text-[#4B5563]">
+            Track, assign and manage company assets assigned to employees.
+          </p>
+        </div>
       </div>
 
       {statsError && (
-        <p className="rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-600">
+        <p className="rounded-lg bg-[#FDE8E8] border border-[#F8B4B4] px-4 py-3 text-xs text-[#9B1C1C]">
           Could not load asset summary: {statsError}
         </p>
       )}
@@ -1776,36 +1812,42 @@ export default function AdminAssets() {
       <NoticePopup notice={notice} onDismiss={dismissNotice} />
 
       {/* Row 1: KPI cards, 5 equal columns at >=1280px */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-        {statCards.map((card) => {
-          const Icon = card.icon;
+      <div className="flex flex-col gap-2.5">
+        <h2 className="text-[11px] font-semibold uppercase tracking-wider text-[#6B7280]">
+          Asset Overview
+        </h2>
 
-          return (
-            <div key={card.label} className={KPI_CARD_CLASS}>
-              <div className="flex items-center justify-between gap-2 min-w-0">
-                <span className="text-[12px] font-medium text-[#4B5563] truncate">
-                  {card.label}
-                </span>
-                <div
-                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${card.iconBg}`}
-                >
-                  <Icon className={`h-4 w-4 shrink-0 ${card.iconColor}`} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+          {statCards.map((card) => {
+            const Icon = card.icon;
+
+            return (
+              <div key={card.label} className={KPI_CARD_CLASS}>
+                <div className="flex items-center justify-between gap-2 min-w-0">
+                  <span className="text-xs font-medium text-[#4B5563] truncate">
+                    {card.label}
+                  </span>
+                  <div
+                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md ${card.iconBg}`}
+                  >
+                    <Icon className={`h-4 w-4 shrink-0 ${card.iconColor}`} />
+                  </div>
+                </div>
+
+                <div>
+                  <span className="text-[24px] font-semibold text-[#111827] tabular-nums tracking-tight leading-none block">
+                    {card.value}
+                  </span>
+                  {card.note && (
+                    <span className={`text-[11px] block mt-1 truncate leading-none ${card.noteClass || "text-[#6B7280]"}`}>
+                      {card.note}
+                    </span>
+                  )}
                 </div>
               </div>
-
-              <div className="mt-2">
-                <span className="text-[24px] font-semibold text-[#111827] tracking-tight leading-none block">
-                  {card.value}
-                </span>
-                {card.note && (
-                  <span className={`text-[11px] block mt-1 truncate ${card.noteClass || "text-[#6B7280]"}`}>
-                    {card.note}
-                  </span>
-                )}
-              </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
       {/* Row 2: ONE grid with two INDEPENDENT stacked columns */}

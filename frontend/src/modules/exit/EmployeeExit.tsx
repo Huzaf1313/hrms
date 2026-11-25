@@ -32,10 +32,19 @@ const STEPPER = ["Resignation", "Clearance", "Final Settlement", "Exit Complete"
 
 type StepState = "Completed" | "In Progress" | "Pending";
 
-const PILL: Record<StepState, string> = {
-  Completed: "bg-emerald-50 text-emerald-700",
-  "In Progress": "bg-blue-50 text-blue-700",
-  Pending: "bg-slate-100 text-slate-600",
+const PILL: Record<StepState, { pill: string; dot: string }> = {
+  Completed: {
+    pill: "bg-[#DEF7EC] text-[#03543F] border border-[#BCF0DA]",
+    dot: "bg-[#03543F]",
+  },
+  "In Progress": {
+    pill: "bg-[#E8EEFB] text-[#2F5FD0]",
+    dot: "bg-[#2F5FD0]",
+  },
+  Pending: {
+    pill: "bg-[#F3F4F6] text-[#4B5563] border border-[#E5E7EB]",
+    dot: "bg-[#7B8794]",
+  },
 };
 
 function isActive(request: ExitRequest) {
@@ -205,41 +214,43 @@ function EmployeeExit() {
   const pendingDocs = request ? request.documents.filter((d) => d.status === "Pending").length : 0;
 
   const linkClass =
-    "flex w-full items-center gap-3 rounded-xl border border-slate-100 px-3 py-2.5 text-left text-sm font-medium";
+    "flex w-full items-center gap-3 rounded-md border border-[#E5E7EB] bg-white px-3.5 py-2.5 text-left text-[12px] font-medium transition";
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex items-center gap-4">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
-          <LogOut className="h-7 w-7" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Exit / Offboarding</h1>
-          <p className="text-sm text-slate-500">
-            Manage your resignation, clearance and final settlement process.
-          </p>
+    <div className="flex flex-col gap-6 w-full max-w-[1280px] mx-auto px-4 sm:px-6 py-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-5 rounded-lg border border-[#E5E7EB] shadow-none">
+        <div className="flex items-center gap-3">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#E8EEFB] text-[#2F5FD0]">
+            <LogOut className="h-4 w-4 shrink-0" />
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <h1 className="text-[18px] font-semibold text-[#111827]">Exit / Offboarding</h1>
+            <p className="text-xs text-[#4B5563]">
+              Manage your resignation, clearance and final settlement process.
+            </p>
+          </div>
         </div>
       </div>
 
       {/* Progress stepper */}
-      <div className="grid grid-cols-1 gap-3 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:grid-cols-2 md:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 rounded-lg border border-[#E5E7EB] bg-white p-4 shadow-none sm:grid-cols-2 md:grid-cols-4">
         {STEPPER.map((label, i) => {
           const done = i < step;
           const current = i === step;
           return (
             <div key={label} className="flex items-center gap-3">
               <span
-                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
+                className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold tabular-nums ${
                   done
-                    ? "bg-emerald-500 text-white"
+                    ? "bg-[#03543F] text-white"
                     : current
-                      ? "bg-blue-600 text-white"
-                      : "bg-slate-100 text-slate-500"
+                      ? "bg-[#2F5FD0] text-white"
+                      : "bg-[#F3F4F6] text-[#6B7280] border border-[#E5E7EB]"
                 }`}
               >
                 {done ? <CheckCircle2 className="h-4 w-4" /> : i + 1}
               </span>
-              <span className={`text-sm ${current ? "font-semibold text-blue-600" : "text-slate-600"}`}>
+              <span className={`text-[13px] ${current ? "font-semibold text-[#2F5FD0]" : "font-medium text-[#4B5563]"}`}>
                 {label}
               </span>
             </div>
@@ -248,94 +259,100 @@ function EmployeeExit() {
       </div>
 
       {error && (
-        <p className="rounded-lg border border-red-100 bg-red-50 px-4 py-2 text-sm text-red-700">{error}</p>
+        <p className="rounded-lg border border-[#F8B4B4] bg-[#FDE8E8] px-4 py-2.5 text-xs text-[#9B1C1C]">{error}</p>
       )}
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_340px]">
-        <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900">My Resignation Request</h2>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_340px]">
+        <section className="rounded-lg border border-[#E5E7EB] bg-white overflow-hidden shadow-none">
+          <div className="border-b border-[#E5E7EB] bg-white px-6 py-3.5">
+            <h2 className="text-[13px] font-semibold text-[#111827]">My Resignation Request</h2>
+          </div>
 
-          {loading ? (
-            <p className="mt-4 text-sm text-slate-500">Loading…</p>
-          ) : !request ? (
-            <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50/50 p-5">
-              <p className="text-sm text-slate-600">
-                You haven&apos;t submitted a resignation request. If you&apos;re planning to leave,
-                you can start one here.
-              </p>
-            </div>
-          ) : (
-            <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50/50 p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
-                  <FileText className="h-5 w-5" />
-                </div>
-                <ExitStatusBadge status={request.status} />
+          <div className="p-5">
+            {loading ? (
+              <p className="text-xs text-[#6B7280]">Loading…</p>
+            ) : !request ? (
+              <div className="rounded-md border border-[#E5E7EB] bg-[#F9FAFB] p-5">
+                <p className="text-xs text-[#4B5563]">
+                  You haven&apos;t submitted a resignation request. If you&apos;re planning to leave,
+                  you can start one here.
+                </p>
               </div>
-
-              <dl className="mt-4 grid gap-2 text-sm sm:grid-cols-[140px_1fr]">
-                <dt className="text-slate-500">Request ID</dt>
-                <dd className="font-medium text-slate-900">{request.request_number ?? request.id}</dd>
-                <dt className="text-slate-500">Requested Date</dt>
-                <dd className="font-medium text-slate-900">{formatExitDate(request.submitted_at)}</dd>
-                <dt className="text-slate-500">Last Working Day</dt>
-                <dd className="font-medium text-slate-900">{formatExitDate(request.last_working_day)}</dd>
-                <dt className="text-slate-500">Reason</dt>
-                <dd className="font-medium text-slate-900">{request.reason}</dd>
-                {request.status === "Rejected" && request.admin_note && (
-                  <>
-                    <dt className="text-slate-500">HR Note</dt>
-                    <dd className="text-slate-900">{request.admin_note}</dd>
-                  </>
-                )}
-              </dl>
-
-              {request.status === "Pending" && (
-                <div className="mt-4 flex justify-end">
-                  <button
-                    type="button"
-                    disabled={cancelling}
-                    onClick={() => void handleCancel()}
-                    className="rounded-lg border border-red-200 bg-white px-4 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
-                  >
-                    {cancelling ? "Cancelling…" : "Cancel Request"}
-                  </button>
+            ) : (
+              <div className="rounded-md border border-[#E5E7EB] bg-[#F9FAFB] p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#E8EEFB] text-[#2F5FD0]">
+                    <FileText className="h-4 w-4" />
+                  </div>
+                  <ExitStatusBadge status={request.status} />
                 </div>
-              )}
-            </div>
-          )}
 
-          {!loading && canStartNew && (
-            <Link
-              to="/employee/exit/resignation"
-              className="mt-4 inline-flex rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-            >
-              {request ? "Start New Resignation" : "Start Resignation"}
-            </Link>
-          )}
+                <dl className="mt-4 grid gap-2 text-[12px] sm:grid-cols-[140px_1fr]">
+                  <dt className="text-[#6B7280]">Request ID</dt>
+                  <dd className="font-medium text-[#111827] tabular-nums">{request.request_number ?? request.id}</dd>
+                  <dt className="text-[#6B7280]">Requested Date</dt>
+                  <dd className="font-medium text-[#111827] tabular-nums">{formatExitDate(request.submitted_at)}</dd>
+                  <dt className="text-[#6B7280]">Last Working Day</dt>
+                  <dd className="font-medium text-[#111827] tabular-nums">{formatExitDate(request.last_working_day)}</dd>
+                  <dt className="text-[#6B7280]">Reason</dt>
+                  <dd className="font-medium text-[#111827]">{request.reason}</dd>
+                  {request.status === "Rejected" && request.admin_note && (
+                    <>
+                      <dt className="text-[#6B7280]">HR Note</dt>
+                      <dd className="text-[#111827]">{request.admin_note}</dd>
+                    </>
+                  )}
+                </dl>
+
+                {request.status === "Pending" && (
+                  <div className="mt-4 flex justify-end">
+                    <button
+                      type="button"
+                      disabled={cancelling}
+                      onClick={() => void handleCancel()}
+                      className="h-8 rounded-[6px] border border-[#F8B4B4] bg-white px-3 text-[12px] font-medium text-[#9B1C1C] hover:bg-[#FDE8E8] disabled:opacity-50"
+                    >
+                      {cancelling ? "Cancelling…" : "Cancel Request"}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {!loading && canStartNew && (
+              <Link
+                to="/employee/exit/resignation"
+                className="mt-4 inline-flex h-[34px] items-center rounded-[6px] bg-[#2F5FD0] px-4 text-[13px] font-medium text-white hover:bg-[#264FB0]"
+              >
+                {request ? "Start New Resignation" : "Start Resignation"}
+              </Link>
+            )}
+          </div>
         </section>
 
-        <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900">Quick Links</h2>
-          <div className="mt-4 space-y-2">
-            <button type="button" disabled className={`${linkClass} cursor-not-allowed text-slate-400`}>
+        <section className="rounded-lg border border-[#E5E7EB] bg-white overflow-hidden shadow-none">
+          <div className="border-b border-[#E5E7EB] bg-white px-6 py-3.5">
+            <h2 className="text-[13px] font-semibold text-[#111827]">Quick Links</h2>
+          </div>
+          <div className="space-y-2 p-5">
+            <button type="button" disabled className={`${linkClass} cursor-not-allowed bg-[#F6F7F5] text-[#7B8794]`}>
               View Clearance Checklist
-              <span className="ml-auto text-xs font-normal">Coming soon</span>
+              <span className="ml-auto text-[11px] font-normal">Coming soon</span>
             </button>
-            <button type="button" disabled className={`${linkClass} cursor-not-allowed text-slate-400`}>
+            <button type="button" disabled className={`${linkClass} cursor-not-allowed bg-[#F6F7F5] text-[#7B8794]`}>
               View Final Settlement Details
-              <span className="ml-auto text-xs font-normal">Coming soon</span>
+              <span className="ml-auto text-[11px] font-normal">Coming soon</span>
             </button>
             <button
               type="button"
               disabled={!request || request.attachments.length === 0}
               onClick={() => void downloadLetter()}
-              className={`${linkClass} text-blue-700 hover:bg-blue-50 disabled:cursor-not-allowed disabled:text-slate-400 disabled:hover:bg-transparent`}
+              className={`${linkClass} text-[#2F5FD0] hover:bg-[#E8EEFB] disabled:cursor-not-allowed disabled:bg-[#F6F7F5] disabled:text-[#7B8794] disabled:hover:bg-[#F6F7F5]`}
             >
               Download Resignation Letter
               <Download className="ml-auto h-4 w-4" />
             </button>
-            <a href={`mailto:${HR_EMAIL}`} className={`${linkClass} text-blue-700 hover:bg-blue-50`}>
+            <a href={`mailto:${HR_EMAIL}`} className={`${linkClass} text-[#2F5FD0] hover:bg-[#E8EEFB]`}>
               Contact HR
               <Mail className="ml-auto h-4 w-4" />
             </a>
@@ -344,114 +361,125 @@ function EmployeeExit() {
       </div>
 
       {request && showProgress && (
-        <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900">Exit Process Overview</h2>
-          <p className="text-sm text-slate-500">Track your offboarding progress and complete pending tasks.</p>
-
-          <ul className="mt-4 space-y-3">
-            {buildOverview(request).map((item) => (
-              <li
-                key={item.title}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-100 px-4 py-3"
-              >
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">{item.title}</p>
-                  <p className="text-xs text-slate-500">{item.text}</p>
-                </div>
-                <div className="flex items-center gap-4">
-                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${PILL[item.state]}`}>
-                    {item.state}
-                  </span>
-                  <span className="w-24 text-right text-xs text-slate-500">
-                    {item.date ? formatExitDate(item.date) : "TBD"}
-                  </span>
-                </div>
-              </li>
-            ))}
+        <section className="rounded-lg border border-[#E5E7EB] bg-white overflow-hidden shadow-none">
+          <div className="border-b border-[#E5E7EB] bg-white px-6 py-3.5">
+            <h2 className="text-[13px] font-semibold text-[#111827]">Exit Process Overview</h2>
+            <p className="mt-0.5 text-xs text-[#4B5563]">Track your offboarding progress and complete pending tasks.</p>
+          </div>
+          <ul className="divide-y divide-[#E5E7EB]">
+            {buildOverview(request).map((item) => {
+              const badge = PILL[item.state];
+              return (
+                <li
+                  key={item.title}
+                  className="flex flex-wrap items-center justify-between gap-3 px-6 py-3.5"
+                >
+                  <div>
+                    <p className="text-[13px] font-medium text-[#111827]">{item.title}</p>
+                    <p className="text-xs text-[#6B7280]">{item.text}</p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className={`inline-flex items-center gap-1.5 h-[22px] rounded-full px-2.5 py-0.5 text-[11px] font-medium ${badge.pill}`}>
+                      <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${badge.dot}`} />
+                      <span>{item.state}</span>
+                    </span>
+                    <span className="w-24 text-right text-xs text-[#6B7280] tabular-nums">
+                      {item.date ? formatExitDate(item.date) : "TBD"}
+                    </span>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         </section>
       )}
 
       {request && !showProgress && (
-        <p className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
+        <p className="rounded-lg border border-[#E5E7EB] bg-white p-4 text-xs text-[#4B5563]">
           This request is {request.status.toLowerCase()}, so there are no further exit steps to complete.
         </p>
       )}
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-slate-900">Documents to Submit</h2>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <section className="rounded-lg border border-[#E5E7EB] bg-white overflow-hidden shadow-none">
+          <div className="flex items-center justify-between border-b border-[#E5E7EB] bg-white px-6 py-3.5">
+            <h2 className="text-[13px] font-semibold text-[#111827]">Documents to Submit</h2>
             {request && active && pendingDocs > 0 && (
-              <span className="rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-600">
+              <span className="rounded-full border border-[#F8B4B4] bg-[#FDE8E8] px-2 py-0.5 text-[11px] font-medium text-[#9B1C1C]">
                 {pendingDocs} Pending
               </span>
             )}
           </div>
 
-          {!request || !showProgress ? (
-            <p className="mt-4 text-sm text-slate-500">
-              Required documents appear here once you have an active resignation request.
-            </p>
-          ) : (
-            <ul className="mt-4 space-y-3">
-              {request.documents.map((doc) => (
-                <li key={doc.key} className="flex items-center justify-between gap-3">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-                      <FileText className="h-4 w-4" />
-                    </span>
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-slate-900">{doc.label}</p>
-                      {doc.status === "Submitted" ? (
-                        <button
-                          type="button"
-                          onClick={() => void downloadDocument(doc.key, doc.file_name ?? doc.label)}
-                          className="block max-w-full truncate text-xs text-emerald-600 hover:underline"
-                        >
-                          Submitted · {doc.file_name}
-                        </button>
-                      ) : (
-                        <p className="text-xs text-slate-500">{doc.required ? "Required" : "Optional"}</p>
-                      )}
+          <div className="p-5">
+            {!request || !showProgress ? (
+              <p className="text-xs text-[#6B7280]">
+                Required documents appear here once you have an active resignation request.
+              </p>
+            ) : (
+              <ul className="space-y-3">
+                {request.documents.map((doc) => (
+                  <li key={doc.key} className="flex items-center justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#E8EEFB] text-[#2F5FD0]">
+                        <FileText className="h-4 w-4" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-[12px] font-medium text-[#111827]">{doc.label}</p>
+                        {doc.status === "Submitted" ? (
+                          <button
+                            type="button"
+                            onClick={() => void downloadDocument(doc.key, doc.file_name ?? doc.label)}
+                            className="block max-w-full truncate text-[11px] text-[#03543F] hover:underline"
+                          >
+                            Submitted · {doc.file_name}
+                          </button>
+                        ) : (
+                          <p className="text-[11px] text-[#6B7280]">{doc.required ? "Required" : "Optional"}</p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <button
-                    type="button"
-                    disabled={!active || uploadingKey === doc.key}
-                    onClick={() => chooseFile(doc.key)}
-                    className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-blue-200 px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <Upload className="h-4 w-4" />
-                    {uploadingKey === doc.key ? "Uploading…" : doc.status === "Submitted" ? "Replace" : "Upload"}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+                    <button
+                      type="button"
+                      disabled={!active || uploadingKey === doc.key}
+                      onClick={() => chooseFile(doc.key)}
+                      className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-[6px] border border-[#E4E6E1] bg-white px-3 text-[12px] font-medium text-[#1F2933] hover:bg-[#F0F1EE] disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <Upload className="h-3.5 w-3.5" />
+                      {uploadingKey === doc.key ? "Uploading…" : doc.status === "Submitted" ? "Replace" : "Upload"}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
 
-          <input
-            ref={fileInput}
-            type="file"
-            hidden
-            accept={ALLOWED_ATTACHMENT_EXTENSIONS.join(",")}
-            onChange={(e) => {
-              void handleFileChosen(e.target.files?.[0]);
-              e.target.value = "";
-            }}
-          />
+            <input
+              ref={fileInput}
+              type="file"
+              hidden
+              accept={ALLOWED_ATTACHMENT_EXTENSIONS.join(",")}
+              onChange={(e) => {
+                void handleFileChosen(e.target.files?.[0]);
+                e.target.value = "";
+              }}
+            />
+          </div>
         </section>
 
-        <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900">Contact HR</h2>
-          <div className="mt-4 rounded-xl bg-blue-50/60 p-4">
-            <p className="text-sm font-medium text-blue-700">Need help with the exit process?</p>
-            <p className="text-sm text-slate-500">Contact our HR team for any queries or support.</p>
+        <section className="rounded-lg border border-[#E5E7EB] bg-white overflow-hidden shadow-none">
+          <div className="border-b border-[#E5E7EB] bg-white px-6 py-3.5">
+            <h2 className="text-[13px] font-semibold text-[#111827]">Contact HR</h2>
           </div>
-          <div className="mt-4 space-y-3 text-sm text-slate-700">
-            <p className="flex items-center gap-3"><Mail className="h-4 w-4 text-slate-500" /> {HR_EMAIL}</p>
-            <p className="flex items-center gap-3"><Phone className="h-4 w-4 text-slate-500" /> {HR_PHONE}</p>
-            <p className="flex items-center gap-3"><Clock3 className="h-4 w-4 text-slate-500" /> {HR_HOURS}</p>
+          <div className="p-5">
+            <div className="rounded-md border border-[#E8EEFB] bg-[#E8EEFB] p-4">
+              <p className="text-[13px] font-semibold text-[#2F5FD0]">Need help with the exit process?</p>
+              <p className="mt-0.5 text-xs text-[#4B5563]">Contact our HR team for any queries or support.</p>
+            </div>
+            <div className="mt-4 space-y-2.5 text-[12px] text-[#4B5563]">
+              <p className="flex items-center gap-3"><Mail className="h-4 w-4 text-[#6B7280]" /> {HR_EMAIL}</p>
+              <p className="flex items-center gap-3"><Phone className="h-4 w-4 text-[#6B7280]" /> {HR_PHONE}</p>
+              <p className="flex items-center gap-3"><Clock3 className="h-4 w-4 text-[#6B7280]" /> {HR_HOURS}</p>
+            </div>
           </div>
         </section>
       </div>

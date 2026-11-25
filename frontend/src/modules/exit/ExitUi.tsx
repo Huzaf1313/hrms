@@ -37,7 +37,7 @@ export function ExitStatusBadge({ status }: { status: ExitStatus }) {
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 h-[22px] whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-medium leading-normal ${tone.pill}`}
+      className={`inline-flex items-center gap-1.5 h-[22px] whitespace-nowrap rounded-full px-2.5 py-0.5 text-[12px] font-medium leading-normal ${tone.pill}`}
     >
       <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${tone.dot}`} />
       <span>{status}</span>
@@ -55,7 +55,7 @@ export function ExitTypeBadge({ type }: { type: string }) {
 
   return (
     <span
-      className={`inline-flex items-center h-[22px] whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-medium leading-normal ${
+      className={`inline-flex items-center h-[22px] whitespace-nowrap rounded-full px-2.5 py-0.5 text-[12px] font-medium leading-normal ${
         TYPE_CHIP[type as ExitType] ?? "bg-[#F3F4F6] text-[#4B5563] border border-[#E5E7EB]"
       }`}
     >

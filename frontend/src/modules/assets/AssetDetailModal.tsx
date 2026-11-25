@@ -55,26 +55,38 @@ function getWarrantyStatus(
   if (diffDays < 0) {
     return {
       label: "Expired",
-      className: "bg-[#FEF2F2] text-[#B91C1C]",
+      className: "bg-[#FDE8E8] text-[#9B1C1C] border border-[#F8B4B4]",
     };
   }
   if (diffDays <= 60) {
     return {
       label: "Expiring soon",
-      className: "bg-[#FFFBEB] text-[#B45309]",
+      className: "bg-[#FEF3C7] text-[#92400E] border border-[#FCD34D]",
     };
   }
   return {
     label: "Active",
-    className: "bg-[#ECFDF5] text-[#047857]",
+    className: "bg-[#DEF7EC] text-[#03543F] border border-[#BCF0DA]",
   };
 }
 
-const statusStyles: Record<AssetStatus, string> = {
-  available: "bg-[#E8EEFB] text-[#2F5FD0] border border-[#CBDCF8]",
-  in_use: "bg-[#E3F5E1] text-[#1E6B45] border border-[#BCE8B5]",
-  pending_return: "bg-[#FEF3EB] text-[#B95000] border border-[#FAD8B8]",
-  maintenance: "bg-[#F3EEFA] text-[#693893] border border-[#DAC9EE]",
+const statusStyles: Record<AssetStatus, { pill: string; dot: string }> = {
+  available: {
+    pill: "bg-[#E8EEFB] text-[#2F5FD0]",
+    dot: "bg-[#2F5FD0]",
+  },
+  in_use: {
+    pill: "bg-[#DEF7EC] text-[#03543F] border border-[#BCF0DA]",
+    dot: "bg-[#03543F]",
+  },
+  pending_return: {
+    pill: "bg-[#FEF3C7] text-[#92400E] border border-[#FCD34D]",
+    dot: "bg-[#92400E]",
+  },
+  maintenance: {
+    pill: "bg-[#F3F4F6] text-[#4B5563] border border-[#E5E7EB]",
+    dot: "bg-[#7B8794]",
+  },
 };
 
 interface RowProps {
@@ -86,12 +98,12 @@ function Row({ label, value }: RowProps) {
   const isEmpty = value == null || value === "" || value === "-";
 
   return (
-    <div className="flex flex-col justify-center py-2 md:py-0 md:min-h-[42px] md:flex-row md:items-center border-b border-[#F0F1F3] last:border-0 text-left">
+    <div className="flex flex-col justify-center py-2 md:py-0 md:min-h-[42px] md:flex-row md:items-center border-b border-[#E5E7EB] last:border-0 text-left">
       <span className="text-[12px] font-normal text-[#6B7280] md:w-[180px] md:shrink-0 md:text-[13px]">
         {label}
       </span>
       <div className="mt-0.5 md:mt-0 min-w-0 flex-1 text-left text-[13px] font-medium text-[#111827] break-words">
-        {isEmpty ? <span className="text-[#9CA3AF]">—</span> : value}
+        {isEmpty ? <span className="text-[#7B8794]">—</span> : value}
       </div>
     </div>
   );
@@ -169,7 +181,7 @@ export default function AssetDetailModal({ asset, onClose }: AssetDetailModalPro
         role="dialog"
         aria-modal="true"
         aria-labelledby="asset-detail-title"
-        className="flex max-h-[calc(100vh-48px)] w-full max-w-[720px] mx-4 flex-col overflow-hidden rounded bg-white shadow-[0_12px_32px_rgba(16,24,40,0.18)] md:flex-row"
+        className="flex max-h-[calc(100vh-48px)] w-full max-w-[720px] mx-4 flex-col overflow-hidden rounded border border-[#E5E7EB] bg-white shadow-[0_12px_32px_rgba(16,24,40,0.18)] md:flex-row"
       >
         {/* Left summary panel */}
         <aside className="flex shrink-0 flex-col bg-[#F9FAFB] border-b md:border-b-0 md:border-r border-[#E5E7EB] p-5 md:p-6 md:w-[240px]">
@@ -184,13 +196,13 @@ export default function AssetDetailModal({ asset, onClose }: AssetDetailModalPro
               </h2>
               <div className="flex items-center gap-2 mt-0.5 md:block">
                 <p className="text-[13px] text-[#6B7280]">{asset.asset_tag}</p>
-                <span className="inline-block md:hidden text-[#D1D5DB]">•</span>
+                <span className="inline-block md:hidden text-[#E5E7EB]">•</span>
                 <div className="md:mt-3">
                   <span
-                    className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] md:text-[12px] font-medium ${statusStyles[asset.status]}`}
+                    className={`inline-flex items-center gap-1.5 h-[22px] whitespace-nowrap rounded-full px-2.5 text-[12px] font-medium ${statusStyles[asset.status].pill}`}
                   >
-                    <span className="h-1.5 w-1.5 rounded-full bg-current opacity-80" />
-                    {ASSET_STATUS_LABELS[asset.status]}
+                    <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${statusStyles[asset.status].dot}`} />
+                    <span>{ASSET_STATUS_LABELS[asset.status]}</span>
                   </span>
                 </div>
               </div>
@@ -219,8 +231,8 @@ export default function AssetDetailModal({ asset, onClose }: AssetDetailModalPro
               <p className="text-[11px] font-semibold uppercase tracking-wider text-[#6B7280]">
                 Issue Date
               </p>
-              <p className="mt-1 text-[13px] font-medium text-[#111827]">
-                {formatDate(asset.issue_date) ?? <span className="text-[#9CA3AF]">—</span>}
+              <p className="mt-1 text-[13px] font-medium text-[#111827] tabular-nums">
+                {formatDate(asset.issue_date) ?? <span className="text-[#7B8794]">—</span>}
               </p>
             </div>
           </div>
@@ -236,7 +248,7 @@ export default function AssetDetailModal({ asset, onClose }: AssetDetailModalPro
               ref={closeButtonRef}
               type="button"
               onClick={onClose}
-              className="flex h-8 w-8 items-center justify-center rounded text-[#6B7280] transition-colors hover:bg-[#F3F4F6] hover:text-[#111827] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0] cursor-pointer"
+              className="flex h-8 w-8 items-center justify-center rounded text-[#6B7280] transition-colors hover:bg-[#F0F1EE] hover:text-[#111827] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0] cursor-pointer"
               aria-label="Close"
             >
               <X className="h-4 w-4" />

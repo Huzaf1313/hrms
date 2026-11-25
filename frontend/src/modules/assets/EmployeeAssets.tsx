@@ -11,6 +11,7 @@ import {
   Search,
   XCircle,
 } from "lucide-react";
+import { Button } from "../../components/ui/Button";
 import { assetService } from "./assetService";
 import type { Asset, AssetRequest } from "./types";
 
@@ -64,22 +65,34 @@ const getErrorMessage = (error: unknown): string => {
   return "Something went wrong. Please try again.";
 };
 
-const statusStyle = (status: string) => {
+const statusStyle = (status: string): { pill: string; dot: string } => {
   const value = normalize(status);
 
   if (value === "approved" || value === "in use") {
-    return "bg-emerald-50 text-emerald-700";
+    return {
+      pill: "bg-[#DEF7EC] text-[#03543F] border border-[#BCF0DA]",
+      dot: "bg-[#03543F]",
+    };
   }
 
   if (value === "rejected" || value === "maintenance") {
-    return "bg-red-50 text-red-700";
+    return {
+      pill: "bg-[#FDE8E8] text-[#9B1C1C] border border-[#F8B4B4]",
+      dot: "bg-[#9B1C1C]",
+    };
   }
 
   if (value === "available" || value === "completed") {
-    return "bg-blue-50 text-blue-700";
+    return {
+      pill: "bg-[#E8EEFB] text-[#2F5FD0] border border-[#2F5FD0]/20",
+      dot: "bg-[#2F5FD0]",
+    };
   }
 
-  return "bg-amber-50 text-amber-700";
+  return {
+    pill: "bg-[#FEF3C7] text-[#92400E] border border-[#FCD34D]",
+    dot: "bg-[#92400E]",
+  };
 };
 
 /**
@@ -309,89 +322,85 @@ export default function EmployeeAssets() {
   ];
 
   return (
-    <div className="space-y-6 p-4 sm:p-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-sm font-medium text-slate-500">
+    <div className="flex flex-col gap-6 w-full max-w-[1280px] mx-auto px-4 sm:px-6 py-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-5 rounded-lg border border-[#E5E7EB] shadow-none">
+        <div className="flex flex-col gap-0.5">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-[#6B7280]">
             Employee Portal
           </p>
-          <h1 className="mt-1 text-2xl font-bold text-slate-900">
+          <h1 className="text-[18px] font-semibold text-[#111827]">
             My Assets
           </h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="text-xs text-[#4B5563]">
             View assigned equipment, request available assets, and track
             requests from your HR team.
           </p>
         </div>
 
-        <button
-          type="button"
+        <Button
+          variant="outline"
+          size="sm"
           onClick={() => void loadData()}
           disabled={loading}
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+          leftIcon={
+            <RefreshCw
+              className={`h-3.5 w-3.5 shrink-0 ${loading ? "animate-spin" : ""}`}
+            />
+          }
+          className="h-8 px-3 rounded-[6px] text-[12px] font-medium shadow-none shrink-0"
         >
-          <RefreshCw
-            size={16}
-            className={loading ? "animate-spin" : ""}
-          />
           Refresh
-        </button>
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-kpi">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-slate-500">
-                Assigned Assets
-              </p>
-              <p className="mt-2 text-3xl font-bold text-slate-900">
-                {myAllocatedAssets.length}
-              </p>
-            </div>
-            <div className="rounded-xl bg-blue-50 p-3 text-blue-600">
-              <Laptop size={23} />
+        <div className="rounded-lg border border-[#E5E7EB] bg-white p-4 h-[104px] shadow-kpi flex flex-col justify-between min-w-0">
+          <div className="flex items-center justify-between gap-2 min-w-0">
+            <span className="text-xs font-medium text-[#4B5563] truncate">
+              Assigned Assets
+            </span>
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#E8EEFB] text-[#2F5FD0]">
+              <Laptop className="h-4 w-4 shrink-0" />
             </div>
           </div>
+          <span className="text-[24px] font-semibold text-[#111827] tabular-nums tracking-tight leading-none block">
+            {myAllocatedAssets.length}
+          </span>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-kpi">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-slate-500">
-                Pending Requests
-              </p>
-              <p className="mt-2 text-3xl font-bold text-slate-900">
-                {pendingCount}
-              </p>
-            </div>
-            <div className="rounded-xl bg-amber-50 p-3 text-amber-600">
-              <Clock3 size={23} />
+        <div className="rounded-lg border border-[#E5E7EB] bg-white p-4 h-[104px] shadow-kpi flex flex-col justify-between min-w-0">
+          <div className="flex items-center justify-between gap-2 min-w-0">
+            <span className="text-xs font-medium text-[#4B5563] truncate">
+              Pending Requests
+            </span>
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#FEF3C7] text-[#92400E]">
+              <Clock3 className="h-4 w-4 shrink-0" />
             </div>
           </div>
+          <span className="text-[24px] font-semibold text-[#111827] tabular-nums tracking-tight leading-none block">
+            {pendingCount}
+          </span>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-kpi">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-slate-500">
-                Approved Requests
-              </p>
-              <p className="mt-2 text-3xl font-bold text-slate-900">
-                {approvedCount}
-              </p>
-            </div>
-            <div className="rounded-xl bg-emerald-50 p-3 text-emerald-600">
-              <CheckCircle2 size={23} />
+        <div className="rounded-lg border border-[#E5E7EB] bg-white p-4 h-[104px] shadow-kpi flex flex-col justify-between min-w-0">
+          <div className="flex items-center justify-between gap-2 min-w-0">
+            <span className="text-xs font-medium text-[#4B5563] truncate">
+              Approved Requests
+            </span>
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#DEF7EC] text-[#03543F]">
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
             </div>
           </div>
+          <span className="text-[24px] font-semibold text-[#111827] tabular-nums tracking-tight leading-none block">
+            {approvedCount}
+          </span>
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-        <div className="border-b border-slate-200 p-4">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-wrap gap-2">
+      <div className="overflow-hidden rounded-lg border border-[#E5E7EB] bg-white shadow-none">
+        <div className="border-b border-[#E5E7EB] px-6 pt-1 pb-3">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-2 border-b border-[#E5E7EB] lg:border-b-0">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
@@ -402,10 +411,10 @@ export default function EmployeeAssets() {
                     setError("");
                     setSuccess("");
                   }}
-                  className={`rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
+                  className={`px-3.5 py-2.5 text-[13px] font-medium transition-colors cursor-pointer border-b-2 -mb-[1px] whitespace-nowrap ${
                     activeTab === tab.id
-                      ? "bg-blue-600 text-white"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      ? "border-[#2F5FD0] text-[#2F5FD0]"
+                      : "border-transparent text-[#4B5563] hover:text-[#111827] hover:border-[#D1D5DB]"
                   }`}
                 >
                   {tab.label}
@@ -413,163 +422,166 @@ export default function EmployeeAssets() {
               ))}
             </div>
 
-            <div className="relative w-full lg:max-w-sm">
+            <div className="relative w-full lg:max-w-xs">
               <Search
-                size={17}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                size={14}
+                className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[#7B8794]"
               />
               <input
                 type="text"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Search assets or requests..."
-                className="w-full rounded-xl border border-slate-200 py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                className="h-8 w-full rounded-[6px] border border-[#E5E7EB] bg-white pl-8 pr-3 text-[12px] text-[#111827] placeholder:text-[#7B8794] outline-none transition hover:border-[#D1D5DB] focus:border-[#2F5FD0] focus:ring-1 focus:ring-[#2F5FD0]"
               />
             </div>
           </div>
 
           {error && (
-            <div className="mt-4 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-              <AlertCircle size={18} className="mt-0.5 shrink-0" />
+            <div className="mt-3 flex items-start gap-2.5 rounded-lg border border-[#F8B4B4] bg-[#FDE8E8] p-3 text-xs text-[#9B1C1C]">
+              <AlertCircle size={16} className="mt-0.5 shrink-0" />
               <p className="flex-1">{error}</p>
               <button
                 type="button"
                 onClick={() => setError("")}
-                className="rounded p-1 hover:bg-red-100"
+                className="rounded p-0.5 hover:bg-[#F8B4B4]/40 cursor-pointer"
                 aria-label="Dismiss error"
               >
-                <XCircle size={17} />
+                <XCircle size={15} />
               </button>
             </div>
           )}
 
           {success && (
-            <div className="mt-4 flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
-              <CheckCircle2 size={18} className="mt-0.5 shrink-0" />
+            <div className="mt-3 flex items-start gap-2.5 rounded-lg border border-[#BCF0DA] bg-[#DEF7EC] p-3 text-xs text-[#03543F]">
+              <CheckCircle2 size={16} className="mt-0.5 shrink-0" />
               <p className="flex-1">{success}</p>
               <button
                 type="button"
                 onClick={() => setSuccess("")}
-                className="rounded p-1 hover:bg-emerald-100"
+                className="rounded p-0.5 hover:bg-[#BCF0DA]/50 cursor-pointer"
                 aria-label="Dismiss success message"
               >
-                <XCircle size={17} />
+                <XCircle size={15} />
               </button>
             </div>
           )}
         </div>
 
         {loading ? (
-          <div className="flex min-h-64 flex-col items-center justify-center gap-3 p-8 text-slate-500">
-            <RefreshCw size={25} className="animate-spin text-blue-600" />
-            <p className="text-sm">Loading assets...</p>
+          <div className="flex min-h-64 flex-col items-center justify-center gap-3 p-8 text-[#6B7280]">
+            <RefreshCw size={22} className="animate-spin text-[#2F5FD0]" />
+            <p className="text-xs">Loading assets...</p>
           </div>
         ) : (
           <>
             {activeTab === "my-assets" && (
-              <div className="p-4">
+              <div className="p-6">
                 {myAllocatedAssets.length === 0 ? (
-                  <div className="py-14 text-center">
+                  <div className="py-12 text-center">
                     <Package
-                      className="mx-auto text-slate-300"
-                      size={40}
+                      className="mx-auto text-[#7B8794]"
+                      size={32}
                     />
-                    <h3 className="mt-3 font-semibold text-slate-800">
+                    <h3 className="mt-3 text-[13px] font-semibold text-[#111827]">
                       No assigned assets found
                     </h3>
-                    <p className="mt-1 text-sm text-slate-500">
+                    <p className="mt-1 text-xs text-[#6B7280]">
                       Your assigned equipment will appear here.
                     </p>
-                    <button
-                      type="button"
+                    <Button
+                      variant="primary"
+                      size="sm"
                       onClick={() => setActiveTab("request-asset")}
-                      className="mt-4 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+                      leftIcon={<ArrowUpRight className="h-3.5 w-3.5 shrink-0" />}
+                      className="mt-4 h-8 px-3.5 rounded-[6px] text-[12px] font-medium shadow-none"
                     >
-                      <ArrowUpRight size={16} />
                       Request an asset
-                    </button>
+                    </Button>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                    {myAllocatedAssets.map((asset) => (
-                      <div
-                        key={asset.id}
-                        className="rounded-xl border border-slate-200 p-4 transition hover:border-blue-200 hover:shadow-sm"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex min-w-0 items-start gap-3">
-                            <div className="rounded-xl bg-blue-50 p-3 text-blue-600">
-                              <Laptop size={22} />
+                    {myAllocatedAssets.map((asset) => {
+                      const badge = statusStyle(asset.status);
+                      return (
+                        <div
+                          key={asset.id}
+                          className="rounded-lg border border-[#E5E7EB] p-4 transition hover:border-[#D1D5DB]"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex min-w-0 items-start gap-3">
+                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#E8EEFB] text-[#2F5FD0]">
+                                <Laptop className="h-4 w-4" />
+                              </div>
+                              <div className="min-w-0">
+                                <h3 className="break-words text-[13px] font-semibold text-[#111827]">
+                                  {asset.name}
+                                </h3>
+                                <p className="mt-0.5 text-[11px] tabular-nums text-[#6B7280]">
+                                  {asset.asset_tag}
+                                </p>
+                              </div>
                             </div>
-                            <div className="min-w-0">
-                              <h3 className="break-words font-semibold text-slate-900">
-                                {asset.name}
-                              </h3>
-                              <p className="mt-1 text-xs text-slate-500">
-                                {asset.asset_tag}
-                              </p>
+
+                            <span
+                              className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] leading-normal font-medium h-5 capitalize ${badge.pill}`}
+                            >
+                              <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${badge.dot}`} />
+                              {normalize(asset.status)}
+                            </span>
+                          </div>
+
+                          <div className="mt-4 space-y-2 text-[12px]">
+                            <div className="flex justify-between gap-3">
+                              <span className="text-[#6B7280]">Category</span>
+                              <span className="text-right font-medium text-[#111827]">
+                                {asset.category || "—"}
+                              </span>
+                            </div>
+                            <div className="flex justify-between gap-3">
+                              <span className="text-[#6B7280]">Brand / Model</span>
+                              <span className="text-right font-medium text-[#111827]">
+                                {asset.brand_model || "—"}
+                              </span>
+                            </div>
+                            <div className="flex justify-between gap-3">
+                              <span className="text-[#6B7280]">Serial Number</span>
+                              <span className="break-all text-right font-medium text-[#111827]">
+                                {asset.serial_number || "—"}
+                              </span>
+                            </div>
+                            <div className="flex justify-between gap-3">
+                              <span className="text-[#6B7280]">Issue Date</span>
+                              <span className="text-right font-medium tabular-nums text-[#111827]">
+                                {asset.issue_date
+                                  ? new Date(
+                                      asset.issue_date,
+                                    ).toLocaleDateString()
+                                  : "—"}
+                              </span>
                             </div>
                           </div>
 
-                          <span
-                            className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${statusStyle(
-                              asset.status,
-                            )}`}
-                          >
-                            {normalize(asset.status)}
-                          </span>
-                        </div>
-
-                        <div className="mt-4 space-y-2 text-sm">
-                          <div className="flex justify-between gap-3">
-                            <span className="text-slate-500">Category</span>
-                            <span className="text-right font-medium text-slate-700">
-                              {asset.category || "—"}
-                            </span>
-                          </div>
-                          <div className="flex justify-between gap-3">
-                            <span className="text-slate-500">Brand / Model</span>
-                            <span className="text-right font-medium text-slate-700">
-                              {asset.brand_model || "—"}
-                            </span>
-                          </div>
-                          <div className="flex justify-between gap-3">
-                            <span className="text-slate-500">Serial Number</span>
-                            <span className="break-all text-right font-medium text-slate-700">
-                              {asset.serial_number || "—"}
-                            </span>
-                          </div>
-                          <div className="flex justify-between gap-3">
-                            <span className="text-slate-500">Issue Date</span>
-                            <span className="text-right font-medium text-slate-700">
-                              {asset.issue_date
-                                ? new Date(
-                                    asset.issue_date,
-                                  ).toLocaleDateString()
-                                : "—"}
-                            </span>
+                          <div className="mt-4 rounded-md border border-[#E5E7EB] bg-[#F9FAFB] px-3 py-2 text-[11px] text-[#4B5563]">
+                            For returns, please follow the return request issued
+                            by HR/Admin/Manager and hand over the asset as
+                            instructed.
                           </div>
                         </div>
-
-                        <div className="mt-4 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
-                          For returns, please follow the return request issued
-                          by HR/Admin/Manager and hand over the asset as
-                          instructed.
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
             )}
 
             {activeTab === "request-asset" && (
-              <div className="space-y-4 p-4">
+              <div className="space-y-4 p-6">
                 <div>
-                  <h3 className="font-semibold text-slate-900">
+                  <h3 className="text-[13px] font-semibold text-[#111827]">
                     Available inventory
                   </h3>
-                  <p className="mt-1 text-sm text-slate-500">
+                  <p className="mt-0.5 text-xs text-[#4B5563]">
                     Choose an available asset to submit an issue request.
                   </p>
                 </div>
@@ -577,13 +589,13 @@ export default function EmployeeAssets() {
                 {filteredAvailableAssets.length === 0 ? (
                   <div className="py-12 text-center">
                     <Package
-                      className="mx-auto text-slate-300"
-                      size={38}
+                      className="mx-auto text-[#7B8794]"
+                      size={32}
                     />
-                    <p className="mt-3 font-medium text-slate-700">
+                    <p className="mt-3 text-[13px] font-medium text-[#111827]">
                       No available assets found
                     </p>
-                    <p className="mt-1 text-sm text-slate-500">
+                    <p className="mt-1 text-xs text-[#6B7280]">
                       Check back later or contact your HR team.
                     </p>
                   </div>
@@ -594,26 +606,27 @@ export default function EmployeeAssets() {
                         type="button"
                         key={asset.id}
                         onClick={() => setSelectedAsset(asset.id)}
-                        className={`rounded-xl border p-4 text-left transition ${
+                        className={`rounded-lg border p-4 text-left transition cursor-pointer ${
                           selectedAsset === asset.id
-                            ? "border-blue-500 bg-blue-50 ring-2 ring-blue-100"
-                            : "border-slate-200 hover:border-blue-300"
+                            ? "border-[#2F5FD0] bg-[#E8EEFB] ring-1 ring-[#2F5FD0]"
+                            : "border-[#E5E7EB] hover:border-[#D1D5DB] hover:bg-[#F9FAFB]"
                         }`}
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <p className="font-semibold text-slate-900">
+                            <p className="text-[13px] font-semibold text-[#111827]">
                               {asset.name}
                             </p>
-                            <p className="mt-1 text-xs text-slate-500">
+                            <p className="mt-0.5 text-[11px] tabular-nums text-[#6B7280]">
                               {asset.asset_tag}
                             </p>
                           </div>
-                          <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
+                          <span className="inline-flex items-center gap-1.5 rounded-full border border-[#2F5FD0]/20 bg-[#E8EEFB] px-2.5 py-0.5 text-[11px] leading-normal font-medium h-5 text-[#2F5FD0]">
+                            <span className="h-1.5 w-1.5 rounded-full bg-[#2F5FD0] shrink-0" />
                             Available
                           </span>
                         </div>
-                        <p className="mt-3 text-sm text-slate-600">
+                        <p className="mt-2.5 text-xs text-[#4B5563]">
                           {asset.category}
                           {asset.brand_model
                             ? ` · ${asset.brand_model}`
@@ -624,8 +637,8 @@ export default function EmployeeAssets() {
                   </div>
                 )}
 
-                <div className="max-w-xl space-y-3 border-t border-slate-100 pt-4">
-                  <label className="block text-sm font-medium text-slate-700">
+                <div className="max-w-xl space-y-3 border-t border-[#E5E7EB] pt-4">
+                  <label className="block text-[12px] font-medium text-[#4B5563]">
                     Reason / details (optional)
                     <textarea
                       value={requestDetail}
@@ -634,89 +647,93 @@ export default function EmployeeAssets() {
                       }
                       rows={3}
                       placeholder="Explain why you need this asset..."
-                      className="mt-2 w-full rounded-xl border border-slate-200 p-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                      className="mt-1.5 w-full rounded-[6px] border border-[#E5E7EB] bg-white p-3 text-[13px] text-[#111827] placeholder:text-[#7B8794] outline-none focus:border-[#2F5FD0] focus:ring-1 focus:ring-[#2F5FD0]"
                     />
                   </label>
 
-                  <button
-                    type="button"
+                  <Button
+                    variant="primary"
+                    size="sm"
                     disabled={!selectedAsset || submitting}
+                    isLoading={submitting}
                     onClick={() => void submitRequest()}
-                    className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    leftIcon={<ArrowUpRight className="h-3.5 w-3.5 shrink-0" />}
+                    className="h-9 px-4 rounded-[6px] text-[13px] font-medium shadow-none"
                   >
-                    <ArrowUpRight size={17} />
                     {submitting ? "Submitting..." : "Submit asset request"}
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
 
             {activeTab === "my-requests" && (
-              <div className="p-4">
+              <div>
                 {filteredRequests.length === 0 ? (
-                  <div className="py-14 text-center">
+                  <div className="py-12 px-6 text-center">
                     <Package
-                      className="mx-auto text-slate-300"
-                      size={40}
+                      className="mx-auto text-[#7B8794]"
+                      size={32}
                     />
-                    <h3 className="mt-3 font-semibold text-slate-800">
+                    <h3 className="mt-3 text-[13px] font-semibold text-[#111827]">
                       No requests found
                     </h3>
-                    <p className="mt-1 text-sm text-slate-500">
+                    <p className="mt-1 text-xs text-[#6B7280]">
                       Your asset issue requests and return requests issued by
                       HR/Admin/Manager will appear here.
                     </p>
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="w-full min-w-[650px] text-left text-sm">
+                    <table className="w-full min-w-[650px] border-collapse text-left text-[12px]">
                       <thead>
-                        <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
-                          <th className="px-3 py-3 font-semibold">Request</th>
-                          <th className="px-3 py-3 font-semibold">Asset</th>
-                          <th className="px-3 py-3 font-semibold">Type</th>
-                          <th className="px-3 py-3 font-semibold">Date</th>
-                          <th className="px-3 py-3 font-semibold">Status</th>
+                        <tr className="h-10 bg-[#F9FAFB] border-b border-[#E5E7EB] text-[11px] font-semibold uppercase tracking-wider text-[#4B5563]">
+                          <th className="px-6 py-0 align-middle font-semibold">Request</th>
+                          <th className="px-4 py-0 align-middle font-semibold">Asset</th>
+                          <th className="px-4 py-0 align-middle font-semibold">Type</th>
+                          <th className="px-4 py-0 align-middle font-semibold">Date</th>
+                          <th className="px-6 py-0 align-middle font-semibold">Status</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {filteredRequests.map((request) => (
-                          <tr
-                            key={request.id}
-                            className="hover:bg-slate-50"
-                          >
-                            <td className="px-3 py-4 font-medium text-slate-900">
-                              {request.request_tag}
-                            </td>
-                            <td className="px-3 py-4">
-                              <p className="font-medium text-slate-800">
-                                {request.asset_name}
-                              </p>
-                              <p className="mt-1 text-xs text-slate-500">
-                                {request.asset_tag}
-                              </p>
-                            </td>
-                            <td className="px-3 py-4 capitalize text-slate-600">
-                              {normalize(request.request_type)}
-                            </td>
-                            <td className="px-3 py-4 text-slate-600">
-                              {request.created_at
-                                ? new Date(
-                                    request.created_at,
-                                  ).toLocaleDateString()
-                                : "—"}
-                            </td>
-                            <td className="px-3 py-4">
-                              <span
-                                className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${statusStyle(
-                                  request.status,
-                                )}`}
-                              >
-                                {normalize(request.status)}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
+                      <tbody className="divide-y divide-[#E5E7EB] bg-white text-[#111827]">
+                        {filteredRequests.map((request) => {
+                          const badge = statusStyle(request.status);
+                          return (
+                            <tr
+                              key={request.id}
+                              className="h-12 hover:bg-[#F9FAFB] transition-colors"
+                            >
+                              <td className="px-6 py-2.5 font-semibold text-[#2F5FD0] tabular-nums">
+                                {request.request_tag}
+                              </td>
+                              <td className="px-4 py-2.5">
+                                <p className="font-medium text-[#111827]">
+                                  {request.asset_name}
+                                </p>
+                                <p className="mt-0.5 text-[11px] tabular-nums text-[#6B7280]">
+                                  {request.asset_tag}
+                                </p>
+                              </td>
+                              <td className="px-4 py-2.5 capitalize text-[#4B5563]">
+                                {normalize(request.request_type)}
+                              </td>
+                              <td className="px-4 py-2.5 tabular-nums text-[#4B5563]">
+                                {request.created_at
+                                  ? new Date(
+                                      request.created_at,
+                                    ).toLocaleDateString()
+                                  : "—"}
+                              </td>
+                              <td className="px-6 py-2.5">
+                                <span
+                                  className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] leading-normal font-medium h-5 capitalize ${badge.pill}`}
+                                >
+                                  <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${badge.dot}`} />
+                                  {normalize(request.status)}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
