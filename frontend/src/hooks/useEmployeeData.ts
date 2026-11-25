@@ -45,6 +45,18 @@ export interface Announcement {
   priority?: string;
   status?: string;
   published_at?: string | null;
+  publish_date?: string | null;
+  expiry_date?: string | null;
+  audience?: string | null;
+  author_name?: string | null;
+  created_at?: string | null;
+  pinned?: boolean;
+  attachment?: {
+    filename: string;
+    url: string;
+    content_type?: string;
+    size?: number;
+  } | null;
   is_important?: boolean;
 }
 
@@ -115,6 +127,38 @@ export function useEmployeeAnnouncements(
       }),
     // A new announcement should reach a dashboard that is already open, so
     // this feed is refreshed on a timer and whenever the tab regains focus.
+    staleTime: 30 * 1000,
+    refetchInterval: 60 * 1000,
+    refetchOnWindowFocus: true,
+  });
+}
+
+/** Organization-wide announcement feed used by the admin dashboard marquee. */
+export function useAdminAnnouncements(limit: number = 100) {
+  return useQuery<Announcement[]>({
+    queryKey: [...queryKeys.admin.announcements(), { limit }],
+    queryFn: async () => {
+      try {
+        const res = await api.get<Announcement[]>("/announcements", {
+          limit,
+        });
+        if (Array.isArray(res) && res.length > 0) return res;
+      } catch (err) {
+        console.warn("Failed to fetch /announcements, trying fallback:", err);
+      }
+      try {
+        const empRes = await api.get<AnnouncementResponse>("/employee-announcements", {
+          page: 1,
+          page_size: limit,
+        });
+        if (empRes?.announcements && empRes.announcements.length > 0) {
+          return empRes.announcements;
+        }
+      } catch {
+        // Fallback error ignored
+      }
+      return [];
+    },
     staleTime: 30 * 1000,
     refetchInterval: 60 * 1000,
     refetchOnWindowFocus: true,

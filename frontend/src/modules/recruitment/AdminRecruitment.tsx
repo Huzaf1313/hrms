@@ -13,6 +13,7 @@ import {
   Trash2,
   UserCheck,
   Users,
+  ChevronDown,
 } from "lucide-react";
 
 import {
@@ -24,6 +25,11 @@ import {
 } from "./RecruitmentModals";
 import ResumeViewerModal from "./ResumeViewerModal";
 import NoticePopup from "../../components/ui/NoticePopup";
+import { Avatar } from "../../components/ui/Avatar";
+import { Button } from "../../components/ui/Button";
+import { EmptyState } from "../../components/ui/EmptyState";
+import { ErrorState } from "../../components/ui/ErrorState";
+import { Skeleton } from "../../components/ui/Skeleton";
 import { departmentService } from "../departments/departmentService";
 import { recruitmentService } from "./recruitmentService";
 import {
@@ -50,6 +56,15 @@ function errorText(error: unknown): string {
   return error instanceof Error ? error.message : "Something went wrong";
 }
 
+function initials(name: string): string {
+  return name
+    .trim()
+    .split(/\\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
 function timeAgo(iso: string): string {
   const minutes = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
 
@@ -73,15 +88,6 @@ function formatDate(iso: string): string {
   });
 }
 
-function initials(name: string): string {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("");
-}
-
 // ---------------------------------------------------------- small components
 
 function Section({
@@ -96,10 +102,10 @@ function Section({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+    <section className="rounded-xl border border-[#E5E7EB] bg-white p-5">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-800">
-          <span className="text-blue-600">{icon}</span>
+        <h2 className="flex items-center gap-2 text-[14px] font-semibold text-[#111827]">
+          <span className="text-[#2563EB]">{icon}</span>
           {title}
         </h2>
         {action}
@@ -114,9 +120,10 @@ function StageBadge({ stage }: { stage: CandidateStage }) {
 
   return (
     <span
-      className="rounded-full px-2.5 py-0.5 text-xs font-medium"
+      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-medium"
       style={{ backgroundColor: `${color}1a`, color }}
     >
+      <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: color }} />
       {STAGE_LABELS[stage]}
     </span>
   );
@@ -130,22 +137,39 @@ function StageSelect({
   onChange: (stage: CandidateStage) => void;
 }) {
   return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value as CandidateStage)}
-      className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-    >
-      {ALL_STAGES.map((stage) => (
-        <option key={stage} value={stage}>
-          {STAGE_LABELS[stage]}
-        </option>
-      ))}
-    </select>
+    <div className="relative">
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value as CandidateStage)}
+        className="h-9 appearance-none rounded-lg border border-[#D1D5DB] bg-white px-3 pr-8 text-[13px] text-[#374151] outline-none transition focus:border-[#2563EB] focus:ring-[3px] focus:ring-[#DBEAFE]"
+      >
+        {ALL_STAGES.map((stage) => (
+          <option key={stage} value={stage}>
+            {STAGE_LABELS[stage]}
+          </option>
+        ))}
+      </select>
+      <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9CA3AF]" />
+    </div>
   );
 }
 
-function EmptyText({ children }: { children: ReactNode }) {
-  return <p className="py-6 text-center text-sm text-slate-400">{children}</p>;
+function EmptyText({
+  children,
+  action,
+}: {
+  children: ReactNode;
+  action?: ReactNode;
+}) {
+  return (
+    <EmptyState
+      icon={<FileText className="h-5 w-5" />}
+      title={String(children)}
+      description="There is nothing to show here yet."
+      action={action}
+      className="max-w-none py-6"
+    />
+  );
 }
 
 /**
@@ -224,8 +248,8 @@ function InterviewScheduler({
       <div className="flex flex-wrap items-center justify-end gap-2">
         {scheduled ? (
           <>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-50 px-2.5 py-1 text-[11px] font-semibold text-violet-700">
-              <CalendarClock className="h-3 w-3" />
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#F5F3FF] px-2.5 py-1 text-[12px] font-medium text-[#6D28D9]">
+              <CalendarClock className="h-4 w-4" />
               {formatDateTimeLabel(scheduled)}
             </span>
 
@@ -233,7 +257,7 @@ function InterviewScheduler({
               type="button"
               disabled={busy}
               onClick={cancel}
-              className="rounded-full border border-slate-200 px-2.5 py-1 text-[11px] font-medium text-slate-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:opacity-40"
+              className="rounded-lg border border-[#E5E7EB] px-2.5 py-1 text-[12px] font-medium text-[#6B7280] transition hover:border-[#FECACA] hover:bg-[#FEF2F2] hover:text-[#DC2626] disabled:opacity-40"
             >
               Cancel
             </button>
@@ -242,9 +266,9 @@ function InterviewScheduler({
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded-full bg-violet-600 px-3 py-1 text-[11px] font-semibold text-white shadow-sm transition hover:bg-violet-700"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[#2563EB] px-3 py-1.5 text-[12px] font-medium text-white transition hover:bg-[#1D4ED8]"
           >
-            <CalendarClock className="h-3 w-3" />
+            <CalendarClock className="h-4 w-4" />
             Schedule interview
           </button>
         )}
@@ -253,9 +277,9 @@ function InterviewScheduler({
   }
 
   return (
-    <div className="flex flex-col items-end gap-2 rounded-xl border border-violet-200 bg-violet-50/70 p-2.5 w-full max-w-[320px]">
+    <div className="flex w-full max-w-[320px] flex-col items-end gap-2 rounded-xl border border-[#BFDBFE] bg-[#EFF6FF] p-3">
       <div className="w-full space-y-1.5">
-        <label className="block text-[10px] font-medium text-slate-600">
+        <label className="block text-[12px] font-medium text-[#374151]">
           Date & Time
         </label>
         <input
@@ -264,10 +288,10 @@ function InterviewScheduler({
           min={new Date().toISOString().slice(0, 16)}
           onChange={(e) => setValue(e.target.value)}
           aria-label={`Interview date and time for ${candidate.full_name}`}
-          className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500"
+          className="h-9 w-full rounded-lg border border-[#D1D5DB] bg-white px-2 text-[13px] text-[#374151] outline-none focus:border-[#2563EB] focus:ring-[3px] focus:ring-[#DBEAFE]"
         />
 
-        <label className="block text-[10px] font-medium text-slate-600">
+        <label className="block text-[12px] font-medium text-[#374151]">
           Meeting Link (Google Meet / Zoom)
         </label>
         <input
@@ -275,10 +299,10 @@ function InterviewScheduler({
           placeholder="https://meet.google.com/..."
           value={meetingLink}
           onChange={(e) => setMeetingLink(e.target.value)}
-          className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500"
+          className="h-9 w-full rounded-lg border border-[#D1D5DB] bg-white px-2 text-[13px] text-[#374151] outline-none focus:border-[#2563EB] focus:ring-[3px] focus:ring-[#DBEAFE]"
         />
 
-        <label className="block text-[10px] font-medium text-slate-600">
+        <label className="block text-[12px] font-medium text-[#374151]">
           Notes / Instructions
         </label>
         <input
@@ -286,7 +310,7 @@ function InterviewScheduler({
           placeholder="e.g. Technical Round 1 with Team Lead"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500"
+          className="h-9 w-full rounded-lg border border-[#D1D5DB] bg-white px-2 text-[13px] text-[#374151] outline-none focus:border-[#2563EB] focus:ring-[3px] focus:ring-[#DBEAFE]"
         />
 
         <label className="flex items-center gap-1.5 cursor-pointer pt-0.5">
@@ -294,10 +318,10 @@ function InterviewScheduler({
             type="checkbox"
             checked={sendEmail}
             onChange={(e) => setSendEmail(e.target.checked)}
-            className="rounded border-slate-300 text-violet-600 focus:ring-violet-500 h-3 w-3"
+            className="h-4 w-4 rounded border-slate-300 text-[#2563EB] focus:ring-[#2563EB]"
           />
-          <span className="text-[10px] text-slate-600 flex items-center gap-1">
-            <Mail className="h-3 w-3 text-violet-600" />
+          <span className="text-[12px] text-[#6B7280] flex items-center gap-1">
+            <Mail className="h-4 w-4 text-[#2563EB]" />
             Send invitation email to candidate
           </span>
         </label>
@@ -308,7 +332,7 @@ function InterviewScheduler({
           type="button"
           disabled={busy || !value}
           onClick={save}
-          className="rounded-lg bg-violet-600 px-3 py-1 text-[11px] font-semibold text-white transition hover:bg-violet-700 disabled:opacity-40"
+          className="rounded-lg bg-[#2563EB] px-3 py-1.5 text-[12px] font-medium text-white transition hover:bg-[#1D4ED8] disabled:opacity-40"
         >
           {busy ? "Scheduling..." : "Confirm & Send"}
         </button>
@@ -316,14 +340,14 @@ function InterviewScheduler({
           type="button"
           disabled={busy}
           onClick={() => setOpen(false)}
-          className="rounded-lg px-2 py-1 text-[11px] font-medium text-slate-500 transition hover:bg-slate-100"
+          className="rounded-lg px-2 py-1.5 text-[12px] font-medium text-[#6B7280] transition hover:bg-[#F3F4F6]"
         >
           Cancel
         </button>
       </div>
 
       {error && (
-        <p className="w-full text-[10px] leading-4 text-red-600">{error}</p>
+        <p className="w-full text-[12px] leading-4 text-[#DC2626]">{error}</p>
       )}
     </div>
   );
@@ -368,6 +392,8 @@ function AdminRecruitment() {
   } | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const [offerModalCandidate, setOfferModalCandidate] = useState<Candidate | null>(null);
   const [onboardModalCandidate, setOnboardModalCandidate] = useState<Candidate | null>(null);
@@ -415,12 +441,18 @@ function AdminRecruitment() {
     ])
       .then(([statsData, jobsData, resumeData]) => {
         if (!active) return;
+        setIsLoading(false);
+        setLoadError(null);
         setStats(statsData);
         setJobs(jobsData.items);
         setResumes(resumeData);
       })
       .catch((error) => {
-        if (active) setNotice({ type: "error", text: errorText(error) });
+        if (active) {
+          setIsLoading(false);
+          setLoadError(errorText(error));
+          setNotice({ type: "error", text: errorText(error) });
+        }
       });
 
     return () => {
@@ -605,96 +637,130 @@ function AdminRecruitment() {
       label: "Total Job Positions",
       value: stats?.total_job_positions ?? 0,
       sub: `${stats?.active_job_positions ?? 0} active`,
-      icon: <Briefcase className="h-6 w-6" />,
-      tone: "border-blue-100 bg-blue-50 text-blue-600",
+      icon: <Briefcase className="h-5 w-5" />,
+      tone: "bg-[#EFF6FF] text-[#2563EB]",
     },
     {
       label: "Total Applications",
       value: stats?.total_applications ?? 0,
       sub: "All candidates",
-      icon: <Users className="h-6 w-6" />,
-      tone: "border-emerald-100 bg-emerald-50 text-emerald-600",
+      icon: <Users className="h-5 w-5" />,
+      tone: "bg-[#ECFDF5] text-[#047857]",
     },
     {
       label: "Interviews Scheduled",
       value: stats?.interviews_scheduled ?? 0,
       sub: "In interview stage",
-      icon: <CalendarClock className="h-6 w-6" />,
-      tone: "border-violet-100 bg-violet-50 text-violet-600",
+      icon: <CalendarClock className="h-5 w-5" />,
+      tone: "bg-[#F5F3FF] text-[#7C3AED]",
     },
     {
       label: "Hired Candidates",
       value: stats?.hired_candidates ?? 0,
       sub: "Total hired",
-      icon: <UserCheck className="h-6 w-6" />,
-      tone: "border-orange-100 bg-orange-50 text-orange-600",
+      icon: <UserCheck className="h-5 w-5" />,
+      tone: "bg-[#FFF7ED] text-[#C2410C]",
     },
   ];
 
+  const pipelineColumns: PipelineColumn[] =
+    pipeline.length > 0
+      ? pipeline
+      : PIPELINE_STAGES.map((stage) => ({
+        stage,
+        count: 0,
+        candidates: [],
+      }));
+
   return (
-    <div className="space-y-6 p-6">
+    <div className="flex w-full flex-col gap-5 pb-10">
       {/* Title */}
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="flex flex-col gap-3 border-b border-[#E5E7EB] pb-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Recruitment</h1>
-          <p className="text-sm text-slate-500">
+          <h1 className="text-[20px] font-semibold leading-tight text-[#111827]">Recruitment</h1>
+          <p className="mt-1 text-[13px] text-[#6B7280]">
             Find the right talent for a better tomorrow
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setJobModal({ job: null })}
-          className="flex items-center gap-2 rounded-lg bg-[#2563eb] px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-        >
-          <Plus className="h-4 w-4" />
-          Add Job Position
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setCandidateModalOpen(true)} leftIcon={<Plus className="h-4 w-4" />}>
+            Add Candidate
+          </Button>
+          <Button variant="primary" size="sm" onClick={() => setJobModal({ job: null })} leftIcon={<Plus className="h-4 w-4" />}>
+            Add Job Position
+          </Button>
+        </div>
       </div>
 
       {/* Successes close themselves; errors now stay until dismissed. */}
       <NoticePopup notice={notice} onDismiss={() => setNotice(null)} />
+      {loadError && stats && (
+        <ErrorState
+          title="Some recruitment data could not be refreshed"
+          message={loadError}
+          onRetry={refresh}
+          className="max-w-none rounded-xl border border-[#FECACA] bg-white py-5"
+        />
+      )}
 
       {/* Top cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {kpiCards.map((card) => (
-          <div
-            key={card.label}
-            className={`flex items-center gap-4 rounded-2xl border border-gray-100 p-5 shadow-kpi ${card.tone}`}
-          >
-            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white">
-              {card.icon}
-            </span>
-            <div>
-              <p className="text-sm text-slate-700">{card.label}</p>
-              <p className="text-3xl font-bold text-slate-800">{card.value}</p>
-              <p className="text-xs text-slate-500">{card.sub}</p>
+        {isLoading && !stats
+          ? Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className="min-h-[128px] rounded-xl border border-[#E5E7EB] bg-white p-5">
+              <div className="flex items-start justify-between">
+                <div className="space-y-3">
+                  <Skeleton className="h-3 w-28 rounded" />
+                  <Skeleton className="h-8 w-16 rounded" />
+                  <Skeleton className="h-3 w-32 rounded" />
+                </div>
+                <Skeleton className="h-9 w-9 rounded-lg" />
+              </div>
             </div>
-          </div>
-        ))}
+          ))
+          : kpiCards.map((card) => (
+            <div
+              key={card.label}
+              className={`flex items-center gap-4 rounded-2xl border border-gray-100 p-5 shadow-kpi ${card.tone}`}
+            >
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white">
+                {card.icon}
+              </span>
+              <div>
+                <p className="text-sm text-slate-700">{card.label}</p>
+                <p className="text-3xl font-bold text-slate-800">{card.value}</p>
+                <p className="text-xs text-slate-500">{card.sub}</p>
+              </div>
+              <p className="mt-auto pt-3 text-[12px] text-[#6B7280]">{card.sub}</p>
+            </div>
+          ))}
       </div>
 
       {/* Pipeline */}
       <Section
         title="Recruitment Pipeline"
-        icon={<Users className="h-5 w-5" />}
+        icon={<Users className="h-4 w-4" />}
         action={
-          <select
-            value={pipelineJobId}
-            onChange={(e) => setPipelineJobId(e.target.value)}
-            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600"
-          >
-            <option value="">All Job Positions</option>
-            {jobs.map((job) => (
-              <option key={job.id} value={job.id}>
-                {job.title}
-              </option>
-            ))}
-          </select>
+          <div className="relative">
+            <select
+              value={pipelineJobId}
+              onChange={(e) => setPipelineJobId(e.target.value)}
+              className="h-9 appearance-none rounded-lg border border-[#D1D5DB] bg-white pl-3 pr-8 text-[13px] text-[#374151] outline-none focus:border-[#2563EB] focus:ring-[3px] focus:ring-[#DBEAFE]"
+            >
+              <option value="">All Job Positions</option>
+              {jobs.map((job) => (
+                <option key={job.id} value={job.id}>
+                  {job.title}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9CA3AF]" />
+          </div>
         }
       >
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto pb-1">
           <div className="grid min-w-[980px] grid-cols-7 gap-3">
-            {pipeline.map((column) => {
+            {pipelineColumns.map((column) => {
               const isOver = dragOverStage === column.stage;
               return (
                 <div
@@ -727,29 +793,23 @@ function AdminRecruitment() {
                     }
                     setDraggedCandidate(null);
                   }}
-                  className={`rounded-xl border transition-all ${
-                    isOver
-                      ? "ring-2 ring-blue-500 bg-blue-50/50 shadow-md"
-                      : "bg-slate-50/60"
-                  }`}
-                  style={{ borderColor: `${STAGE_COLORS[column.stage]}55` }}
+                  className={`relative overflow-hidden rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] transition-all ${isOver
+                    ? "ring-2 ring-[#2563EB]"
+                    : ""
+                    }`}
                 >
-                  <div
-                    className="flex items-center justify-between rounded-t-xl px-3 py-2 text-sm font-semibold"
-                    style={{
-                      backgroundColor: `${STAGE_COLORS[column.stage]}1a`,
-                      color: STAGE_COLORS[column.stage],
-                    }}
-                  >
-                    <span>{STAGE_LABELS[column.stage]}</span>
-                    <span>{column.count}</span>
+                  <div className="h-[3px]" style={{ backgroundColor: STAGE_COLORS[column.stage] }} />
+                  <div className="flex items-center justify-between px-3 py-3">
+                    <span className="text-[13px] font-medium text-[#374151]">{STAGE_LABELS[column.stage]}</span>
+                    <span className="inline-flex min-w-6 items-center justify-center rounded-full bg-[#E5E7EB] px-2 py-0.5 text-[12px] font-medium text-[#4B5563]">{column.count}</span>
                   </div>
 
-                  <div className="max-h-[380px] space-y-2 overflow-y-auto overscroll-contain p-2">
+                  <div className="max-h-[330px] space-y-2 overflow-y-auto overscroll-contain px-2 pb-2">
                     {column.candidates.length === 0 && (
-                      <p className="py-4 text-center text-xs text-slate-400">
-                        {isOver ? "Drop candidate here" : "No candidates"}
-                      </p>
+                      <div className={`flex min-h-[118px] flex-col items-center justify-center rounded-lg border border-dashed ${isOver ? "border-[#2563EB] bg-[#EFF6FF]" : "border-[#D1D5DB]"}`}>
+                        <Users className="mb-2 h-5 w-5 text-[#9CA3AF]" />
+                        <span className="text-[12px] text-[#9CA3AF]">{isOver ? "Drop candidate here" : "No candidates"}</span>
+                      </div>
                     )}
 
                     {column.candidates.map((card) => {
@@ -771,17 +831,17 @@ function AdminRecruitment() {
                             });
                           }}
                           onDragEnd={() => setDraggedCandidate(null)}
-                          className="cursor-grab active:cursor-grabbing rounded-lg border border-slate-200 bg-white p-2.5 shadow-sm transition hover:border-slate-300 hover:shadow"
+                          className="cursor-grab rounded-lg border border-[#E5E7EB] bg-white p-3 transition hover:border-[#BFDBFE] active:cursor-grabbing"
                         >
-                          <p className="truncate text-sm font-medium text-slate-800">
-                            {card.full_name}
-                          </p>
-                          <p className="truncate text-xs text-slate-500">
-                            {card.job_title}
-                          </p>
-                          <p className="mb-1.5 text-[11px] text-slate-400">
-                            {timeAgo(card.stage_updated_at)}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <Avatar name={card.full_name} size="sm" />
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-[13px] font-semibold text-[#111827]">{card.full_name}</p>
+                              <p className="truncate text-[12px] text-[#6B7280]">{card.job_title}</p>
+                            </div>
+                            <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: STAGE_COLORS[column.stage] }} />
+                          </div>
+                          <p className="mt-2 text-[12px] text-[#9CA3AF]">{timeAgo(card.stage_updated_at)}</p>
 
                           {/* Quick stage action badges */}
                           {column.stage === "offer" && (
@@ -800,7 +860,7 @@ function AdminRecruitment() {
                                         });
                                     }
                                   }}
-                                  className="w-full truncate rounded bg-pink-50 px-2 py-1 text-left text-[11px] font-semibold text-pink-700 hover:bg-pink-100"
+                                  className="w-full truncate rounded-md bg-[#FDF2F8] px-2 py-1.5 text-left text-[12px] font-medium text-[#BE185D] hover:bg-[#FCE7F3]"
                                 >
                                   ₹{Number(card.offer_details.offered_salary).toLocaleString("en-IN")} · Edit
                                 </button>
@@ -818,7 +878,7 @@ function AdminRecruitment() {
                                         });
                                     }
                                   }}
-                                  className="w-full rounded border border-pink-200 bg-white px-2 py-1 text-[11px] font-medium text-pink-600 hover:bg-pink-50"
+                                  className="w-full rounded-md border border-[#FBCFE8] bg-white px-2 py-1.5 text-[12px] font-medium text-[#BE185D] hover:bg-[#FDF2F8]"
                                 >
                                   + Issue Offer
                                 </button>
@@ -829,8 +889,8 @@ function AdminRecruitment() {
                           {column.stage === "hired" && (
                             <div className="mb-2">
                               {card.is_onboarded ? (
-                                <span className="inline-flex items-center gap-1 rounded bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
-                                  <CheckCircle2 className="h-3 w-3" />
+                                <span className="inline-flex items-center gap-1 rounded-full bg-[#ECFDF5] px-2 py-1 text-[12px] font-medium text-[#047857]">
+                                  <CheckCircle2 className="h-4 w-4" />
                                   Onboarded ({card.employee_code ?? "EMP"})
                                 </span>
                               ) : (
@@ -847,7 +907,7 @@ function AdminRecruitment() {
                                         });
                                     }
                                   }}
-                                  className="w-full rounded bg-emerald-600 px-2 py-1 text-[11px] font-semibold text-white hover:bg-emerald-700"
+                                  className="w-full rounded-md bg-[#16A34A] px-2 py-1.5 text-[12px] font-medium text-white hover:bg-[#15803D]"
                                 >
                                   Onboard as Employee
                                 </button>
@@ -866,7 +926,7 @@ function AdminRecruitment() {
                     })}
 
                     {column.count > column.candidates.length && (
-                      <p className="text-center text-xs font-medium text-slate-500">
+                      <p className="text-center text-[12px] font-medium text-[#6B7280]">
                         + {column.count - column.candidates.length} more
                       </p>
                     )}
@@ -878,24 +938,19 @@ function AdminRecruitment() {
         </div>
       </Section>
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+      <div className="grid grid-cols-1 items-stretch gap-5 xl:grid-cols-[7fr_5fr]">
         {/* Job positions */}
         <Section
           title="Job Positions"
-          icon={<Briefcase className="h-5 w-5" />}
+          icon={<Briefcase className="h-4 w-4" />}
           action={
-            <button
-              type="button"
-              onClick={() => setJobModal({ job: null })}
-              className="flex items-center gap-1 rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700"
-            >
-              <Plus className="h-4 w-4" />
-              Add Job
-            </button>
+            <Button variant="primary" size="sm" onClick={() => setJobModal({ job: null })} leftIcon={<Plus className="h-4 w-4" />}>Add Job</Button>
           }
         >
           {jobs.length === 0 ? (
-            <EmptyText>No job positions yet. Click "Add Job" to create one.</EmptyText>
+            <EmptyText action={<Button variant="primary" size="sm" onClick={() => setJobModal({ job: null })} leftIcon={<Plus className="h-4 w-4" />}>Add Job</Button>}>
+              No job positions yet
+            </EmptyText>
           ) : (
             <div className="max-h-[360px] overflow-auto overscroll-contain">
               <table className="w-full min-w-[550px] text-left text-sm">
@@ -918,11 +973,10 @@ function AdminRecruitment() {
                       <td className="py-3 pr-3 text-slate-600">{job.location}</td>
                       <td className="py-3 pr-3">
                         <span
-                          className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                            job.status === "active"
-                              ? "bg-emerald-50 text-emerald-700"
-                              : "bg-slate-100 text-slate-500"
-                          }`}
+                          className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${job.status === "active"
+                            ? "bg-emerald-50 text-emerald-700"
+                            : "bg-slate-100 text-slate-500"
+                            }`}
                         >
                           {job.status === "active" ? "Active" : "Closed"}
                         </span>
@@ -975,40 +1029,34 @@ function AdminRecruitment() {
         {/* Candidate profiles */}
         <Section
           title="Candidate Profiles"
-          icon={<Users className="h-5 w-5" />}
-          action={
-            <button
-              type="button"
-              onClick={() => setCandidateModalOpen(true)}
-              className="flex items-center gap-1 rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700"
-            >
-              <Plus className="h-4 w-4" />
-              Add Candidate
-            </button>
-          }
+          icon={<Users className="h-4 w-4" />}
         >
-          <div className="mb-3 flex gap-3">
+          <div className="mb-4 flex flex-col gap-2 sm:flex-row">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search by name, email, or skills..."
-                className="w-full rounded-lg border border-slate-200 py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Search candidates..."
+                className="h-9 w-full rounded-lg border border-[#D1D5DB] py-2 pl-9 pr-3 text-[13px] text-[#111827] outline-none placeholder:text-[#9CA3AF] focus:border-[#2563EB] focus:ring-[3px] focus:ring-[#DBEAFE]"
               />
             </div>
-            <select
-              value={stageFilter}
-              onChange={(e) => setStageFilter(e.target.value as CandidateStage | "")}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600"
-            >
-              <option value="">All Stages</option>
-              {ALL_STAGES.map((stage) => (
-                <option key={stage} value={stage}>
-                  {STAGE_LABELS[stage]}
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <select
+                value={stageFilter}
+                onChange={(e) => setStageFilter(e.target.value as CandidateStage | "")}
+                className="h-9 appearance-none rounded-lg border border-[#D1D5DB] bg-white pl-3 pr-8 text-[13px] text-[#374151] outline-none focus:border-[#2563EB] focus:ring-[3px] focus:ring-[#DBEAFE]"
+              >
+                <option value="">All Stages</option>
+                {ALL_STAGES.map((stage) => (
+                  <option key={stage} value={stage}>
+                    {STAGE_LABELS[stage]}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9CA3AF]" />
+            </div>
+            <Button variant="primary" size="sm" onClick={() => setCandidateModalOpen(true)} leftIcon={<Plus className="h-4 w-4" />}>Add Candidate</Button>
           </div>
 
           {!candidates || candidates.items.length === 0 ? (
@@ -1156,87 +1204,87 @@ function AdminRecruitment() {
 
       {/* Resumes */}
       <Section title="Resume" icon={<Download className="h-5 w-5" />}>
-          {!resumes || resumes.items.length === 0 ? (
-            <EmptyText>No resumes uploaded yet.</EmptyText>
-          ) : (
-            <div className="max-h-[320px] overflow-auto overscroll-contain">
-              <table className="w-full min-w-[550px] text-left text-sm">
-                <thead className="sticky top-0 bg-white text-slate-500 shadow-[0_1px_0_0_#e2e8f0]">
-                  <tr>
-                    <th className="py-2 pr-3 font-medium">Candidate</th>
-                    <th className="py-2 pr-3 font-medium">File</th>
-                    <th className="py-2 pr-3 font-medium">Uploaded</th>
-                    <th className="py-2 pr-4 font-medium text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {resumes.items.map((candidate) => {
-                    const canView = (candidate.resume_file_name ?? "")
-                      .toLowerCase()
-                      .endsWith(".pdf");
+        {!resumes || resumes.items.length === 0 ? (
+          <EmptyText>No resumes uploaded yet.</EmptyText>
+        ) : (
+          <div className="max-h-[320px] overflow-auto overscroll-contain">
+            <table className="w-full min-w-[550px] text-left text-sm">
+              <thead className="sticky top-0 bg-white text-slate-500 shadow-[0_1px_0_0_#e2e8f0]">
+                <tr>
+                  <th className="py-2 pr-3 font-medium">Candidate</th>
+                  <th className="py-2 pr-3 font-medium">File</th>
+                  <th className="py-2 pr-3 font-medium">Uploaded</th>
+                  <th className="py-2 pr-4 font-medium text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {resumes.items.map((candidate) => {
+                  const canView = (candidate.resume_file_name ?? "")
+                    .toLowerCase()
+                    .endsWith(".pdf");
 
-                    return (
-                      <tr key={candidate.id}>
-                        <td className="py-3 pr-3 font-medium text-slate-800">
-                          {candidate.full_name}
-                        </td>
-                        <td className="max-w-[160px] truncate py-3 pr-3 text-slate-600">
-                          {candidate.resume_file_name}
-                        </td>
-                        <td className="whitespace-nowrap py-3 pr-3 text-slate-600">
-                          {candidate.resume_uploaded_at
-                            ? formatDate(candidate.resume_uploaded_at)
-                            : "-"}
-                        </td>
-                        <td className="whitespace-nowrap py-3 pr-4 text-right">
-                          <button
-                            type="button"
-                            disabled={!canView}
-                            title={
-                              canView
-                                ? "View resume"
-                                : "Preview is available for PDF files only"
-                            }
-                            aria-label={`View resume of ${candidate.full_name}`}
-                            onClick={() => setViewingResume(candidate)}
-                            className="rounded-lg p-1.5 text-blue-600 hover:bg-blue-50 disabled:cursor-not-allowed disabled:text-slate-300 disabled:hover:bg-transparent"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </button>
-                          <button
-                            type="button"
-                            title="Download resume"
-                            aria-label={`Download resume of ${candidate.full_name}`}
-                            onClick={() => void handleDownload(candidate)}
-                            className="rounded-lg p-1.5 text-blue-600 hover:bg-blue-50"
-                          >
-                            <Download className="h-4 w-4" />
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
+                  return (
+                    <tr key={candidate.id}>
+                      <td className="py-3 pr-3 font-medium text-slate-800">
+                        {candidate.full_name}
+                      </td>
+                      <td className="max-w-[160px] truncate py-3 pr-3 text-slate-600">
+                        {candidate.resume_file_name}
+                      </td>
+                      <td className="whitespace-nowrap py-3 pr-3 text-slate-600">
+                        {candidate.resume_uploaded_at
+                          ? formatDate(candidate.resume_uploaded_at)
+                          : "-"}
+                      </td>
+                      <td className="whitespace-nowrap py-3 pr-4 text-right">
+                        <button
+                          type="button"
+                          disabled={!canView}
+                          title={
+                            canView
+                              ? "View resume"
+                              : "Preview is available for PDF files only"
+                          }
+                          aria-label={`View resume of ${candidate.full_name}`}
+                          onClick={() => setViewingResume(candidate)}
+                          className="rounded-lg p-1.5 text-blue-600 hover:bg-blue-50 disabled:cursor-not-allowed disabled:text-slate-300 disabled:hover:bg-transparent"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          title="Download resume"
+                          aria-label={`Download resume of ${candidate.full_name}`}
+                          onClick={() => void handleDownload(candidate)}
+                          className="rounded-lg p-1.5 text-blue-600 hover:bg-blue-50"
+                        >
+                          <Download className="h-4 w-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Section>
 
       {/* Reports */}
-      <Section title="Recruitment Reports" icon={<Briefcase className="h-5 w-5" />}>
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+      <Section title="Recruitment Reports" icon={<Briefcase className="h-4 w-4" />}>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[5fr_7fr]">
           {/* Stage mix */}
           <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-center sm:gap-8">
-            <div className="relative h-40 w-40 shrink-0">
+            <div className="relative h-36 w-36 shrink-0">
               <div
                 className="h-full w-full rounded-full"
                 style={{ background: donutBackground }}
               />
               <div className="absolute inset-[26px] flex flex-col items-center justify-center rounded-full bg-white">
-                <span className="text-3xl font-bold tracking-tight text-slate-800">
+                <span className="text-[28px] font-semibold tracking-tight text-[#111827]">
                   {donutTotal}
                 </span>
-                <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
+                <span className="text-[12px] text-[#6B7280]">
                   Candidates
                 </span>
               </div>
@@ -1252,23 +1300,23 @@ function AdminRecruitment() {
                 return (
                   <li
                     key={entry.stage}
-                    className="flex items-center justify-between gap-3 rounded-lg px-2.5 py-1 text-xs transition hover:bg-slate-50"
+                    className="flex items-center justify-between gap-3 rounded-lg px-2 py-1.5 text-[12px] transition hover:bg-[#F9FAFB]"
                   >
                     <div className="flex min-w-0 items-center gap-2">
                       <span
                         className="h-2.5 w-2.5 shrink-0 rounded-full"
                         style={{ backgroundColor: STAGE_COLORS[entry.stage] }}
                       />
-                      <span className="whitespace-nowrap font-medium text-slate-700">
+                      <span className="whitespace-nowrap font-medium text-[#374151]">
                         {STAGE_LABELS[entry.stage]}
                       </span>
                     </div>
 
                     <div className="flex shrink-0 items-center gap-3">
-                      <span className="text-slate-400 tabular-nums">
+                      <span className="text-[#6B7280] tabular-nums">
                         {percent}%
                       </span>
-                      <span className="w-5 text-right font-bold text-slate-800 tabular-nums">
+                      <span className="w-5 text-right font-medium text-[#111827] tabular-nums">
                         {entry.count}
                       </span>
                     </div>
@@ -1279,14 +1327,14 @@ function AdminRecruitment() {
           </div>
 
           {/* Department split */}
-          <div className="min-w-0 border-t border-slate-100 pt-6 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
+          <div className="min-w-0 border-t border-[#E5E7EB] pt-5 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
             <div className="mb-4 flex items-baseline justify-between gap-3">
-              <p className="text-sm font-semibold text-slate-800">
+              <p className="text-[14px] font-semibold text-[#111827]">
                 Applications by Department
               </p>
 
               {departmentCounts.length > 0 && (
-                <p className="text-xs font-medium text-slate-400">
+                <p className="text-[12px] font-medium text-[#6B7280]">
                   {departmentCounts.length} department
                   {departmentCounts.length === 1 ? "" : "s"}
                 </p>
@@ -1294,40 +1342,43 @@ function AdminRecruitment() {
             </div>
 
             {departmentCounts.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-slate-200 py-8 text-center text-sm text-slate-400">
-                No applications yet.
-              </p>
+              <div className="flex min-h-[140px] flex-col items-center justify-center rounded-lg border border-dashed border-[#D1D5DB]">
+                <Briefcase className="mb-2 h-5 w-5 text-[#9CA3AF]" />
+                <p className="text-[12px] text-[#6B7280]">
+                  No applications yet.
+                </p>
+              </div>
             ) : (
               <ul className="max-h-[240px] space-y-3 overflow-y-auto overscroll-contain pr-1">
-                {departmentCounts.map((item) => {
+                {departmentCounts.map((item, index) => {
                   const percent = totalDepartmentApplications > 0
                     ? Math.round((item.count / totalDepartmentApplications) * 100)
                     : 0;
 
                   return (
                     <li key={item.department}>
-                      <div className="mb-1.5 flex items-baseline justify-between gap-3 text-xs">
-                        <span className="min-w-0 truncate font-medium text-slate-700">
+                      <div className="mb-1.5 flex items-baseline justify-between gap-3 text-[12px]">
+                        <span className="min-w-0 truncate font-medium text-[#374151]">
                           {item.department}
                         </span>
 
-                        <span className="shrink-0 whitespace-nowrap text-slate-400 tabular-nums">
-                          <span className="font-semibold text-slate-800">
+                        <span className="shrink-0 whitespace-nowrap text-[#6B7280] tabular-nums">
+                          <span className="font-medium text-[#111827]">
                             {item.count}
                           </span>{" "}
                           · {percent}%
                         </span>
                       </div>
 
-                      <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                      <div className="h-2 overflow-hidden rounded-full bg-[#F3F4F6]">
                         <div
-                          className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500"
+                          className="h-full rounded-full"
                           style={{
-                            width: `${
-                              totalDepartmentApplications > 0
-                                ? (item.count / totalDepartmentApplications) * 100
-                                : 0
-                            }%`,
+                            width: `${totalDepartmentApplications > 0
+                              ? (item.count / totalDepartmentApplications) * 100
+                              : 0
+                              }%`,
+                            backgroundColor: STAGE_COLORS[PIPELINE_STAGES[index % PIPELINE_STAGES.length]],
                           }}
                         />
                       </div>
@@ -1340,105 +1391,119 @@ function AdminRecruitment() {
         </div>
       </Section>
 
-      {pendingDelete && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-          onClick={() => {
-            if (!deleting) setPendingDelete(null);
-          }}
-        >
+      {
+        pendingDelete && (
           <div
-            role="alertdialog"
-            aria-modal="true"
-            className="w-full max-w-sm rounded bg-white p-6 shadow-xl"
-            onClick={(event) => event.stopPropagation()}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(17,24,39,0.5)] p-4"
+            onClick={() => {
+              if (!deleting) setPendingDelete(null);
+            }}
           >
-            <h3 className="text-base font-semibold text-slate-900">
-              Delete {pendingDelete.kind === "job" ? "job position" : "candidate"}?
-            </h3>
-            <p className="mt-1 text-sm text-slate-500">
-              "{pendingDelete.name}" will be deleted permanently
-              {pendingDelete.kind === "candidate" ? ", including their resume." : "."}
-            </p>
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                type="button"
-                disabled={deleting}
-                onClick={() => setPendingDelete(null)}
-                className="rounded border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={deleting}
-                onClick={() => void handleConfirmDelete()}
-                className="rounded bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-60"
-              >
-                {deleting ? "Deleting..." : "Delete"}
-              </button>
+            <div
+              role="alertdialog"
+              aria-modal="true"
+              className="w-full max-w-sm rounded bg-white p-6 shadow-xl"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <h3 className="text-[18px] font-semibold text-[#111827]">
+                Delete {pendingDelete.kind === "job" ? "job position" : "candidate"}?
+              </h3>
+              <p className="mt-2 text-[13px] text-[#6B7280]">
+                "{pendingDelete.name}" will be deleted permanently
+                {pendingDelete.kind === "candidate" ? ", including their resume." : "."}
+              </p>
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  type="button"
+                  disabled={deleting}
+                  onClick={() => setPendingDelete(null)}
+                  className="rounded border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={deleting}
+                  onClick={() => void handleConfirmDelete()}
+                  className="rounded bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-60"
+                >
+                  {deleting ? "Deleting..." : "Delete"}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
-      {viewingResume && (
-        <ResumeViewerModal
-          candidate={viewingResume}
-          onClose={() => setViewingResume(null)}
-          onDownload={() => void handleDownload(viewingResume)}
-        />
-      )}
+      {
+        viewingResume && (
+          <ResumeViewerModal
+            candidate={viewingResume}
+            onClose={() => setViewingResume(null)}
+            onDownload={() => void handleDownload(viewingResume)}
+          />
+        )
+      }
 
-      {jobModal && (
-        <JobModal
-          job={jobModal.job}
-          departments={departments}
-          onClose={() => setJobModal(null)}
-          onSaved={handleSaved}
-        />
-      )}
+      {
+        jobModal && (
+          <JobModal
+            job={jobModal.job}
+            departments={departments}
+            onClose={() => setJobModal(null)}
+            onSaved={handleSaved}
+          />
+        )
+      }
 
-      {candidateModalOpen && (
-        <CandidateModal
-          jobs={jobs}
-          onClose={() => setCandidateModalOpen(false)}
-          onSaved={handleSaved}
-        />
-      )}
+      {
+        candidateModalOpen && (
+          <CandidateModal
+            jobs={jobs}
+            onClose={() => setCandidateModalOpen(false)}
+            onSaved={handleSaved}
+          />
+        )
+      }
 
-      {offerModalCandidate && (
-        <OfferModal
-          candidate={offerModalCandidate}
-          onClose={() => setOfferModalCandidate(null)}
-          onSaved={handleSaved}
-        />
-      )}
+      {
+        offerModalCandidate && (
+          <OfferModal
+            candidate={offerModalCandidate}
+            onClose={() => setOfferModalCandidate(null)}
+            onSaved={handleSaved}
+          />
+        )
+      }
 
-      {onboardModalCandidate && (
-        <OnboardCandidateModal
-          candidate={onboardModalCandidate}
-          onClose={() => setOnboardModalCandidate(null)}
-          onSaved={handleSaved}
-        />
-      )}
+      {
+        onboardModalCandidate && (
+          <OnboardCandidateModal
+            candidate={onboardModalCandidate}
+            onClose={() => setOnboardModalCandidate(null)}
+            onSaved={handleSaved}
+          />
+        )
+      }
 
-      {rejectionCandidate && (
-        <RejectionModal
-          candidate={
-            (candidates?.items.find((c) => c.id === rejectionCandidate.id) ?? {
-              id: rejectionCandidate.id,
-              full_name: rejectionCandidate.name,
-              job_title: "Candidate",
-            }) as Candidate
-          }
-          onClose={() => setRejectionCandidate(null)}
-          onConfirm={(sendEmail, reason) =>
-            void handleConfirmRejection(sendEmail, reason)
-          }
-        />
-      )}
-    </div>
+      {
+        rejectionCandidate && (
+          <RejectionModal
+            candidate={
+              (candidates?.items.find((c) => c.id === rejectionCandidate.id) ?? {
+                id: rejectionCandidate.id,
+                full_name: rejectionCandidate.name,
+                job_title: "Candidate",
+              }) as Candidate
+            }
+            onClose={() => setRejectionCandidate(null)}
+            onConfirm={(sendEmail, reason) =>
+              void handleConfirmRejection(sendEmail, reason)
+            }
+          />
+        )
+      }
+    </div >
   );
 }
 

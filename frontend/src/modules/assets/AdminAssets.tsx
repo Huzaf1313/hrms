@@ -423,11 +423,10 @@ function Pagination({
               type="button"
               onClick={() => onPageChange(entry)}
               aria-current={entry === page ? "page" : undefined}
-              className={`flex h-8 min-w-8 items-center justify-center rounded-md border px-2 text-xs font-semibold tabular-nums transition cursor-pointer ${
-                entry === page
+              className={`flex h-8 min-w-8 items-center justify-center rounded-md border px-2 text-xs font-semibold tabular-nums transition cursor-pointer ${entry === page
                   ? "border-[#2F5FD0] bg-[#2F5FD0] text-white"
                   : "border-[#E5E7EB] text-[#4B5563] hover:bg-[#F0F1EE] hover:text-[#111827]"
-              }`}
+                }`}
             >
               {entry}
             </button>
@@ -544,9 +543,9 @@ function AssetOverview({
       spaceBelow < menuHeight && rect.top > menuHeight
         ? rect.top - menuHeight - 4
         : Math.min(
-            Math.max(rect.bottom + 4, 16),
-            Math.max(16, window.innerHeight - menuHeight - 16),
-          );
+          Math.max(rect.bottom + 4, 16),
+          Math.max(16, window.innerHeight - menuHeight - 16),
+        );
 
     setMenu({
       id,
@@ -816,11 +815,10 @@ function MenuItem({
     <button
       type="button"
       onClick={onClick}
-      className={`flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-left text-xs font-medium transition cursor-pointer ${
-        tone === "danger"
+      className={`flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-left text-xs font-medium transition cursor-pointer ${tone === "danger"
           ? "text-[#9B1C1C] hover:bg-[#FDE8E8]"
           : "text-[#4B5563] hover:bg-[#F0F1EE] hover:text-[#111827]"
-      }`}
+        }`}
     >
       <Icon
         className={`h-4 w-4 shrink-0 ${tone === "danger" ? "text-[#9B1C1C]" : "text-[#6B7280]"}`}
@@ -927,16 +925,14 @@ function AssetCategoriesPanel({
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <span
-                    className={`w-6 text-right font-semibold tabular-nums text-[12px] ${
-                      isZero ? "text-[#7B8794]" : "text-[#111827]"
-                    }`}
+                    className={`w-6 text-right font-semibold tabular-nums text-[12px] ${isZero ? "text-[#7B8794]" : "text-[#111827]"
+                      }`}
                   >
                     {segment.count}
                   </span>
                   <span
-                    className={`w-11 text-right tabular-nums text-[11px] ${
-                      isZero ? "text-[#7B8794]" : "text-[#6B7280]"
-                    }`}
+                    className={`w-11 text-right tabular-nums text-[11px] ${isZero ? "text-[#7B8794]" : "text-[#6B7280]"
+                      }`}
                   >
                     {pct}%
                   </span>
@@ -1132,11 +1128,10 @@ function QuickActionsPanel({
                       : "Not available yet: this action is not wired up yet"
                     : undefined
                 }
-                className={`flex min-w-0 items-center gap-2.5 rounded-lg border border-[#E5E7EB] h-12 px-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0] ${
-                  disabled
+                className={`flex min-w-0 items-center gap-2.5 rounded-lg border border-[#E5E7EB] h-12 px-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0] ${disabled
                     ? `bg-[#F6F7F5] text-[#7B8794] cursor-not-allowed ${action.busy ? "animate-pulse" : ""}`
                     : "bg-white text-[#111827] hover:bg-[#F0F1EE] cursor-pointer group"
-                }`}
+                  }`}
               >
                 <span
                   className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md ${action.iconBg} ${action.iconColor}`}
@@ -1144,9 +1139,8 @@ function QuickActionsPanel({
                   <Icon className="h-4 w-4 shrink-0" />
                 </span>
                 <span
-                  className={`min-w-0 text-[12px] font-medium leading-tight whitespace-nowrap ${
-                    disabled ? "text-[#7B8794]" : "text-[#111827]"
-                  }`}
+                  className={`min-w-0 text-[12px] font-medium leading-tight whitespace-nowrap ${disabled ? "text-[#7B8794]" : "text-[#111827]"
+                    }`}
                 >
                   {action.label}
                 </span>
@@ -1220,11 +1214,10 @@ function AssetAllocationPanel({
               setTab("employee");
               setPage(1);
             }}
-            className={`h-7 px-3 text-[12px] rounded-md whitespace-nowrap transition-colors cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-[#2F5FD0] ${
-              tab === "employee"
+            className={`h-7 px-3 text-[12px] rounded-md whitespace-nowrap transition-colors cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-[#2F5FD0] ${tab === "employee"
                 ? "bg-white text-[#2F5FD0] border border-[#E5E7EB] font-semibold shadow-xs"
                 : "text-[#4B5563] hover:text-[#111827] font-medium"
-            }`}
+              }`}
           >
             By Employee
           </button>
@@ -1234,11 +1227,10 @@ function AssetAllocationPanel({
               setTab("department");
               setPage(1);
             }}
-            className={`h-7 px-3 text-[12px] rounded-md whitespace-nowrap transition-colors cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-[#2F5FD0] ${
-              tab === "department"
+            className={`h-7 px-3 text-[12px] rounded-md whitespace-nowrap transition-colors cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-[#2F5FD0] ${tab === "department"
                 ? "bg-white text-[#2F5FD0] border border-[#E5E7EB] font-semibold shadow-xs"
                 : "text-[#4B5563] hover:text-[#111827] font-medium"
-            }`}
+              }`}
           >
             By Department
           </button>
@@ -1354,9 +1346,8 @@ function AssetAllocationPanel({
         page={currentPage}
         pageCount={pageCount}
         onPageChange={setPage}
-        summary={`Showing ${firstRow} to ${lastRow} of ${total} ${
-          tab === "employee" ? "employees" : "departments"
-        }`}
+        summary={`Showing ${firstRow} to ${lastRow} of ${total} ${tab === "employee" ? "employees" : "departments"
+          }`}
       />
 
       {error && (

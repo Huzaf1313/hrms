@@ -210,6 +210,8 @@ export default function AdminExitRequests() {
   // scope the summary too so their KPI cards count only that type.
   useEffect(() => {
     let active = true;
+    setLoading(true);
+    setError(null);
 
     const exitType = view === "all" ? undefined : view;
 
@@ -268,9 +270,10 @@ export default function AdminExitRequests() {
       await adminExitRequestService.remove(request.id);
       setConfirmDelete(null);
       refresh();
+
       setNotice({
         type: "success",
-        text: `${request.employee_name}'s exit request deleted.`,
+        text: `${request.employee_name ?? request.employee_id}'s exit request deleted.`,
       });
     } catch (cause: unknown) {
       setConfirmDelete(null);
@@ -308,9 +311,8 @@ export default function AdminExitRequests() {
         noteClass: "text-[#6B7280]",
         icon: (
           <FileText
-            className={`h-4 w-4 shrink-0 ${
-              type === "Termination" ? "text-[#9B1C1C]" : "text-[#2F5FD0]"
-            }`}
+            className={`h-4 w-4 shrink-0 ${type === "Termination" ? "text-[#9B1C1C]" : "text-[#2F5FD0]"
+              }`}
           />
         ),
         iconBg: type === "Termination" ? "bg-[#FDE8E8]" : "bg-[#E8EEFB]",
@@ -527,11 +529,10 @@ export default function AdminExitRequests() {
                 key={tab.id}
                 type="button"
                 onClick={() => changeView(tab.id)}
-                className={`flex items-center gap-1.5 whitespace-nowrap px-3.5 py-2.5 text-[13px] font-medium transition-colors cursor-pointer border-b-2 -mb-[1px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0] ${
-                  active
-                    ? "border-[#2F5FD0] text-[#2F5FD0]"
-                    : "border-transparent text-[#4B5563] hover:text-[#111827] hover:border-[#D1D5DB]"
-                }`}
+                className={`flex items-center gap-1.5 whitespace-nowrap px-3.5 py-2.5 text-[13px] font-medium transition-colors cursor-pointer border-b-2 -mb-[1px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0] ${active
+                  ? "border-[#2F5FD0] text-[#2F5FD0]"
+                  : "border-transparent text-[#4B5563] hover:text-[#111827] hover:border-[#D1D5DB]"
+                  }`}
               >
                 <Icon className="w-4 h-4 shrink-0" />
                 <span>{tab.label}</span>

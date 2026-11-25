@@ -213,6 +213,7 @@ function DashboardLayout({
                 celebrations={dashboardData?.celebrations ?? []}
                 recentActivities={dashboardData?.recent_activities ?? []}
                 onNavigate={handleNavigate}
+                onCreateEmployee={handleCreateEmployee}
                 onCreateAnnouncement={handleCreateAnnouncement}
               />
             )}

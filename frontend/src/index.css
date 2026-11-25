@@ -75,6 +75,40 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 /* Celebration Scrolling Announcement */
+.announcement-marquee-viewport {
+  mask-image: linear-gradient(to right, transparent 0, #000 16px, #000 calc(100% - 16px), transparent 100%);
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+.announcement-marquee-track {
+  white-space: nowrap;
+  width: max-content;
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+.announcement-marquee-animated {
+  animation: announcement-marquee-loop var(--announcement-duration, 40s) linear infinite;
+  will-change: transform;
+}
+
+.announcement-marquee-sequence {
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+/* Base focus styles */
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+/* Celebration Scrolling Announcement */
 .celebration-marquee {
   animation: celebration-scroll var(--marquee-duration, 35s) linear infinite;
   will-change: transform;
@@ -84,12 +118,103 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   animation-play-state: paused;
 }
 
+.announcement-marquee-fade {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  bottom: 0;
+  width: 18px;
+  pointer-events: none;
+}
+
+.announcement-marquee-fade-left {
+  left: 0;
+  background: linear-gradient(to right, #fff, rgb(255 255 255 / 0%));
+}
+
+.announcement-marquee-fade-right {
+  right: 0;
+  background: linear-gradient(to left, #fff, rgb(255 255 255 / 0%));
+}
+
+@keyframes announcement-marquee-loop {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.celebration-marquee {
+  animation: celebration-scroll var(--marquee-duration, 35s) linear infinite;
+  will-change: transform;
+}
+
+.celebration-marquee:hover {
+  animation-play-state: paused;
+}
+
+.employee-announcement-marquee {
+  animation: announcement-scroll var(--marquee-duration, 35s) linear infinite;
+  will-change: transform;
+}
+
+.employee-announcement-marquee:hover,
+.employee-announcement-marquee:focus-within {
+  animation-play-state: paused;
+}
+
+.announcement-slide-in {
+  animation: announcement-slide-up-fade 300ms ease-out both;
+}
+
 @keyframes celebration-scroll {
   from {
     transform: translateX(0);
   }
+
   to {
     transform: translateX(calc(var(--marquee-distance, 50%) * -1));
+  }
+}
+
+@keyframes announcement-scroll {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(calc(var(--marquee-distance, 50%) * -1));
+  }
+}
+
+@keyframes announcement-slide-up-fade {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .announcement-marquee-animated {
+    animation: none;
+    transform: none;
+  }
+
+  .celebration-marquee,
+  .employee-announcement-marquee {
+    animation: none;
+  }
+
+  .announcement-slide-in {
+    animation: none;
   }
 }
 
@@ -112,34 +237,41 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     size: A4;
     margin: 0;
   }
+
   body {
     background: white;
   }
+
   body * {
     visibility: hidden;
   }
+
   .payslip-modal,
   .payslip-modal .payslip-paper,
   .payslip-modal .payslip-paper * {
     visibility: visible;
   }
+
   .payslip-modal {
     position: static;
     display: block;
     padding: 0;
     background: white;
   }
-  .payslip-modal > div {
+
+  .payslip-modal>div {
     max-height: none;
     max-width: none;
     overflow: visible;
     border-radius: 0;
     box-shadow: none;
   }
-  .payslip-modal > div > div:first-child,
+
+  .payslip-modal>div>div:first-child,
   .payslip-actions {
     display: none;
   }
+
   .payslip-paper {
     width: 100%;
     min-height: 297mm;

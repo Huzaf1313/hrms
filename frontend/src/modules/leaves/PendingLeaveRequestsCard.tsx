@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import { useCallback, useEffect, useState } from "react";
-import { Check, X } from "lucide-react";
+import { Check, Inbox, X } from "lucide-react";
 
 import DashboardCard, { DashboardViewAllLink } from "../dashboard/DashboardCard";
 
@@ -97,19 +97,19 @@ export default function PendingLeaveRequestsCard({
   return (
     <DashboardCard
       title="Pending Leave Requests"
-      className="col-span-12 xl:col-span-5"
+      className="col-span-12 shrink-0"
       action={<DashboardViewAllLink onClick={onOpenLeave} />}
     >
       <div className="-mx-1 overflow-x-auto">
         <table className="w-full min-w-[560px] border-collapse">
           <thead>
-            <tr className="border-b border-gray-100 text-left text-[10px] uppercase tracking-wide text-black">
-              <th className="px-1 pb-2 font-bold">Employee</th>
-              <th className="px-1 pb-2 font-bold">Leave Type</th>
-              <th className="px-1 pb-2 font-bold">From – To</th>
-              <th className="px-1 pb-2 font-bold">Days</th>
-              <th className="px-1 pb-2 font-bold">Status</th>
-              <th className="px-1 pb-2 text-right font-bold">Action</th>
+            <tr className="h-10 border-b border-[#E5E7EB] text-left text-[11px] text-[#6B7280]">
+              <th className="px-1 pb-2 font-medium">Employee</th>
+              <th className="px-1 pb-2 font-medium">Leave Type</th>
+              <th className="px-1 pb-2 font-medium">From – To</th>
+              <th className="px-1 pb-2 font-medium">Days</th>
+              <th className="px-1 pb-2 font-medium">Status</th>
+              <th className="px-1 pb-2 text-right font-medium">Action</th>
             </tr>
           </thead>
 
@@ -118,7 +118,7 @@ export default function PendingLeaveRequestsCard({
               <tr>
                 <td
                   colSpan={6}
-                  className="py-8 text-center text-[11px] text-gray-400"
+                    className="py-5 text-center text-[11px] text-[#6B7280]"
                 >
                   Loading leave requests…
                 </td>
@@ -129,9 +129,16 @@ export default function PendingLeaveRequestsCard({
               <tr>
                 <td
                   colSpan={6}
-                  className="py-8 text-center text-[11px] text-gray-400"
-                >
-                  {loadError || "No pending leave requests."}
+                    className="py-5 text-center text-[11px] text-[#6B7280]"
+                  >
+                  {loadError ? (
+                    loadError
+                  ) : (
+                    <span className="inline-flex items-center gap-2">
+                      <Inbox className="h-4 w-4 text-[#9CA3AF]" />
+                      No pending leave requests.
+                    </span>
+                  )}
                 </td>
               </tr>
             )}
@@ -143,7 +150,7 @@ export default function PendingLeaveRequestsCard({
               return (
                 <tr
                   key={row.id}
-                  className="dashboard-rise border-b border-gray-50 last:border-0"
+                  className="dashboard-rise h-14 border-b border-[#F3F4F6] last:border-0 hover:bg-[#FAFAF8]"
                   style={
                     {
                       "--dashboard-delay": `${index * 80}ms`,
@@ -154,9 +161,14 @@ export default function PendingLeaveRequestsCard({
                     <div className="flex items-center gap-2">
                       <PersonAvatar name={name} />
 
-                      <span className="whitespace-nowrap text-[11px] font-medium text-gray-700">
-                        {name}
-                      </span>
+                      <div className="min-w-0">
+                        <span className="block truncate whitespace-nowrap text-[11px] font-medium text-[#1F2937]">
+                          {name}
+                        </span>
+                        <span className="mt-0.5 block font-mono text-[10px] text-[#9CA3AF]">
+                          {row.employee_id}
+                        </span>
+                      </div>
                     </div>
                   </td>
 
@@ -174,7 +186,8 @@ export default function PendingLeaveRequestsCard({
                   </td>
 
                   <td className="px-1 py-2.5">
-                    <span className="rounded-full bg-[#fff7ed] px-2 py-0.5 text-[10px] font-medium text-[#c2410c]">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-[#FFFBEB] px-2 py-0.5 text-[10px] font-medium text-[#92400E]">
+                      <span aria-hidden="true">•</span>
                       Pending
                     </span>
                   </td>
@@ -186,9 +199,10 @@ export default function PendingLeaveRequestsCard({
                         disabled={busy}
                         aria-label={`Approve ${name}'s leave`}
                         onClick={() => updateStatus(row, "approved")}
-                        className="flex h-6 w-6 items-center justify-center rounded-full bg-[#ecfdf5] text-[#16a34a] transition hover:bg-[#d1fae5] disabled:cursor-not-allowed disabled:opacity-50"
+                        className="inline-flex h-7 items-center gap-1 rounded-md border border-[#D1FAE5] bg-white px-2 text-[10px] font-medium text-[#047857] transition hover:bg-[#ECFDF5] disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <Check className="h-3.5 w-3.5" />
+                        Approve
                       </button>
 
                       <button
@@ -196,9 +210,10 @@ export default function PendingLeaveRequestsCard({
                         disabled={busy}
                         aria-label={`Reject ${name}'s leave`}
                         onClick={() => updateStatus(row, "rejected")}
-                        className="flex h-6 w-6 items-center justify-center rounded-full bg-[#fef2f2] text-[#dc2626] transition hover:bg-[#fee2e2] disabled:cursor-not-allowed disabled:opacity-50"
+                        className="inline-flex h-7 items-center gap-1 rounded-md border border-[#FECACA] bg-white px-2 text-[10px] font-medium text-[#B91C1C] transition hover:bg-[#FEF2F2] disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <X className="h-3.5 w-3.5" />
+                        Reject
                       </button>
                     </div>
                   </td>

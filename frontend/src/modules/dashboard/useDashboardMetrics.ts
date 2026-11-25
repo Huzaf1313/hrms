@@ -24,8 +24,12 @@ export interface DashboardMetrics {
   totalEmployees: number | null;
   presentToday: number | null;
   presentPercent: number | null;
+  lateToday: number | null;
+  latePercent: number | null;
   onLeaveToday: number | null;
   onLeavePercent: number | null;
+  absentToday: number | null;
+  absentPercent: number | null;
   pendingLeaveRequests: number | null;
   departmentCounts: DepartmentCount[] | null;
   /** Candidates sitting at each pipeline stage, as the recruitment board counts them. */
@@ -54,8 +58,12 @@ const EMPTY_METRICS: DashboardMetrics = {
   totalEmployees: null,
   presentToday: null,
   presentPercent: null,
+  lateToday: null,
+  latePercent: null,
   onLeaveToday: null,
   onLeavePercent: null,
+  absentToday: null,
+  absentPercent: null,
   pendingLeaveRequests: null,
   departmentCounts: null,
   recruitmentStageCounts: null,
@@ -153,8 +161,12 @@ export function useDashboardMetrics(
       const summary = attendanceQuery.data;
       next.presentToday = summary.present_count ?? null;
       next.presentPercent = summary.present_percentage ?? null;
+      next.lateToday = summary.late_count ?? null;
+      next.latePercent = summary.late_percentage ?? null;
       next.onLeaveToday = summary.on_leave_count ?? null;
       next.onLeavePercent = summary.on_leave_percentage ?? null;
+      next.absentToday = summary.absent_count ?? null;
+      next.absentPercent = summary.absent_percentage ?? null;
 
       if (!next.totalEmployees && summary.total_employees > 0) {
         next.totalEmployees = summary.total_employees;

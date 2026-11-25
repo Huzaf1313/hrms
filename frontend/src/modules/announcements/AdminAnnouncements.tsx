@@ -4,7 +4,7 @@ import {
   Megaphone,
   Plus,
   Search,
-  Filter,
+  RotateCcw,
   Calendar,
   User,
   ArrowRight,
@@ -40,6 +40,13 @@ import {
 } from "lucide-react";
 import { api, ApiError } from "../../services/api";
 import NoticePopup from "../../components/ui/NoticePopup";
+import { Avatar } from "../../components/ui/Avatar";
+import { Button } from "../../components/ui/Button";
+import { EmptyState } from "../../components/ui/EmptyState";
+import { ErrorState } from "../../components/ui/ErrorState";
+import { Select } from "../../components/ui/Select";
+import { Skeleton } from "../../components/ui/Skeleton";
+import { Tabs as SharedTabs } from "../../components/ui/Tabs";
 import { departmentService } from "../departments/departmentService";
 import { employeeService } from "../employees/employeeService";
 import type { Department } from "../departments/types";
@@ -113,48 +120,35 @@ const categoryStyles: Record<
   { badge: string; icon: ReactNode; iconBg: string }
 > = {
   "Company News": {
-    badge: "bg-blue-50 text-blue-600",
+    badge: "bg-[#EFF6FF] text-[#1D4ED8]",
     icon: <FileText className="h-5 w-5 text-blue-600" />,
-    iconBg: "bg-blue-100",
+    iconBg: "bg-[#DBEAFE]",
   },
 
   "HR & Policy": {
-    badge: "bg-purple-50 text-purple-600",
+    badge: "bg-[#F5F3FF] text-[#6D28D9]",
     icon: <Shield className="h-5 w-5 text-purple-600" />,
-    iconBg: "bg-purple-100",
+    iconBg: "bg-[#EDE9FE]",
   },
 
   Events: {
-    badge: "bg-green-50 text-green-600",
+    badge: "bg-[#ECFDF5] text-[#047857]",
     icon: <PartyPopper className="h-5 w-5 text-green-600" />,
-    iconBg: "bg-green-100",
+    iconBg: "bg-[#D1FAE5]",
   },
 
   "IT & System": {
-    badge: "bg-orange-50 text-orange-600",
-    icon: <Wrench className="h-5 w-5 text-orange-600" />,
-    iconBg: "bg-orange-100",
+    badge: "bg-[#F3F4F6] text-[#4B5563]",
+    icon: <Wrench className="h-5 w-5 text-[#4B5563]" />,
+    iconBg: "bg-[#E5E7EB]",
   },
 };
 
-const statusStyles: Record<Status, string> = {
-  NEW: "bg-green-100 text-green-700",
-  IMPORTANT: "bg-red-100 text-red-700",
-  UPCOMING: "bg-blue-100 text-blue-700",
-  INFO: "bg-orange-100 text-orange-700",
-};
-
-const audienceStyles: Record<Audience, string> = {
-  "All Employees": "bg-slate-100 text-slate-600",
-  "Department-wise": "bg-blue-50 text-blue-700",
-  Custom: "bg-purple-50 text-purple-700",
-};
-
 const dotStyles: Record<Category, string> = {
-  "Company News": "bg-blue-500",
-  "HR & Policy": "bg-purple-500",
-  Events: "bg-green-500",
-  "IT & System": "bg-orange-500",
+  "Company News": "bg-[#3B82F6]",
+  "HR & Policy": "bg-[#8B5CF6]",
+  Events: "bg-[#10B981]",
+  "IT & System": "bg-[#6B7280]",
 };
 
 // ---- Date helpers ------------------------------------------------------------
@@ -243,6 +237,19 @@ function formatDateOnly(value?: string | null): string {
     day: "2-digit",
     year: "numeric",
   });
+}
+
+function formatRelativeDate(value?: string | null): string {
+  if (!value) return "—";
+  const timestamp = Date.parse(value.includes("T") ? value : `${value}T00:00:00`);
+  if (Number.isNaN(timestamp)) return "—";
+
+  const minutes = Math.max(0, Math.floor((Date.now() - timestamp) / 60000));
+  if (minutes < 60) return `${Math.max(1, minutes)} min ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hr ago`;
+  const days = Math.floor(hours / 24);
+  return `${days} day${days === 1 ? "" : "s"} ago`;
 }
 
 /** Newest-first sort key. Falls back to createdAt, then to 0, so records
@@ -536,12 +543,15 @@ export default function AdminAnnouncements({
 
   const [quickCategory, setQuickCategory] = useState<QuickCategory>("All Categories");
   const [quickDateRange, setQuickDateRange] = useState<DateRangeKey>("All Time");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(5);
 
   const [announcementList, setAnnouncementList] = useState<Announcement[]>([]);
   const [selectedAnnouncement, setSelectedAnnouncement] =
     useState<Announcement | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Restore any in-progress draft. Required because navigating to the
   // Employees page unmounts this component. Read once, then used as the
@@ -893,7 +903,7 @@ export default function AdminAnnouncements({
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [refreshKey]);
 
   // ---- Filter announcements -----------------------------------------------
 
@@ -902,7 +912,8 @@ export default function AdminAnnouncements({
     const cutoff =
       days === null ? null : new Date().getTime() - days * 86400000;
 
-    return announcementList.filter((a) => {
+    return announcementList
+      .filter((a) => {
       const matchesTab =
         quickCategory === "All Categories" || a.category === quickCategory;
 
@@ -922,8 +933,12 @@ export default function AdminAnnouncements({
         matchesDate = Number.isNaN(published) || published >= cutoff;
       }
 
-      return matchesTab && matchesSearch && matchesDate;
-    });
+        return matchesTab && matchesSearch && matchesDate;
+      })
+      .sort((a, b) => {
+        if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+        return announcementTimestamp(b) - announcementTimestamp(a);
+      });
   }, [quickCategory, search, quickDateRange, announcementList]);
 
   const hasActiveQuickFilters =
@@ -942,11 +957,60 @@ export default function AdminAnnouncements({
   // not show the same announcement twice.
   const recentItems = useMemo(
     () =>
-      announcementList
-        .filter((a) => !a.pinned)
-        .sort((a, b) => announcementTimestamp(b) - announcementTimestamp(a)),
+      [...announcementList].sort(
+        (a, b) => announcementTimestamp(b) - announcementTimestamp(a),
+      ),
     [announcementList],
   );
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / rowsPerPage));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedAnnouncements = filtered.slice(
+    (safeCurrentPage - 1) * rowsPerPage,
+    safeCurrentPage * rowsPerPage,
+  );
+  const showingFrom = filtered.length === 0 ? 0 : (safeCurrentPage - 1) * rowsPerPage + 1;
+  const showingTo = Math.min(safeCurrentPage * rowsPerPage, filtered.length);
+
+  const thisMonthCount = announcementList.filter((announcement) => {
+    const date = new Date(`${announcement.publishDate}T00:00:00`);
+    const now = new Date();
+    return (
+      date.getFullYear() === now.getFullYear() &&
+      date.getMonth() === now.getMonth()
+    );
+  }).length;
+
+  const announcementKpis = [
+    {
+      label: "Total Announcements",
+      value: announcementList.length,
+      helper: "All time",
+      icon: <Megaphone className="h-5 w-5" />,
+      tone: "bg-[#EFF6FF] text-[#2563EB]",
+    },
+    {
+      label: "Pinned",
+      value: pinnedItems.length,
+      helper: "Shown at the top",
+      icon: <Pin className="h-5 w-5" />,
+      tone: "bg-[#FFF7ED] text-[#C2410C]",
+    },
+    {
+      label: "Important",
+      value: announcementList.filter((item) => item.priority !== "Normal").length,
+      helper: "High priority",
+      icon: <AlertCircle className="h-5 w-5" />,
+      tone: "bg-[#FEF2F2] text-[#DC2626]",
+    },
+    {
+      label: "This Month",
+      value: thisMonthCount,
+      helper: `Published in ${new Date().toLocaleDateString("en-US", { month: "short", year: "numeric" })}`,
+      icon: <Calendar className="h-5 w-5" />,
+      tone: "bg-[#ECFDF5] text-[#047857]",
+    },
+  ];
 
   const [sidebarModal, setSidebarModal] = useState<"pinned" | "recent" | null>(null);
 
@@ -964,12 +1028,37 @@ export default function AdminAnnouncements({
   function handleCategoryFilterChange(next: QuickCategory) {
     setQuickCategory(next);
     setActiveTab(next === "All Categories" ? "All" : next);
+    setCurrentPage(1);
   }
 
   function handleClearQuickFilters() {
     setQuickCategory("All Categories");
     setQuickDateRange("All Time");
     setActiveTab("All");
+    setSearch("");
+    setCurrentPage(1);
+  }
+
+  async function handleTogglePinned(announcement: Announcement) {
+    const formData = new FormData();
+    formData.append("pinned", String(!announcement.pinned));
+
+    try {
+      const saved = await api.putForm<Parameters<typeof mapAnnouncement>[0]>(
+        `/announcements/${announcement.id}`,
+        formData,
+      );
+      const updated = mapAnnouncement(saved);
+      setAnnouncementList((previous) =>
+        previous.map((item) => (item.id === updated.id ? updated : item)),
+      );
+    } catch (requestError: unknown) {
+      setError(
+        requestError instanceof ApiError
+          ? requestError.message
+          : "Could not update the pinned status.",
+      );
+    }
   }
 
   // ---- Open create form ----------------------------------------------------
@@ -1836,42 +1925,34 @@ export default function AdminAnnouncements({
   // ==========================================================================
 
   return (
-    <div className="min-h-screen bg-slate-50 px-6 py-6">
+    <div className="flex w-full flex-col gap-5 pb-10">
       {/* Header ------------------------------------------------------------- */}
 
-      <div className="mb-6 flex items-start justify-between">
-        <div className="flex items-start gap-3">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-600">
-            <Megaphone className="h-5 w-5 text-white" />
-          </span>
-
-          <div>
-            <h1 className="text-xl font-bold text-slate-900">
-              Announcements
-            </h1>
-
-            <p className="mt-0.5 text-sm text-slate-500">
-              Share important updates, policies and news with your team.
-            </p>
-          </div>
+      <div className="flex flex-col gap-3 border-b border-[#E5E7EB] pb-5 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-[20px] font-semibold leading-tight text-[#111827]">
+            Announcements
+          </h1>
+          <p className="mt-1 text-[13px] text-[#6B7280]">
+            Share important updates, policies and news with your team
+          </p>
         </div>
 
-        {/* CREATE BUTTON */}
-
-        <button
-          type="button"
-          onClick={handleCreateAnnouncement}
-          className="flex shrink-0 items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
-        >
-          <Plus className="h-4 w-4" />
+        <Button variant="primary" size="sm" onClick={handleCreateAnnouncement} leftIcon={<Plus className="h-4 w-4" />}>
           Create Announcement
-        </button>
+        </Button>
       </div>
 
       {error && (
-        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
+        <ErrorState
+          title="Could not load announcements"
+          message={error}
+          onRetry={() => {
+            setError("");
+            setRefreshKey((key) => key + 1);
+          }}
+          className="max-w-none rounded-xl border border-[#FECACA] bg-white py-4"
+        />
       )}
 
       {/* Closes itself after a few seconds, so no timer is needed here. */}
@@ -1879,6 +1960,34 @@ export default function AdminAnnouncements({
         notice={successMessage ? { type: "success", text: successMessage } : null}
         onDismiss={() => setSuccessMessage("")}
       />
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {isLoading
+          ? Array.from({ length: 4 }).map((_, index) => (
+              <div key={index} className="min-h-[128px] rounded-xl border border-[#E5E7EB] bg-white p-5">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-3">
+                    <Skeleton className="h-3 w-28 rounded" />
+                    <Skeleton className="h-8 w-16 rounded" />
+                    <Skeleton className="h-3 w-24 rounded" />
+                  </div>
+                  <Skeleton className="h-9 w-9 rounded-lg" />
+                </div>
+              </div>
+            ))
+          : announcementKpis.map((card) => (
+              <div key={card.label} className="flex min-h-[128px] flex-col rounded-xl border border-[#E5E7EB] bg-white p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[12px] font-medium text-[#6B7280]">{card.label}</p>
+                    <p className="mt-2 text-[28px] font-semibold leading-none text-[#111827]">{card.value}</p>
+                  </div>
+                  <span className={`flex h-9 w-9 items-center justify-center rounded-lg ${card.tone}`}>{card.icon}</span>
+                </div>
+                <p className="mt-auto pt-3 text-[12px] text-[#6B7280]">{card.helper}</p>
+              </div>
+            ))}
+      </div>
 
       {restoredDraftAvailable && !showCreateForm && (
         <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
@@ -1906,59 +2015,118 @@ export default function AdminAnnouncements({
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_300px]">
+      <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-12">
         {/* Main column ------------------------------------------------------ */}
 
-        <div className="min-w-0">
+        <section className="min-w-0 rounded-xl border border-[#E5E7EB] bg-white p-5 lg:col-span-8">
           {/* Tabs */}
 
-          <div className="mb-4 flex items-center gap-6 border-b border-slate-200">
-            {tabs.map((tab) => (
-              <button
-                key={tab}
-                type="button"
-                onClick={() => handleCategoryFilterChange(tab === "All" ? "All Categories" : tab)}
-                className={`-mb-px border-b-2 pb-3 text-sm font-medium transition ${
-                  activeTab === tab
-                    ? "border-blue-600 text-blue-600"
-                    : "border-transparent text-slate-500 hover:text-slate-700"
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
+          <div className="mb-4 overflow-x-auto">
+            <SharedTabs
+              variant="underline"
+              activeTab={activeTab}
+              onChange={(tab) =>
+                handleCategoryFilterChange(
+                  tab === "All" ? "All Categories" : (tab as QuickCategory),
+                )
+              }
+              tabs={tabs.map((tab) => ({
+                id: tab,
+                label: tab,
+                badge:
+                  tab === "All"
+                    ? announcementList.length
+                    : announcementList.filter((item) => item.category === tab).length,
+              }))}
+              className="min-w-max"
+            />
           </div>
 
-          {/* Search */}
+          {/* Search and filters */}
 
-          <div className="relative mb-4">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <div className="mb-5 flex flex-col gap-2 lg:flex-row">
+            <div className="relative min-w-0 flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9CA3AF]" />
 
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search announcements..."
-              className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-700 placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setCurrentPage(1);
+                }}
+                placeholder="Search announcements..."
+                className="h-9 w-full rounded-lg border border-[#D1D5DB] bg-white pl-9 pr-3 text-[13px] text-[#111827] outline-none placeholder:text-[#9CA3AF] focus:border-[#2563EB] focus:ring-[3px] focus:ring-[#DBEAFE]"
+              />
+            </div>
+            <Select
+              aria-label="Filter by category"
+              value={quickCategory}
+              onChange={(event) => {
+                handleCategoryFilterChange(event.target.value as QuickCategory);
+                setCurrentPage(1);
+              }}
+              wrapperClassName="w-full lg:w-[160px]"
+              className="h-9 text-[13px]"
+              options={[
+                { value: "All Categories", label: "Category" },
+                { value: "Company News", label: "Company News" },
+                { value: "HR & Policy", label: "HR & Policy" },
+                { value: "Events", label: "Events" },
+                { value: "IT & System", label: "IT & System" },
+              ]}
             />
+            <Select
+              aria-label="Filter by date range"
+              value={quickDateRange}
+              onChange={(event) => {
+                setQuickDateRange(event.target.value as DateRangeKey);
+                setCurrentPage(1);
+              }}
+              wrapperClassName="w-full lg:w-[150px]"
+              className="h-9 text-[13px]"
+              options={[
+                { value: "All Time", label: "Date Range" },
+                { value: "Last 7 Days", label: "Last 7 Days" },
+                { value: "Last 30 Days", label: "Last 30 Days" },
+                { value: "Last 90 Days", label: "Last 90 Days" },
+              ]}
+            />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleClearQuickFilters}
+              disabled={!hasActiveQuickFilters && !search}
+              leftIcon={<RotateCcw className="h-4 w-4" />}
+              className="shrink-0 border border-transparent"
+            >
+              Clear Filters
+            </Button>
           </div>
 
           {/* Announcement cards */}
 
-          <div className="flex flex-col gap-4">
+          <div className="flex min-h-[420px] flex-col">
             {isLoading && (
-              <div className="rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-400">
-                Loading announcements...
-              </div>
+              Array.from({ length: rowsPerPage }).map((_, index) => (
+                <div key={index} className="flex gap-3 border-b border-[#E5E7EB] py-4">
+                  <Skeleton className="h-9 w-9 shrink-0 rounded-lg" />
+                  <div className="min-w-0 flex-1 space-y-3">
+                    <Skeleton className="h-3 w-40 rounded" />
+                    <Skeleton className="h-4 w-2/3 rounded" />
+                    <Skeleton className="h-3 w-full rounded" />
+                  </div>
+                </div>
+              ))
             )}
 
-            {filtered.map((a) => {
+            {!isLoading && paginatedAnnouncements.map((a) => {
               const style = categoryStyles[a.category];
 
               return (
                 <div
                   key={a.id}
-                  className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"
+                  className="border-b border-[#E5E7EB] px-1 py-4 transition hover:bg-[#F9FAFB]"
                 >
                   <div className="flex gap-3">
                     <span
@@ -1969,104 +2137,104 @@ export default function AdminAnnouncements({
 
                       <div className="min-w-0 flex-1">
                         <div className="mb-1.5 flex flex-wrap items-center gap-2">
-                          <span
-                            className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${style.badge}`}
-                          >
-                            {a.category}
-                          </span>
+                      <span
+                        className={`inline-block rounded-full px-2.5 py-1 text-[12px] font-medium ${style.badge}`}
+                      >
+                        {a.category}
+                      </span>
 
-                          <span
-                            className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
-                              audienceNames(a).length === 0 &&
-                              a.audience !== "All Employees"
-                                ? "bg-red-100 text-red-700"
-                                : audienceStyles[a.audience]
-                            }`}
-                            title={audienceTooltip(a)}
-                          >
-                            {audienceLabel(a)}
-                          </span>
-
-                          {a.status && (
-                            <span
-                              className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${statusStyles[a.status]}`}
-                            >
-                              {a.status}
-                            </span>
-                          )}
+                      {a.priority !== "Normal" && (
+                        <span className="inline-block rounded-full bg-[#FEF2F2] px-2.5 py-1 text-[12px] font-medium text-[#B91C1C]">
+                          {a.priority}
+                        </span>
+                      )}
                         </div>
 
-                        <h3 className="mb-1 text-[15px] font-semibold text-slate-900">
-                          {a.title}
+                        <h3 className="mb-1 flex items-center gap-1.5 text-[14px] font-semibold text-[#111827]">
+                          {a.pinned && <Pin className="h-4 w-4 shrink-0 text-[#2563EB]" aria-label="Pinned" />}
+                          <span className="truncate">{a.title}</span>
                         </h3>
 
-                        <p className="mb-3 text-sm leading-6 text-slate-500">
-                          {audienceNames(a).length > 0 && (
-                            <span className="mb-1 flex flex-wrap items-center gap-1.5">
-                              <span className="font-medium text-slate-600">
-                                To:
-                              </span>
-
-                              {audienceNames(a).map((name) => (
-                                <span
-                                  key={name}
-                                  className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-600"
-                                >
-                                  {name}
-                                </span>
-                              ))}
-                            </span>
-                          )}
-
+                        <p className="mb-2 line-clamp-2 text-[13px] leading-5 text-[#6B7280]">
                           {a.description}
                         </p>
 
+                        <div className="mb-3 flex flex-wrap items-center gap-1.5 text-[12px] text-[#6B7280]" title={audienceTooltip(a)}>
+                          <span className="font-medium text-[#9CA3AF]">To:</span>
+                          {a.audience === "All Employees" ? (
+                            <span>All employees</span>
+                          ) : audienceNames(a).length === 0 ? (
+                            <span>No recipients selected</span>
+                          ) : (
+                            <>
+                              {audienceNames(a).slice(0, 3).map((name) => (
+                                <Avatar key={name} name={name} size="xs" />
+                              ))}
+                              {audienceNames(a).length > 3 && (
+                                <span className="rounded-full bg-[#F3F4F6] px-2 py-0.5 text-[12px]">
+                                  +{audienceNames(a).length - 3} more
+                                </span>
+                              )}
+                              <span className="ml-1">{a.audience === "Department-wise" ? "departments" : "employees"}</span>
+                            </>
+                          )}
+                        </div>
 
-                      <div className="flex items-center justify-between">
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-400">
+
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-[#6B7280]">
                           <span
                             className="flex items-center gap-1"
                             title={
                               "Publishes on " + formatDateOnly(a.publishDate)
                             }
                           >
-                            <Clock className="h-3.5 w-3.5" />
-                            {formatDateTime(a.createdAt)}
+                             <Clock className="h-4 w-4" />
+                             {formatDateOnly(a.publishDate)}
                           </span>
 
                           <span className="flex items-center gap-1">
-                            <User className="h-3.5 w-3.5" />
+                             <User className="h-4 w-4" />
                             By {a.author}
                           </span>
                         </div>
 
 
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => void handleTogglePinned(a)}
+                            className={`flex h-8 w-8 items-center justify-center rounded-md transition hover:bg-[#EFF6FF] ${a.pinned ? "text-[#2563EB]" : "text-[#9CA3AF] hover:text-[#2563EB]"}`}
+                            title={a.pinned ? "Unpin announcement" : "Pin announcement"}
+                            aria-label={a.pinned ? "Unpin announcement" : "Pin announcement"}
+                          >
+                            <Pin className="h-4 w-4" />
+                          </button>
                           <button
                             type="button"
                             onClick={() => handleEditAnnouncement(a)}
-                            className="rounded-lg p-1.5 text-slate-500 hover:bg-blue-50 hover:text-blue-600"
+                            className="flex h-8 w-8 items-center justify-center rounded-md text-[#6B7280] hover:bg-[#EFF6FF] hover:text-[#2563EB]"
                             title="Edit announcement"
                             aria-label="Edit announcement"
                           >
-                            <Pencil className="h-3.5 w-3.5" />
+                            <Pencil className="h-4 w-4" />
                           </button>
                           <button
                             type="button"
                             onClick={() => requestDeleteAnnouncement(a)}
-                            className="rounded-lg p-1.5 text-slate-500 hover:bg-red-50 hover:text-red-600"
+                            className="flex h-8 w-8 items-center justify-center rounded-md text-[#6B7280] hover:bg-[#FEF2F2] hover:text-[#DC2626]"
                             title="Delete announcement"
                             aria-label="Delete announcement"
                           >
-                            <Trash2 className="h-3.5 w-3.5" />
+                            <Trash2 className="h-4 w-4" />
                           </button>
                           <button
                             type="button"
                             onClick={() => openAnnouncement(a)}
-                            className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700"
+                            className="flex items-center gap-1 text-[12px] font-medium text-[#2563EB] hover:text-[#1D4ED8]"
                           >
                             View Details
-                            <ArrowRight className="h-3.5 w-3.5" />
+                            <ArrowRight className="h-4 w-4" />
                           </button>
                         </div>
                       </div>
@@ -2077,123 +2245,82 @@ export default function AdminAnnouncements({
             })}
 
             {!isLoading && filtered.length === 0 && (
-              <div className="rounded-xl border border-dashed border-slate-200 bg-white p-8 text-center text-sm text-slate-400">
-                {hasActiveQuickFilters
-                  ? "No announcements match the selected filters."
-                  : "No announcements match your search."}
-              </div>
+              <EmptyState
+                icon={<Megaphone className="h-4 w-4" />}
+                title={announcementList.length === 0 ? "No announcements yet" : "No matching announcements"}
+                description={announcementList.length === 0 ? "Create an announcement to share an update with your team." : "Try a different search or clear the filters."}
+                action={announcementList.length === 0 ? <Button variant="primary" size="sm" onClick={handleCreateAnnouncement} leftIcon={<Plus className="h-4 w-4" />}>Create Announcement</Button> : <Button variant="ghost" size="sm" onClick={handleClearQuickFilters} leftIcon={<RotateCcw className="h-4 w-4" />}>Clear Filters</Button>}
+                className="max-w-none py-10"
+              />
             )}
           </div>
 
           {/* Pagination */}
 
-          <div className="mt-5 flex items-center justify-between">
-            <p className="text-xs text-slate-400">
-              Showing 1–{filtered.length} of{" "}
-              {announcementList.length} announcements
-            </p>
-
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:bg-slate-100"
-              >
-                ‹
-              </button>
-
-              {[1, 2, 3].map((page) => (
-                <button
-                  key={page}
-                  type="button"
-                  className={`flex h-8 w-8 items-center justify-center rounded-lg text-sm font-medium ${
-                    page === 1
-                      ? "bg-blue-600 text-white"
-                      : "border border-slate-200 text-slate-500 hover:bg-slate-100"
-                  }`}
-                >
-                  {page}
-                </button>
-              ))}
-
-              <button
-                type="button"
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:bg-slate-100"
-              >
-                ›
-              </button>
+          <div className="mt-4 flex flex-col gap-3 border-t border-[#E5E7EB] pt-4 text-[12px] text-[#6B7280] md:flex-row md:items-center md:justify-between">
+            <p>Showing {showingFrom}-{showingTo} of {filtered.length} announcements</p>
+            <div className="flex flex-wrap items-center justify-end gap-3">
+              <label className="flex items-center gap-2">
+                Rows per page
+                <Select
+                  aria-label="Rows per page"
+                  value={String(rowsPerPage)}
+                  onChange={(event) => {
+                    setRowsPerPage(Number(event.target.value));
+                    setCurrentPage(1);
+                  }}
+                  wrapperClassName="w-[72px]"
+                  className="h-8 text-[12px]"
+                  options={[
+                    { value: "5", label: "5" },
+                    { value: "10", label: "10" },
+                    { value: "25", label: "25" },
+                  ]}
+                />
+              </label>
+              {totalPages > 1 && (
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    disabled={safeCurrentPage === 1}
+                    onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                    className="h-8 rounded-full border border-[#E5E7EB] px-3 text-[12px] hover:bg-[#F3F4F6] disabled:bg-[#F3F4F6] disabled:text-[#D1D5DB]"
+                  >
+                    Previous
+                  </button>
+                  {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
+                    <button
+                      key={page}
+                      type="button"
+                      onClick={() => setCurrentPage(page)}
+                      className={`flex h-8 min-w-8 items-center justify-center rounded-full px-2 text-[12px] font-medium ${page === safeCurrentPage ? "bg-[#2563EB] text-white" : "text-[#6B7280] hover:bg-[#F3F4F6]"}`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    disabled={safeCurrentPage === totalPages}
+                    onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                    className="h-8 rounded-full border border-[#E5E7EB] px-3 text-[12px] hover:bg-[#F3F4F6] disabled:bg-[#F3F4F6] disabled:text-[#D1D5DB]"
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
             </div>
           </div>
-        </div>
+        </section>
 
         {/* Right sidebar --------------------------------------------------- */}
 
-        <div className="flex flex-col gap-5">
-          {/* Quick Filters */}
-
-          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-            <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-900">
-              <Filter className="h-4 w-4 text-slate-400" />
-              Quick Filters
-            </h3>
-
-            <label className="mb-1.5 block text-xs font-medium text-slate-500">
-              Category
-            </label>
-
-            <select
-              value={quickCategory}
-              onChange={(event) =>
-                handleCategoryFilterChange(event.target.value as QuickCategory)
-              }
-              className="mb-4 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-            >
-              <option>All Categories</option>
-              <option>Company News</option>
-              <option>HR &amp; Policy</option>
-              <option>Events</option>
-              <option>IT &amp; System</option>
-            </select>
-
-            <label className="mb-1.5 block text-xs font-medium text-slate-500">
-              Date Range
-            </label>
-
-            <select
-              value={quickDateRange}
-              onChange={(event) =>
-                setQuickDateRange(event.target.value as DateRangeKey)
-              }
-              className="mb-4 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-            >
-              <option>All Time</option>
-              <option>Last 7 Days</option>
-              <option>Last 30 Days</option>
-              <option>Last 90 Days</option>
-            </select>
-
-            <button
-              type="button"
-              onClick={handleClearQuickFilters}
-              disabled={!hasActiveQuickFilters}
-              className="w-full rounded-lg border border-slate-200 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Clear Filters
-            </button>
-
-            {hasActiveQuickFilters && (
-              <p className="mt-3 text-xs text-slate-400">
-                Showing {filtered.length} of {announcementList.length}{" "}
-                announcements
-              </p>
-            )}
-          </div>
-
+        <aside className="flex flex-col gap-5 lg:col-span-4 lg:sticky lg:top-6">
           {/* Pinned */}
 
-          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+          <div className="rounded-xl border border-[#E5E7EB] bg-white p-5">
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                <Pin className="h-4 w-4 text-slate-400" />
+              <h3 className="flex items-center gap-2 text-[14px] font-semibold text-[#111827]">
+                <Pin className="h-4 w-4 text-[#6B7280]" />
                 Pinned Announcements
               </h3>
 
@@ -2201,7 +2328,7 @@ export default function AdminAnnouncements({
                 <button
                   type="button"
                   onClick={() => setSidebarModal("pinned")}
-                  className="text-xs font-semibold text-blue-600 hover:text-blue-700"
+                  className="text-[12px] font-medium text-[#2563EB] hover:text-[#1D4ED8]"
                 >
                   View All
                 </button>
@@ -2209,9 +2336,7 @@ export default function AdminAnnouncements({
             </div>
 
             {pinnedItems.length === 0 ? (
-              <p className="text-xs text-slate-400">
-                No pinned announcements.
-              </p>
+              <EmptyState icon={<Pin className="h-4 w-4" />} title="No pinned announcements" description="Pinned updates will appear here." className="max-w-none py-5" />
             ) : (
               <div className="flex flex-col gap-3">
                 {pinnedItems.slice(0, SIDEBAR_PREVIEW_COUNT).map((p) => {
@@ -2225,17 +2350,17 @@ export default function AdminAnnouncements({
                       className="flex items-center gap-2.5 rounded-lg text-left transition hover:bg-slate-50"
                     >
                       <span
-                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${style.iconBg}`}
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${style.iconBg}`}
                       >
                         {style.icon}
                       </span>
 
                       <span className="min-w-0">
-                        <span className="block truncate text-sm font-medium text-slate-800">
+                        <span className="block truncate text-[13px] font-semibold text-[#111827]">
                           {p.title}
                         </span>
 
-                        <span className="block text-xs text-slate-400">
+                        <span className="block text-[12px] text-[#6B7280]">
                           {formatDateOnly(p.publishDate)}
                         </span>
                       </span>
@@ -2248,10 +2373,10 @@ export default function AdminAnnouncements({
 
           {/* Recent */}
 
-          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+          <div className="rounded-xl border border-[#E5E7EB] bg-white p-5">
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                <Clock className="h-4 w-4 text-slate-400" />
+              <h3 className="flex items-center gap-2 text-[14px] font-semibold text-[#111827]">
+                <Clock className="h-4 w-4 text-[#6B7280]" />
                 Recent Announcements
               </h3>
 
@@ -2259,7 +2384,7 @@ export default function AdminAnnouncements({
                 <button
                   type="button"
                   onClick={() => setSidebarModal("recent")}
-                  className="text-xs font-semibold text-blue-600 hover:text-blue-700"
+                  className="text-[12px] font-medium text-[#2563EB] hover:text-[#1D4ED8]"
                 >
                   View All
                 </button>
@@ -2267,9 +2392,7 @@ export default function AdminAnnouncements({
             </div>
 
             {recentItems.length === 0 ? (
-              <p className="text-xs text-slate-400">
-                No recent announcements.
-              </p>
+              <EmptyState icon={<Clock className="h-4 w-4" />} title="No recent announcements" description="New announcements will appear here." className="max-w-none py-5" />
             ) : (
               <div className="flex flex-col gap-3">
                 {recentItems.slice(0, SIDEBAR_PREVIEW_COUNT).map((r) => (
@@ -2284,12 +2407,12 @@ export default function AdminAnnouncements({
                     />
 
                     <span className="min-w-0">
-                      <span className="block truncate text-sm font-medium text-slate-800">
+                      <span className="block truncate text-[13px] font-semibold text-[#111827]">
                         {r.title}
                       </span>
 
-                      <span className="block text-xs text-slate-400">
-                        {formatDateOnly(r.publishDate)}
+                      <span className="block text-[12px] text-[#6B7280]">
+                        {formatRelativeDate(r.createdAt)}
                       </span>
                     </span>
                   </button>
@@ -2297,7 +2420,7 @@ export default function AdminAnnouncements({
               </div>
             )}
           </div>
-        </div>
+        </aside>
       </div>
 
       {sidebarModal && (

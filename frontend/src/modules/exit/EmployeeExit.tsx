@@ -120,6 +120,7 @@ function EmployeeExit() {
   const [error, setError] = useState("");
 
   const [cancelling, setCancelling] = useState(false);
+  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [uploadingKey, setUploadingKey] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const pendingKey = useRef<string | null>(null);
@@ -140,14 +141,20 @@ function EmployeeExit() {
     void load();
   }, [load]);
 
-  const handleCancel = async () => {
-    if (!request) return;
-    if (!window.confirm("Cancel your resignation request?")) return;
+  const handleCancel = () => {
+    if (!request || cancelling) return;
+    setCancelConfirmOpen(true);
+  };
+
+  const confirmCancel = async () => {
+    if (!request || cancelling) return;
 
     setCancelling(true);
     setError("");
+
     try {
       setRequest(await exitRequestService.cancel(request.id));
+      setCancelConfirmOpen(false);
     } catch (err) {
       setError(errorText(err, "Unable to cancel the request."));
     } finally {
@@ -240,13 +247,12 @@ function EmployeeExit() {
           return (
             <div key={label} className="flex items-center gap-3">
               <span
-                className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold tabular-nums ${
-                  done
+                className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold tabular-nums ${done
                     ? "bg-[#03543F] text-white"
                     : current
                       ? "bg-[#2F5FD0] text-white"
                       : "bg-[#F3F4F6] text-[#6B7280] border border-[#E5E7EB]"
-                }`}
+                  }`}
               >
                 {done ? <CheckCircle2 className="h-4 w-4" /> : i + 1}
               </span>

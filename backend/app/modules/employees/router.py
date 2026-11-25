@@ -59,6 +59,7 @@ def to_datetime(value: date | None) -> datetime | None:
 async def serialize_employee(
     employee: dict,
     welcome_email_sent: bool | None = None,
+    current_user: dict | None = None,
 ) -> EmployeeResponse:
     avatar_url = employee.get("avatar_url")
     # Employee self-service uploads use profile_photo_key, while admin
@@ -108,17 +109,28 @@ async def serialize_employee(
 
     email = employee.get("email") or "user@hrms.com"
 
+    role = getattr((current_user or {}).get("role"), "value", (current_user or {}).get("role"))
+    is_own_profile = bool(
+        current_user
+        and (
+            str(current_user.get("_id")) == str(employee.get("_id"))
+            or str(current_user.get("employee_id") or "") == str(employee.get("employee_id") or "")
+        )
+    )
+    can_view_sensitive = role in {UserRole.SUPER_ADMIN.value, UserRole.HR_ADMIN.value}
+    is_manager = role == UserRole.MANAGER.value
+
     return EmployeeResponse(
         id=str(employee["_id"]),
         employee_id=employee.get("employee_id") or "",
         first_name=first_name,
         last_name=last_name,
         email=email,
-        phone=employee.get("phone") or employee.get("phone_number") or "",
+        phone=(employee.get("phone") or employee.get("phone_number") or "") if not is_manager else None,
         avatar_url=avatar_url,
-        date_of_birth=date_of_birth,
-        gender=employee.get("gender"),
-        address=employee.get("address"),
+        date_of_birth=date_of_birth if can_view_sensitive or is_own_profile else None,
+        gender=employee.get("gender") if can_view_sensitive or is_own_profile else None,
+        address=employee.get("address") if not is_manager or is_own_profile else None,
         department_id=employee.get("department_id") or "",
         designation=employee.get("designation") or "",
         joining_date=joining_date,
@@ -126,11 +138,11 @@ async def serialize_employee(
         work_location=employee.get("work_location"),
         reporting_manager=employee.get("reporting_manager"),
         manager_id=employee.get("manager_id"),
-        salary_structure=employee.get("salary_structure"),
-        salary=employee.get("salary"),
+        salary_structure=employee.get("salary_structure") if can_view_sensitive else None,
+        salary=employee.get("salary") if can_view_sensitive else None,
         shift_id=employee.get("shift_id"),
-        emergency_contact=emergency_contact,
-        bank_information=bank_information,
+        emergency_contact=emergency_contact if can_view_sensitive or is_own_profile else None,
+        bank_information=bank_information if can_view_sensitive else None,
         status=employee.get("status") or "active",
         created_by=employee.get("created_by"),
         welcome_email_sent=welcome_email_sent,
@@ -203,6 +215,9 @@ async def create_employee(
     data: EmployeeCreate,
     current_user: dict = Depends(require_permission(Permission.EMPLOYEES_CREATE)),
 ):
+    role = getattr(current_user.get("role"), "value", current_user.get("role"))
+    if role == UserRole.MANAGER.value:
+        raise AppException("Managers can view employees but cannot create them", 403)
     employee_data = data.model_dump()
     employee_data["date_of_birth"] = to_datetime(employee_data.get("date_of_birth"))
     employee_data["joining_date"] = to_datetime(employee_data["joining_date"])
@@ -215,7 +230,7 @@ async def create_employee(
     await invalidate_employees_cache()
     await invalidate_payroll_analytics_cache()
 
-    response = await serialize_employee(employee, welcome_email_sent=welcome_email_sent)
+    response = await serialize_employee(employee, welcome_email_sent=welcome_email_sent, current_user=current_user)
     response.credentials = EmployeeCredentials(
         email=response.email,
         temporary_password=temporary_password,
@@ -243,6 +258,10 @@ async def get_employees(
     department_id: str | None = Query(default=None),
     status: str | None = Query(default=None),
     filter: str | None = Query(default=None),
+    designation: str | None = Query(default=None),
+    employment_type: str | None = Query(default=None),
+    joining_from: str | None = Query(default=None),
+    joining_to: str | None = Query(default=None),
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=10, ge=1, le=100),
     current_user: dict = Depends(require_permission(Permission.EMPLOYEES_READ)),
@@ -257,7 +276,7 @@ async def get_employees(
     role = getattr(current_user.get("role"), "value", current_user.get("role"))
     scope = f"mgr_{current_user.get('_id')}" if role == "manager" else "hr"
     search_str = search_val.strip().lower() if search_val else "none"
-    cache_key = f"employees:list:{scope}:{dept_val or 'all'}:{status_val or 'all'}:{filter_val or 'all'}:{search_str}:{page_val}:{limit_val}"
+    cache_key = f"employees:list:{scope}:{dept_val or 'all'}:{status_val or 'all'}:{filter_val or 'all'}:{designation or 'all'}:{employment_type or 'all'}:{joining_from or 'all'}:{joining_to or 'all'}:{search_str}:{page_val}:{limit_val}"
 
     cached = await get_cache(cache_key)
     if cached is not None:
@@ -279,9 +298,13 @@ async def get_employees(
         pagination=pagination,
         current_user=current_user,
         special_filter=filter_val,
+        designation=designation,
+        employment_type=employment_type,
+        joining_from=joining_from,
+        joining_to=joining_to,
     )
 
-    serialized = [await serialize_employee(employee) for employee in employees]
+    serialized = [await serialize_employee(employee, current_user=current_user) for employee in employees]
     await set_cache(
         cache_key,
         [item.model_dump(mode="json") for item in serialized],
@@ -292,6 +315,38 @@ async def get_employees(
         success=True,
         message="Employees retrieved successfully",
         data=serialized,
+    )
+
+@router.get(
+    "/employees/count",
+    response_model=APIResponse[dict[str, int]],
+)
+async def count_employees(
+    search: str | None = Query(default=None),
+    department_id: str | None = Query(default=None),
+    status: str | None = Query(default=None),
+    filter: str | None = Query(default=None),
+    designation: str | None = Query(default=None),
+    employment_type: str | None = Query(default=None),
+    joining_from: str | None = Query(default=None),
+    joining_to: str | None = Query(default=None),
+    current_user: dict = Depends(require_permission(Permission.EMPLOYEES_READ)),
+):
+    total = await service.count_employees(
+        search=search,
+        department_id=department_id,
+        status=status,
+        special_filter=filter,
+        designation=designation,
+        employment_type=employment_type,
+        joining_from=joining_from,
+        joining_to=joining_to,
+        current_user=current_user,
+    )
+    return APIResponse(
+        success=True,
+        message="Employee count retrieved successfully",
+        data={"total": total},
     )
 
 @router.get(
@@ -338,7 +393,7 @@ async def get_my_employee_profile(
         except Exception:
             pass
 
-    response_data = await serialize_employee(current_user)
+    response_data = await serialize_employee(current_user, current_user=current_user)
     try:
         await set_cache(cache_key, response_data.model_dump(mode="json"), ttl=EMPLOYEE_PROFILE_CACHE_TTL)
     except Exception:
@@ -377,13 +432,38 @@ async def get_employee(
         current_user=current_user,
     )
 
-    response_data = await serialize_employee(employee)
+    response_data = await serialize_employee(employee, current_user=current_user)
     await set_cache(cache_key, response_data.model_dump(mode="json"), ttl=EMPLOYEE_PROFILE_CACHE_TTL)
 
     return APIResponse(
         success=True,
         message="Employee retrieved successfully",
         data=response_data,
+    )
+
+@router.get(
+    "/employees/{employee_id}/sensitive",
+    response_model=APIResponse[EmployeeResponse],
+)
+async def reveal_sensitive_employee_fields(
+    employee_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    role = getattr(current_user.get("role"), "value", current_user.get("role"))
+    if role not in {UserRole.SUPER_ADMIN.value, UserRole.HR_ADMIN.value}:
+        raise AppException("You do not have permission to reveal sensitive employee fields", 403)
+
+    employee = await service.get_employee(employee_id=employee_id, current_user=current_user)
+    await service.activity_service.record(
+        text=f"Sensitive employee fields were revealed for {employee.get('employee_id', employee_id)}",
+        actor=current_user,
+        employee_id=employee.get("employee_id"),
+        target="/dashboard/employees",
+    )
+    return APIResponse(
+        success=True,
+        message="Sensitive employee fields revealed",
+        data=await serialize_employee(employee, current_user=current_user),
     )
 
 
@@ -459,7 +539,7 @@ async def upload_employee_avatar(
     return APIResponse(
         success=True,
         message="Profile photo uploaded successfully",
-        data=await serialize_employee(updated),
+        data=await serialize_employee(updated, current_user=current_user),
     )
 
 
@@ -520,6 +600,9 @@ async def update_employee(
     current_user_id = current_user.get("_id")
     current_emp_code = current_user.get("employee_id")
 
+    if role == UserRole.MANAGER.value:
+        raise AppException("Managers can view employees but cannot edit them", 403)
+
     # Employee users can only update their own emergency contact
     if role == "employee":
         if not current_user_id:
@@ -542,11 +625,11 @@ async def update_employee(
 
         update_data = data.model_dump(exclude_unset=True)
 
-        allowed_fields = {"emergency_contact"}
+        allowed_fields = {"phone", "address", "emergency_contact"}
 
         if not set(update_data).issubset(allowed_fields):
             raise AppException(
-                "Employees can only update emergency contact details",
+                "Employees can only update phone, address, and emergency contact details",
                 403,
             )
 
@@ -584,7 +667,7 @@ async def update_employee(
     return APIResponse(
         success=True,
         message="Employee updated successfully",
-        data=await serialize_employee(employee),
+        data=await serialize_employee(employee, current_user=current_user),
     )
 
 
@@ -629,7 +712,7 @@ async def delete_employee_avatar(
     return APIResponse(
         success=True,
         message="Profile photo removed successfully",
-        data=await serialize_employee(updated),
+        data=await serialize_employee(updated, current_user=current_user),
     )
 
 
@@ -643,6 +726,9 @@ async def deactivate_employee(
         require_permission(Permission.EMPLOYEES_UPDATE)
     ),
 ):
+    role = getattr(current_user.get("role"), "value", current_user.get("role"))
+    if role == UserRole.MANAGER.value:
+        raise AppException("Managers can view employees but cannot change status", 403)
     employee = await service.deactivate_employee(
         employee_id=employee_id,
         current_user=current_user,
@@ -654,7 +740,7 @@ async def deactivate_employee(
     return APIResponse(
         success=True,
         message="Employee deactivated successfully",
-        data=await serialize_employee(employee),
+        data=await serialize_employee(employee, current_user=current_user),
     )
 
 @router.delete(
@@ -665,6 +751,9 @@ async def delete_employee(
     employee_id: str,
     current_user: dict = Depends(require_permission(Permission.EMPLOYEES_DELETE)),
 ):
+    role = getattr(current_user.get("role"), "value", current_user.get("role"))
+    if role == UserRole.MANAGER.value:
+        raise AppException("Managers cannot delete employees", 403)
     await service.delete_employee(
         employee_id=employee_id,
         current_user=current_user,

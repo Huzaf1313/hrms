@@ -1,4 +1,3 @@
-
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Archive,
@@ -93,25 +92,20 @@ export default function EmployeeDocuments() {
     categories: {},
   });
 
-  const [activeTab, setActiveTab] =
-    useState<CategoryTab>("All Documents");
+  const [activeTab, setActiveTab] = useState<CategoryTab>("All Documents");
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [, setOpenMenuId] = useState<string | null>(null);
   const [selectedDocument, setSelectedDocument] =
     useState<EmployeeDocument | null>(null);
   const [loadingDocument, setLoadingDocument] = useState(false);
   const [previewDocument, setPreviewDocument] =
     useState<EmployeeDocument | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-
   const [previewMimeType, setPreviewMimeType] = useState("");
-  const [downloadingId, setDownloadingId] = useState<string | null>(
-    null
-  );
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
@@ -140,7 +134,6 @@ export default function EmployeeDocuments() {
       );
 
       setDocuments(response.documents ?? []);
-
       setSummary(
         response.summary ?? {
           total_documents: 0,
@@ -200,8 +193,7 @@ export default function EmployeeDocuments() {
     return [...documents]
       .sort(
         (a, b) =>
-          new Date(b.created_at).getTime() -
-          new Date(a.created_at).getTime()
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       )
       .slice(0, 3).length;
   }, [documents]);
@@ -234,7 +226,6 @@ export default function EmployeeDocuments() {
 
   const handleView = async (document: EmployeeDocument) => {
     try {
-      setOpenMenuId(null);
       setLoadingDocument(true);
       setError("");
 
@@ -247,7 +238,6 @@ export default function EmployeeDocuments() {
       setPreviewMimeType(
         document.mime_type || blob.type || "application/octet-stream"
       );
-
       setPreviewDocument(document);
       setPreviewUrl(blobUrl);
     } catch (err) {
@@ -265,7 +255,6 @@ export default function EmployeeDocuments() {
 
   const handleDownload = async (document: EmployeeDocument) => {
     try {
-      setOpenMenuId(null);
       setDownloadingId(document.id);
       setError("");
 
@@ -278,9 +267,7 @@ export default function EmployeeDocuments() {
 
       anchor.href = blobUrl;
       anchor.download =
-        document.file_name ||
-        document.document_name ||
-        "document";
+        document.file_name || document.document_name || "document";
 
       window.document.body.appendChild(anchor);
       anchor.click();
@@ -304,7 +291,6 @@ export default function EmployeeDocuments() {
 
   const handleDelete = async (document: EmployeeDocument) => {
     try {
-      setOpenMenuId(null);
       setDeletingId(document.id);
       setError("");
 
@@ -326,7 +312,6 @@ export default function EmployeeDocuments() {
   const handleTabChange = (tab: CategoryTab) => {
     setActiveTab(tab);
     setCurrentPage(1);
-    setOpenMenuId(null);
   };
 
   const handleRetry = () => {
@@ -356,6 +341,11 @@ export default function EmployeeDocuments() {
   const closeUploadModal = () => {
     setUploadModalOpen(false);
     resetUploadForm();
+  };
+
+  const openUploadModal = () => {
+    resetUploadForm();
+    setUploadModalOpen(true);
   };
 
   const handleFileSelection = (file: File | null) => {
@@ -449,12 +439,12 @@ export default function EmployeeDocuments() {
       }
 
       setUploadNotice("Document uploaded successfully.");
-    } catch (error) {
-      console.error("Document upload failed:", error);
+    } catch (err) {
+      console.error("Document upload failed:", err);
 
       setUploadValidationError(
-        error instanceof ApiError
-          ? error.message
+        err instanceof ApiError
+          ? err.message
           : "Unable to upload your document. Please try again."
       );
     } finally {
@@ -462,29 +452,22 @@ export default function EmployeeDocuments() {
     }
   };
 
-  const openUploadModal = () => {
-    resetUploadForm();
-    setUploadModalOpen(true);
-  };
-
   return (
     <div className="space-y-6 p-4 sm:p-6">
       {/* Page header */}
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-        <div>
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded bg-blue-50 text-blue-600">
-              <FolderOpen size={23} />
-            </div>
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded bg-blue-50 text-blue-600">
+            <FolderOpen size={23} />
+          </div>
 
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight text-gray-900">
-                My Documents
-              </h1>
-              <p className="mt-1 text-sm text-gray-500">
-                View and manage your employment-related documents.
-              </p>
-            </div>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+              My Documents
+            </h1>
+            <p className="mt-1 text-sm text-gray-500">
+              View and manage your employment-related documents.
+            </p>
           </div>
         </div>
 
@@ -506,10 +489,7 @@ export default function EmployeeDocuments() {
           className="flex flex-col gap-3 rounded-xl border border-red-200 bg-red-50 p-4 sm:flex-row sm:items-center sm:justify-between"
         >
           <div className="flex items-start gap-3">
-            <AlertCircle
-              size={20}
-              className="mt-0.5 shrink-0 text-red-600"
-            />
+            <AlertCircle size={20} className="mt-0.5 shrink-0 text-red-600" />
             <p className="text-sm text-red-700">{error}</p>
           </div>
 
@@ -623,15 +603,15 @@ export default function EmployeeDocuments() {
                   type="button"
                   onClick={() => handleTabChange(tab)}
                   className={`inline-flex shrink-0 items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition ${active
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900"
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900"
                     }`}
                 >
                   {tab}
                   <span
                     className={`rounded-md px-1.5 py-0.5 text-xs ${active
-                      ? "bg-white/20 text-white"
-                      : "bg-white text-gray-600"
+                        ? "bg-white/20 text-white"
+                        : "bg-white text-gray-600"
                       }`}
                   >
                     {loading ? "—" : getCategoryCount(tab)}
@@ -768,7 +748,7 @@ export default function EmployeeDocuments() {
                             )}
                           </button>
 
-                          {/* Delete Document Button */}
+                          {/* Delete document button */}
                           {(document.source === "employee" ||
                             document.source === "employee_upload") && (
                               <button
@@ -836,9 +816,7 @@ export default function EmployeeDocuments() {
                   type="button"
                   disabled={safeCurrentPage >= totalPages}
                   onClick={() =>
-                    setCurrentPage((page) =>
-                      Math.min(totalPages, page + 1)
-                    )
+                    setCurrentPage((page) => Math.min(totalPages, page + 1))
                   }
                   className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
                 >
@@ -1148,7 +1126,8 @@ export default function EmployeeDocuments() {
                           {selectedFile.name}
                         </span>
                         <span className="mt-1 text-xs text-gray-500">
-                          {formatFileSize(selectedFile.size)} · Click to change file
+                          {formatFileSize(selectedFile.size)} · Click to change
+                          file
                         </span>
                       </>
                     ) : (
@@ -1244,11 +1223,10 @@ export default function EmployeeDocuments() {
         </div>
       )}
 
-      {/* Document Preview Modal */}
+      {/* Document preview modal */}
       {previewDocument && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-3 sm:p-6">
           <div className="flex max-h-[95vh] w-full max-w-5xl flex-col overflow-hidden rounded bg-white shadow-2xl">
-
             {/* Header */}
             <div className="flex items-center justify-between gap-4 border-b border-gray-200 px-5 py-4">
               <div className="min-w-0">
@@ -1275,9 +1253,8 @@ export default function EmployeeDocuments() {
               </button>
             </div>
 
-            {/* Preview Content */}
+            {/* Preview content */}
             <div className="min-h-[400px] flex-1 overflow-auto bg-gray-100">
-
               {previewUrl && previewMimeType === "application/pdf" ? (
                 <iframe
                   src={previewUrl}
@@ -1301,8 +1278,8 @@ export default function EmployeeDocuments() {
                   </h3>
 
                   <p className="mt-2 max-w-md text-sm text-gray-500">
-                    This file format cannot be previewed directly in your browser.
-                    Download the document to open it.
+                    This file format cannot be previewed directly in your
+                    browser. Download the document to open it.
                   </p>
 
                   <button
@@ -1316,7 +1293,6 @@ export default function EmployeeDocuments() {
                     ) : (
                       <Download size={16} />
                     )}
-
                     Download document
                   </button>
                 </div>

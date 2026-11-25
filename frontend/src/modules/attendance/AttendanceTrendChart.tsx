@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Calendar, ChevronDown } from "lucide-react";
+import { AlertCircle, Calendar, ChevronDown, RotateCcw } from "lucide-react";
 
 import { attendanceService } from "./attendanceService";
 import { queryKeys } from "../../lib/queryKeys";
+import { Button } from "../../components/ui/Button";
 
 const CHART_WIDTH = 620;
 const CHART_HEIGHT = 180;
@@ -11,10 +12,10 @@ const CHART_PADDING_TOP = 12;
 const CHART_PADDING_BOTTOM = 12;
 
 const SERIES_META = [
-  { key: "present", label: "Present", color: "#0066ff" },
-  { key: "late", label: "Late", color: "#f97316" },
-  { key: "absent", label: "Absent", color: "#ef4444" },
-  { key: "onLeave", label: "On Leave", color: "#8b5cf6" },
+  { key: "present", label: "Present", color: "#2563EB" },
+  { key: "late", label: "Late", color: "#F59E0B" },
+  { key: "absent", label: "Absent", color: "#EF4444" },
+  { key: "onLeave", label: "On Leave", color: "#60A5FA" },
 ] as const;
 
 type SeriesKey = (typeof SERIES_META)[number]["key"];
@@ -99,16 +100,23 @@ function buildSeriesPoints(
 
 interface AttendanceTrendChartProps {
   className?: string;
+  summary?: {
+    presentPercent: number | null;
+    latePercent: number | null;
+    onLeavePercent: number | null;
+    absentPercent: number | null;
+  };
 }
 
 export default function AttendanceTrendChart({
   className = "col-span-12 lg:col-span-7",
+  summary,
 }: AttendanceTrendChartProps) {
   const [month, setMonth] = useState(() => monthKeyOf(new Date()));
 
   const bounds = useMemo(() => monthBounds(month), [month]);
 
-  const { data, isPending, isError } = useQuery({
+  const { data, isPending, isFetching, isError, refetch } = useQuery({
     queryKey: queryKeys.admin.attendanceTrend(bounds.start, bounds.end),
     queryFn: () =>
       attendanceService.trend({
@@ -130,19 +138,7 @@ export default function AttendanceTrendChart({
     [data],
   );
 
-  // If live series is present, display it; otherwise fallback to the reference 7-day pattern
-  const series: TrendPoint[] = useMemo(() => {
-    if (liveSeries.length > 0) return liveSeries;
-    return [
-      { day: 13, present: 2, late: 0, absent: 0, onLeave: 0 },
-      { day: 14, present: 7, late: 0, absent: 0, onLeave: 0 },
-      { day: 15, present: 10, late: 0, absent: 0, onLeave: 0 },
-      { day: 16, present: 8, late: 0, absent: 0, onLeave: 0 },
-      { day: 17, present: 12, late: 0, absent: 0, onLeave: 0 },
-      { day: 18, present: 10, late: 0, absent: 0, onLeave: 0 },
-      { day: 19, present: 10, late: 0, absent: 0, onLeave: 0 },
-    ];
-  }, [liveSeries]);
+  const series = liveSeries;
 
   const peak = useMemo(
     () =>
@@ -167,16 +163,22 @@ export default function AttendanceTrendChart({
   ).replace(/ /g, " L ")} L ${CHART_WIDTH},${CHART_HEIGHT} Z`;
 
   const shortMonth = monthLabelOf(month).split(" ")[0]?.slice(0, 3) ?? "Nov";
+  const showComparison =
+    Boolean(summary) &&
+    !isPending &&
+    !isFetching &&
+    !isError &&
+    liveSeries.length > 0;
 
   return (
     <div
-      className={`rounded-3xl border border-slate-100 bg-white p-6 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between ${className}`}
+      className={`flex h-full flex-col rounded-xl border border-[#E5E7EB] bg-white p-5 shadow-none ${className}`}
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <Calendar className="h-4.5 w-4.5 text-[#0066ff]" />
-          <h2 className="text-base font-bold text-[#0f172a] font-manrope">
+          <Calendar className="h-[18px] w-[18px] text-[#2563EB]" />
+          <h2 className="text-[14px] font-semibold text-[#111827]">
             Attendance Overview
           </h2>
         </div>
@@ -187,7 +189,7 @@ export default function AttendanceTrendChart({
           <select
             value={month}
             onChange={(event) => setMonth(event.target.value)}
-            className="cursor-pointer appearance-none rounded-xl border border-slate-200 bg-slate-50/60 py-1.5 pl-3.5 pr-8 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 focus:border-[#0066ff] shadow-2xs"
+             className="cursor-pointer appearance-none rounded-md border border-[#E5E7EB] bg-white py-1.5 pl-3 pr-8 text-[12px] font-medium text-[#374151] outline-none transition hover:border-[#93C5FD] focus:border-[#2563EB]"
           >
             {MONTH_OPTIONS.map((option) => (
               <option key={option.key} value={option.key}>
@@ -216,13 +218,31 @@ export default function AttendanceTrendChart({
         ))}
       </div>
 
-      {isPending && liveSeries.length === 0 ? (
-        <div className="flex h-[175px] items-center justify-center text-xs text-slate-400">
-          Loading attendance…
+      {(isPending || isFetching) && liveSeries.length === 0 ? (
+        <div className="flex h-[150px] flex-col justify-center gap-3 animate-pulse" aria-label="Loading attendance">
+          <div className="h-px w-full bg-[#E5E7EB]" />
+          <div className="h-20 w-full rounded-lg bg-[#F3F4F6]" />
+          <div className="h-px w-4/5 bg-[#E5E7EB]" />
         </div>
       ) : isError && liveSeries.length === 0 ? (
-        <div className="flex h-[175px] items-center justify-center text-xs text-rose-500">
-          Could not load live attendance data.
+        <div className="flex min-h-[118px] flex-col items-center justify-center gap-3 text-center">
+          <div className="flex items-center gap-2 text-[12px] text-[#B91C1C]">
+            <AlertCircle className="h-4 w-4" />
+            <span>Could not load live attendance data.</span>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void refetch()}
+            leftIcon={<RotateCcw className="h-3.5 w-3.5" />}
+          >
+            Retry
+          </Button>
+        </div>
+      ) : data && liveSeries.length === 0 ? (
+        <div className="flex min-h-[118px] flex-col items-center justify-center gap-2 text-center">
+          <Calendar className="h-5 w-5 text-[#9CA3AF]" />
+          <p className="text-[12px] text-[#6B7280]">No attendance data for this period.</p>
         </div>
       ) : (
         <div className="flex gap-3">
@@ -295,7 +315,7 @@ export default function AttendanceTrendChart({
                     cx={x}
                     cy={y}
                     r={3.8}
-                    fill="#0066ff"
+                     fill="#2563EB"
                     stroke="#ffffff"
                     strokeWidth={2}
                     vectorEffect="non-scaling-stroke"
@@ -311,8 +331,8 @@ export default function AttendanceTrendChart({
                   x2="0"
                   y2="1"
                 >
-                  <stop offset="0%" stopColor="#0066ff" stopOpacity={0.25} />
-                  <stop offset="100%" stopColor="#0066ff" stopOpacity={0.01} />
+                   <stop offset="0%" stopColor="#2563EB" stopOpacity={0.25} />
+                   <stop offset="100%" stopColor="#2563EB" stopOpacity={0.01} />
                 </linearGradient>
               </defs>
             </svg>
@@ -335,6 +355,24 @@ export default function AttendanceTrendChart({
               })}
             </div>
           </div>
+        </div>
+      )}
+
+      {showComparison && summary && (
+        <div className="mt-4 grid grid-cols-2 gap-2 border-t border-[#F3F4F6] pt-3 sm:grid-cols-4">
+          {[
+            ["Present", summary.presentPercent, "text-[#047857]", "bg-[#ECFDF5]"],
+            ["Late", summary.latePercent, "text-[#B45309]", "bg-[#FFFBEB]"],
+            ["On Leave", summary.onLeavePercent, "text-[#2563EB]", "bg-[#EFF6FF]"],
+            ["Absent", summary.absentPercent, "text-[#B91C1C]", "bg-[#FEF2F2]"],
+          ].map(([label, value, text, background]) => (
+            <div key={label} className={`rounded-md px-2.5 py-2 ${background}`}>
+              <p className="text-[10px] text-[#6B7280]">{label}</p>
+              <p className={`mt-0.5 text-[13px] font-semibold ${text}`}>
+                {typeof value === "number" ? `${value}%` : "—"}
+              </p>
+            </div>
+          ))}
         </div>
       )}
     </div>
