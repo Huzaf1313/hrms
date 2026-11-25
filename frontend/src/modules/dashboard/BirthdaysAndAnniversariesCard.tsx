@@ -235,7 +235,7 @@ export default function BirthdaysAndAnniversariesCard() {
   return (
     <DashboardCard
       title="Upcoming Birthdays & Work Anniversaries"
-      className="col-span-12 md:col-span-6 xl:col-span-4"
+      className="col-span-12 md:col-span-6 lg:col-span-3"
       action={<DashboardViewAllLink />}
     >
       <div className="mb-3 flex gap-1 border-b border-gray-100">
@@ -260,16 +260,17 @@ export default function BirthdaysAndAnniversariesCard() {
 
       <div className="space-y-1.5">
         {employees === null && (
-          <p className="py-6 text-center text-[11px] text-gray-400">
-            Loading celebrations…
-          </p>
+            <p className="py-4 text-center text-[11px] text-gray-400">
+              Loading celebrations…
+            </p>
         )}
 
         {employees !== null && rows.length === 0 && (
-          <p className="py-6 text-center text-[11px] text-gray-400">
-            {error ||
-              `No upcoming ${tab === "birthday" ? "birthdays" : "work anniversaries"} in the next ${WINDOW_DAYS} days.`}
-          </p>
+            <p className="flex items-center justify-center gap-2 py-4 text-center text-[11px] text-gray-400">
+              <PartyPopper className="h-4 w-4 text-gray-300" />
+              {error ||
+                `No upcoming ${tab === "birthday" ? "birthdays" : "work anniversaries"} in the next ${WINDOW_DAYS} days.`}
+            </p>
         )}
 
         {rows.slice(0, 5).map((row, index) => (

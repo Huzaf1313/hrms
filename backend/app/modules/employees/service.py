@@ -232,9 +232,16 @@ class EmployeeService:
             admin_id=admin_id,
         )
 
-        employee_data["employee_id"] = await next_employee_code(
-            self.repository.collection
-        )
+        requested_employee_id = str(employee_data.get("employee_id") or "").strip().upper()
+        if requested_employee_id:
+            existing_employee = await self.repository.get_by_employee_id(requested_employee_id)
+            if existing_employee:
+                raise AppException("Employee ID already exists", 400)
+            employee_data["employee_id"] = requested_employee_id
+        else:
+            employee_data["employee_id"] = await next_employee_code(
+                self.repository.collection
+            )
 
         employee_name = (
             f'{employee_data["first_name"]} {employee_data["last_name"]}'
@@ -325,12 +332,40 @@ class EmployeeService:
         pagination: PaginationParams,
         current_user: dict | None = None,
         special_filter: str | None = None,
+        designation: str | None = None,
+        employment_type: str | None = None,
+        joining_from: str | None = None,
+        joining_to: str | None = None,
     ):
         conditions: list[dict] = []
         if department_id:
             conditions.append({"department_id": department_id})
         if status:
             conditions.append({"status": status})
+        if designation:
+            conditions.append({"designation": {"$regex": designation, "$options": "i"}})
+        if employment_type:
+            conditions.append({"employment_type": employment_type})
+        if joining_from or joining_to:
+            joining_filter: dict = {}
+            if joining_from:
+                try:
+                    joining_filter["$gte"] = datetime.combine(
+                        date.fromisoformat(joining_from),
+                        time.min,
+                    )
+                except ValueError:
+                    pass
+            if joining_to:
+                try:
+                    joining_filter["$lte"] = datetime.combine(
+                        date.fromisoformat(joining_to),
+                        time.max,
+                    )
+                except ValueError:
+                    pass
+            if joining_filter:
+                conditions.append({"joining_date": joining_filter})
 
         if special_filter == "new_joiners":
             now = datetime.now(timezone.utc)
@@ -384,6 +419,82 @@ class EmployeeService:
             limit=pagination.limit,
             scope=self._visibility_scope(current_user),
         )
+
+    async def count_employees(
+        self,
+        search: str | None = None,
+        department_id: str | None = None,
+        status: str | None = None,
+        current_user: dict | None = None,
+        special_filter: str | None = None,
+        designation: str | None = None,
+        employment_type: str | None = None,
+        joining_from: str | None = None,
+        joining_to: str | None = None,
+    ) -> int:
+        conditions: list[dict] = []
+        if department_id:
+            conditions.append({"department_id": department_id})
+        if status:
+            conditions.append({"status": status})
+        if designation:
+            conditions.append({"designation": {"$regex": designation, "$options": "i"}})
+        if employment_type:
+            conditions.append({"employment_type": employment_type})
+        if joining_from or joining_to:
+            joining_filter: dict = {}
+            if joining_from:
+                try:
+                    joining_filter["$gte"] = datetime.combine(
+                        date.fromisoformat(joining_from),
+                        time.min,
+                    )
+                except ValueError:
+                    pass
+            if joining_to:
+                try:
+                    joining_filter["$lte"] = datetime.combine(
+                        date.fromisoformat(joining_to),
+                        time.max,
+                    )
+                except ValueError:
+                    pass
+            if joining_filter:
+                conditions.append({"joining_date": joining_filter})
+        if special_filter == "new_joiners":
+            now = datetime.now(timezone.utc)
+            thirty_days_ago = now - timedelta(days=30)
+            if not status:
+                conditions.append({"status": {"$nin": ["inactive", "terminated", "Inactive", "Terminated"]}})
+            conditions.append({"joining_date": {"$gte": thirty_days_ago}})
+        elif special_filter == "missing_salary_structure":
+            if not status:
+                conditions.append({"status": {"$nin": ["inactive", "terminated", "Inactive", "Terminated"]}})
+            structures = await self.salary_structure_repository.collection.find({}, {"name": 1}).to_list(1000)
+            valid_names = [item.get("name") for item in structures if item.get("name")]
+            conditions.append({
+                "$or": [
+                    {"salary_structure": {"$in": [None, ""]}},
+                    {"salary_structure": {"$exists": False}},
+                    {"salary_structure": {"$nin": valid_names}},
+                ]
+            })
+        if search:
+            conditions.append({
+                "$or": [
+                    {"first_name": {"$regex": search, "$options": "i"}},
+                    {"last_name": {"$regex": search, "$options": "i"}},
+                    {"employee_id": {"$regex": search, "$options": "i"}},
+                    {"email": {"$regex": search, "$options": "i"}},
+                ]
+            })
+        filters = {"$and": conditions} if len(conditions) > 1 else (conditions[0] if conditions else {})
+        query = {"employee_id": {"$exists": True}}
+        query.update(filters)
+        scope = self._visibility_scope(current_user)
+        if scope:
+            query.update(scope)
+        return await self.repository.collection.count_documents(query)
 
     async def update_employee(
         self,

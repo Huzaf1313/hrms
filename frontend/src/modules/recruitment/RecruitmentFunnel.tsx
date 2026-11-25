@@ -47,7 +47,7 @@ export default function RecruitmentFunnel({
   return (
     <DashboardCard
       title="Recruitment Pipeline"
-      className="col-span-12 md:col-span-6 xl:col-span-4"
+      className="col-span-12 md:col-span-6 lg:col-span-3"
       action={<DashboardViewAllLink onClick={onOpenRecruitment} />}
     >
       <div className="space-y-2.5">

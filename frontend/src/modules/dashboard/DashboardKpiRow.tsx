@@ -1,9 +1,9 @@
 import {
-  ArrowRight,
   CalendarCheck,
   Clock,
   Umbrella,
   Users,
+  UserX,
 } from "lucide-react";
 import type { DashboardMetrics } from "./useDashboardMetrics";
 
@@ -25,7 +25,8 @@ export default function DashboardKpiRow({
   const headcount = metrics.totalEmployees ?? 0;
   const presentToday = metrics.presentToday ?? 0;
   const onLeaveToday = metrics.onLeaveToday ?? 0;
-  const pendingLeave = metrics.pendingLeaveRequests ?? 0;
+  const lateToday = metrics.lateToday ?? 0;
+  const absentToday = metrics.absentToday ?? 0;
 
   const cards = [
     {
@@ -33,9 +34,9 @@ export default function DashboardKpiRow({
       label: "Total Employees",
       value: headcount,
       icon: Users,
-      iconBg: "bg-[#e8f1ff]",
-      iconColor: "text-[#0066ff]",
-      arrowBg: "bg-blue-50/70 hover:bg-blue-100 text-[#0066ff]",
+      helper: "active employees",
+      iconBg: "bg-[#F3F4F6]",
+      iconColor: "text-[#4B5563]",
       onClick: onOpenEmployees || (() => {}),
     },
     {
@@ -43,70 +44,68 @@ export default function DashboardKpiRow({
       label: "Present Today",
       value: presentToday,
       icon: CalendarCheck,
-      iconBg: "bg-[#e2f7ec]",
-      iconColor: "text-[#16a34a]",
-      arrowBg: "bg-emerald-50/70 hover:bg-emerald-100 text-[#16a34a]",
+      helper: `${metrics.presentPercent ?? 0}% on time`,
+      iconBg: "bg-[#ECFDF5]",
+      iconColor: "text-[#047857]",
+      onClick: onOpenAttendance || (() => {}),
+    },
+    {
+      icon: Clock,
+      id: "late",
+      label: "Late",
+      value: lateToday,
+      helper: `${metrics.latePercent ?? 0}% late arrivals`,
+      iconBg: "bg-[#FFFBEB]",
+      iconColor: "text-[#B45309]",
       onClick: onOpenAttendance || (() => {}),
     },
     {
       id: "on-leave",
       label: "On Leave",
       value: onLeaveToday,
+      helper: "approved leaves",
       icon: Umbrella,
-      iconBg: "bg-[#fff2e2]",
-      iconColor: "text-[#ea580c]",
-      arrowBg: "bg-orange-50/70 hover:bg-orange-100 text-[#ea580c]",
+      iconBg: "bg-[#EFF6FF]",
+      iconColor: "text-[#2563EB]",
       onClick: onOpenLeave,
     },
     {
-      id: "pending-leave-requests",
-      label: "Pending Leave Requests",
-      value: pendingLeave,
-      icon: Clock,
-      iconBg: "bg-[#f2edfe]",
-      iconColor: "text-[#7c3aed]",
-      arrowBg: "bg-purple-50/70 hover:bg-purple-100 text-[#7c3aed]",
-      onClick: onOpenLeave,
+      id: "absent",
+      label: "Absent",
+      value: absentToday,
+      helper: `${metrics.absentPercent ?? 0}% unexcused`,
+      icon: UserX,
+      iconBg: "bg-[#FEF2F2]",
+      iconColor: "text-[#B91C1C]",
+      onClick: onOpenAttendance || (() => {}),
     },
   ];
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
       {cards.map((card) => {
         const Icon = card.icon;
 
         return (
-          <div
+          <button
             key={card.id}
-            className="group relative rounded-3xl border border-slate-100 bg-white p-5 shadow-sm hover:shadow-md transition-all duration-200 flex items-center justify-between"
+            type="button"
+            onClick={card.onClick}
+            className="group flex min-h-[128px] w-full flex-col rounded-xl border border-[#E5E7EB] bg-white p-5 text-left transition-colors hover:border-[#BFDBFE] hover:bg-[#FAFCFF] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB] focus-visible:ring-offset-1"
           >
-            <div className="flex items-center gap-4">
-              <div
-                className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${card.iconBg} ${card.iconColor}`}
-              >
-                <Icon className="h-6 w-6" />
-              </div>
-
+            <div className="flex w-full items-start justify-between gap-3">
               <div>
-                <p className="text-3xl font-extrabold tracking-tight text-[#0f172a] font-manrope">
+                <p className="text-[12px] font-medium text-[#6B7280]">{card.label}</p>
+                <p className="mt-2 text-[28px] font-semibold leading-none tracking-tight text-[#111827]">
                   {card.value}
                 </p>
-                <p className="text-xs font-semibold text-slate-500 mt-0.5">
-                  {card.label}
-                </p>
               </div>
+              <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${card.iconBg} ${card.iconColor}`}>
+                <Icon className="h-[18px] w-[18px]" />
+              </span>
             </div>
-
-            <button
-              type="button"
-              onClick={card.onClick}
-              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all duration-150 group-hover:scale-105 ${card.arrowBg}`}
-              title={`View ${card.label}`}
-              aria-label={`View ${card.label}`}
-            >
-              <ArrowRight className="h-4 w-4" />
-            </button>
-          </div>
+            <p className="mt-auto pt-3 text-[12px] text-[#6B7280]">{card.helper}</p>
+          </button>
         );
       })}
     </div>

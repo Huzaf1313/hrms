@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { Video } from "lucide-react";
+import { CalendarDays, Video } from "lucide-react";
 
 import type { UpcomingInterview } from "./types";
 import DashboardCard, { DashboardViewAllLink } from "../dashboard/DashboardCard";
@@ -69,13 +69,14 @@ export default function UpcomingInterviewsCard({
   return (
     <DashboardCard
       title="Upcoming Interviews"
-      className="col-span-12 md:col-span-6 xl:col-span-3"
+      className="col-span-12 md:col-span-6 lg:col-span-3"
       action={<DashboardViewAllLink onClick={onOpenRecruitment} />}
     >
       {interviews.length === 0 ? (
-        <p className="py-6 text-center text-xs text-gray-400">
-          No interviews scheduled.
-        </p>
+        <div className="flex flex-col items-center justify-center gap-2 py-4 text-center">
+          <CalendarDays className="h-4 w-4 text-gray-300" />
+          <p className="text-[11px] text-gray-400">No interviews scheduled.</p>
+        </div>
       ) : (
         <div className="space-y-1.5">
           {interviews.map((interview, index) => {

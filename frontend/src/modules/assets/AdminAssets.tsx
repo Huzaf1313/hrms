@@ -880,7 +880,7 @@ function AssetCategoriesPanel({
           </text>
         </svg>
 
-        <ul className="min-w-0 flex-1 space-y-1">
+        <ul className="min-w-0 flex-1 space-y-1.5">
           {segments.map((segment) => (
             <li key={segment.label} className="flex h-6 items-center gap-2 text-xs">
               <span
