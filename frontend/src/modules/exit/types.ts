@@ -20,8 +20,8 @@ export const EXIT_TYPES = ["Resignation", "Termination"] as const;
 export type ExitType = (typeof EXIT_TYPES)[number];
 
 export const EXIT_TYPE_META: Record<ExitType, { label: string; color: string; dot: string }> = {
-  Resignation: { label: "Resignation", color: "#2563eb", dot: "bg-blue-600" },
-  Termination: { label: "Termination", color: "#e11d48", dot: "bg-rose-600" },
+  Resignation: { label: "Resignation", color: "#2F5FD0", dot: "bg-[#2F5FD0]" },
+  Termination: { label: "Termination", color: "#9B1C1C", dot: "bg-[#9B1C1C]" },
 };
 
 // Must match the backend Literals in schemas/exit_request.py.

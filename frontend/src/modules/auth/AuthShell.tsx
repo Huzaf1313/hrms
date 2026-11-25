@@ -29,10 +29,19 @@ export const AuthShell: React.FC<AuthShellProps> = ({
           -webkit-text-fill-color: #111827 !important;
           caret-color: #111827 !important;
         }
+
+        @media (max-width: 480px) {
+          .login-card {
+            box-shadow: none !important;
+            border: none !important;
+            border-radius: 0px !important;
+            background-color: transparent !important;
+          }
+        }
       `}</style>
 
       {/* Main Elevated Login Card */}
-      <div className="relative z-10 w-full max-w-[440px] lg:max-w-[960px] min-h-[560px] bg-white border border-[#E5E7EB] rounded shadow-kpi overflow-hidden my-auto flex flex-col lg:flex-row max-[480px]:border-0 max-[480px]:shadow-none max-[480px]:bg-transparent max-[480px]:min-h-0">
+      <div className="login-card relative z-10 w-full max-w-[440px] lg:max-w-[960px] min-h-[560px] bg-white border border-[#E5E7EB] rounded shadow-kpi overflow-hidden my-auto flex flex-col lg:flex-row max-[480px]:border-0 max-[480px]:shadow-none max-[480px]:bg-transparent max-[480px]:min-h-0">
         {/* Left Brand Panel: Flat Solid Primary Blue, Flush against edges */}
         <aside
           className="hidden lg:flex lg:w-[45%] shrink-0 bg-[#2F5FD0] p-10 flex-col justify-between text-white relative"

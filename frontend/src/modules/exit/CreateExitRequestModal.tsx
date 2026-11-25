@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, LogOut, Plus, X } from "lucide-react";
 
-import { SELECT_CLASS, INPUT_CLASS } from "./exitUiUtils";
+import { Button } from "../../components/ui/Button";
+import { SELECT_CLASS, INPUT_CLASS, useDialogA11y } from "./exitUiUtils";
 import { adminExitRequestService } from "./exitRequestService";
 import { employeeService } from "../employees/employeeService";
 import { ApiError } from "../../services/api";
@@ -9,7 +10,7 @@ import { EXIT_TYPES } from "./types";
 import type { ExitType } from "./types";
 import type { Employee } from "../employees/types";
 
-const LABEL_CLASS = "mb-1.5 block text-xs font-semibold text-slate-600";
+const LABEL_CLASS = "mb-1.5 block text-[12px] font-medium text-[#4B5563]";
 
 /** Default checklist offered when HR records a departure. */
 const DEFAULT_HANDOVER = [
@@ -63,6 +64,16 @@ export default function CreateExitRequestModal({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
+  const formDialogRef = useRef<HTMLDivElement | null>(null);
+  const confirmDialogRef = useRef<HTMLDivElement | null>(null);
+
+  useDialogA11y(!isConfirming, formDialogRef, () => {
+    if (!submitting) onClose();
+  });
+  useDialogA11y(isConfirming, confirmDialogRef, () => {
+    if (!submitting) setIsConfirming(false);
+  });
+
   useEffect(() => {
     let active = true;
 
@@ -83,8 +94,6 @@ export default function CreateExitRequestModal({
     };
   }, []);
 
-  // Employees carrying an open request are not eligible; the API rejects them
-  // too, but hiding them here saves a pointless round trip.
   const options = useMemo(() => employees, [employees]);
 
   const toggleTask = (task: string) =>
@@ -105,8 +114,6 @@ export default function CreateExitRequestModal({
     [employeeId, employees],
   );
 
-  // Falls back to the raw id so the confirmation never reads as blank while the
-  // employee list is still loading.
   const employeeLabel = selectedEmployee
     ? `${selectedEmployee.employee_id} - ${`${selectedEmployee.first_name ?? ""} ${selectedEmployee.last_name ?? ""}`.trim()}`
     : employeeId;
@@ -125,8 +132,6 @@ export default function CreateExitRequestModal({
       return;
     }
 
-    // Compared case-insensitively, since the list is free text and "Asset
-    // Return" twice would look like a bug.
     if (availableTasks.some((task) => task.toLowerCase() === next.toLowerCase())) {
       setCustomTaskError("That step is already on the list.");
       return;
@@ -140,7 +145,6 @@ export default function CreateExitRequestModal({
     }
 
     setCustomTasks((current) => [...current, next]);
-    // Selected straight away, since the point of adding it is to run it.
     setTasks((current) => [...current, next]);
     setCustomTaskDraft("");
     setShowCustomTaskInput(false);
@@ -178,7 +182,6 @@ export default function CreateExitRequestModal({
       return;
     }
 
-    // Nothing is sent yet: the confirmation step decides.
     setIsConfirming(true);
   };
 
@@ -213,22 +216,31 @@ export default function CreateExitRequestModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4 py-6 backdrop-blur-[2px]"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4 py-6 backdrop-blur-[2px]"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget && !submitting) onClose();
+        if (event.target === event.currentTarget && !submitting && !isConfirming) onClose();
       }}
     >
-      <div className="flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded bg-white shadow-2xl">
-        <header className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
+      <div
+        ref={formDialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="create-exit-dialog-title"
+        className="flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded border border-[#E5E7EB] bg-white shadow-xl"
+      >
+        <header className="flex items-center justify-between border-b border-[#E5E7EB] px-6 py-4">
           <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded bg-rose-50">
-              <LogOut className="h-5 w-5 text-rose-600" />
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-[#FDE8E8]">
+              <LogOut className="h-4 w-4 text-[#9B1C1C]" />
             </span>
             <div>
-              <h2 className="text-xl font-bold text-slate-900">
+              <h2
+                id="create-exit-dialog-title"
+                className="text-[16px] font-semibold text-[#111827]"
+              >
                 {lockedType ? `Initiate ${lockedType}` : "Create Exit Request"}
               </h2>
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="mt-0.5 text-xs text-[#4B5563]">
                 Record a departure raised by HR rather than the employee.
               </p>
             </div>
@@ -238,10 +250,10 @@ export default function CreateExitRequestModal({
             type="button"
             onClick={onClose}
             disabled={submitting}
-            className="flex h-9 w-9 items-center justify-center rounded text-slate-400 transition hover:bg-slate-100 disabled:opacity-50"
+            className="flex h-8 w-8 items-center justify-center rounded text-[#6B7280] transition hover:bg-[#F0F1EE] hover:text-[#111827] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0] disabled:opacity-50"
             aria-label="Close"
           >
-            <X className="h-5 w-5" />
+            <X className="h-4 w-4" />
           </button>
         </header>
 
@@ -250,7 +262,7 @@ export default function CreateExitRequestModal({
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label htmlFor="exit-employee" className={LABEL_CLASS}>
-                  Employee <span className="text-rose-500">*</span>
+                  Employee <span className="text-[#9B1C1C]">*</span>
                 </label>
                 <div className="relative">
                   <select
@@ -258,7 +270,7 @@ export default function CreateExitRequestModal({
                     value={employeeId}
                     disabled={submitting || loadingEmployees}
                     onChange={(event) => setEmployeeId(event.target.value)}
-                    className={SELECT_CLASS}
+                    className={`${SELECT_CLASS} rounded`}
                   >
                     <option value="">
                       {loadingEmployees
@@ -274,13 +286,13 @@ export default function CreateExitRequestModal({
                       </option>
                     ))}
                   </select>
-                  <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#6B7280]" />
                 </div>
               </div>
 
               <div>
                 <label htmlFor="exit-type" className={LABEL_CLASS}>
-                  Exit Type <span className="text-rose-500">*</span>
+                  Exit Type <span className="text-[#9B1C1C]">*</span>
                 </label>
                 <div className="relative">
                   <select
@@ -288,7 +300,7 @@ export default function CreateExitRequestModal({
                     value={exitType}
                     disabled={submitting || Boolean(lockedType)}
                     onChange={(event) => setExitType(event.target.value as ExitType)}
-                    className={SELECT_CLASS}
+                    className={`${SELECT_CLASS} rounded`}
                   >
                     {EXIT_TYPES.map((type) => (
                       <option key={type} value={type}>
@@ -296,13 +308,13 @@ export default function CreateExitRequestModal({
                       </option>
                     ))}
                   </select>
-                  <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#6B7280]" />
                 </div>
               </div>
 
               <div>
                 <label htmlFor="exit-lwd" className={LABEL_CLASS}>
-                  Last Working Day <span className="text-rose-500">*</span>
+                  Last Working Day <span className="text-[#9B1C1C]">*</span>
                 </label>
                 <input
                   id="exit-lwd"
@@ -310,13 +322,13 @@ export default function CreateExitRequestModal({
                   value={lastWorkingDay}
                   disabled={submitting}
                   onChange={(event) => setLastWorkingDay(event.target.value)}
-                  className={INPUT_CLASS}
+                  className={`${INPUT_CLASS} rounded`}
                 />
               </div>
 
               <div>
                 <label htmlFor="exit-reason" className={LABEL_CLASS}>
-                  Reason <span className="text-rose-500">*</span>
+                  Reason <span className="text-[#9B1C1C]">*</span>
                 </label>
                 <input
                   id="exit-reason"
@@ -326,7 +338,7 @@ export default function CreateExitRequestModal({
                   disabled={submitting}
                   onChange={(event) => setReason(event.target.value)}
                   placeholder="e.g. Company restructuring"
-                  className={INPUT_CLASS}
+                  className={`${INPUT_CLASS} rounded`}
                 />
               </div>
             </div>
@@ -342,31 +354,31 @@ export default function CreateExitRequestModal({
                 value={remarks}
                 disabled={submitting}
                 onChange={(event) => setRemarks(event.target.value)}
-                className="w-full resize-none rounded border border-slate-200 p-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                className="w-full resize-none rounded border border-[#E5E7EB] bg-white p-3 text-[12px] text-[#111827] outline-none transition placeholder:text-[#7B8794] focus:border-[#2F5FD0] focus:ring-1 focus:ring-[#2F5FD0]"
               />
             </div>
 
             <div>
               <p className={LABEL_CLASS}>Clearance Checklist</p>
 
-              <div className="mt-3 flex flex-wrap items-center gap-2">
+              <div className="mt-2 flex flex-wrap items-center gap-2">
                 {DEFAULT_HANDOVER.map((task) => {
                   const checked = tasks.includes(task);
 
                   return (
                     <span
                       key={task}
-                      className={`inline-flex items-center rounded-full border text-xs font-medium transition ${
+                      className={`inline-flex items-center rounded-full border text-[12px] font-medium transition ${
                         checked
-                          ? "border-blue-600 bg-blue-600 text-white"
-                          : "border-slate-200 bg-white text-slate-600"
+                          ? "border-[#2F5FD0] bg-[#2F5FD0] text-white"
+                          : "border-[#E5E7EB] bg-white text-[#4B5563]"
                       }`}
                     >
                       <button
                         type="button"
                         disabled={submitting || isConfirming}
                         onClick={() => toggleTask(task)}
-                        className="px-3 py-1 text-left disabled:cursor-not-allowed"
+                        className="px-3 py-1 text-left cursor-pointer disabled:cursor-not-allowed"
                       >
                         {task}
                       </button>
@@ -379,17 +391,17 @@ export default function CreateExitRequestModal({
                   return (
                     <span
                       key={task}
-                      className={`inline-flex items-center rounded-full border text-xs font-medium transition ${
+                      className={`inline-flex items-center rounded-full border text-[12px] font-medium transition ${
                         checked
-                          ? "border-blue-600 bg-blue-600 text-white"
-                          : "border-slate-200 bg-white text-slate-600"
+                          ? "border-[#2F5FD0] bg-[#2F5FD0] text-white"
+                          : "border-[#E5E7EB] bg-white text-[#4B5563]"
                       }`}
                     >
                       <button
                         type="button"
                         disabled={submitting || isConfirming}
                         onClick={() => toggleTask(task)}
-                        className="px-3 py-1 text-left disabled:cursor-not-allowed"
+                        className="px-3 py-1 text-left cursor-pointer disabled:cursor-not-allowed"
                       >
                         {task}
                       </button>
@@ -399,7 +411,7 @@ export default function CreateExitRequestModal({
                         disabled={submitting || isConfirming}
                         aria-label={`Remove ${task}`}
                         title={`Remove ${task}`}
-                        className="pr-2.5 pl-0.5 opacity-60 transition hover:opacity-100 disabled:cursor-not-allowed"
+                        className="pr-2.5 pl-0.5 opacity-70 transition hover:opacity-100 disabled:cursor-not-allowed"
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -416,7 +428,7 @@ export default function CreateExitRequestModal({
                   disabled={submitting || isConfirming || availableTasks.length >= MAX_HANDOVER_TASKS}
                   aria-label="Add a custom clearance step"
                   title="Add a custom clearance step"
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-dashed border-blue-300 text-blue-600 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-dashed border-[#2F5FD0] text-[#2F5FD0] transition hover:bg-[#E8EEFB] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <Plus className="h-4 w-4" />
                 </button>
@@ -439,17 +451,18 @@ export default function CreateExitRequestModal({
                     }}
                     placeholder="Enter a clearance step"
                     aria-label="Custom clearance step"
-                    className={`${INPUT_CLASS} flex-1`}
+                    className={`${INPUT_CLASS} flex-1 rounded`}
                   />
 
-                  <button
-                    type="button"
+                  <Button
+                    variant="primary"
+                    size="sm"
                     onClick={addCustomTask}
                     disabled={submitting || isConfirming || !customTaskDraft.trim()}
-                    className="inline-flex h-9 shrink-0 items-center rounded bg-blue-600 px-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="h-8 px-3 rounded text-[12px] font-medium shadow-none shrink-0"
                   >
                     Add
-                  </button>
+                  </Button>
                   <button
                     type="button"
                     onClick={() => {
@@ -459,7 +472,7 @@ export default function CreateExitRequestModal({
                     }}
                     disabled={submitting || isConfirming}
                     aria-label="Cancel adding clearance step"
-                    className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded border border-[#E4E6E1] bg-white text-[#6B7280] transition hover:bg-[#F0F1EE] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -467,57 +480,53 @@ export default function CreateExitRequestModal({
               )}
 
               {customTaskError && (
-                <p className="mt-1.5 text-[11px] font-medium text-rose-600">
+                <p className="mt-1.5 text-[11px] font-medium text-[#9B1C1C]">
                   {customTaskError}
                 </p>
               )}
 
-              <p className="mt-2 text-[11px] text-slate-400">
+              <p className="mt-2 text-[11px] text-[#6B7280]">
                 Selected steps ({tasks.length} of {availableTasks.length}) are
                 attached as the request&apos;s handover tasks.
               </p>
             </div>
 
             {error && (
-              <p className="rounded border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-600">
+              <p className="rounded border border-[#F8B4B4] bg-[#FDE8E8] px-4 py-3 text-xs text-[#9B1C1C]">
                 {error}
               </p>
             )}
           </div>
 
-          <footer className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50/60 px-6 py-4">
-            <button
-              type="button"
+          <footer className="flex items-center justify-end gap-2 border-t border-[#E5E7EB] bg-[#F9FAFB] px-6 py-3.5">
+            <Button
+              variant="outline"
+              size="sm"
               onClick={onClose}
               disabled={submitting}
-              className="h-10 rounded border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+              className="h-8 px-3.5 rounded text-[12px] font-medium shadow-none"
             >
               Cancel
-            </button>
+            </Button>
 
-            <button
+            <Button
               type="submit"
+              variant="primary"
+              size="sm"
               disabled={submitting}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded bg-blue-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-60"
+              isLoading={submitting}
+              className="h-8 px-3.5 rounded text-[12px] font-medium shadow-none"
             >
-              {submitting ? (
-                <>
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-                  Saving...
-                </>
-              ) : (
-                "Create Request"
-              )}
-            </button>
+              Create Request
+            </Button>
           </footer>
         </form>
       </div>
 
-      {/* Sits above the form rather than inside it, so the details being
-          confirmed stay visible behind it. */}
+      {/* Confirmation dialog */}
       {isConfirming && (
         <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/60 px-4 py-6 backdrop-blur-[2px]"
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/40 px-4 py-6 backdrop-blur-[2px]"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget && !submitting) {
               setIsConfirming(false);
@@ -525,28 +534,42 @@ export default function CreateExitRequestModal({
           }}
         >
           <div
-            role="alertdialog"
+            ref={confirmDialogRef}
+            role="dialog"
             aria-modal="true"
-            aria-label="Confirm exit request"
-            className="w-full max-w-md overflow-hidden rounded bg-white shadow-2xl"
+            aria-labelledby="confirm-exit-dialog-title"
+            className="w-full max-w-md overflow-hidden rounded border border-[#E5E7EB] bg-white shadow-xl"
           >
-            <header className="flex items-start gap-3 border-b border-slate-200 px-6 py-5">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-amber-50">
-                <LogOut className="h-5 w-5 text-amber-600" />
-              </span>
-
-              <div>
-                <h3 className="text-lg font-bold text-slate-900">
-                  Create this exit request?
-                </h3>
-
-                <p className="mt-1 text-sm text-slate-500">
-                  This starts clearance for the employee below.
-                </p>
+            <header className="flex items-center justify-between gap-3 border-b border-[#E5E7EB] px-6 py-4">
+              <div className="flex items-center gap-3">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-[#FEF3C7]">
+                  <LogOut className="h-4 w-4 text-[#92400E]" />
+                </span>
+                <div>
+                  <h3
+                    id="confirm-exit-dialog-title"
+                    className="text-[15px] font-semibold text-[#111827]"
+                  >
+                    Create this exit request?
+                  </h3>
+                  <p className="mt-0.5 text-xs text-[#4B5563]">
+                    This starts clearance for the employee below.
+                  </p>
+                </div>
               </div>
+
+              <button
+                type="button"
+                onClick={() => setIsConfirming(false)}
+                disabled={submitting}
+                aria-label="Close"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-[#6B7280] transition hover:bg-[#F0F1EE] hover:text-[#111827] disabled:opacity-50"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </header>
 
-            <div className="space-y-2.5 px-6 py-5 text-sm">
+            <div className="space-y-2.5 px-6 py-5 text-[13px]">
               <ConfirmRow label="Employee" value={employeeLabel} />
               <ConfirmRow label="Exit type" value={exitType} />
               <ConfirmRow label="Last working day" value={lastWorkingDay} />
@@ -556,51 +579,48 @@ export default function CreateExitRequestModal({
                 <ConfirmRow label="Remarks" value={remarks.trim()} />
               )}
 
-              <div>
-                <p className="text-xs font-semibold text-slate-500">
+              <div className="grid grid-cols-[120px_1fr] items-start gap-2 pt-1">
+                <p className="text-xs font-medium text-[#6B7280]">
                   Clearance steps
                 </p>
 
-                <p className="mt-1 text-sm text-slate-700">{tasks.length}</p>
-
-                <ul className="mt-1.5 flex flex-wrap gap-1.5">
-                  {tasks.map((task) => (
-                    <li
-                      key={task}
-                      className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-600"
-                    >
-                      {task}
-                    </li>
-                  ))}
-                </ul>
+                <div>
+                  <p className="text-[13px] font-medium text-[#111827] tabular-nums">{tasks.length}</p>
+                  <ul className="mt-1.5 flex flex-wrap gap-1.5">
+                    {tasks.map((task) => (
+                      <li
+                        key={task}
+                        className="rounded-full bg-[#F3F4F6] border border-[#E5E7EB] px-2.5 py-0.5 text-[11px] font-medium text-[#4B5563]"
+                      >
+                        {task}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
             </div>
 
-            <footer className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50/60 px-6 py-4">
-              <button
-                type="button"
+            <footer className="flex items-center justify-end gap-2 border-t border-[#E5E7EB] bg-[#F9FAFB] px-6 py-3.5">
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => setIsConfirming(false)}
                 disabled={submitting}
-                className="h-10 rounded border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+                className="h-8 px-3.5 rounded text-[12px] font-medium shadow-none"
               >
                 Back
-              </button>
+              </Button>
 
-              <button
-                type="button"
+              <Button
+                variant="primary"
+                size="sm"
                 onClick={() => void confirmCreate()}
                 disabled={submitting}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded bg-blue-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-60"
+                isLoading={submitting}
+                className="h-8 px-3.5 rounded text-[12px] font-medium shadow-none"
               >
-                {submitting ? (
-                  <>
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-                    Saving...
-                  </>
-                ) : (
-                  "Confirm & create"
-                )}
-              </button>
+                Confirm &amp; create
+              </Button>
             </footer>
           </div>
         </div>
@@ -611,9 +631,9 @@ export default function CreateExitRequestModal({
 
 function ConfirmRow({ label, value }: { label: string; value: string }) {
   return (
-    <div>
-      <p className="text-xs font-semibold text-slate-500">{label}</p>
-      <p className="mt-0.5 break-words text-slate-700">{value}</p>
+    <div className="grid grid-cols-[120px_1fr] items-baseline gap-2">
+      <p className="text-xs font-medium text-[#6B7280]">{label}</p>
+      <p className="break-words text-left font-medium text-[#111827]">{value}</p>
     </div>
   );
 }

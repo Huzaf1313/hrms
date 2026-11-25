@@ -22,22 +22,22 @@ const FLOW_STAGES = [
 
 export function ExitProcessFlow() {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5">
-      <div className="mb-4 flex items-center gap-2">
-        <ArrowRight className="h-4 w-4 text-blue-600" />
-        <h3 className="text-[15px] font-bold text-slate-900">Exit Process Flow</h3>
+    <div className="rounded-lg border border-[#E5E7EB] bg-white overflow-hidden shadow-none">
+      <div className="flex items-center gap-2 border-b border-[#E5E7EB] bg-white px-6 py-3.5">
+        <ArrowRight className="h-4 w-4 shrink-0 text-[#2F5FD0]" />
+        <h3 className="text-[13px] font-semibold text-[#111827]">Exit Process Flow</h3>
       </div>
 
-      <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <ol className="grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-4">
         {FLOW_STAGES.map((stage, index) => (
           <li key={stage.title} className="flex min-w-0 items-start gap-3">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#2F5FD0] text-[12px] font-semibold text-white tabular-nums">
               {index + 1}
             </span>
 
             <div className="min-w-0">
-              <p className="truncate text-[13px] font-bold text-slate-900">{stage.title}</p>
-              <p className="mt-0.5 text-[11px] leading-4 text-slate-500">
+              <p className="truncate text-[13px] font-semibold text-[#111827]">{stage.title}</p>
+              <p className="mt-0.5 text-[11px] leading-4 text-[#6B7280]">
                 {stage.description}
               </p>
             </div>

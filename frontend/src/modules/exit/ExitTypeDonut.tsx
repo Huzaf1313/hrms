@@ -1,9 +1,9 @@
 import { EXIT_TYPES, EXIT_TYPE_META } from "./types";
-import { percent } from "./exitUiUtils";
+import { PANEL_CLASS, percent } from "./exitUiUtils";
 
-const DONUT_RADIUS = 54;
+const DONUT_RADIUS = 52;
 const DONUT_CIRCUMFERENCE = 2 * Math.PI * DONUT_RADIUS;
-const DONUT_STROKE_WIDTH = 20;
+const DONUT_STROKE_WIDTH = 18;
 
 interface ExitTypeDonutProps {
   byType: Record<string, number>;
@@ -14,8 +14,7 @@ interface ExitTypeDonutProps {
  * Exit type mix.
  *
  * Every type is drawn, including zero-count ones, so the legend stays the same
- * four rows the KPI cards above show and the colours do not shuffle when a type
- * goes unused.
+ * rows and colours do not shuffle when a type goes unused.
  */
 export default function ExitTypeDonut({ byType, total }: ExitTypeDonutProps) {
   const counts = EXIT_TYPES.map((type) => byType[type] ?? 0);
@@ -35,13 +34,15 @@ export default function ExitTypeDonut({ byType, total }: ExitTypeDonutProps) {
   });
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5">
-      <h3 className="mb-4 text-[15px] font-bold text-slate-900">Exit Requests by Type</h3>
+    <div className={PANEL_CLASS}>
+      <div className="border-b border-[#E5E7EB] bg-white px-5 py-3.5">
+        <h3 className="text-[13px] font-semibold text-[#111827]">Exit Requests by Type</h3>
+      </div>
 
-      <div className="flex items-center gap-5">
+      <div className="flex items-center gap-4 p-5">
         <svg
           viewBox="0 0 140 140"
-          className="h-[124px] w-[124px] shrink-0"
+          className="h-[104px] w-[104px] shrink-0"
           role="img"
           aria-label={`Exit requests by type, ${total} total`}
         >
@@ -49,7 +50,7 @@ export default function ExitTypeDonut({ byType, total }: ExitTypeDonutProps) {
             <circle
               r={DONUT_RADIUS}
               fill="none"
-              stroke="#f1f5f9"
+              stroke="#E5E7EB"
               strokeWidth={DONUT_STROKE_WIDTH}
             />
 
@@ -68,27 +69,31 @@ export default function ExitTypeDonut({ byType, total }: ExitTypeDonutProps) {
             )}
           </g>
 
-          <text x="70" y="68" textAnchor="middle" className="fill-slate-900 text-[22px] font-bold">
+          <text x="70" y="68" textAnchor="middle" className="fill-[#111827] text-[22px] font-semibold tabular-nums">
             {total}
           </text>
-          <text x="70" y="85" textAnchor="middle" className="fill-slate-400 text-[9px]">
+          <text x="70" y="86" textAnchor="middle" className="fill-[#6B7280] text-[11px] font-medium">
             Total
           </text>
         </svg>
 
         <ul className="min-w-0 flex-1 space-y-2.5">
           {segments.map((segment) => (
-            <li key={segment.type} className="flex items-center gap-2 text-xs">
-              <span
-                className="h-2 w-2 shrink-0 rounded-full"
-                style={{ backgroundColor: EXIT_TYPE_META[segment.type].color }}
-              />
-              <span className="min-w-0 flex-1 truncate text-slate-600">
-                {segment.type}
+            <li key={segment.type} className="flex items-center justify-between gap-2 text-[12px]">
+              <span className="flex items-center gap-2 min-w-0">
+                <span
+                  className="h-2 w-2 shrink-0 rounded-full"
+                  style={{ backgroundColor: EXIT_TYPE_META[segment.type].color }}
+                />
+                <span className="whitespace-nowrap text-[#4B5563]">
+                  {segment.type}
+                </span>
               </span>
-              <span className="shrink-0 font-semibold text-slate-900">{segment.count}</span>
-              <span className="w-11 shrink-0 text-right text-slate-400">
-                ({percent(segment.count, total)})
+              <span className="flex items-center gap-1.5 shrink-0 tabular-nums">
+                <span className="font-semibold text-[#111827]">{segment.count}</span>
+                <span className="w-[42px] text-right text-[#6B7280]">
+                  ({percent(segment.count, total)})
+                </span>
               </span>
             </li>
           ))}

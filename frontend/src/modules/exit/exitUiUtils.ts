@@ -1,3 +1,5 @@
+import { useEffect, type RefObject } from "react";
+
 import { EXIT_STATUSES, EXIT_TYPES } from "./types";
 import type { ExitStatus } from "./types";
 import type { ExitRequest } from "./types";
@@ -9,14 +11,76 @@ import type { ExitRequest } from "./types";
  * is what React Fast Refresh needs to swap a module without a full reload.
  */
 
-export const PANEL_CLASS = "rounded-3xl border border-slate-100 bg-white shadow-xs";
+export const PANEL_CLASS = "rounded-lg border border-[#E5E7EB] bg-white overflow-hidden shadow-none";
 
 export const INPUT_CLASS =
-  "h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 " +
-  "outline-none transition placeholder:text-slate-400 focus:border-blue-500 " +
-  "focus:ring-2 focus:ring-blue-100";
+  "h-8 w-full rounded-md border border-[#E5E7EB] bg-white px-2.5 text-[12px] text-[#111827] " +
+  "outline-none transition placeholder:text-[#7B8794] focus:border-[#2F5FD0] " +
+  "focus:ring-1 focus:ring-[#2F5FD0]";
 
-export const SELECT_CLASS = `${INPUT_CLASS} appearance-none pr-8`;
+export const SELECT_CLASS = `${INPUT_CLASS} appearance-none pr-7 cursor-pointer`;
+
+/**
+ * Accessible dialog keyboard handling: Escape to dismiss, Tab focus trapping
+ * inside the container, and focus restoration to the opener on close.
+ */
+export function useDialogA11y(
+  open: boolean,
+  containerRef: RefObject<HTMLElement | null>,
+  onClose: () => void,
+) {
+  useEffect(() => {
+    if (!open) return;
+
+    const opener = document.activeElement as HTMLElement | null;
+    const node = containerRef.current;
+
+    if (node) {
+      const focusables = node.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+      if (focusables.length > 0 && !node.contains(document.activeElement)) {
+        focusables[0].focus();
+      }
+    }
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+
+      if (event.key === "Tab" && containerRef.current) {
+        const focusables = Array.from(
+          containerRef.current.querySelectorAll<HTMLElement>(
+            'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+          ),
+        );
+        if (focusables.length === 0) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        if (event.shiftKey) {
+          if (document.activeElement === first || !containerRef.current.contains(document.activeElement)) {
+            event.preventDefault();
+            last.focus();
+          }
+        } else if (document.activeElement === last || !containerRef.current.contains(document.activeElement)) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      if (opener && typeof opener.focus === "function") {
+        opener.focus();
+      }
+    };
+  }, [open, containerRef, onClose]);
+}
 
 /* ------------------------------------------------------------------- dates */
 

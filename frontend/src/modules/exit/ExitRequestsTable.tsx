@@ -1,5 +1,6 @@
 import { Trash2 } from "lucide-react";
 
+import { Button } from "../../components/ui/Button";
 import {
   EmptyState,
   EmployeeAvatar,
@@ -48,13 +49,14 @@ function ActionsMenu({
 
   return (
     <div className="flex items-center justify-end gap-1.5">
-      <button
-        type="button"
+      <Button
+        variant="outline"
+        size="sm"
         onClick={() => onOpen(request)}
-        className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1 text-[11px] font-semibold text-blue-700 transition hover:bg-blue-100"
+        className="h-7 px-2.5 py-0 text-[12px] font-medium shadow-none whitespace-nowrap"
       >
         View
-      </button>
+      </Button>
 
       {onDelete && (
         <button
@@ -66,10 +68,10 @@ function ActionsMenu({
               ? `Delete ${request.employee_name}'s request`
               : `A ${request.status.toLowerCase()} request cannot be deleted`
           }
-          aria-label={`Delete ${request.employee_name}'s exit request`}
-          className="flex h-7 w-7 items-center justify-center rounded-lg text-rose-500 transition hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:text-slate-300 disabled:hover:bg-transparent disabled:hover:text-slate-300"
+          aria-label="Delete exit request"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] text-[#9B1C1C] transition hover:bg-[#FDE8E8] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0] cursor-pointer disabled:cursor-not-allowed disabled:text-[#7B8794]/50 disabled:hover:bg-transparent"
         >
-          <Trash2 className="h-4 w-4" />
+          <Trash2 className="h-4 w-4 shrink-0" />
         </button>
       )}
     </div>
@@ -87,7 +89,7 @@ export default function ExitRequestsTable({
   emptyMessage = "No exit requests found.",
 }: ExitRequestsTableProps) {
   if (loading) {
-    return <LoadingRows className="px-5 pb-5" />;
+    return <LoadingRows className="px-6 pb-5" />;
   }
 
   if (error) {
@@ -101,44 +103,89 @@ export default function ExitRequestsTable({
   const typed = variant === "typed";
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[860px] text-left text-[13px]">
-        <thead>
-          <tr className="border-b border-slate-100 text-[11px] font-bold uppercase tracking-wide text-slate-500">
-            <th className="whitespace-nowrap px-5 py-3">Employee</th>
+    <div className="overflow-x-auto w-full">
+      <table
+        className={`w-full table-fixed border-collapse text-left text-[12px] ${
+          typed ? "min-w-[1140px]" : "min-w-[1040px]"
+        }`}
+      >
+        <colgroup>
+          <col className="w-[220px]" />
+          {typed ? (
+            <>
+              <col className="w-[140px]" />
+              <col className="w-[140px]" />
+            </>
+          ) : (
+            <col className="w-[130px]" />
+          )}
+          <col />
+          <col className="w-[150px]" />
+          <col className="w-[130px]" />
+          <col className="w-[140px]" />
+          <col className="w-[120px]" />
+        </colgroup>
+        <thead className="sticky top-0 z-10 bg-[#F9FAFB] border-b border-[#E5E7EB] text-[#4B5563] font-semibold text-[11px] uppercase tracking-wider">
+          <tr className="h-10">
+            <th className="whitespace-nowrap px-6 py-0 bg-[#F9FAFB] align-middle font-semibold">
+              Employee
+            </th>
 
             {typed ? (
               <>
-                <th className="whitespace-nowrap px-3 py-3">Department</th>
-                <th className="whitespace-nowrap px-3 py-3">Designation</th>
+                <th className="whitespace-nowrap px-4 py-0 bg-[#F9FAFB] align-middle font-semibold">
+                  Department
+                </th>
+                <th className="whitespace-nowrap px-4 py-0 bg-[#F9FAFB] align-middle font-semibold">
+                  Designation
+                </th>
               </>
             ) : (
-              <th className="whitespace-nowrap px-3 py-3">Type</th>
+              <th className="whitespace-nowrap px-4 py-0 bg-[#F9FAFB] align-middle font-semibold">
+                Type
+              </th>
             )}
 
-            <th className="whitespace-nowrap px-3 py-3">Reason</th>
-            <th className="whitespace-nowrap px-3 py-3">Last Working Day</th>
-            <th className="whitespace-nowrap px-3 py-3">Status</th>
-            <th className="whitespace-nowrap px-3 py-3">Requested On</th>
-            <th className="whitespace-nowrap px-5 py-3 text-right">Action</th>
+            <th className="whitespace-nowrap px-4 py-0 bg-[#F9FAFB] align-middle font-semibold">
+              Reason
+            </th>
+            <th className="whitespace-nowrap px-4 py-0 bg-[#F9FAFB] align-middle font-semibold">
+              Last Working Day
+            </th>
+            <th className="whitespace-nowrap px-4 py-0 bg-[#F9FAFB] align-middle font-semibold">
+              Status
+            </th>
+            <th className="whitespace-nowrap px-4 py-0 bg-[#F9FAFB] align-middle font-semibold">
+              Requested On
+            </th>
+            <th className="whitespace-nowrap pl-3 pr-4 py-0 bg-[#F9FAFB] text-right align-middle font-semibold">
+              Action
+            </th>
           </tr>
         </thead>
 
-        <tbody>
+        <tbody className="divide-y divide-[#E5E7EB] bg-white text-[#111827]">
           {requests.map((request) => (
             <tr
               key={request.id}
               onClick={() => onOpen(request)}
-              className="cursor-pointer border-b border-slate-50 transition last:border-0 hover:bg-slate-50/70"
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  onOpen(request);
+                }
+              }}
+              tabIndex={0}
+              className="min-h-[56px] h-[56px] cursor-pointer transition-colors hover:bg-[#F9FAFB] focus:outline-none focus-visible:bg-[#F9FAFB] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#2F5FD0]"
             >
-              <td className="px-5 py-3">
-                <div className="flex items-center gap-2.5">
+              <td className="px-6 py-2 align-middle">
+                <div className="flex items-center gap-2.5 min-w-0">
                   <EmployeeAvatar name={request.employee_name} size="sm" />
                   <div className="min-w-0">
-                    <p className="truncate font-semibold text-slate-900">
+                    <p className="truncate font-medium text-[12px] text-[#111827] leading-tight">
                       {request.employee_name ?? "—"}
                     </p>
-                    <p className="truncate text-[11px] text-slate-500">
+                    <p className="truncate text-[11px] text-[#6B7280] mt-0.5 leading-tight tabular-nums">
                       {request.employee_id}
                     </p>
                   </div>
@@ -147,33 +194,40 @@ export default function ExitRequestsTable({
 
               {typed ? (
                 <>
-                  <td className="truncate px-3 py-3 text-slate-600">
+                  <td className="truncate px-4 py-2 align-middle text-[#4B5563]">
                     {request.department_name ?? "—"}
                   </td>
-                  <td className="truncate px-3 py-3 text-slate-600">
+                  <td className="truncate px-4 py-2 align-middle text-[#4B5563]">
                     {request.designation ?? "—"}
                   </td>
                 </>
               ) : (
-                <td className="px-3 py-3">
+                <td className="px-4 py-2 align-middle">
                   <ExitTypeBadge type={request.exit_type} />
                 </td>
               )}
 
-              <td className="max-w-[220px] truncate px-3 py-3 text-slate-600">
+              <td
+                title={request.reason}
+                className="truncate px-4 py-2 align-middle text-[#4B5563]"
+              >
                 {request.reason}
               </td>
-              <td className="whitespace-nowrap px-3 py-3 text-slate-600">
+              <td className="whitespace-nowrap px-4 py-2 align-middle text-[12px] font-medium text-[#111827] tabular-nums">
                 {formatDate(request.last_working_day)}
               </td>
-              <td className="px-3 py-3">
+              <td className="px-4 py-2 align-middle">
                 <ExitStatusBadge status={request.status} />
               </td>
-              <td className="whitespace-nowrap px-3 py-3 text-slate-500">
+              <td className="whitespace-nowrap px-4 py-2 align-middle text-[12px] font-medium text-[#111827] tabular-nums">
                 {formatDate(request.submitted_at)}
               </td>
 
-              <td className="px-5 py-3" onClick={(event) => event.stopPropagation()}>
+              <td
+                className="pl-3 pr-4 py-2 align-middle text-right"
+                onClick={(event) => event.stopPropagation()}
+                onKeyDown={(event) => event.stopPropagation()}
+              >
                 <ActionsMenu
                   request={request}
                   onOpen={onOpen}

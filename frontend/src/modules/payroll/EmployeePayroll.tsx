@@ -410,545 +410,544 @@ function EmployeePayroll() {
               </div>
             </div>
 
-              <div className="mt-4 grid grid-cols-2 gap-3 border-t border-slate-100 pt-3">
-                <div>
-                  <p className="text-xs text-slate-400">Basic</p>
-                  <p className="mt-1 text-sm font-semibold text-slate-700">
-                    {latestPayroll
-                      ? formatCurrency(Number(latestPayroll.salary?.basic ?? 0))
-                      : "—"}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-xs text-slate-400">Deductions</p>
-                  <p className="mt-1 text-sm font-semibold text-slate-700">
-                    {latestPayroll
-                      ? formatCurrency(Number(latestPayroll.deductions?.total ?? 0))
-                      : "—"}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Pay Period */}
-            <div className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-kpi">
+            <div className="mt-4 grid grid-cols-2 gap-3 border-t border-slate-100 pt-3">
               <div>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-slate-500">
-                      Pay Period
-                    </p>
-                    <p className="mt-2 text-xl font-bold text-slate-900">
-                      {latestPayroll?.month ?? "—"}
-                    </p>
-                  </div>
-
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50">
-                    <CalendarDays className="h-5 w-5 text-blue-600" />
-                  </div>
-                </div>
-
-                <p className="mt-4 text-sm text-slate-500">
+                <p className="text-xs text-slate-400">Basic</p>
+                <p className="mt-1 text-sm font-semibold text-slate-700">
                   {latestPayroll
-                    ? `${new Date(latestPayroll.pay_period_start).toLocaleDateString(
-                      "en-IN",
-                      {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric",
-                      }
-                    )} – ${new Date(latestPayroll.pay_period_end).toLocaleDateString(
-                      "en-IN",
-                      {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric",
-                      }
-                    )}`
+                    ? formatCurrency(Number(latestPayroll.salary?.basic ?? 0))
                     : "—"}
                 </p>
               </div>
 
-              <div className="mt-4 border-t border-slate-100 pt-3">
-                <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
-                  <div className="h-full w-full rounded-full bg-blue-600" />
+              <div>
+                <p className="text-xs text-slate-400">Deductions</p>
+                <p className="mt-1 text-sm font-semibold text-slate-700">
+                  {latestPayroll
+                    ? formatCurrency(Number(latestPayroll.deductions?.total ?? 0))
+                    : "—"}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Pay Period */}
+          <div className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-kpi">
+            <div>
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-500">
+                    Pay Period
+                  </p>
+                  <p className="mt-2 text-xl font-bold text-slate-900">
+                    {latestPayroll?.month ?? "—"}
+                  </p>
+                </div>
+
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50">
+                  <CalendarDays className="h-5 w-5 text-blue-600" />
+                </div>
+              </div>
+
+              <p className="mt-4 text-sm text-slate-500">
+                {latestPayroll
+                  ? `${new Date(latestPayroll.pay_period_start).toLocaleDateString(
+                    "en-IN",
+                    {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                    }
+                  )} – ${new Date(latestPayroll.pay_period_end).toLocaleDateString(
+                    "en-IN",
+                    {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                    }
+                  )}`
+                  : "—"}
+              </p>
+            </div>
+
+            <div className="mt-4 border-t border-slate-100 pt-3">
+              <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
+                <div className="h-full w-full rounded-full bg-blue-600" />
+              </div>
+            </div>
+          </div>
+
+
+          {/* Bank Account */}
+          <div className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-kpi">
+            <div>
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-500">
+                    Bank Account
+                  </p>
+
+                  <p className="mt-2 text-xl font-bold text-slate-900">
+                    {bankInformationLoading
+                      ? "Loading..."
+                      : bankInformation?.bank_name || "Bank information not added"}
+                  </p>
+                </div>
+
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50">
+                  <Landmark className="h-5 w-5 text-violet-600" />
+                </div>
+              </div>
+
+
+              <div className="mt-4 space-y-3">
+                {/* Account Number */}
+                <div className="flex items-center gap-2">
+                  <CreditCard className="h-4 w-4 shrink-0 text-slate-400" />
+
+                  <span className="text-sm font-medium text-slate-600">
+                    {bankInformationLoading
+                      ? "Loading account details..."
+                      : bankInformation?.account_number
+                        ? `•••• •••• ${bankInformation.account_number.slice(-4)}`
+                        : "Account number not provided"}
+                  </span>
+                </div>
+                {/* Account Holder */}
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 shrink-0 text-slate-400" />
+
+                  <span className="text-sm text-slate-600">
+                    <span className="font-medium text-slate-500">
+                      Account Holder:{" "}
+                    </span>
+                    {bankInformationLoading
+                      ? "Loading..."
+                      : bankInformation?.account_holder_name || "Not provided"}
+                  </span>
+                </div>
+
+                {/* IFSC Code */}
+                <div className="flex items-center gap-2">
+                  <Landmark className="h-4 w-4 shrink-0 text-slate-400" />
+
+                  <span className="text-sm text-slate-600">
+                    <span className="font-medium text-slate-500">
+                      IFSC Code:{" "}
+                    </span>
+                    {bankInformationLoading
+                      ? "Loading..."
+                      : bankInformation?.ifsc_code || "Not provided"}
+                  </span>
                 </div>
               </div>
             </div>
+          </div>
+        </section>
 
+        {/* Main Payroll Area */}
+        <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+          {/* Main Content */}
+          <section className="min-w-0 rounded-3xl border border-slate-100 bg-white shadow-xs">
+            {/* Tabs */}
+            <div className="overflow-x-auto border-b border-slate-100 p-3">
+              <div className="flex min-w-max gap-1.5">
+                {tabs.map((tab) => {
+                  const isActive = activeTab === tab;
 
-            {/* Bank Account */}
-            <div className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-kpi">
-              <div>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-slate-500">
-                      Bank Account
-                    </p>
-
-                    <p className="mt-2 text-xl font-bold text-slate-900">
-                      {bankInformationLoading
-                        ? "Loading..."
-                        : bankInformation?.bank_name || "Bank information not added"}
-                    </p>
-                  </div>
-
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50">
-                    <Landmark className="h-5 w-5 text-violet-600" />
-                  </div>
-                </div>
-
-
-                <div className="mt-4 space-y-3">
-                  {/* Account Number */}
-                  <div className="flex items-center gap-2">
-                    <CreditCard className="h-4 w-4 shrink-0 text-slate-400" />
-
-                    <span className="text-sm font-medium text-slate-600">
-                      {bankInformationLoading
-                        ? "Loading account details..."
-                        : bankInformation?.account_number
-                          ? `•••• •••• ${bankInformation.account_number.slice(-4)}`
-                          : "Account number not provided"}
-                    </span>
-                  </div>
-                  {/* Account Holder */}
-                  <div className="flex items-center gap-2">
-                    <ShieldCheck className="h-4 w-4 shrink-0 text-slate-400" />
-
-                    <span className="text-sm text-slate-600">
-                      <span className="font-medium text-slate-500">
-                        Account Holder:{" "}
-                      </span>
-                      {bankInformationLoading
-                        ? "Loading..."
-                        : bankInformation?.account_holder_name || "Not provided"}
-                    </span>
-                  </div>
-
-                  {/* IFSC Code */}
-                  <div className="flex items-center gap-2">
-                    <Landmark className="h-4 w-4 shrink-0 text-slate-400" />
-
-                    <span className="text-sm text-slate-600">
-                      <span className="font-medium text-slate-500">
-                        IFSC Code:{" "}
-                      </span>
-                      {bankInformationLoading
-                        ? "Loading..."
-                        : bankInformation?.ifsc_code || "Not provided"}
-                    </span>
-                  </div>
-                </div>
+                  return (
+                    <button
+                      key={tab}
+                      type="button"
+                      onClick={() => handleTabChange(tab)}
+                      className={`rounded-xl px-4 py-2.5 text-xs font-bold transition ${isActive
+                        ? "bg-[#0066ff] text-white shadow-md shadow-blue-500/20"
+                        : "text-slate-500 hover:bg-slate-100/70 hover:text-slate-800"
+                        }`}
+                    >
+                      {tab}
+                    </button>
+                  );
+                })}
               </div>
+            </div>
+
+            {/* Tab Content */}
+            <div className="p-5 sm:p-6">
+              {activeTab === "Payslips" && (
+                <>
+                  <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h2 className="text-lg font-bold text-slate-900">
+                        Payslip History
+                      </h2>
+                      <p className="mt-1 text-sm text-slate-500">
+                        Your previous salary payments and payslips.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <GlobalDateBadge prefix="Period" />
+
+                      <span className="text-sm text-slate-500">
+                        {payslips.length} payslips
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Desktop Table */}
+                  <div className="hidden overflow-hidden rounded-xl border border-slate-200 md:block">
+                    <div className="overflow-x-auto">
+                      <table className="w-full min-w-[650px]">
+                        <thead>
+                          <tr className="border-b border-slate-200 bg-slate-50">
+                            <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                              Month
+                            </th>
+                            <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                              Paid On
+                            </th>
+                            <th className="px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">
+                              Amount
+                            </th>
+                            <th className="px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">
+                              Status
+                            </th>
+                            <th className="px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">
+                              Action
+                            </th>
+                          </tr>
+                        </thead>
+
+                        <tbody className="divide-y divide-slate-100">
+                          {currentPayslips.map((payslip) => (
+                            <tr
+                              key={`${payslip.month}-${payslip.paidOn}`}
+                              className="transition hover:bg-slate-50/70"
+                            >
+                              <td className="px-5 py-4">
+                                <div className="flex items-center gap-3">
+                                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50">
+                                    <FileText className="h-4 w-4 text-blue-600" />
+                                  </div>
+
+                                  <span className="text-sm font-semibold text-slate-800">
+                                    {payslip.month}
+                                  </span>
+                                </div>
+                              </td>
+
+                              <td className="px-5 py-4 text-sm text-slate-500">
+                                {payslip.paidOn}
+                              </td>
+
+                              <td className="px-5 py-4 text-right text-sm font-bold text-slate-800">
+                                {formatCurrency(payslip.amount)}
+                              </td>
+
+                              <td className="px-5 py-4 text-center">
+                                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                  {payslip.status}
+                                </span>
+                              </td>
+
+                              <td className="px-5 py-4 text-right">
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedPayslip(payslip)}
+                                  className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-blue-600 transition hover:bg-blue-50"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                  View
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Mobile Cards */}
+                  <div className="space-y-3 md:hidden">
+                    {currentPayslips.map((payslip) => (
+                      <div
+                        key={`${payslip.month}-${payslip.paidOn}`}
+                        className="rounded-xl border border-slate-200 p-4"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50">
+                              <FileText className="h-4 w-4 text-blue-600" />
+                            </div>
+
+                            <div>
+                              <p className="text-sm font-semibold text-slate-800">
+                                {payslip.month}
+                              </p>
+                              <p className="mt-0.5 text-xs text-slate-500">
+                                Paid on {payslip.paidOn}
+                              </p>
+                            </div>
+                          </div>
+
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                            {payslip.status}
+                          </span>
+                        </div>
+
+                        <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
+                          <span className="text-sm font-bold text-slate-800">
+                            {formatCurrency(payslip.amount)}
+                          </span>
+
+                          <button
+                            type="button"
+                            onClick={() => setSelectedPayslip(payslip)}
+                            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-blue-600 hover:bg-blue-50"
+                          >
+                            <Eye className="h-4 w-4" />
+                            View
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Pagination */}
+                  <div className="mt-5 flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-sm text-slate-500">
+                      Showing{" "}
+                      <span className="font-semibold text-slate-700">
+                        {pageStart}–{pageEnd}
+                      </span>{" "}
+                      of{" "}
+                      <span className="font-semibold text-slate-700">
+                        {payslips.length}
+                      </span>
+                    </p>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handlePreviousPage}
+                        disabled={currentPage === 1}
+                        className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                        aria-label="Previous page"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </button>
+
+                      <span className="flex h-9 min-w-9 items-center justify-center rounded-lg bg-blue-600 px-3 text-sm font-semibold text-white">
+                        {currentPage}
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={handleNextPage}
+                        disabled={currentPage === totalPages}
+                        className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                        aria-label="Next page"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {activeTab === "Salary Details" && (
+                <SalaryDetails
+                  salaryComponents={salaryComponents}
+                  grossSalary={grossSalary}
+                  netSalary={netSalary}
+                  payrollMonth={latestPayroll?.month}
+                />
+              )}
+
+              {activeTab === "Deductions & Contributions" && (
+                <DeductionsDetails
+                  deductions={deductions}
+                  totalDeductions={totalDeductions}
+                  payrollMonth={latestPayroll?.month}
+                />
+              )}
+
+              {activeTab === "Tax Details" && <TaxDetails
+                latestPayroll={latestPayroll}
+                taxableIncome={taxableIncome}
+                taxDeducted={taxDeducted}
+              />
+              }
             </div>
           </section>
 
-          {/* Main Payroll Area */}
-          <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-            {/* Main Content */}
-            <section className="min-w-0 rounded-3xl border border-slate-100 bg-white shadow-xs">
-              {/* Tabs */}
-              <div className="overflow-x-auto border-b border-slate-100 p-3">
-                <div className="flex min-w-max gap-1.5">
-                  {tabs.map((tab) => {
-                    const isActive = activeTab === tab;
+          {/* Right Sidebar */}
+          <aside className="space-y-6">
+            {/* Salary Breakdown */}
+            <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+              <div className="mb-5">
+                <h2 className="text-lg font-bold text-slate-900">
+                  Salary Breakdown
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  {latestPayroll?.month ?? "—"}
+                </p>
+              </div>
 
-                    return (
-                      <button
-                        key={tab}
-                        type="button"
-                        onClick={() => handleTabChange(tab)}
-                        className={`rounded-xl px-4 py-2.5 text-xs font-bold transition ${
-                          isActive
-                            ? "bg-[#0066ff] text-white shadow-md shadow-blue-500/20"
-                            : "text-slate-500 hover:bg-slate-100/70 hover:text-slate-800"
-                        }`}
-                      >
-                        {tab}
-                      </button>
-                    );
-                  })}
+              {/* Donut */}
+              <div className="flex justify-center">
+                <div
+                  className="relative h-52 w-52 rounded-full"
+                  style={{
+                    background: latestPayroll
+                      ? `conic-gradient(
+                          #2563eb 0deg ${(salaryComponents[0].percentage / 100) * 360
+                      }deg,
+                          #60a5fa ${(salaryComponents[0].percentage / 100) * 360
+                      }deg ${((salaryComponents[0].percentage +
+                        salaryComponents[1].percentage) /
+                        100) *
+                      360
+                      }deg,
+                          #818cf8 ${((salaryComponents[0].percentage +
+                        salaryComponents[1].percentage) /
+                        100) *
+                      360
+                      }deg ${((salaryComponents[0].percentage +
+                        salaryComponents[1].percentage +
+                        salaryComponents[2].percentage) /
+                        100) *
+                      360
+                      }deg,
+                          #a78bfa ${((salaryComponents[0].percentage +
+                        salaryComponents[1].percentage +
+                        salaryComponents[2].percentage) /
+                        100) *
+                      360
+                      }deg ${((salaryComponents[0].percentage +
+                        salaryComponents[1].percentage +
+                        salaryComponents[2].percentage +
+                        salaryComponents[3].percentage) /
+                        100) *
+                      360
+                      }deg,
+                          #c4b5fd ${((salaryComponents[0].percentage +
+                        salaryComponents[1].percentage +
+                        salaryComponents[2].percentage +
+                        salaryComponents[3].percentage) /
+                        100) *
+                      360
+                      }deg 360deg
+                        )`
+                      : "conic-gradient(#e2e8f0 0deg 360deg)",
+                  }}
+                >
+                  <div className="absolute inset-[24px] flex flex-col items-center justify-center rounded-full bg-white">
+                    <span className="text-xs font-medium text-slate-500">
+                      Gross Salary
+                    </span>
+                    <span className="mt-1 text-xl font-bold text-slate-900">
+                      {formatCurrency(grossSalary)}
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              {/* Tab Content */}
-              <div className="p-5 sm:p-6">
-                {activeTab === "Payslips" && (
-                  <>
-                    <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <h2 className="text-lg font-bold text-slate-900">
-                          Payslip History
-                        </h2>
-                        <p className="mt-1 text-sm text-slate-500">
-                          Your previous salary payments and payslips.
-                        </p>
-                      </div>
+              {/* Salary Legend */}
+              <div className="mt-6 space-y-3">
+                {salaryComponents.map((component, index) => (
+                  <div
+                    key={component.label}
+                    className="flex items-center justify-between gap-3"
+                  >
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <span
+                        className={`h-2.5 w-2.5 shrink-0 rounded-full ${[
+                          "bg-blue-600",
+                          "bg-blue-400",
+                          "bg-indigo-400",
+                          "bg-violet-400",
+                          "bg-violet-300",
+                        ][index]
+                          }`}
+                      />
 
-                      <div className="flex items-center gap-3">
-                        <GlobalDateBadge prefix="Period" />
-
-                        <span className="text-sm text-slate-500">
-                          {payslips.length} payslips
-                        </span>
-                      </div>
+                      <span className="truncate text-sm text-slate-600">
+                        {component.label}
+                      </span>
                     </div>
 
-                    {/* Desktop Table */}
-                    <div className="hidden overflow-hidden rounded-xl border border-slate-200 md:block">
-                      <div className="overflow-x-auto">
-                        <table className="w-full min-w-[650px]">
-                          <thead>
-                            <tr className="border-b border-slate-200 bg-slate-50">
-                              <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                                Month
-                              </th>
-                              <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                                Paid On
-                              </th>
-                              <th className="px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">
-                                Amount
-                              </th>
-                              <th className="px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">
-                                Status
-                              </th>
-                              <th className="px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">
-                                Action
-                              </th>
-                            </tr>
-                          </thead>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span className="text-sm font-semibold text-slate-800">
+                        {formatCurrency(component.amount)}
+                      </span>
 
-                          <tbody className="divide-y divide-slate-100">
-                            {currentPayslips.map((payslip) => (
-                              <tr
-                                key={`${payslip.month}-${payslip.paidOn}`}
-                                className="transition hover:bg-slate-50/70"
-                              >
-                                <td className="px-5 py-4">
-                                  <div className="flex items-center gap-3">
-                                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50">
-                                      <FileText className="h-4 w-4 text-blue-600" />
-                                    </div>
-
-                                    <span className="text-sm font-semibold text-slate-800">
-                                      {payslip.month}
-                                    </span>
-                                  </div>
-                                </td>
-
-                                <td className="px-5 py-4 text-sm text-slate-500">
-                                  {payslip.paidOn}
-                                </td>
-
-                                <td className="px-5 py-4 text-right text-sm font-bold text-slate-800">
-                                  {formatCurrency(payslip.amount)}
-                                </td>
-
-                                <td className="px-5 py-4 text-center">
-                                  <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-                                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                                    {payslip.status}
-                                  </span>
-                                </td>
-
-                                <td className="px-5 py-4 text-right">
-                                  <button
-                                    type="button"
-                                    onClick={() => setSelectedPayslip(payslip)}
-                                    className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-blue-600 transition hover:bg-blue-50"
-                                  >
-                                    <Eye className="h-4 w-4" />
-                                    View
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                      <span className="w-7 text-right text-xs text-slate-400">
+                        {component.percentage}%
+                      </span>
                     </div>
-
-                    {/* Mobile Cards */}
-                    <div className="space-y-3 md:hidden">
-                      {currentPayslips.map((payslip) => (
-                        <div
-                          key={`${payslip.month}-${payslip.paidOn}`}
-                          className="rounded-xl border border-slate-200 p-4"
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex items-center gap-3">
-                              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50">
-                                <FileText className="h-4 w-4 text-blue-600" />
-                              </div>
-
-                              <div>
-                                <p className="text-sm font-semibold text-slate-800">
-                                  {payslip.month}
-                                </p>
-                                <p className="mt-0.5 text-xs text-slate-500">
-                                  Paid on {payslip.paidOn}
-                                </p>
-                              </div>
-                            </div>
-
-                            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700">
-                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                              {payslip.status}
-                            </span>
-                          </div>
-
-                          <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
-                            <span className="text-sm font-bold text-slate-800">
-                              {formatCurrency(payslip.amount)}
-                            </span>
-
-                            <button
-                              type="button"
-                              onClick={() => setSelectedPayslip(payslip)}
-                              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-blue-600 hover:bg-blue-50"
-                            >
-                              <Eye className="h-4 w-4" />
-                              View
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Pagination */}
-                    <div className="mt-5 flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
-                      <p className="text-sm text-slate-500">
-                        Showing{" "}
-                        <span className="font-semibold text-slate-700">
-                          {pageStart}–{pageEnd}
-                        </span>{" "}
-                        of{" "}
-                        <span className="font-semibold text-slate-700">
-                          {payslips.length}
-                        </span>
-                      </p>
-
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={handlePreviousPage}
-                          disabled={currentPage === 1}
-                          className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-                          aria-label="Previous page"
-                        >
-                          <ChevronLeft className="h-4 w-4" />
-                        </button>
-
-                        <span className="flex h-9 min-w-9 items-center justify-center rounded-lg bg-blue-600 px-3 text-sm font-semibold text-white">
-                          {currentPage}
-                        </span>
-
-                        <button
-                          type="button"
-                          onClick={handleNextPage}
-                          disabled={currentPage === totalPages}
-                          className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-                          aria-label="Next page"
-                        >
-                          <ChevronRight className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-                  </>
-                )}
-
-                {activeTab === "Salary Details" && (
-                  <SalaryDetails
-                    salaryComponents={salaryComponents}
-                    grossSalary={grossSalary}
-                    netSalary={netSalary}
-                    payrollMonth={latestPayroll?.month}
-                  />
-                )}
-
-                {activeTab === "Deductions & Contributions" && (
-                  <DeductionsDetails
-                    deductions={deductions}
-                    totalDeductions={totalDeductions}
-                    payrollMonth={latestPayroll?.month}
-                  />
-                )}
-
-                {activeTab === "Tax Details" && <TaxDetails
-                  latestPayroll={latestPayroll}
-                  taxableIncome={taxableIncome}
-                  taxDeducted={taxDeducted}
-                />
-                }
+                  </div>
+                ))}
               </div>
             </section>
 
-            {/* Right Sidebar */}
-            <aside className="space-y-6">
-              {/* Salary Breakdown */}
-              <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-                <div className="mb-5">
+            {/* Recent Deductions */}
+            <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+              <div className="flex items-start justify-between">
+                <div>
                   <h2 className="text-lg font-bold text-slate-900">
-                    Salary Breakdown
+                    Recent Deductions
                   </h2>
                   <p className="mt-1 text-sm text-slate-500">
                     {latestPayroll?.month ?? "—"}
                   </p>
                 </div>
 
-                {/* Donut */}
-                <div className="flex justify-center">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-50">
+                  <ShieldCheck className="h-4 w-4 text-red-500" />
+                </div>
+              </div>
+
+              <div className="mt-5 space-y-4">
+                {deductions.map((deduction) => (
                   <div
-                    className="relative h-52 w-52 rounded-full"
-                    style={{
-                      background: latestPayroll
-                        ? `conic-gradient(
-                          #2563eb 0deg ${(salaryComponents[0].percentage / 100) * 360
-                        }deg,
-                          #60a5fa ${(salaryComponents[0].percentage / 100) * 360
-                        }deg ${((salaryComponents[0].percentage +
-                          salaryComponents[1].percentage) /
-                          100) *
-                        360
-                        }deg,
-                          #818cf8 ${((salaryComponents[0].percentage +
-                          salaryComponents[1].percentage) /
-                          100) *
-                        360
-                        }deg ${((salaryComponents[0].percentage +
-                          salaryComponents[1].percentage +
-                          salaryComponents[2].percentage) /
-                          100) *
-                        360
-                        }deg,
-                          #a78bfa ${((salaryComponents[0].percentage +
-                          salaryComponents[1].percentage +
-                          salaryComponents[2].percentage) /
-                          100) *
-                        360
-                        }deg ${((salaryComponents[0].percentage +
-                          salaryComponents[1].percentage +
-                          salaryComponents[2].percentage +
-                          salaryComponents[3].percentage) /
-                          100) *
-                        360
-                        }deg,
-                          #c4b5fd ${((salaryComponents[0].percentage +
-                          salaryComponents[1].percentage +
-                          salaryComponents[2].percentage +
-                          salaryComponents[3].percentage) /
-                          100) *
-                        360
-                        }deg 360deg
-                        )`
-                        : "conic-gradient(#e2e8f0 0deg 360deg)",
-                    }}
+                    key={deduction.shortLabel}
+                    className="flex items-center justify-between gap-3"
                   >
-                    <div className="absolute inset-[24px] flex flex-col items-center justify-center rounded-full bg-white">
-                      <span className="text-xs font-medium text-slate-500">
-                        Gross Salary
-                      </span>
-                      <span className="mt-1 text-xl font-bold text-slate-900">
-                        {formatCurrency(grossSalary)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Salary Legend */}
-                <div className="mt-6 space-y-3">
-                  {salaryComponents.map((component, index) => (
-                    <div
-                      key={component.label}
-                      className="flex items-center justify-between gap-3"
-                    >
-                      <div className="flex min-w-0 items-center gap-2.5">
-                        <span
-                          className={`h-2.5 w-2.5 shrink-0 rounded-full ${[
-                            "bg-blue-600",
-                            "bg-blue-400",
-                            "bg-indigo-400",
-                            "bg-violet-400",
-                            "bg-violet-300",
-                          ][index]
-                            }`}
-                        />
-
-                        <span className="truncate text-sm text-slate-600">
-                          {component.label}
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100">
+                        <span className="text-[10px] font-bold text-slate-500">
+                          {deduction.shortLabel}
                         </span>
                       </div>
 
-                      <div className="flex shrink-0 items-center gap-2">
-                        <span className="text-sm font-semibold text-slate-800">
-                          {formatCurrency(component.amount)}
-                        </span>
-
-                        <span className="w-7 text-right text-xs text-slate-400">
-                          {component.percentage}%
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              {/* Recent Deductions */}
-              <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h2 className="text-lg font-bold text-slate-900">
-                      Recent Deductions
-                    </h2>
-                    <p className="mt-1 text-sm text-slate-500">
-                      {latestPayroll?.month ?? "—"}
-                    </p>
-                  </div>
-
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-50">
-                    <ShieldCheck className="h-4 w-4 text-red-500" />
-                  </div>
-                </div>
-
-                <div className="mt-5 space-y-4">
-                  {deductions.map((deduction) => (
-                    <div
-                      key={deduction.shortLabel}
-                      className="flex items-center justify-between gap-3"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100">
-                          <span className="text-[10px] font-bold text-slate-500">
-                            {deduction.shortLabel}
-                          </span>
-                        </div>
-
-                        <span className="text-sm text-slate-600">
-                          {deduction.label}
-                        </span>
-                      </div>
-
-                      <span className="text-sm font-semibold text-slate-800">
-                        {formatCurrency(deduction.amount)}
+                      <span className="text-sm text-slate-600">
+                        {deduction.label}
                       </span>
                     </div>
-                  ))}
-                </div>
 
-                <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4">
-                  <span className="text-sm font-semibold text-slate-600">
-                    Total Deductions
-                  </span>
+                    <span className="text-sm font-semibold text-slate-800">
+                      {formatCurrency(deduction.amount)}
+                    </span>
+                  </div>
+                ))}
+              </div>
 
-                  <span className="text-base font-bold text-red-600">
-                    {formatCurrency(totalDeductions)}
-                  </span>
-                </div>
-              </section>
-            </aside>
-          </div>
+              <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4">
+                <span className="text-sm font-semibold text-slate-600">
+                  Total Deductions
+                </span>
+
+                <span className="text-base font-bold text-red-600">
+                  {formatCurrency(totalDeductions)}
+                </span>
+              </div>
+            </section>
+          </aside>
+        </div>
       </div>
 
       {/* Payslip View & Print Modal */}
@@ -1012,7 +1011,7 @@ function EmployeePayroll() {
                 }
               }
             `}</style>
-            <div className="max-h-[94vh] w-full max-w-3xl overflow-y-auto rounded bg-white shadow-2xl">
+            <div className="max-h-[94vh] w-full max-w-3xl overflow-y-auto rounded-lg bg-white shadow-2xl">
               <div className="no-print flex items-center justify-between border-b border-slate-100 px-6 py-4">
                 <div className="flex items-center gap-3">
                   <h3 className="text-base font-bold text-slate-900">Official Payslip</h3>
@@ -1024,7 +1023,7 @@ function EmployeePayroll() {
                   <button
                     type="button"
                     onClick={() => window.print()}
-                    className="flex items-center gap-1.5 rounded border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                    className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
                     title="Print or Save as PDF"
                   >
                     <Printer className="h-3.5 w-3.5 text-slate-500" />
@@ -1033,7 +1032,7 @@ function EmployeePayroll() {
                   <button
                     type="button"
                     onClick={() => setSelectedPayslip(null)}
-                    className="flex h-8 w-8 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600"
                   >
                     <X className="h-4 w-4" />
                   </button>

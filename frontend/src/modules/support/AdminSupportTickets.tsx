@@ -21,6 +21,10 @@ import {
 } from "lucide-react";
 
 import { ApiError } from "../../services/api";
+import { Avatar } from "../../components/ui/Avatar";
+import { Button } from "../../components/ui/Button";
+import { EmptyState } from "../../components/ui/EmptyState";
+import { TableRowSkeleton } from "../../components/ui/Skeleton";
 import { adminSupportTicketService } from "./adminSupportTicketService";
 import {
   TICKET_CATEGORIES,
@@ -39,32 +43,60 @@ const PAGE_SIZE = 10;
 function getStatusStyle(status: SupportTicketStatus) {
   switch (status) {
     case "Open":
-      return "bg-blue-50 text-blue-700 ring-blue-600/20";
+      return "bg-[#E8EEFB] text-[#2F5FD0]";
     case "In Progress":
-      return "bg-amber-50 text-amber-700 ring-amber-600/20";
+      return "bg-[#FEF3C7] text-[#92400E] border border-[#FCD34D]";
     case "Waiting for Employee":
-      return "bg-purple-50 text-purple-700 ring-purple-600/20";
+      return "bg-[#F2EDFB] text-[#6D4AB5]";
     case "Resolved":
-      return "bg-emerald-50 text-emerald-700 ring-emerald-600/20";
+      return "bg-[#DEF7EC] text-[#03543F] border border-[#BCF0DA]";
     default:
-      return "bg-gray-100 text-gray-600 ring-gray-500/20";
+      return "bg-[#F3F4F6] text-[#4B5563] border border-[#E5E7EB]";
+  }
+}
+
+function getStatusDotColor(status: SupportTicketStatus) {
+  switch (status) {
+    case "Open":
+      return "bg-[#2F5FD0]";
+    case "In Progress":
+      return "bg-[#92400E]";
+    case "Waiting for Employee":
+      return "bg-[#6D4AB5]";
+    case "Resolved":
+      return "bg-[#03543F]";
+    default:
+      return "bg-[#7B8794]";
   }
 }
 
 function getPriorityStyle(priority: SupportTicketPriority) {
   switch (priority) {
     case "Urgent":
-      return "bg-red-50 text-red-700";
+      return "bg-[#FDE8E8] text-[#9B1C1C] border border-[#F8B4B4]";
     case "High":
-      return "bg-orange-50 text-orange-700";
+      return "bg-[#FFF1EC] text-[#C2410C]";
     case "Medium":
-      return "bg-blue-50 text-blue-700";
+      return "bg-[#E8EEFB] text-[#2F5FD0]";
     default:
-      return "bg-gray-100 text-gray-600";
+      return "bg-[#F3F4F6] text-[#4B5563] border border-[#E5E7EB]";
   }
 }
 
-/** Small icon tile used by the KPI cards, matching the employee page. */
+function getPriorityDotColor(priority: SupportTicketPriority) {
+  switch (priority) {
+    case "Urgent":
+      return "bg-[#9B1C1C]";
+    case "High":
+      return "bg-[#C2410C]";
+    case "Medium":
+      return "bg-[#2F5FD0]";
+    default:
+      return "bg-[#6B7280]";
+  }
+}
+
+/** Small icon tile used by cards, matching the Leave theme. */
 function Tile({
   icon: Icon,
   tone,
@@ -74,9 +106,9 @@ function Tile({
 }) {
   return (
     <span
-      className={`flex h-11 w-11 items-center justify-center rounded-xl ${tone}`}
+      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md ${tone}`}
     >
-      <Icon className="h-5 w-5" />
+      <Icon className="h-4 w-4 shrink-0" />
     </span>
   );
 }
@@ -270,133 +302,161 @@ function AdminSupportTickets() {
   }
 
   return (
-    <main className="px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-[1500px]">
-        {/* Page header */}
-        <section className="mb-4 flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              Support Tickets
-            </h1>
-            <p className="mt-1 text-sm text-gray-500">
-              Every request raised by your team, with the queues that need
-              attention first.
-            </p>
-          </div>
+    <div className="flex flex-col gap-6 w-full max-w-[1280px] mx-auto px-4 sm:px-6 py-4">
+      {/* Page header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-5 rounded-lg border border-[#E5E7EB] shadow-none">
+        <div className="flex flex-col gap-0.5">
+          <h1 className="text-[18px] font-semibold text-[#111827]">
+            Support Tickets
+          </h1>
+          <p className="text-xs text-[#4B5563]">
+            Every request raised by your team, with the queues that need
+            attention first.
+          </p>
+        </div>
 
-          <button
-            type="button"
+        <div className="flex items-center shrink-0">
+          <Button
+            variant="outline"
             onClick={() => loadTickets(currentPage)}
             disabled={isLoading}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-600 shadow-sm transition hover:bg-gray-50 disabled:opacity-50 cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#2F5FD0]"
+            leftIcon={
+              <RefreshCw
+                className={`h-4 w-4 shrink-0 ${isLoading ? "animate-spin" : ""}`}
+              />
+            }
+            className="whitespace-nowrap shadow-none"
           >
-            <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
             Refresh
-          </button>
-        </section>
+          </Button>
+        </div>
+      </div>
 
-        {/* KPI row */}
-        <section className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-kpi">
-            <div className="flex items-start justify-between">
-              <Tile icon={Layers} tone="bg-blue-50 text-[#2563eb]" />
-              <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[11px] font-semibold text-gray-600">
-                All time
+      {/* Ticket Overview KPI Strip */}
+      <div className="flex flex-col gap-2.5">
+        <div className="flex items-center justify-between">
+          <h2 className="text-[11px] font-semibold uppercase tracking-wider text-[#6B7280]">
+            TICKET OVERVIEW
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+          <div className="rounded-lg border border-[#E5E7EB] bg-white p-4 h-[104px] shadow-kpi flex flex-col justify-between min-w-0">
+            <div className="flex items-center justify-between gap-2 min-w-0">
+              <span className="text-xs font-medium text-[#4B5563] truncate">
+                Total tickets
               </span>
+              <Tile icon={Layers} tone="bg-[#E8EEFB] text-[#2F5FD0]" />
             </div>
-
-            <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-gray-400">
-              Total tickets
-            </p>
-            <p className="mt-1 text-2xl font-bold text-gray-900">
-              {analytics?.total ?? 0}
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-kpi">
-            <div className="flex items-start justify-between">
-              <Tile icon={Inbox} tone="bg-amber-50 text-amber-600" />
-              {analytics && analytics.urgent_open_count > 0 && (
-                <span className="rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-600">
-                  {analytics.urgent_open_count} high priority
+            <div>
+              <span className="text-[24px] font-semibold text-[#111827] tabular-nums tracking-tight leading-none block">
+                {analytics?.total ?? 0}
+              </span>
+              <div className="mt-1 flex items-center justify-between gap-2 min-w-0">
+                <span className="text-[11px] text-[#6B7280] leading-none truncate" />
+                <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#F3F4F6] text-[#4B5563] font-medium border border-[#E5E7EB] leading-none shrink-0">
+                  All time
                 </span>
-              )}
-            </div>
-
-            <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-gray-400">
-              Awaiting reply
-            </p>
-            <p className="mt-1 text-2xl font-bold text-amber-600">
-              {analytics?.unhandled_count ?? 0}
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-kpi">
-            <div className="flex items-start justify-between">
-              <Tile icon={Timer} tone="bg-emerald-50 text-emerald-600" />
-            </div>
-
-            <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-gray-400">
-              Avg resolution
-            </p>
-            <p className="mt-1 text-2xl font-bold text-emerald-600">
-              {formatDuration(analytics?.avg_resolution_hours ?? null)}
-            </p>
-            <p className="mt-1 text-xs text-gray-400">
-              across {analytics?.resolved_sample_size ?? 0} handled
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-kpi">
-            <div className="flex items-start justify-between">
-              <Tile icon={Gauge} tone="bg-purple-50 text-purple-600" />
-            </div>
-
-            <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-gray-400">
-              Resolution rate
-            </p>
-            <p className="mt-1 text-2xl font-bold text-purple-600">
-              {resolutionPercent}%
-            </p>
-            <p className="mt-1 text-xs text-gray-400">
-              {analytics?.resolved_count ?? 0} of {analytics?.total ?? 0} closed
-            </p>
-          </div>
-        </section>
-
-        {/* Breakdown + aging */}
-        <section className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {/* Status distribution */}
-          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-            <div className="flex items-center gap-3">
-              <Tile icon={TrendingUp} tone="bg-blue-50 text-[#2563eb]" />
-              <div>
-                <h2 className="text-base font-bold text-gray-900">
-                  By status
-                </h2>
-                <p className="text-xs text-gray-500">Where the queue sits.</p>
               </div>
             </div>
+          </div>
 
+          <div className="rounded-lg border border-[#E5E7EB] bg-white p-4 h-[104px] shadow-kpi flex flex-col justify-between min-w-0">
+            <div className="flex items-center justify-between gap-2 min-w-0">
+              <span className="text-xs font-medium text-[#4B5563] truncate">
+                Awaiting reply
+              </span>
+              <Tile icon={Inbox} tone="bg-[#FEF3C7] text-[#92400E]" />
+            </div>
+            <div>
+              <span className="text-[24px] font-semibold text-[#111827] tabular-nums tracking-tight leading-none block">
+                {analytics?.unhandled_count ?? 0}
+              </span>
+              <div className="mt-1 flex items-center justify-between gap-2 min-w-0">
+                <span className="text-[11px] text-[#6B7280] leading-none truncate" />
+                {analytics && analytics.urgent_open_count > 0 && (
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#FDE8E8] text-[#9B1C1C] border border-[#F8B4B4] font-medium leading-none shrink-0 tabular-nums">
+                    {analytics.urgent_open_count} high priority
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-[#E5E7EB] bg-white p-4 h-[104px] shadow-kpi flex flex-col justify-between min-w-0">
+            <div className="flex items-center justify-between gap-2 min-w-0">
+              <span className="text-xs font-medium text-[#4B5563] truncate">
+                Avg resolution
+              </span>
+              <Tile icon={Timer} tone="bg-[#DEF7EC] text-[#03543F]" />
+            </div>
+            <div>
+              <span className="text-[24px] font-semibold text-[#111827] tabular-nums tracking-tight leading-none block">
+                {formatDuration(analytics?.avg_resolution_hours ?? null)}
+              </span>
+              <div className="mt-1 flex items-center justify-between gap-2 min-w-0">
+                <span className="text-[11px] text-[#6B7280] truncate block leading-none tabular-nums">
+                  across {analytics?.resolved_sample_size ?? 0} handled
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-[#E5E7EB] bg-white p-4 h-[104px] shadow-kpi flex flex-col justify-between min-w-0">
+            <div className="flex items-center justify-between gap-2 min-w-0">
+              <span className="text-xs font-medium text-[#4B5563] truncate">
+                Resolution rate
+              </span>
+              <Tile icon={Gauge} tone="bg-[#F3E8FF] text-[#7E22CE]" />
+            </div>
+            <div>
+              <span className="text-[24px] font-semibold text-[#111827] tabular-nums tracking-tight leading-none block">
+                {resolutionPercent}%
+              </span>
+              <div className="mt-1 flex items-center justify-between gap-2 min-w-0">
+                <span className="text-[11px] text-[#6B7280] truncate block leading-none tabular-nums">
+                  {analytics?.resolved_count ?? 0} of {analytics?.total ?? 0} closed
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Breakdown + aging */}
+      <section className="grid grid-cols-1 items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {/* Status distribution + By priority */}
+        <div className="flex flex-col rounded-lg border border-[#E5E7EB] bg-white overflow-hidden shadow-none">
+          <div className="flex items-center gap-3 px-6 py-3.5 border-b border-[#E5E7EB]">
+            <Tile icon={TrendingUp} tone="bg-[#E8EEFB] text-[#2F5FD0]" />
+            <div>
+              <h3 className="text-[13px] font-semibold text-[#111827]">
+                By status
+              </h3>
+              <p className="text-xs text-[#4B5563]">Where the queue sits.</p>
+            </div>
+          </div>
+
+          <div className="p-5">
             {statusSegments.length === 0 ? (
-              <p className="mt-5 text-sm text-gray-400">No tickets yet.</p>
+              <p className="text-[12px] text-[#6B7280]">No tickets yet.</p>
             ) : (
               <>
-                <div className="mt-5 flex h-2.5 overflow-hidden rounded-full bg-gray-100">
+                <div className="flex h-2.5 overflow-hidden rounded-full bg-[#E5E7EB]">
                   {statusSegments.map((segment) => (
                     <div
                       key={segment.status}
                       title={`${segment.status}: ${segment.count}`}
                       className={
                         segment.status === "Open"
-                          ? "bg-blue-500"
+                          ? "bg-[#2F5FD0]"
                           : segment.status === "In Progress"
-                            ? "bg-amber-500"
+                            ? "bg-[#92400E]"
                             : segment.status === "Waiting for Employee"
-                              ? "bg-purple-500"
+                              ? "bg-[#6D4AB5]"
                               : segment.status === "Resolved"
-                                ? "bg-emerald-500"
-                                : "bg-gray-400"
+                                ? "bg-[#03543F]"
+                                : "bg-[#7B8794]"
                       }
                       style={{
                         width: `${
@@ -413,18 +473,21 @@ function AdminSupportTickets() {
                   {statusSegments.map((segment) => (
                     <li
                       key={segment.status}
-                      className="flex items-center justify-between text-xs"
+                      className="flex items-center justify-between text-[12px]"
                     >
-                      <span className="inline-flex items-center gap-2 text-gray-600">
+                      <span className="inline-flex items-center gap-2 text-[#4B5563]">
                         <span
-                          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-medium ring-1 ring-inset ${getStatusStyle(
+                          className={`inline-flex items-center gap-1.5 h-[22px] rounded-full px-2.5 py-0.5 font-medium ${getStatusStyle(
                             segment.status,
                           )}`}
                         >
-                          {segment.status}
+                          <span
+                            className={`h-1.5 w-1.5 rounded-full shrink-0 ${getStatusDotColor(segment.status)}`}
+                          />
+                          <span>{segment.status}</span>
                         </span>
                       </span>
-                      <span className="font-semibold text-gray-900">
+                      <span className="font-semibold text-[#111827] tabular-nums">
                         {segment.count}
                       </span>
                     </li>
@@ -432,54 +495,9 @@ function AdminSupportTickets() {
                 </ul>
               </>
             )}
-          </div>
 
-          {/* Category + priority */}
-          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-            <div className="flex items-center gap-3">
-              <Tile icon={Headphones} tone="bg-indigo-50 text-indigo-600" />
-              <div>
-                <h2 className="text-base font-bold text-gray-900">
-                  By category
-                </h2>
-                <p className="text-xs text-gray-500">Which team is loaded.</p>
-              </div>
-            </div>
-
-            <ul className="mt-5 space-y-3">
-              {TICKET_CATEGORIES.map((category) => {
-                const total = analytics?.counts_by_category[category] ?? 0;
-                const open = analytics?.open_by_category[category] ?? 0;
-
-                return (
-                  <li key={category}>
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-medium text-gray-700">
-                        {category}
-                      </span>
-                      <span className="text-gray-500">
-                        <span className="font-semibold text-gray-900">
-                          {open}
-                        </span>{" "}
-                        open / {total}
-                      </span>
-                    </div>
-
-                    <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-gray-100">
-                      <div
-                        className="h-full rounded-full bg-[#2563eb]"
-                        style={{
-                          width: `${(total / categoryMax) * 100}%`,
-                        }}
-                      />
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-
-            <div className="mt-6 border-t border-gray-100 pt-4">
-              <p className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+            <div className="mt-4 border-t border-[#E5E7EB] pt-4">
+              <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-[#6B7280]">
                 By priority
               </p>
 
@@ -490,14 +508,17 @@ function AdminSupportTickets() {
                   return (
                     <li
                       key={priority}
-                      className="flex items-center justify-between rounded-lg bg-gray-50 px-2.5 py-2 text-xs"
+                      className="flex items-center justify-between rounded-md bg-[#F9FAFB] px-2.5 py-2 text-[12px]"
                     >
                       <span
-                        className={`rounded-full px-2 py-0.5 font-medium ${getPriorityStyle(priority)}`}
+                        className={`inline-flex items-center gap-1.5 h-[22px] rounded-full px-2.5 py-0.5 font-medium ${getPriorityStyle(priority)}`}
                       >
-                        {priority}
+                        <span
+                          className={`h-1.5 w-1.5 rounded-full shrink-0 ${getPriorityDotColor(priority)}`}
+                        />
+                        <span>{priority}</span>
                       </span>
-                      <span className="font-semibold text-gray-900">
+                      <span className="font-semibold text-[#111827] tabular-nums">
                         {total}
                       </span>
                     </li>
@@ -506,52 +527,101 @@ function AdminSupportTickets() {
               </ul>
             </div>
           </div>
+        </div>
 
-          {/* Aging */}
-          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm md:col-span-2 lg:col-span-1">
-            <div className="flex items-center gap-3">
-              <Tile icon={Clock3} tone="bg-orange-50 text-orange-600" />
-              <div>
-                <h2 className="text-base font-bold text-gray-900">
-                  Aging
-                </h2>
-                <p className="text-xs text-gray-500">
-                  How long replies are taking.
-                </p>
-              </div>
+        {/* Category */}
+        <div className="flex flex-col rounded-lg border border-[#E5E7EB] bg-white overflow-hidden shadow-none">
+          <div className="flex items-center gap-3 px-6 py-3.5 border-b border-[#E5E7EB]">
+            <Tile icon={Headphones} tone="bg-[#F3E8FF] text-[#7E22CE]" />
+            <div>
+              <h3 className="text-[13px] font-semibold text-[#111827]">
+                By category
+              </h3>
+              <p className="text-xs text-[#4B5563]">Which team is loaded.</p>
             </div>
+          </div>
 
-            <dl className="mt-5 space-y-3">
-              <div className="flex items-center justify-between rounded-xl bg-gray-50 px-3.5 py-3">
-                <dt className="text-xs font-medium text-gray-600">
+          <div className="p-5">
+            <ul className="space-y-3">
+              {TICKET_CATEGORIES.map((category) => {
+                const total = analytics?.counts_by_category[category] ?? 0;
+                const open = analytics?.open_by_category[category] ?? 0;
+
+                return (
+                  <li key={category}>
+                    <div className="flex items-center justify-between text-[12px]">
+                      <span className="font-medium text-[#111827]">
+                        {category}
+                      </span>
+                      <span className="text-[#4B5563] tabular-nums">
+                        <span className="font-semibold text-[#111827]">
+                          {open}
+                        </span>{" "}
+                        open / {total}
+                      </span>
+                    </div>
+
+                    <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-[#E5E7EB]">
+                      <div
+                        className="h-full rounded-full bg-[#2F5FD0]"
+                        style={{
+                          width: `${(total / categoryMax) * 100}%`,
+                        }}
+                      />
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        </div>
+
+        {/* Aging */}
+        <div className="flex flex-col rounded-lg border border-[#E5E7EB] bg-white overflow-hidden shadow-none md:col-span-2 xl:col-span-1">
+          <div className="flex items-center gap-3 px-6 py-3.5 border-b border-[#E5E7EB]">
+            <Tile icon={Clock3} tone="bg-[#FEF3C7] text-[#92400E]" />
+            <div>
+              <h3 className="text-[13px] font-semibold text-[#111827]">
+                Aging
+              </h3>
+              <p className="text-xs text-[#4B5563]">
+                How long replies are taking.
+              </p>
+            </div>
+          </div>
+
+          <div className="p-5">
+            <dl className="space-y-3">
+              <div className="flex items-center justify-between rounded-md bg-[#F9FAFB] px-3.5 py-2.5">
+                <dt className="text-[12px] font-medium text-[#4B5563]">
                   Oldest unanswered
                 </dt>
-                <dd className="text-sm font-bold text-gray-900">
+                <dd className="text-[13px] font-semibold text-[#111827] tabular-nums">
                   {formatAge(analytics?.oldest_open_age_days ?? null)}
                 </dd>
               </div>
 
-              <div className="flex items-center justify-between rounded-xl bg-gray-50 px-3.5 py-3">
-                <dt className="text-xs font-medium text-gray-600">
+              <div className="flex items-center justify-between rounded-md bg-[#F9FAFB] px-3.5 py-2.5">
+                <dt className="text-[12px] font-medium text-[#4B5563]">
                   Average age
                 </dt>
-                <dd className="text-sm font-bold text-gray-900">
+                <dd className="text-[13px] font-semibold text-[#111827] tabular-nums">
                   {formatAge(analytics?.avg_open_age_days ?? null)}
                 </dd>
               </div>
 
-              <div className="flex items-center justify-between rounded-xl bg-gray-50 px-3.5 py-3">
-                <dt className="text-xs font-medium text-gray-600">
+              <div className="flex items-center justify-between rounded-md bg-[#F9FAFB] px-3.5 py-2.5">
+                <dt className="text-[12px] font-medium text-[#4B5563]">
                   Older than {analytics?.stale_after_days ?? 3} days
                 </dt>
-                <dd className="text-sm font-bold text-gray-900">
+                <dd className="text-[13px] font-semibold text-[#111827] tabular-nums">
                   {analytics?.stale_open_count ?? 0}
                 </dd>
               </div>
             </dl>
 
             {(analytics?.stale_open_count ?? 0) > 0 && (
-              <div className="mt-4 flex items-start gap-2 rounded-xl border border-amber-100 bg-amber-50 p-3 text-xs text-amber-800">
+              <div className="mt-4 flex items-start gap-2 rounded-md border border-[#FCD34D] bg-[#FEF3C7] p-3 text-[12px] text-[#92400E]">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                 <span className="leading-5">
                   {analytics?.stale_open_count} ticket
@@ -561,10 +631,13 @@ function AdminSupportTickets() {
               </div>
             )}
           </div>
-        </section>
+        </div>
+      </section>
 
+      {/* Filter bar + Ticket queue */}
+      <div className="flex flex-col gap-4">
         {/* Filters */}
-        <section className="mb-4 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+        <section className="rounded-lg border border-[#E5E7EB] bg-white p-4 shadow-none">
           <div className="flex flex-col gap-2 min-[900px]:flex-row min-[900px]:items-center">
             <div className="relative w-full min-[900px]:flex-1">
               <Search
@@ -577,7 +650,7 @@ function AdminSupportTickets() {
                 onChange={(event) => changeFilter(setSearch, event.target.value)}
                 placeholder="Search subject, description or employee..."
                 aria-label="Search subject, description or employee"
-                className="h-8 w-full rounded-[6px] border border-[#E5E7EB] bg-white pl-8 pr-3 text-[13px] text-[#111827] placeholder:text-[#9CA3AF] transition hover:border-[#CBD2D9] focus:border-[#2F5FD0] focus:ring-1 focus:ring-[#2F5FD0] focus:outline-none"
+                className="h-8 w-full rounded-md border border-[#E5E7EB] bg-white pl-8 pr-3 text-[12px] text-[#111827] placeholder:text-[#7B8794] transition hover:border-[#D1D5DB] focus:border-[#2F5FD0] focus:ring-1 focus:ring-[#2F5FD0] focus:outline-none"
               />
             </div>
 
@@ -587,7 +660,7 @@ function AdminSupportTickets() {
                   value={statusFilter}
                   onChange={(event) => changeFilter(setStatusFilter, event.target.value)}
                   aria-label="Filter by status"
-                  className="h-8 w-full appearance-none rounded-[6px] border border-[#E5E7EB] bg-white pl-3 pr-8 text-[13px] text-[#111827] transition hover:border-[#CBD2D9] focus:border-[#2F5FD0] focus:ring-1 focus:ring-[#2F5FD0] focus:outline-none cursor-pointer truncate"
+                  className="h-8 w-full appearance-none rounded-md border border-[#E5E7EB] bg-white pl-2.5 pr-7 text-[12px] text-[#111827] transition hover:border-[#D1D5DB] focus:border-[#2F5FD0] focus:ring-1 focus:ring-[#2F5FD0] focus:outline-none cursor-pointer truncate"
                 >
                   <option value="">All statuses</option>
                   {TICKET_STATUSES.map((status) => (
@@ -607,7 +680,7 @@ function AdminSupportTickets() {
                   value={categoryFilter}
                   onChange={(event) => changeFilter(setCategoryFilter, event.target.value)}
                   aria-label="Filter by category"
-                  className="h-8 w-full appearance-none rounded-[6px] border border-[#E5E7EB] bg-white pl-3 pr-8 text-[13px] text-[#111827] transition hover:border-[#CBD2D9] focus:border-[#2F5FD0] focus:ring-1 focus:ring-[#2F5FD0] focus:outline-none cursor-pointer truncate"
+                  className="h-8 w-full appearance-none rounded-md border border-[#E5E7EB] bg-white pl-2.5 pr-7 text-[12px] text-[#111827] transition hover:border-[#D1D5DB] focus:border-[#2F5FD0] focus:ring-1 focus:ring-[#2F5FD0] focus:outline-none cursor-pointer truncate"
                 >
                   <option value="">All categories</option>
                   {TICKET_CATEGORIES.map((category) => (
@@ -627,7 +700,7 @@ function AdminSupportTickets() {
                   value={priorityFilter}
                   onChange={(event) => changeFilter(setPriorityFilter, event.target.value)}
                   aria-label="Filter by priority"
-                  className="h-8 w-full appearance-none rounded-[6px] border border-[#E5E7EB] bg-white pl-3 pr-8 text-[13px] text-[#111827] transition hover:border-[#CBD2D9] focus:border-[#2F5FD0] focus:ring-1 focus:ring-[#2F5FD0] focus:outline-none cursor-pointer truncate"
+                  className="h-8 w-full appearance-none rounded-md border border-[#E5E7EB] bg-white pl-2.5 pr-7 text-[12px] text-[#111827] transition hover:border-[#D1D5DB] focus:border-[#2F5FD0] focus:ring-1 focus:ring-[#2F5FD0] focus:outline-none cursor-pointer truncate"
                 >
                   <option value="">All priorities</option>
                   {TICKET_PRIORITIES.map((priority) => (
@@ -644,27 +717,28 @@ function AdminSupportTickets() {
             </div>
 
             {hasFilters && (
-              <button
-                type="button"
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={clearFilters}
-                className="h-8 shrink-0 rounded-[6px] border border-[#E5E7EB] bg-white px-2.5 text-[12px] font-medium text-[#4B5563] transition hover:bg-[#F9FAFB] hover:text-[#111827] focus:outline-none focus:ring-1 focus:ring-[#2F5FD0] cursor-pointer"
+                className="h-8 px-2.5 text-[12px] shrink-0"
               >
                 Clear
-              </button>
+              </Button>
             )}
           </div>
         </section>
 
         {/* Ticket queue */}
-        <section className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-          <div className="mb-4 flex items-center justify-between gap-3">
+        <section className="rounded-lg border border-[#E5E7EB] bg-white overflow-hidden shadow-none">
+          <div className="flex items-center justify-between gap-3 px-6 py-3.5 border-b border-[#E5E7EB]">
             <div className="flex items-center gap-3">
-              <Tile icon={Ticket} tone="bg-indigo-50 text-indigo-600" />
+              <Tile icon={Ticket} tone="bg-[#E8EEFB] text-[#2F5FD0]" />
               <div>
-                <h2 className="text-base font-bold text-gray-900">
+                <h3 className="text-[13px] font-semibold text-[#111827]">
                   Ticket queue
-                </h2>
-                <p className="text-xs text-gray-500">
+                </h3>
+                <p className="text-xs text-[#4B5563]">
                   {hasFilters
                     ? "Filtered to matching tickets."
                     : "Every request raised by employees."}
@@ -672,181 +746,231 @@ function AdminSupportTickets() {
               </div>
             </div>
 
-            <span className="inline-flex h-6 items-center rounded-full bg-gray-100 px-2.5 text-[12px] font-semibold text-gray-600">
+            <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-[#FEF3C7] text-[#92400E] border border-[#FCD34D] tabular-nums shrink-0">
               {totalTickets} {totalTickets === 1 ? "ticket" : "tickets"}
             </span>
           </div>
 
-          {isLoading ? (
-            <div className="space-y-2" aria-busy="true" aria-label="Loading tickets">
-              {[1, 2, 3].map((key) => (
-                <div
-                  key={key}
-                  className="rounded-xl border border-[#E5E7EB] bg-white p-4 animate-pulse space-y-3"
-                >
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="min-w-0 flex-1 space-y-2.5">
-                      <div className="flex items-center gap-2">
-                        <div className="h-4 w-16 rounded bg-gray-200" />
-                        <div className="h-4 w-14 rounded bg-gray-200" />
-                        <div className="h-5 w-12 rounded-full bg-gray-200" />
-                      </div>
-                      <div className="h-4 w-3/5 rounded bg-gray-200" />
-                      <div className="h-3 w-4/5 rounded bg-gray-200" />
-                      <div className="flex items-center gap-2 pt-1">
-                        <div className="h-5 w-20 rounded-full bg-gray-200" />
-                        <div className="h-5 w-16 rounded-full bg-gray-200" />
-                        <div className="h-4 w-28 rounded bg-gray-200" />
-                      </div>
-                    </div>
-                    <div className="shrink-0 space-y-1 sm:text-right">
-                      <div className="h-3 w-10 rounded bg-gray-200 sm:ml-auto" />
-                      <div className="h-4 w-16 rounded bg-gray-200 sm:ml-auto" />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : error ? (
-            <div
-              role="alert"
-              className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-center sm:text-left"
-            >
-              <div className="flex items-center gap-2 text-sm text-red-700">
-                <AlertCircle className="h-4 w-4 shrink-0 text-red-600" />
-                <span>{error}</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => loadTickets(currentPage)}
-                className="inline-flex items-center justify-center rounded-[6px] border border-red-300 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 shadow-sm transition hover:bg-red-50 focus:outline-none focus:ring-1 focus:ring-red-500 shrink-0 cursor-pointer"
+          <div className="overflow-x-auto w-full">
+            <table className="min-w-[1140px] w-full table-fixed border-collapse text-left text-[12px]">
+              <colgroup>
+                <col />
+                <col className="w-[155px]" />
+                <col className="w-[120px]" />
+                <col className="w-[165px]" />
+                <col className="w-[205px]" />
+                <col className="w-[165px]" />
+                <col className="w-[125px]" />
+              </colgroup>
+              <thead className="sticky top-0 z-10 bg-[#F9FAFB] border-b border-[#E5E7EB] text-[#4B5563] font-semibold text-[11px] uppercase tracking-wider">
+                <tr className="h-10">
+                  <th className="px-6 py-0 bg-[#F9FAFB] align-middle font-semibold whitespace-nowrap">
+                    TICKET
+                  </th>
+                  <th className="px-6 py-0 bg-[#F9FAFB] align-middle font-semibold whitespace-nowrap">
+                    EMPLOYEE
+                  </th>
+                  <th className="px-6 py-0 bg-[#F9FAFB] align-middle font-semibold whitespace-nowrap">
+                    CATEGORY
+                  </th>
+                  <th className="px-6 py-0 bg-[#F9FAFB] align-middle font-semibold whitespace-nowrap">
+                    PRIORITY
+                  </th>
+                  <th className="px-6 py-0 bg-[#F9FAFB] align-middle font-semibold whitespace-nowrap">
+                    STATUS
+                  </th>
+                  <th className="px-6 py-0 bg-[#F9FAFB] align-middle font-semibold whitespace-nowrap">
+                    HANDLED BY
+                  </th>
+                  <th className="px-6 py-0 bg-[#F9FAFB] text-right align-middle font-semibold whitespace-nowrap">
+                    CREATED
+                  </th>
+                </tr>
+              </thead>
+              <tbody
+                className="divide-y divide-[#E5E7EB] bg-white text-[#111827]"
+                aria-busy={isLoading}
               >
-                Retry
-              </button>
-            </div>
-          ) : tickets.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-gray-200 px-4 py-12 text-center">
-              <Ticket className="mx-auto h-8 w-8 text-gray-300" />
-              <h3 className="mt-3 text-sm font-semibold text-gray-700">
-                {hasFilters ? "No tickets match your filters" : "No tickets found"}
-              </h3>
-              <p className="mt-1 text-xs leading-5 text-gray-500">
-                {hasFilters
-                  ? "Try adjusting or clearing the filters."
-                  : "When an employee raises a request, it appears here."}
-              </p>
-              {hasFilters && (
-                <button
-                  type="button"
-                  onClick={clearFilters}
-                  className="mt-3 inline-flex items-center gap-1.5 rounded-[6px] border border-[#E5E7EB] bg-white px-3 py-1.5 text-[12px] font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition focus:outline-none focus:ring-1 focus:ring-[#2F5FD0] cursor-pointer"
-                >
-                  Clear filters
-                </button>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {tickets.map((ticket) => (
-                <button
-                  key={ticket.id}
-                  type="button"
-                  onClick={() => openTicket(ticket)}
-                  className="group block w-full rounded-xl border border-[#E5E7EB] bg-white p-4 text-left transition hover:border-[#D1D5DB] hover:bg-[#F9FAFB] focus:outline-none focus:ring-2 focus:ring-[#2F5FD0] focus:ring-offset-1 cursor-pointer"
-                >
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-[12px] font-medium tabular-nums text-blue-700">
-                          #{ticket.id.slice(-8).toUpperCase()}
-                        </span>
+                {isLoading ? (
+                  <TableRowSkeleton rows={3} columns={7} />
+                ) : error ? (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-8">
+                      <div
+                        role="alert"
+                        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg border border-[#F8B4B4] bg-[#FDE8E8] p-4 text-center sm:text-left"
+                      >
+                        <div className="flex items-center gap-2 text-[13px] text-[#9B1C1C]">
+                          <AlertCircle className="h-4 w-4 shrink-0 text-[#9B1C1C]" />
+                          <span>{error}</span>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => loadTickets(currentPage)}
+                          className="border-[#F8B4B4] text-[#9B1C1C] hover:bg-[#FDE8E8] shrink-0"
+                        >
+                          Retry
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ) : tickets.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-12 text-center">
+                      <EmptyState
+                        icon={<Ticket className="h-6 w-6 shrink-0 stroke-[1.5]" />}
+                        title={
+                          hasFilters
+                            ? "No tickets match your filters"
+                            : "No tickets found"
+                        }
+                        description={
+                          hasFilters
+                            ? "Try adjusting or clearing the filters."
+                            : "When an employee raises a request, it appears here."
+                        }
+                        action={
+                          hasFilters ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={clearFilters}
+                            >
+                              Clear filters
+                            </Button>
+                          ) : undefined
+                        }
+                      />
+                    </td>
+                  </tr>
+                ) : (
+                  tickets.map((ticket) => (
+                    <tr
+                      key={ticket.id}
+                      onClick={() => openTicket(ticket)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          openTicket(ticket);
+                        }
+                      }}
+                      tabIndex={0}
+                      role="button"
+                      className="min-h-[56px] h-[56px] hover:bg-[#F9FAFB] transition-colors cursor-pointer group focus:outline-none focus-visible:bg-[#F9FAFB] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#2F5FD0]"
+                    >
+                      <td className="px-6 py-2 align-middle">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-[11px] font-medium tabular-nums text-[#2F5FD0] shrink-0">
+                            #{ticket.id.slice(-8).toUpperCase()}
+                          </span>
+                          <span className="font-medium text-[12px] text-[#111827] truncate group-hover:underline leading-tight">
+                            {ticket.subject}
+                          </span>
+                        </div>
+                        <p
+                          title={ticket.description}
+                          className="mt-0.5 truncate text-[11px] text-[#6B7280] leading-tight"
+                        >
+                          {ticket.description}
+                        </p>
+                      </td>
 
-                        <span className="text-[12px] text-[#6B7280]">
-                          {ticket.employee_id}
-                        </span>
+                      <td className="px-6 py-2 align-middle">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <Avatar
+                            name={ticket.employee_id}
+                            className="!w-8 !h-8 text-[11px] shrink-0"
+                          />
+                          <div className="min-w-0">
+                            <span className="font-medium text-[#111827] block truncate text-[12px] leading-tight tabular-nums">
+                              {ticket.employee_id}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
 
-                        <span className="inline-flex h-5 items-center rounded-full bg-gray-100 px-2 text-[11px] font-medium text-gray-600">
+                      <td className="px-6 py-2 align-middle">
+                        <span className="inline-flex items-center rounded-full bg-[#F3F4F6] border border-[#E5E7EB] px-2 py-0.5 text-[11px] font-medium text-[#4B5563] whitespace-nowrap">
                           {ticket.category}
                         </span>
-                      </div>
+                      </td>
 
-                      <h3 className="mt-1.5 break-words text-[14px] font-semibold text-[#2563eb] group-hover:underline">
-                        {ticket.subject}
-                      </h3>
-
-                      <p
-                        title={ticket.description}
-                        className="mt-1 truncate text-[13px] text-[#4B5563]"
-                      >
-                        {ticket.description}
-                      </p>
-
-                      <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                      <td className="px-6 py-2 align-middle">
                         <span
-                          className={`inline-flex h-5 items-center justify-center rounded-full px-2 text-[11px] font-medium leading-none ${getPriorityStyle(ticket.priority)}`}
+                          className={`inline-flex items-center gap-1.5 h-[22px] rounded-full px-2.5 py-0.5 text-[12px] font-medium leading-normal whitespace-nowrap ${getPriorityStyle(ticket.priority)}`}
                         >
-                          {ticket.priority} priority
+                          <span
+                            className={`h-1.5 w-1.5 rounded-full shrink-0 ${getPriorityDotColor(ticket.priority)}`}
+                          />
+                          <span>{ticket.priority} priority</span>
                         </span>
+                      </td>
 
+                      <td className="px-6 py-2 align-middle">
                         <span
-                          className={`inline-flex h-5 items-center justify-center gap-1 rounded-full px-2 text-[11px] font-medium leading-none ring-1 ring-inset ${getStatusStyle(ticket.status)}`}
+                          className={`inline-flex items-center gap-1.5 h-[22px] rounded-full px-2.5 py-0.5 text-[12px] font-medium leading-normal whitespace-nowrap ${getStatusStyle(ticket.status)}`}
                         >
-                          <Clock3 className="h-3 w-3 shrink-0" />
+                          <span
+                            className={`h-1.5 w-1.5 rounded-full shrink-0 ${getStatusDotColor(ticket.status)}`}
+                          />
                           <span>{ticket.status}</span>
                         </span>
+                      </td>
 
-                        {ticket.handled_by && (
+                      <td className="px-6 py-2 align-middle">
+                        {ticket.handled_by ? (
                           <span
-                            title={`Handled by ${ticket.handled_by}`}
-                            className="max-w-[200px] truncate text-[12px] text-[#6B7280]"
+                            title={ticket.handled_by}
+                            className="text-[12px] text-[#4B5563] truncate block"
                           >
-                            handled by {ticket.handled_by}
+                            {ticket.handled_by}
                           </span>
+                        ) : (
+                          <span className="text-[12px] text-[#6B7280]">—</span>
                         )}
-                      </div>
-                    </div>
+                      </td>
 
-                    <div className="mt-1 shrink-0 text-left whitespace-nowrap sm:mt-0 sm:self-start sm:text-right">
-                      <span className="block text-[11px] leading-tight text-[#6B7280]">
-                        Created
-                      </span>
-                      <span className="mt-0.5 block text-[12px] font-medium leading-tight text-[#111827]">
-                        {formatDate(ticket.created_at)}
-                      </span>
-                    </div>
-                  </div>
-                </button>
-              ))}
+                      <td className="px-6 py-2 align-middle text-right">
+                        <span className="text-[12px] font-medium text-[#111827] tabular-nums whitespace-nowrap">
+                          {formatDate(ticket.created_at)}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
 
-              {totalPages > 1 && (
-                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 pt-4">
-                  <p className="text-xs text-gray-500">
-                    Page {currentPage} of {totalPages}
-                  </p>
+          {totalPages > 1 && (
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#E5E7EB] bg-white px-6 py-4">
+              <p className="text-[13px] text-[#6B7280] tabular-nums">
+                Page <span className="font-medium text-[#111827]">{currentPage}</span>{" "}
+                of <span className="font-medium text-[#111827]">{totalPages}</span>
+              </p>
 
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      disabled={currentPage <= 1 || isLoading}
-                      onClick={() => setCurrentPage((page) => page - 1)}
-                      className="inline-flex items-center gap-1 rounded-[6px] border border-[#E5E7EB] bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 focus:outline-none focus:ring-1 focus:ring-[#2F5FD0]"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                      Previous
-                    </button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage <= 1 || isLoading}
+                  onClick={() => setCurrentPage((page) => page - 1)}
+                  leftIcon={<ChevronLeft className="h-4 w-4" />}
+                >
+                  Previous
+                </Button>
 
-                    <button
-                      type="button"
-                      disabled={currentPage >= totalPages || isLoading}
-                      onClick={() => setCurrentPage((page) => page + 1)}
-                      className="inline-flex items-center gap-1 rounded-[6px] border border-[#E5E7EB] bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 focus:outline-none focus:ring-1 focus:ring-[#2F5FD0]"
-                    >
-                      Next
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-              )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage >= totalPages || isLoading}
+                  onClick={() => setCurrentPage((page) => page + 1)}
+                  rightIcon={<ChevronRight className="h-4 w-4" />}
+                >
+                  Next
+                </Button>
+              </div>
             </div>
           )}
         </section>
@@ -856,11 +980,11 @@ function AdminSupportTickets() {
       {selectedTicket && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
           <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded bg-white shadow-xl">
-            <div className="flex items-start justify-between gap-3 border-b border-gray-100 px-6 py-5">
+            <div className="flex items-start justify-between gap-3 border-b border-[#E5E7EB] px-6 py-5">
               <div className="min-w-0">
                 <div className="mb-2 flex flex-wrap items-center gap-2">
                   <span
-                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${getStatusStyle(selectedTicket.status)}`}
+                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${getStatusStyle(selectedTicket.status)}`}
                   >
                     <Clock3 className="h-3 w-3" />
                     {selectedTicket.status}
@@ -872,16 +996,16 @@ function AdminSupportTickets() {
                     {selectedTicket.priority}
                   </span>
 
-                  <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600">
+                  <span className="rounded-full bg-[#F3F4F6] border border-[#E5E7EB] px-2.5 py-1 text-xs font-medium text-[#4B5563]">
                     {selectedTicket.category}
                   </span>
                 </div>
 
-                <h2 className="text-lg font-bold text-gray-900">
+                <h2 className="text-lg font-bold text-[#111827]">
                   {selectedTicket.subject}
                 </h2>
 
-                <p className="mt-1 text-xs text-gray-400">
+                <p className="mt-1 text-xs text-[#6B7280]">
                   #{selectedTicket.id.slice(-8).toUpperCase()} &middot; raised by{" "}
                   {selectedTicket.employee_id} on{" "}
                   {formatDate(selectedTicket.created_at)}
@@ -891,7 +1015,7 @@ function AdminSupportTickets() {
               <button
                 type="button"
                 onClick={closeTicket}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-gray-200 text-gray-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-[#E5E7EB] text-[#6B7280] transition hover:border-[#F8B4B4] hover:bg-[#FDE8E8] hover:text-[#9B1C1C]"
                 aria-label="Close ticket"
               >
                 <X className="h-4 w-4" />
@@ -900,25 +1024,25 @@ function AdminSupportTickets() {
 
             <div className="space-y-5 px-6 py-6">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[#6B7280]">
                   Employee&apos;s message
                 </p>
 
-                <p className="mt-2 whitespace-pre-wrap rounded bg-gray-50 px-4 py-3 text-sm leading-6 text-gray-700">
+                <p className="mt-2 whitespace-pre-wrap rounded bg-[#F9FAFB] px-4 py-3 text-sm leading-6 text-[#4B5563]">
                   {selectedTicket.description}
                 </p>
               </div>
 
               {selectedTicket.resolution_note && (
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-[#6B7280]">
                     Previous reply
                     {selectedTicket.handled_by
                       ? ` by ${selectedTicket.handled_by}`
                       : ""}
                   </p>
 
-                  <p className="mt-2 whitespace-pre-wrap rounded bg-emerald-50 px-4 py-3 text-sm leading-6 text-gray-700">
+                  <p className="mt-2 whitespace-pre-wrap rounded bg-[#DEF7EC] px-4 py-3 text-sm leading-6 text-[#4B5563]">
                     {selectedTicket.resolution_note}
                   </p>
                 </div>
@@ -928,7 +1052,7 @@ function AdminSupportTickets() {
                 <div>
                   <label
                     htmlFor="ticket-status"
-                    className="mb-1.5 block text-sm font-medium text-gray-700"
+                    className="mb-1.5 block text-sm font-medium text-[#4B5563]"
                   >
                     Update status
                   </label>
@@ -941,7 +1065,7 @@ function AdminSupportTickets() {
                         event.target.value as SupportTicketStatus,
                       )
                     }
-                    className="w-full rounded border border-gray-200 bg-white px-3.5 py-3 text-sm text-gray-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    className="w-full rounded border border-[#E5E7EB] bg-white px-3.5 py-3 text-sm text-[#111827] outline-none focus:border-[#2F5FD0] focus:ring-2 focus:ring-[#2F5FD0]/20"
                   >
                     {TICKET_STATUSES.map((status) => (
                       <option key={status} value={status}>
@@ -954,7 +1078,7 @@ function AdminSupportTickets() {
                 <div>
                   <label
                     htmlFor="ticket-note"
-                    className="mb-1.5 block text-sm font-medium text-gray-700"
+                    className="mb-1.5 block text-sm font-medium text-[#4B5563]"
                   >
                     Reply to employee
                   </label>
@@ -966,10 +1090,10 @@ function AdminSupportTickets() {
                     rows={4}
                     maxLength={2000}
                     placeholder="Shown to the employee on their ticket, and sent as a notification."
-                    className="w-full resize-y rounded border border-gray-200 px-3.5 py-3 text-sm leading-6 text-gray-800 outline-none transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    className="w-full resize-y rounded border border-[#E5E7EB] px-3.5 py-3 text-sm leading-6 text-[#111827] outline-none transition placeholder:text-[#7B8794] focus:border-[#2F5FD0] focus:ring-2 focus:ring-[#2F5FD0]/20"
                   />
 
-                  <div className="mt-1 flex justify-between text-xs text-gray-400">
+                  <div className="mt-1 flex justify-between text-xs text-[#6B7280]">
                     <span>Visible to the employee.</span>
                     <span>{replyNote.length}/2000</span>
                   </div>
@@ -978,16 +1102,16 @@ function AdminSupportTickets() {
                 {replyError && (
                   <div
                     role="alert"
-                    className="flex items-start gap-2 rounded border border-red-100 bg-red-50 p-3.5 text-sm text-red-700"
+                    className="flex items-start gap-2 rounded border border-[#F8B4B4] bg-[#FDE8E8] p-3.5 text-sm text-[#9B1C1C]"
                   >
                     <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                     <span>{replyError}</span>
                   </div>
                 )}
 
-                <div className="flex flex-col-reverse gap-3 border-t border-gray-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="inline-flex items-center gap-1.5 text-xs text-gray-500">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                <div className="flex flex-col-reverse gap-3 border-t border-[#E5E7EB] pt-5 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="inline-flex items-center gap-1.5 text-xs text-[#6B7280]">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-[#03543F]" />
                     Saving notifies the employee automatically.
                   </p>
 
@@ -995,7 +1119,7 @@ function AdminSupportTickets() {
                     <button
                       type="button"
                       onClick={closeTicket}
-                      className="rounded px-4 py-2.5 text-sm font-semibold text-gray-600 transition hover:bg-gray-100"
+                      className="rounded px-4 py-2.5 text-sm font-semibold text-[#4B5563] transition hover:bg-[#F3F4F6]"
                     >
                       Cancel
                     </button>
@@ -1003,7 +1127,7 @@ function AdminSupportTickets() {
                     <button
                       type="submit"
                       disabled={isSaving}
-                      className="inline-flex items-center justify-center gap-2 rounded bg-[#2563eb] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="inline-flex items-center justify-center gap-2 rounded bg-[#2F5FD0] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#264FB0] disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {isSaving && (
                         <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -1017,7 +1141,7 @@ function AdminSupportTickets() {
           </div>
         </div>
       )}
-    </main>
+    </div>
   );
 }
 

@@ -17,9 +17,9 @@ const STAGES: Array<{
   countKey: keyof ExitRequestSummary | "total";
   tone: string;
 }> = [
-  { label: "Request", countKey: "total", tone: "bg-blue-500" },
-  { label: "In Progress", countKey: "in_progress", tone: "bg-amber-500" },
-  { label: "Completed", countKey: "completed", tone: "bg-emerald-500" },
+  { label: "Request", countKey: "total", tone: "bg-[#2F5FD0]" },
+  { label: "In Progress", countKey: "in_progress", tone: "bg-[#92400E]" },
+  { label: "Completed", countKey: "completed", tone: "bg-[#03543F]" },
 ];
 
 interface ActivityRow {
@@ -85,28 +85,28 @@ export default function TerminationPanel({
     {
       label: "Initiate Termination",
       icon: Flag,
-      tone: "border-blue-200 bg-blue-50 text-blue-700",
+      tone: "border-[#E8EEFB] bg-[#E8EEFB] text-[#2F5FD0]",
       enabled: true,
       onClick: onInitiateTermination,
     },
     {
       label: "Update Status",
       icon: RefreshCw,
-      tone: "border-amber-200 bg-amber-50 text-amber-700",
+      tone: "border-[#FCD34D] bg-[#FEF3C7] text-[#92400E]",
       enabled: Boolean(actionable),
       onClick: () => actionable && onOpenRequest(actionable),
     },
     {
       label: "Process Settlement",
       icon: Wallet,
-      tone: "border-emerald-200 bg-emerald-50 text-emerald-700",
+      tone: "border-[#BCF0DA] bg-[#DEF7EC] text-[#03543F]",
       enabled: actionable?.status === "In Progress",
       onClick: () => actionable && onOpenRequest(actionable),
     },
     {
       label: "Download Reports",
       icon: Download,
-      tone: "border-cyan-200 bg-cyan-50 text-cyan-700",
+      tone: "border-[#E4E6E1] bg-white text-[#1F2933] hover:bg-[#F0F1EE]",
       enabled: requests.length > 0,
       onClick: exportCsv,
     },
@@ -128,17 +128,17 @@ export default function TerminationPanel({
                 <li key={stage.label} className="flex min-w-0 flex-1 items-start gap-2">
                   <div className="min-w-0 flex-1 text-center">
                     <span
-                      className={`mx-auto flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-white ${stage.tone}`}
+                      className={`mx-auto flex h-9 w-9 items-center justify-center rounded-full text-xs font-semibold text-white tabular-nums ${stage.tone}`}
                     >
                       {value}
                     </span>
-                    <p className="mt-2 text-[11px] font-semibold text-slate-700">
+                    <p className="mt-2 text-[11px] font-medium text-[#4B5563]">
                       {stage.label}
                     </p>
                   </div>
 
                   {index < STAGES.length - 1 && (
-                    <span className="mt-4 h-px w-4 shrink-0 bg-slate-200" aria-hidden="true" />
+                    <span className="mt-4 h-px w-4 shrink-0 bg-[#E5E7EB]" aria-hidden="true" />
                   )}
                 </li>
               );
@@ -149,37 +149,38 @@ export default function TerminationPanel({
         <Panel
           title="Recent Termination Activity"
           description="Derived from request submission and review timestamps."
+          bodyClassName="p-0"
         >
           {activity.length === 0 ? (
-            <p className="py-8 text-center text-sm text-slate-500">
+            <p className="py-8 text-center text-xs text-[#6B7280]">
               No termination activity recorded yet.
             </p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[520px] table-fixed text-left text-[13px]">
-                <thead>
-                  <tr className="border-b border-slate-100 text-[11px] font-bold uppercase tracking-wide text-slate-500">
-                    <th className="w-[26%] px-2 py-2.5">Date &amp; Time</th>
-                    <th className="w-[24%] px-2 py-2.5">Employee</th>
-                    <th className="w-[32%] px-2 py-2.5">Action</th>
-                    <th className="w-[18%] px-2 py-2.5">By</th>
+              <table className="w-full min-w-[520px] table-fixed border-collapse text-left text-[12px]">
+                <thead className="bg-[#F9FAFB] border-b border-[#E5E7EB] text-[#4B5563] text-[11px] font-semibold uppercase tracking-wider">
+                  <tr className="h-10">
+                    <th className="w-[26%] px-4 py-0 bg-[#F9FAFB] align-middle font-semibold">Date &amp; Time</th>
+                    <th className="w-[24%] px-4 py-0 bg-[#F9FAFB] align-middle font-semibold">Employee</th>
+                    <th className="w-[32%] px-4 py-0 bg-[#F9FAFB] align-middle font-semibold">Action</th>
+                    <th className="w-[18%] px-4 py-0 bg-[#F9FAFB] align-middle font-semibold">By</th>
                   </tr>
                 </thead>
 
-                <tbody>
+                <tbody className="divide-y divide-[#E5E7EB] bg-white text-[#111827]">
                   {activity.map((row) => (
                     <tr
                       key={row.id}
-                      className="border-b border-slate-50 last:border-0"
+                      className="min-h-[48px] h-12 hover:bg-[#F9FAFB] transition-colors"
                     >
-                      <td className="px-2 py-3 whitespace-nowrap text-slate-500">
+                      <td className="px-4 py-2 whitespace-nowrap text-[#6B7280] tabular-nums">
                         {formatDateTime(row.at)}
                       </td>
-                      <td className="truncate px-2 py-3 font-medium text-slate-900">
+                      <td className="truncate px-4 py-2 font-medium text-[#111827]">
                         {row.employee}
                       </td>
-                      <td className="truncate px-2 py-3 text-slate-600">{row.action}</td>
-                      <td className="truncate px-2 py-3 text-slate-600">{row.by}</td>
+                      <td className="truncate px-4 py-2 text-[#4B5563]">{row.action}</td>
+                      <td className="truncate px-4 py-2 text-[#4B5563]">{row.by}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -201,10 +202,10 @@ export default function TerminationPanel({
                   type="button"
                   disabled={!action.enabled}
                   onClick={action.onClick}
-                  className={`flex w-full items-center gap-2.5 rounded-xl border px-3.5 py-2.5 text-left text-[13px] font-semibold transition ${
+                  className={`flex w-full items-center gap-2.5 rounded-md border px-3 py-2 text-left text-[12px] font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0] ${
                     action.enabled
-                      ? `${action.tone} hover:opacity-90`
-                      : "cursor-not-allowed border-slate-100 bg-slate-50 text-slate-300"
+                      ? `${action.tone} cursor-pointer`
+                      : "cursor-not-allowed border-[#E5E7EB] bg-[#F9FAFB] text-[#7B8794]"
                   }`}
                 >
                   <Icon className="h-4 w-4 shrink-0" />
@@ -215,12 +216,12 @@ export default function TerminationPanel({
           </div>
         </Panel>
 
-        <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
+        <div className="rounded-lg border border-[#E8EEFB] bg-[#E8EEFB] p-4">
           <div className="flex items-start gap-2.5">
-            <FileText className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
+            <FileText className="mt-0.5 h-4 w-4 shrink-0 text-[#2F5FD0]" />
             <div className="min-w-0">
-              <p className="text-sm font-bold text-blue-900">Notes</p>
-              <p className="mt-1 text-xs leading-5 text-blue-700">
+              <p className="text-[13px] font-semibold text-[#111827]">Notes</p>
+              <p className="mt-1 text-xs leading-5 text-[#2F5FD0]">
                 Ensure all documents are collected, access is revoked and final
                 settlement is processed before marking the exit as completed.
               </p>

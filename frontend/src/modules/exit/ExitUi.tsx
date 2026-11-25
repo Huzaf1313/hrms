@@ -1,35 +1,53 @@
 import type { ReactNode } from "react";
 import { AlertCircle, CheckCircle2, X } from "lucide-react";
 
+import { Avatar } from "../../components/ui/Avatar";
 import { EXIT_TYPE_META } from "./types";
-import { PANEL_CLASS, initialsOf } from "./exitUiUtils";
+import { PANEL_CLASS } from "./exitUiUtils";
 import type { ExitStatus, ExitType } from "./types";
 import type { InlineNotice } from "./exitUiUtils";
 
 /* ------------------------------------------------------------------ badges */
 
-const STATUS_STYLES: Record<ExitStatus, string> = {
-  Pending: "bg-amber-50 text-amber-700",
-  "In Progress": "bg-blue-50 text-blue-700",
-  Completed: "bg-emerald-50 text-emerald-700",
-  Rejected: "bg-rose-50 text-rose-700",
-  Cancelled: "bg-slate-100 text-slate-500",
+const STATUS_STYLES: Record<ExitStatus, { pill: string; dot: string }> = {
+  Pending: {
+    pill: "bg-[#FEF3C7] text-[#92400E] border border-[#FCD34D]",
+    dot: "bg-[#92400E]",
+  },
+  "In Progress": {
+    pill: "bg-[#E8EEFB] text-[#2F5FD0]",
+    dot: "bg-[#2F5FD0]",
+  },
+  Completed: {
+    pill: "bg-[#DEF7EC] text-[#03543F] border border-[#BCF0DA]",
+    dot: "bg-[#03543F]",
+  },
+  Rejected: {
+    pill: "bg-[#FDE8E8] text-[#9B1C1C] border border-[#F8B4B4]",
+    dot: "bg-[#9B1C1C]",
+  },
+  Cancelled: {
+    pill: "bg-[#F3F4F6] text-[#4B5563] border border-[#E5E7EB]",
+    dot: "bg-[#7B8794]",
+  },
 };
 
 export function ExitStatusBadge({ status }: { status: ExitStatus }) {
+  const tone = STATUS_STYLES[status] ?? STATUS_STYLES.Cancelled;
+
   return (
     <span
-      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold ${STATUS_STYLES[status]}`}
+      className={`inline-flex items-center gap-1.5 h-[22px] whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-medium leading-normal ${tone.pill}`}
     >
-      <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
-      {status}
+      <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${tone.dot}`} />
+      <span>{status}</span>
     </span>
   );
 }
 
 const TYPE_CHIP: Record<ExitType, string> = {
-  Resignation: "bg-blue-50 text-blue-700",
-  Termination: "bg-rose-50 text-rose-700",
+  Resignation: "bg-[#E8EEFB] text-[#2F5FD0]",
+  Termination: "bg-[#FDE8E8] text-[#9B1C1C] border border-[#F8B4B4]",
 };
 
 export function ExitTypeBadge({ type }: { type: string }) {
@@ -37,8 +55,8 @@ export function ExitTypeBadge({ type }: { type: string }) {
 
   return (
     <span
-      className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-        TYPE_CHIP[type as ExitType] ?? "bg-slate-100 text-slate-600"
+      className={`inline-flex items-center h-[22px] whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-medium leading-normal ${
+        TYPE_CHIP[type as ExitType] ?? "bg-[#F3F4F6] text-[#4B5563] border border-[#E5E7EB]"
       }`}
     >
       {meta?.label ?? type}
@@ -48,26 +66,6 @@ export function ExitTypeBadge({ type }: { type: string }) {
 
 /* ----------------------------------------------------------------- avatars */
 
-const AVATAR_TONES = [
-  "bg-blue-100 text-blue-700",
-  "bg-emerald-100 text-emerald-700",
-  "bg-rose-100 text-rose-700",
-  "bg-amber-100 text-amber-700",
-  "bg-purple-100 text-purple-700",
-  "bg-cyan-100 text-cyan-700",
-];
-
-/** Deterministic tone per name, so the same person keeps the same colour. */
-function toneFor(name: string): string {
-  let hash = 0;
-
-  for (let i = 0; i < name.length; i += 1) {
-    hash = (hash * 31 + name.charCodeAt(i)) % 997;
-  }
-
-  return AVATAR_TONES[hash % AVATAR_TONES.length];
-}
-
 export function EmployeeAvatar({
   name,
   size = "md",
@@ -75,16 +73,13 @@ export function EmployeeAvatar({
   name: string | null | undefined;
   size?: "sm" | "md";
 }) {
-  const label = name ?? "?";
-  const dimension = size === "sm" ? "h-7 w-7 text-[9px]" : "h-9 w-9 text-[11px]";
+  const dimension = size === "sm" ? "!w-8 !h-8 text-[11px]" : "!w-9 !h-9 text-xs";
 
   return (
-    <span
-      className={`flex shrink-0 items-center justify-center rounded-full font-bold ${dimension} ${toneFor(label)}`}
-      aria-hidden="true"
-    >
-      {initialsOf(label)}
-    </span>
+    <Avatar
+      name={name || "Employee"}
+      className={`${dimension} shrink-0`}
+    />
   );
 }
 
@@ -108,11 +103,11 @@ export function Panel({
   return (
     <section className={`${PANEL_CLASS} flex min-w-0 flex-col ${className}`}>
       {title && (
-        <header className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-5 py-4">
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E5E7EB] bg-white px-6 py-3.5">
           <div className="min-w-0">
-            <h3 className="text-[15px] font-bold text-slate-900">{title}</h3>
+            <h3 className="text-[13px] font-semibold text-[#111827]">{title}</h3>
             {description && (
-              <p className="mt-0.5 text-xs text-slate-500">{description}</p>
+              <p className="mt-0.5 text-xs text-[#4B5563]">{description}</p>
             )}
           </div>
           {action}
@@ -148,22 +143,26 @@ export function StatCards({
       {cards.map((card) => (
         <div
           key={card.label}
-          className="flex min-w-0 items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-kpi"
+          className="rounded-lg border border-[#E5E7EB] bg-white p-4 h-[104px] shadow-kpi flex flex-col justify-between min-w-0"
         >
-          <span
-            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${card.iconBg}`}
-          >
-            {card.icon}
-          </span>
+          <div className="flex items-center justify-between gap-2 min-w-0">
+            <span className="text-xs font-medium text-[#4B5563] truncate">
+              {card.label}
+            </span>
+            <span
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md ${card.iconBg}`}
+            >
+              {card.icon}
+            </span>
+          </div>
 
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-xs font-semibold text-slate-500">{card.label}</p>
-            <p className="mt-1 text-2xl font-bold leading-tight text-slate-900">
+          <div>
+            <span className="text-[24px] font-semibold text-[#111827] tabular-nums tracking-tight leading-none block">
               {card.value}
-            </p>
-            <p className={`mt-0.5 truncate text-[11px] font-semibold ${card.noteClass}`}>
+            </span>
+            <span className={`text-[11px] mt-1 truncate block leading-none ${card.noteClass}`}>
               {card.note}
-            </p>
+            </span>
           </div>
         </div>
       ))}
@@ -185,14 +184,14 @@ export function InlineNoticeBanner({
   const Icon = notice.type === "success" ? CheckCircle2 : AlertCircle;
   const tone =
     notice.type === "success"
-      ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-      : "border-rose-200 bg-rose-50 text-rose-800";
+      ? "border-[#BCF0DA] bg-[#DEF7EC] text-[#03543F]"
+      : "border-[#F8B4B4] bg-[#FDE8E8] text-[#9B1C1C]";
 
   return (
     <div
       role="status"
       aria-live="polite"
-      className={`mb-4 flex items-center gap-2.5 rounded-xl border px-4 py-3 text-sm ${tone}`}
+      className={`flex items-center gap-2.5 rounded-lg border px-4 py-3 text-[13px] ${tone}`}
     >
       <Icon className="h-4 w-4 shrink-0" />
       <span className="min-w-0 flex-1 break-words">{notice.text}</span>
@@ -200,7 +199,7 @@ export function InlineNoticeBanner({
         type="button"
         onClick={onDismiss}
         aria-label="Dismiss"
-        className="shrink-0 rounded-lg p-1 opacity-60 transition hover:bg-black/5 hover:opacity-100"
+        className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-current opacity-70 transition hover:bg-black/5 hover:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0]"
       >
         <X className="h-3.5 w-3.5" />
       </button>
@@ -218,18 +217,18 @@ export function LoadingRows({
   className?: string;
 }) {
   return (
-    <div className={`space-y-2.5 ${className}`}>
+    <div className={`space-y-2.5 py-4 ${className}`}>
       {Array.from({ length: rows }, (_, index) => (
-        <div key={index} className="h-11 animate-pulse rounded-lg bg-slate-100" />
+        <div key={index} className="h-11 animate-pulse rounded-md bg-[#F3F4F6]" />
       ))}
     </div>
   );
 }
 
 export function EmptyState({ message }: { message: string }) {
-  return <p className="py-10 text-center text-sm text-slate-500">{message}</p>;
+  return <p className="py-10 text-center text-xs text-[#6B7280]">{message}</p>;
 }
 
 export function ErrorState({ message }: { message: string }) {
-  return <p className="py-10 text-center text-sm text-rose-600">{message}</p>;
+  return <p className="py-10 text-center text-xs text-[#9B1C1C]">{message}</p>;
 }
