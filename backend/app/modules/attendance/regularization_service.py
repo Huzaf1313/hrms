@@ -257,20 +257,20 @@ class EmployeeAttendanceRegularizationService:
                 )
 
             if check_in_missing:
-                expected_issue_type = "Missing Check-In"
+                expected_issue_type = "Missing Punch In"
             else:
-                expected_issue_type = "Missing Check-Out"
+                expected_issue_type = "Missing Punch Out"
 
         else:
             # 5. No attendance document exists.
-            # Only a Missing Check-In request is allowed in this situation.
-            expected_issue_type = "Missing Check-In"
+            # Only a Missing Punch In request is allowed in this situation.
+            expected_issue_type = "Missing Punch In"
 
             if issue_type != expected_issue_type:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=(
-                        "Only Missing Check-In regularization is allowed "
+                        "Only Missing Punch In regularization is allowed "
                         "when no attendance record exists"
                     ),
                 )
@@ -285,7 +285,7 @@ class EmployeeAttendanceRegularizationService:
                 ),
             )
 
-        if issue_type == "Missing Check-In":
+        if issue_type == "Missing Punch In":
             if requested_check_in is None:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -297,11 +297,11 @@ class EmployeeAttendanceRegularizationService:
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=(
                         "Requested check-out time should not be "
-                        "provided for a missing check-in request"
+                        "provided for a Missing Punch In request"
                     ),
                 )
 
-        elif issue_type == "Missing Check-Out":
+        elif issue_type == "Missing Punch Out":
             if requested_check_out is None:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -313,7 +313,7 @@ class EmployeeAttendanceRegularizationService:
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=(
                         "Requested check-in time should not be "
-                        "provided for a missing check-out request"
+                        "provided for a Missing Punch Out request"
                     ),
                 )
 
@@ -388,7 +388,11 @@ class EmployeeAttendanceRegularizationService:
                 target_id=str(created.get("_id")),
             )
         except Exception:
-            pass
+            logger.exception(
+                "Failed to create admin notification for attendance "
+                "regularization. Employee ID: %s",
+                employee_id,
+            )
 
         return created
 
@@ -449,13 +453,21 @@ class EmployeeAttendanceRegularizationService:
         """Approve or reject a pending request and notify the employee.
 
         Approval writes the requested time onto the attendance record,
-        creating the record for a Missing Check-In with none. Who may review
+        creating the record for a Missing Punch In with none. Who may review
         (team scope, no self-review) is checked by the route, not here.
         """
+
+        logger.warning("REGULARIZATION SERVICE UPDATED VERSION IS RUNNING")
+
         request = await self.regularization_repository.get_by_id(
             regularization_id
         )
-
+        logger.warning(
+            "ISSUE TYPE CHECK | value=%r | type=%s | attendance_id=%r",
+            request.get("issue_type"),
+            type(request.get("issue_type")).__name__,
+            request.get("attendance_id"),
+        )
         if not request:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -493,7 +505,12 @@ class EmployeeAttendanceRegularizationService:
         # 1. Process attendance only when the request is approved.
         # Rejected requests must not create or modify attendance.
         if normalized_status == "Approved":
-
+            logger.info(
+                "REVIEW DEBUG | Request ID: %s | Issue Type: %r | Attendance ID: %r",
+                regularization_id,
+                request.get("issue_type"),
+                request.get("attendance_id"),
+            )
             attendance_id = request.get("attendance_id")
             attendance = None
             attendance_created = False
@@ -512,8 +529,8 @@ class EmployeeAttendanceRegularizationService:
 
             else:
                 # 3. No attendance ID exists.
-                # This is expected for a Missing Check-In request.
-                if request.get("issue_type") != "Missing Check-In":
+                # This is expected for a Missing Punch In request.
+                if request.get("issue_type") != "Missing Punch In":
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
                         detail=(
@@ -623,8 +640,13 @@ class EmployeeAttendanceRegularizationService:
             if not attendance_created:
 
                 attendance_update = {}
-
-                if request.get("issue_type") == "Missing Check-In":
+                logger.info(
+                    "Regularization debug | ID: %s | Issue Type: %r | Reason: %r",
+                    regularization_id,
+                    request.get("issue_type"),
+                    request.get("reason"),
+                )
+                if request.get("issue_type") == "Missing Punch In":
 
                     existing_check_in = (
                         attendance.get("check_in")
@@ -653,7 +675,7 @@ class EmployeeAttendanceRegularizationService:
                         request["requested_check_in"]
                     )
 
-                elif request.get("issue_type") == "Missing Check-Out":
+                elif request.get("issue_type") == "Missing Punch Out":
 
                     existing_check_out = (
                         attendance.get("check_out")

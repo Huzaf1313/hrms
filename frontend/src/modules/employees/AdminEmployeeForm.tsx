@@ -48,7 +48,7 @@ type IdentityField = "first_name" | "last_name" | "phone";
 
 const NAME_DIGIT_PATTERN = /[0-9]/;
 const PHONE_PATTERN = /^[0-9]{10}$/;
-
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const COUNTRY_CODES = [
   { code: "+91", label: "India", flag: "🇮🇳" },
   { code: "+1", label: "USA", flag: "🇺🇸" },
@@ -158,7 +158,7 @@ function AdminEmployeeForm({
   const [otpError, setOtpError] = useState<string | null>(null);
   const [otpSuccess, setOtpSuccess] = useState<string | null>(null);
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
-
+  const [emailError, setEmailError] = useState("");
   useEffect(() => {
     if (cooldownSeconds <= 0) return;
     const interval = setInterval(() => {
@@ -368,8 +368,8 @@ function AdminEmployeeForm({
 
   const legacyStructureName =
     form.salary_structure &&
-    !selectedStructure &&
-    LEGACY_SALARY_STRUCTURE_LABELS[form.salary_structure]
+      !selectedStructure &&
+      LEGACY_SALARY_STRUCTURE_LABELS[form.salary_structure]
       ? form.salary_structure
       : null;
 
@@ -569,7 +569,19 @@ function AdminEmployeeForm({
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const email = form.email.trim();
 
+    if (!email) {
+      setEmailError("Email address is required.");
+      return;
+    }
+
+    if (!EMAIL_PATTERN.test(email)) {
+      setEmailError("Enter a valid email address.");
+      return;
+    }
+
+    setEmailError("");
     if (!validateIdentityFields()) {
       focusFirstError();
       return;
@@ -723,7 +735,7 @@ function AdminEmployeeForm({
               <input
                 ref={fileInputRef}
                 type="file"
-                 accept="image/png,image/jpeg,image/jpg"
+                accept="image/png,image/jpeg,image/jpg"
                 onChange={handlePhotoChange}
                 className="hidden"
               />
@@ -803,41 +815,41 @@ function AdminEmployeeForm({
                 Shift
               </label>
 
-              <select
-                value={form.shift_id ?? ""}
-                onChange={(event) =>
-                  updateField("shift_id", event.target.value)
-                }
-                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10 disabled:cursor-not-allowed disabled:bg-gray-50"
-              >
-                <option value="">
-                  {availableShifts.length === 0
-                    ? "No shifts available yet"
-                    : "No shift assigned"}
+            <select
+              value={form.shift_id ?? ""}
+              onChange={(event) =>
+                updateField("shift_id", event.target.value)
+              }
+              className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10 disabled:cursor-not-allowed disabled:bg-gray-50"
+            >
+              <option value="">
+                {availableShifts.length === 0
+                  ? "No shifts available yet"
+                  : "No shift assigned"}
+              </option>
+              {availableShifts.map((shift) => (
+                <option key={shift.id} value={shift.id}>
+                  {shift.name} ({formatShiftTime(shift.start_time)} -{" "}
+                  {formatShiftTime(shift.end_time)},{" "}
+                  {formatDuration(shift.duration_minutes)})
                 </option>
-                {availableShifts.map((shift) => (
-                  <option key={shift.id} value={shift.id}>
-                    {shift.name} ({formatShiftTime(shift.start_time)} -{" "}
-                    {formatShiftTime(shift.end_time)},{" "}
-                    {formatDuration(shift.duration_minutes)})
-                  </option>
-                ))}
-              </select>
+              ))}
+            </select>
 
-              {availableShifts.length === 0 ? (
-                <p className="mt-1.5 text-xs font-medium text-amber-600">
-                  No shift added yet!
-                </p>
-              ) : (
-                <p className="mt-1.5 text-xs text-gray-500">
-                  {selectedShift
-                    ? `Overtime is worked time beyond this ${formatDuration(
-                        selectedShift.duration_minutes,
-                      )} shift.`
-                    : "Assign a shift so attendance can be measured against it."}
-                </p>
-              )}
-            </div>
+            {availableShifts.length === 0 ? (
+              <p className="mt-1.5 text-xs font-medium text-amber-600">
+                No shift added yet!
+              </p>
+            ) : (
+              <p className="mt-1.5 text-xs text-gray-500">
+                {selectedShift
+                  ? `Overtime is worked time beyond this ${formatDuration(
+                    selectedShift.duration_minutes,
+                  )} shift.`
+                  : "Assign a shift so attendance can be measured against it."}
+              </p>
+            )}
+          </div>
 
           {/* FIRST NAME */}
           <div className="order-4">
@@ -859,11 +871,10 @@ function AdminEmployeeForm({
               }
               placeholder="First name"
               aria-invalid={Boolean(identityErrors.first_name)}
-              className={`w-full rounded-xl border px-4 py-3 text-sm outline-none transition focus:ring-2 ${
-                identityErrors.first_name
-                  ? "border-red-400 focus:border-red-400 focus:ring-red-400/10"
-                  : "border-gray-200 focus:border-[#2563eb] focus:ring-[#2563eb]/10"
-              }`}
+              className={`w-full rounded-xl border px-4 py-3 text-sm outline-none transition focus:ring-2 ${identityErrors.first_name
+                ? "border-red-400 focus:border-red-400 focus:ring-red-400/10"
+                : "border-gray-200 focus:border-[#2563eb] focus:ring-[#2563eb]/10"
+                }`}
             />
 
             {identityErrors.first_name && (
@@ -893,11 +904,10 @@ function AdminEmployeeForm({
               }
               placeholder="Last name"
               aria-invalid={Boolean(identityErrors.last_name)}
-              className={`w-full rounded-xl border px-4 py-3 text-sm outline-none transition focus:ring-2 ${
-                identityErrors.last_name
-                  ? "border-red-400 focus:border-red-400 focus:ring-red-400/10"
-                  : "border-gray-200 focus:border-[#2563eb] focus:ring-[#2563eb]/10"
-              }`}
+              className={`w-full rounded-xl border px-4 py-3 text-sm outline-none transition focus:ring-2 ${identityErrors.last_name
+                ? "border-red-400 focus:border-red-400 focus:ring-red-400/10"
+                : "border-gray-200 focus:border-[#2563eb] focus:ring-[#2563eb]/10"
+                }`}
             />
 
             {identityErrors.last_name && (
@@ -927,8 +937,18 @@ function AdminEmployeeForm({
                 required
                 type="email"
                 value={form.email}
-                onChange={(event) => updateField("email", event.target.value)}
-                placeholder="employee@company.com"
+                onChange={(event) => {
+                  const value = event.target.value;
+                  updateField("email", value);
+
+                  if (!value.trim()) {
+                    setEmailError("Email address is required.");
+                  } else if (!EMAIL_PATTERN.test(value.trim())) {
+                    setEmailError("Enter a valid email address.");
+                  } else {
+                    setEmailError("");
+                  }
+                }} placeholder="employee@company.com"
                 className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
               />
             ) : (
@@ -940,11 +960,10 @@ function AdminEmployeeForm({
                     value={form.email}
                     onChange={(event) => handleEmailChange(event.target.value)}
                     placeholder="employee@company.com"
-                    className={`w-full rounded-xl border px-4 py-3 pr-32 text-sm outline-none transition focus:ring-2 ${
-                      isEmailVerified
-                        ? "border-emerald-300 bg-emerald-50/20 text-gray-900 focus:border-emerald-500 focus:ring-emerald-500/10"
-                        : "border-gray-200 focus:border-[#2563eb] focus:ring-[#2563eb]/10"
-                    }`}
+                    className={`w-full rounded-xl border px-4 py-3 pr-32 text-sm outline-none transition focus:ring-2 ${isEmailVerified
+                      ? "border-emerald-300 bg-emerald-50/20 text-gray-900 focus:border-emerald-500 focus:ring-emerald-500/10"
+                      : "border-gray-200 focus:border-[#2563eb] focus:ring-[#2563eb]/10"
+                      }`}
                   />
 
                   <button
@@ -973,6 +992,7 @@ function AdminEmployeeForm({
                       "Send OTP"
                     )}
                   </button>
+
                 </div>
 
                 {/* OTP Verification Box */}
@@ -1291,16 +1311,21 @@ function AdminEmployeeForm({
               Joining Date
             </label>
 
+          <div className="relative">
             <input
-              required
-              type="date"
-              value={form.joining_date}
-              onChange={(event) =>
-                updateField("joining_date", event.target.value)
-              }
-              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
+              type={showPassword ? "text" : "password"}
+              value={form.password ?? ""}
+              onChange={(event) => {
+                setPasswordError(null);
+                updateField("password", event.target.value);
+              }}
+              placeholder="Employee login password"
+              autoComplete="new-password"
+              className={`w-full rounded-xl border px-4 py-3 pr-12 text-sm outline-none transition focus:ring-2 ${passwordError
+                ? "border-red-400 focus:border-red-400 focus:ring-red-400/10"
+                : "border-gray-200 focus:border-[#2563eb] focus:ring-[#2563eb]/10"
+                }`}
             />
-          </div>
 
           {/* DATE OF BIRTH */}
           <div className="order-8">
@@ -1315,8 +1340,10 @@ function AdminEmployeeForm({
               onChange={(event) =>
                 updateField("date_of_birth", event.target.value)
               }
-              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
-            />
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold text-[#2563eb] hover:underline"
+            >
+              {showPassword ? "Hide" : "Show"}
+            </button>
           </div>
 
           {/* GENDER */}
@@ -1325,13 +1352,10 @@ function AdminEmployeeForm({
               Gender <span className="ml-1 text-red-500">*</span>
             </label>
 
-            <select
-              required={!isEditMode}
-              value={form.gender ?? ""}
-              onChange={(event) =>
-                updateField("gender", event.target.value)
-              }
-              className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
+          {departments.map((department) => (
+            <option
+              key={department.id}
+              value={department.id}
             >
               <option value="">Select gender</option>
               <option value="Male">Male</option>
@@ -1346,15 +1370,22 @@ function AdminEmployeeForm({
               Work Location
             </label>
 
-            <input
-              value={form.work_location ?? ""}
-              onChange={(event) =>
-                updateField("work_location", event.target.value)
-              }
-              placeholder="e.g. Mumbai Office"
-              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
-            />
-          </div>
+      {/* DESIGNATION */}
+      <div>
+        <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
+          Designation
+        </label>
+
+        <input
+          required
+          value={form.designation}
+          onChange={(event) =>
+            updateField("designation", event.target.value)
+          }
+          placeholder="e.g. Software Engineer"
+          className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
+        />
+      </div>
 
           {/* SALARY STRUCTURE */}
           <div className="order-19 grid grid-cols-1 gap-4 sm:grid-cols-2 md:col-span-2">
@@ -1363,81 +1394,125 @@ function AdminEmployeeForm({
                 Salary Structure
               </label>
 
-              <select
-                value={form.salary_structure ?? ""}
-                onChange={(event) => {
-                  updateField("salary_structure", event.target.value);
-                  updateField("salary", "");
-                }}
-                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#456b54] focus:ring-2 focus:ring-[#456b54]/10"
-              >
-                <option value="" disabled>
-                  Select Salary Structure
-                </option>
+      {/* DATE OF BIRTH */}
+      <div>
+        <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
+          Date of Birth <span className="ml-1 text-red-500">*</span>
+        </label>
 
-                {legacyStructureName && (
-                  <option value={legacyStructureName}>
-                    {LEGACY_SALARY_STRUCTURE_LABELS[legacyStructureName]} (legacy)
-                  </option>
-                )}
+        <input
+          required={!isEditMode}
+          type="date"
+          value={form.date_of_birth ?? ""}
+          onChange={(event) =>
+            updateField("date_of_birth", event.target.value)
+          }
+          className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
+        />
+      </div>
 
-                {salaryStructures.map((structure) => (
-                  <option key={structure.id} value={structure.name}>
-                    {structure.name}
-                  </option>
-                ))}
-              </select>
+      {/* GENDER */}
+      <div>
+        <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
+          Gender <span className="ml-1 text-red-500">*</span>
+        </label>
 
-              <p className="mt-1.5 text-xs text-gray-400">
-                {selectedStructure
-                  ? `Range: ${selectedStructure.range} · Gross: ₹${selectedStructure.gross_salary.toLocaleString("en-IN")}`
-                  : legacyStructureName
-                    ? "Previously hardcoded structure — please re-assign a current one"
-                    : "Choose a structure from Payroll → Salary Structure"}
-              </p>
-            </div>
+        <select
+          required={!isEditMode}
+          value={form.gender ?? ""}
+          onChange={(event) =>
+            updateField("gender", event.target.value)
+          }
+          className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
+        >
+          <option value="">Select gender</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
 
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
-                Salary Amount
-              </label>
+      {/* WORK LOCATION */}
+      <div>
+        <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
+          Work Location
+        </label>
 
-              <input
-                type="number"
-                min={salaryBand.min ?? undefined}
-                max={salaryBand.max ?? undefined}
-                required={Boolean(form.salary_structure)}
-                value={form.salary ?? ""}
-                onChange={(event) => {
-                  updateField("salary", event.target.value);
-                  setSalaryError(null);
-                }}
-                onBlur={validateSalary}
-                placeholder="Enter salary"
-                disabled={!form.salary_structure}
-                aria-invalid={Boolean(salaryError)}
-                className={`w-full rounded-xl border px-4 py-3 text-sm outline-none transition focus:ring-2 disabled:bg-gray-100 disabled:cursor-not-allowed ${
-                  salaryError
-                    ? "border-red-400 focus:border-red-500 focus:ring-red-500/10"
-                    : "border-gray-200 focus:border-[#456b54] focus:ring-[#456b54]/10"
-                }`}
-              />
+        <input
+          value={form.work_location ?? ""}
+          onChange={(event) =>
+            updateField("work_location", event.target.value)
+          }
+          placeholder="e.g. Mumbai Office"
+          className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
+        />
+      </div>
 
-              {salaryError ? (
-                <p className="mt-1.5 text-xs text-red-600">{salaryError}</p>
-              ) : (
-                <p className="mt-1.5 text-xs text-gray-400">
-                  {!form.salary_structure
-                    ? "Select a salary structure first"
-                    : salaryBand.min === null && salaryBand.max === null
-                      ? "No salary limits set on this structure"
-                      : salaryBand.max === null
-                        ? `Minimum ₹${salaryBand.min?.toLocaleString("en-IN")} · Structure gross: ₹${selectedStructure?.gross_salary.toLocaleString("en-IN")}`
-                        : `Allowed ₹${salaryBand.min?.toLocaleString("en-IN")} – ₹${salaryBand.max.toLocaleString("en-IN")}`}
-                </p>
-              )}
-            </div>
-          </div>
+      {/* SALARY STRUCTURE */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:col-span-2">
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
+            Salary Structure
+          </label>
+
+          <select
+            value={form.salary_structure ?? ""}
+            onChange={(event) => {
+              updateField("salary_structure", event.target.value);
+              updateField("salary", "");
+            }}
+            className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#456b54] focus:ring-2 focus:ring-[#456b54]/10"
+          >
+            <option value="" disabled>
+              Select Salary Structure
+            </option>
+
+            {legacyStructureName && (
+              <option value={legacyStructureName}>
+                {LEGACY_SALARY_STRUCTURE_LABELS[legacyStructureName]} (legacy)
+              </option>
+            )}
+
+            {salaryStructures.map((structure) => (
+              <option key={structure.id} value={structure.name}>
+                {structure.name}
+              </option>
+            ))}
+          </select>
+
+          <p className="mt-1.5 text-xs text-gray-400">
+            {selectedStructure
+              ? `Range: ${selectedStructure.range} · Gross: ₹${selectedStructure.gross_salary.toLocaleString("en-IN")}`
+              : legacyStructureName
+                ? "Previously hardcoded structure — please re-assign a current one"
+                : "Choose a structure from Payroll → Salary Structure"}
+          </p>
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
+            Salary Amount
+          </label>
+
+          <input
+            type="number"
+            min={salaryBand.min ?? undefined}
+            max={salaryBand.max ?? undefined}
+            required={Boolean(form.salary_structure)}
+            value={form.salary ?? ""}
+            onChange={(event) => {
+              updateField("salary", event.target.value);
+              setSalaryError(null);
+            }}
+            onBlur={validateSalary}
+            placeholder="Enter salary"
+            disabled={!form.salary_structure}
+            aria-invalid={Boolean(salaryError)}
+            className={`w-full rounded-xl border px-4 py-3 text-sm outline-none transition focus:ring-2 disabled:bg-gray-100 disabled:cursor-not-allowed ${salaryError
+              ? "border-red-400 focus:border-red-500 focus:ring-red-500/10"
+              : "border-gray-200 focus:border-[#456b54] focus:ring-[#456b54]/10"
+              }`}
+          />
 
           {/* ADDRESS */}
           <div className="order-10 col-span-1 md:col-span-2">
@@ -1445,16 +1520,22 @@ function AdminEmployeeForm({
               Address
             </label>
 
-            <textarea
-              value={form.address ?? ""}
-              onChange={(event) =>
-                updateField("address", event.target.value)
-              }
-              rows={3}
-              placeholder="Employee address"
-              className="w-full resize-none rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
-            />
-          </div>
+      {/* ADDRESS */}
+      <div className="col-span-1 md:col-span-2">
+        <label className="mb-1.5 block text-sm font-medium text-[#17375e]">
+          Address
+        </label>
+
+        <textarea
+          value={form.address ?? ""}
+          onChange={(event) =>
+            updateField("address", event.target.value)
+          }
+          rows={3}
+          placeholder="Employee address"
+          className="w-full resize-none rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/10"
+        />
+      </div>
 
           {/* ERROR */}
           {errorMessage && (
@@ -1493,7 +1574,9 @@ function AdminEmployeeForm({
           </div>
         </form>
       </div>
-    </div>
+    </form>
+      </div >
+    </div >
   );
 }
 
