@@ -19,14 +19,21 @@ from app.utils.pagination import PaginationParams
 
 # Mongo/BSON stores datetime, never a bare date. Every date-only field on an
 # asset is therefore written at midnight and read back as a date.
-def to_datetime(value: date | str | None) -> datetime | None:
-    if value is None:
+def to_datetime(value: date | datetime | str | None) -> datetime | None:
+    if value is None or value == "":
         return None
 
-    if isinstance(value, str):
-        value = date.fromisoformat(value)
+    if isinstance(value, date):  # also covers datetime, which subclasses date
+        return datetime(value.year, value.month, value.day)
 
-    return datetime(value.year, value.month, value.day)
+    if isinstance(value, str):
+        try:
+            parsed = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+        except ValueError:
+            raise AppException(f"Invalid date '{value}'. Use YYYY-MM-DD.", 422)
+        return datetime(parsed.year, parsed.month, parsed.day)
+
+    raise AppException(f"Invalid date: {value!r}", 422)
 
 
 def _now() -> datetime:

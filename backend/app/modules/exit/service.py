@@ -322,23 +322,26 @@ class ExitRequestService:
             target="/dashboard/exit-requests",
         )
 
-        # Routed to the admin who onboarded this employee. Wrapped so a
-        # notification failure can never lose the resignation itself.
+        # Notify the responsible HR/Admin when an employee submits an exit request.
         try:
             await self.admin_notification_service.create_for_employee(
                 employee_id=str(employee_id),
                 notification_type="resignation_submitted",
-                title="Resignation submitted",
+                title="New Employee Exit Request",
                 message=(
-                    f"Notice period {payload.notice_period_days} days, "
-                    f"last working day {payload.last_working_day}."
+                    f"{name} has submitted an exit request. "
+                    f"Notice period: {payload.notice_period_days} days. "
+                    f"Last working day: {payload.last_working_day}."
                 ),
                 target="/dashboard/exit-requests",
                 target_id=str(created.get("_id")),
+                include_super_admin=True,
             )
         except Exception:
-            pass
-
+            logger.exception(
+                "Failed to create exit request notification for employee %s",
+                employee_id,
+            )
         return created
 
     async def list_requests(

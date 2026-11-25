@@ -28,6 +28,7 @@ from app.modules.attendance.schemas import (
     AttendanceOptionsResponse,
     AttendanceResponse,
     AttendanceSummaryResponse,
+    AttendanceTrendResponse,
     AttendanceUpdate,
     BulkAttendanceMark,
     BulkAttendanceResponse,
@@ -359,6 +360,37 @@ async def get_attendance_summary(
         success=True,
         message="Attendance summary retrieved successfully",
         data=summary,
+    )
+
+
+@router.get(
+    "/attendance/trend",
+    response_model=APIResponse[AttendanceTrendResponse],
+)
+async def get_attendance_trend(
+    start_date: date = Query(...),
+    end_date: date = Query(...),
+    department_id: str | None = Query(default=None),
+    current_user: dict | None = Depends(
+        require_permission(Permission.ATTENDANCE_READ)
+    ),
+):
+    """Daily attendance counts across a date range, for the dashboard chart.
+
+    Declared before /attendance/{attendance_id} so "trend" is never parsed as
+    an attendance id.
+    """
+    trend = await service.get_trend(
+        start_date=start_date,
+        end_date=end_date,
+        department_id=department_id,
+        current_user=current_user,
+    )
+
+    return APIResponse(
+        success=True,
+        message="Attendance trend retrieved successfully",
+        data=trend,
     )
 
 
