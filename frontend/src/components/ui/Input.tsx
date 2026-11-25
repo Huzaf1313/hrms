@@ -1,5 +1,4 @@
 import React from "react";
-import { AlertCircle } from "lucide-react";
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -33,12 +32,12 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         {label && (
           <label
             htmlFor={inputId}
-            className="text-[13px] font-medium text-[#374151] flex items-center justify-between"
+            className="text-[12px] font-medium text-[#52606D] flex items-center justify-between"
           >
             <span>{label}</span>
           </label>
         )}
-        <div className="relative flex w-full items-center">
+        <div className="relative flex items-center w-full">
           {leftIcon && (
             <div className="absolute left-2.5 flex items-center pointer-events-none text-[#7B8794]">
               {leftIcon}
@@ -48,12 +47,12 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             id={inputId}
             disabled={disabled}
-            className={`h-10 w-full rounded-lg border bg-white px-3 text-[14px] text-[#111827] placeholder:text-[#9CA3AF] transition-colors focus:outline-none focus:ring-[3px] focus:ring-[#DBEAFE] focus:border-[#2563EB] disabled:bg-[#F3F4F6] disabled:text-[#6B7280] disabled:border-[#E5E7EB] disabled:cursor-not-allowed ${
+            className={`w-full h-[34px] rounded-[6px] border bg-white px-3 text-[13.5px] text-[#1F2933] placeholder:text-[#7B8794] transition-colors focus:outline-none focus:ring-1 focus:ring-[#2F5FD0] focus:border-[#2F5FD0] disabled:bg-[#F6F7F5] disabled:text-[#7B8794] disabled:border-[#E4E6E1] disabled:cursor-not-allowed ${
               leftIcon ? "pl-9" : ""
             } ${rightIcon ? "pr-9" : ""} ${
               error
-                ? "border-[#DC2626] focus:border-[#DC2626] focus:ring-[#FEE2E2] text-[#B91C1C]"
-                : "border-[#D1D5DB] hover:border-[#9CA3AF]"
+                ? "border-[#A12D22] focus:border-[#A12D22] focus:ring-[#A12D22] text-[#A12D22]"
+                : "border-[#E4E6E1] hover:border-[#D1D5DB]"
               } ${className}`}
             {...props}
           />
@@ -64,10 +63,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           )}
         </div>
         {error ? (
-          <p className="mt-0.5 flex items-center gap-1 text-[12px] text-[#DC2626]">
-            <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-            {error}
-          </p>
+          <p className="text-xs text-[#A12D22] mt-0.5">{error}</p>
         ) : hint ? (
           <p className="text-xs text-[#7B8794] mt-0.5">{hint}</p>
         ) : null}

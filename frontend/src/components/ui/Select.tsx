@@ -1,5 +1,5 @@
 import React from "react";
-import { AlertCircle, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
 export interface SelectOption {
   value: string;
@@ -36,7 +36,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
     return (
       <div className={`flex flex-col gap-1 ${wrapperClassName || "w-full"}`}>
         {label && (
-          <label htmlFor={selectId} className="text-[13px] font-medium text-[#374151]">
+          <label htmlFor={selectId} className="text-xs font-medium text-[#52606D]">
             {label}
           </label>
         )}
@@ -45,10 +45,10 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
             ref={ref}
             id={selectId}
             disabled={disabled}
-            className={`h-9 w-full appearance-none rounded-lg border bg-white pl-3 pr-8 text-[13px] text-[#111827] placeholder:text-[#9CA3AF] transition-colors focus:outline-none focus:ring-[3px] focus:ring-[#DBEAFE] focus:border-[#2563EB] disabled:bg-[#F3F4F6] disabled:text-[#6B7280] disabled:border-[#E5E7EB] disabled:cursor-not-allowed ${
+            className={`w-full h-10 appearance-none rounded-[6px] border bg-white pl-3 pr-8 text-sm text-[#1F2933] placeholder:text-[#7B8794] transition-colors focus:outline-none focus:ring-1 focus:ring-[#2F5FD0] focus:border-[#2F5FD0] disabled:bg-[#F6F7F5] disabled:text-[#7B8794] disabled:border-[#E4E6E1] disabled:cursor-not-allowed ${
               error
-                ? "border-[#DC2626] focus:border-[#DC2626] focus:ring-[#FEE2E2]"
-                : "border-[#D1D5DB] hover:border-[#9CA3AF]"
+                ? "border-[#A12D22] focus:border-[#A12D22] focus:ring-[#A12D22]"
+                : "border-[#E4E6E1] hover:border-[#D1D5DB]"
             } ${className}`}
             {...props}
           >
@@ -65,10 +65,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
           </div>
         </div>
         {error ? (
-          <p className="mt-0.5 flex items-center gap-1 text-[12px] text-[#DC2626]">
-            <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-            {error}
-          </p>
+          <p className="text-xs text-[#A12D22] mt-0.5">{error}</p>
         ) : hint ? (
           <p className="text-xs text-[#7B8794] mt-0.5">{hint}</p>
         ) : null}

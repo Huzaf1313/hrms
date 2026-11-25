@@ -161,7 +161,7 @@ export const RegularizationRequestsCard: React.FC<{ onReviewed?: () => void }> =
   // When there are 0 pending requests, collapse to a single slim row (about 48px)
   if (pendingRequests.length === 0 && !isLoading) {
     return (
-      <div className="shrink-0 rounded-lg border border-[#E4E6E1] bg-white h-[48px] px-6 py-4 flex items-center justify-between shadow-none">
+      <div className="rounded-lg border border-[#E4E6E1] bg-white h-[48px] px-6 py-4 flex items-center justify-between shadow-none">
         <div className="flex items-center gap-2">
           <Clock className="w-4 h-4 shrink-0 text-[#8A5A00]" />
           <h3 className="text-[14px] font-semibold text-[#1F2933]">
@@ -186,7 +186,7 @@ export const RegularizationRequestsCard: React.FC<{ onReviewed?: () => void }> =
   }
 
   return (
-    <div className="shrink-0 rounded-lg border border-[#E4E6E1] bg-white overflow-hidden shadow-none">
+    <div className="rounded-lg border border-[#E4E6E1] bg-white overflow-hidden shadow-none">
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-[#E4E6E1]">
         <div className="flex items-center gap-2">
@@ -218,8 +218,8 @@ export const RegularizationRequestsCard: React.FC<{ onReviewed?: () => void }> =
           </div>
         ) : (
           <table className="w-full text-left text-sm border-collapse">
-            <thead className="bg-[#F9FAFB] text-[11px] font-medium text-[#6B7280] normal-case tracking-normal border-b border-[#E5E7EB]">
-              <tr className="h-10">
+            <thead className="bg-[#F6F7F5] text-xs font-medium text-[#7B8794] normal-case tracking-[0.02em] border-b border-[#E4E6E1]">
+              <tr className="h-11">
                 <th className="px-6 py-3 font-medium bg-[#F6F7F5] align-middle">Employee</th>
                 <th className="px-6 py-3 font-medium bg-[#F6F7F5] align-middle">Date</th>
                 <th className="px-6 py-3 font-medium bg-[#F6F7F5] align-middle">Issue / Reason</th>
@@ -228,9 +228,9 @@ export const RegularizationRequestsCard: React.FC<{ onReviewed?: () => void }> =
                 {canApprove && <th className="px-6 py-3 text-right font-medium bg-[#F6F7F5] align-middle">Decision</th>}
               </tr>
             </thead>
-              <tbody className="divide-y divide-[#F3F4F6] bg-white text-[#1F2933]">
+            <tbody className="divide-y divide-[#E4E6E1] bg-white text-[#1F2933]">
               {pendingRequests.map((req) => (
-                <tr key={req.id} className="h-14 hover:bg-[#FAFAF8] transition-colors">
+                <tr key={req.id} className="min-h-[64px] hover:bg-[#FAFAF8] transition-colors">
                   <td className="px-6 py-4 align-middle">
                     <div className="flex items-center gap-3">
                       <Avatar name={req.employeeName} size="xs" />
@@ -258,7 +258,7 @@ export const RegularizationRequestsCard: React.FC<{ onReviewed?: () => void }> =
                   </td>
 
                   <td className="px-6 py-4 align-middle whitespace-nowrap text-sm">
-                     <StatusPill variant="warn">Pending</StatusPill>
+                    <StatusPill variant="warn">Pending</StatusPill>
                   </td>
 
                   {canApprove && (

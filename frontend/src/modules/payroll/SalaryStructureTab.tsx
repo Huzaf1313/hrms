@@ -41,58 +41,58 @@ function StructureCard({
   const band = salaryBandFor(structure);
 
   return (
-    <div className="flex flex-col justify-between rounded-2xl border border-slate-100 bg-white p-5 shadow-sm transition hover:shadow-md">
+    <div className="flex flex-col justify-between rounded-lg border border-[#E4E6E1] bg-white p-5 shadow-none transition">
       <div>
         <div className="flex items-start justify-between gap-2">
-          <h3 className="text-base font-bold text-slate-900">{structure.name}</h3>
+          <h3 className="text-base font-semibold text-[#1F2933]">{structure.name}</h3>
         </div>
 
         <div className="mt-4">
-          <p className="text-[11px] font-medium text-slate-400">Salary Range</p>
-          <p className="text-sm font-semibold text-slate-700">{structure.range || "Flexible"}</p>
+          <p className="text-xs font-medium text-[#7B8794]">Salary Range</p>
+          <p className="mt-0.5 text-sm font-medium text-[#1F2933]">{structure.range || "Flexible"}</p>
         </div>
 
-        <div className="mt-3 rounded-lg bg-slate-50 px-3 py-2">
-          <p className="text-[11px] font-medium text-slate-400">Allowed Salary Band</p>
-          <p className="text-sm font-semibold text-slate-700">
+        <div className="mt-3 rounded-md border border-[#E4E6E1]/50 bg-[#FAFAF8] px-3 py-2">
+          <p className="text-xs font-medium text-[#7B8794]">Allowed Salary Band</p>
+          <p className="mt-0.5 text-sm font-medium tabular-nums text-[#1F2933]">
             {band.min !== null ? formatCurrency(band.min) : "No min"}
             {" – "}
             {band.max !== null ? formatCurrency(band.max) : "No max"}
           </p>
         </div>
 
-        <div className="mt-4 border-t border-slate-100 pt-4">
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+        <div className="mt-4 border-t border-[#E4E6E1] pt-4">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#7B8794]">
             Earnings ({structure.earnings.length})
           </p>
           <div className="space-y-1.5 text-sm">
             {structure.earnings.map((earning, idx) => (
               <div key={`${earning.label}-${idx}`} className="flex items-center justify-between">
-                <span className="text-slate-600">{earning.label}</span>
-                <span className="font-medium text-slate-800">{formatCurrency(earning.amount)}</span>
+                <span className="text-[#52606D]">{earning.label}</span>
+                <span className="font-medium tabular-nums text-right text-[#1F2933]">{formatCurrency(earning.amount)}</span>
               </div>
             ))}
           </div>
 
-          <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
-            <span className="text-sm font-bold text-slate-900">Gross Salary</span>
-            <span className="text-sm font-bold text-blue-600">{formatCurrency(gross)}</span>
+          <div className="mt-3 flex items-center justify-between border-t border-[#E4E6E1] pt-3">
+            <span className="text-sm font-semibold text-[#1F2933]">Gross Salary</span>
+            <span className="text-sm font-semibold tabular-nums text-right text-[#2F5FD0]">{formatCurrency(gross)}</span>
           </div>
         </div>
 
         {structure.deductions && structure.deductions.length > 0 && (
-          <div className="mt-4 border-t border-slate-100 pt-4">
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+          <div className="mt-4 border-t border-[#E4E6E1] pt-4">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#7B8794]">
               Applied Deductions & Contributions ({structure.deductions.length})
             </p>
             <div className="flex flex-wrap gap-1.5">
               {structure.deductions.map((deduction) => (
                 <span
                   key={deduction.id}
-                  className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${
+                  className={`inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-medium border ${
                     deduction.type === "contribution"
-                      ? "bg-purple-50 text-purple-700 border border-purple-200"
-                      : "bg-slate-100 text-slate-700 border border-slate-200"
+                      ? "bg-[#E3F5E1] text-[#1E6B45] border-[#BCE8B5]"
+                      : "bg-[#FDF3D6] text-[#8A5A00] border-[#F6DE95]"
                   }`}
                 >
                   {deduction.name}
@@ -103,23 +103,23 @@ function StructureCard({
         )}
       </div>
 
-      <div className="mt-5 flex gap-2 border-t border-slate-50 pt-4">
+      <div className="mt-5 flex gap-2 border-t border-[#E4E6E1] pt-4">
         <button
           type="button"
           onClick={() => onEdit(structure)}
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-200 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+          className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-md border border-[#E4E6E1] bg-white text-[13px] font-medium text-[#1F2933] transition hover:bg-[#F0F1EE] cursor-pointer"
         >
-          <Pencil className="h-3.5 w-3.5" />
+          <Pencil className="h-3.5 w-3.5 shrink-0" />
           Edit Structure
         </button>
         <button
           type="button"
           onClick={() => onDelete(structure)}
-          className="flex items-center justify-center rounded-lg border border-slate-200 px-3 py-2 text-rose-500 transition hover:bg-rose-50"
+          className="flex h-8 w-8 items-center justify-center rounded-md border border-[#E4E6E1] bg-white text-[#7B8794] transition hover:bg-[#FBE4E1] hover:text-[#A12D22] cursor-pointer"
           aria-label={`Delete ${structure.name}`}
           title="Delete structure"
         >
-          <Trash2 className="h-3.5 w-3.5" />
+          <Trash2 className="h-3.5 w-3.5 shrink-0" />
         </button>
       </div>
     </div>
@@ -634,19 +634,19 @@ function SalaryStructureTab() {
 
   return (
     <div>
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold text-slate-900">Salary Structures</h2>
-          <p className="mt-0.5 text-xs text-slate-500">
+          <h2 className="text-base font-semibold text-[#1F2933]">Salary Structures</h2>
+          <p className="mt-1 text-sm text-[#7B8794]">
             Define salary bands, earning components, and gross remuneration for employee assignments.
           </p>
         </div>
         <button
           type="button"
           onClick={handleAddNew}
-          className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-blue-700"
+          className="flex h-10 items-center gap-2 rounded-md bg-[#2F5FD0] px-4 text-sm font-medium text-white transition hover:bg-[#264FB0]"
         >
-          <Plus className="h-4 w-4" />
+          <Plus className="h-4 w-4 shrink-0" />
           Add Structure
         </button>
       </div>
@@ -674,27 +674,27 @@ function SalaryStructureTab() {
       )}
 
       {loading ? (
-        <div className="flex h-56 flex-col items-center justify-center gap-2 rounded-2xl border border-slate-100 bg-white p-8">
-          <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
-          <p className="text-xs text-slate-400">Loading salary structures...</p>
+        <div className="flex h-56 flex-col items-center justify-center gap-2 rounded-lg border border-[#E4E6E1] bg-white p-8">
+          <Loader2 className="h-6 w-6 animate-spin text-[#2F5FD0]" />
+          <p className="text-xs text-[#7B8794]">Loading salary structures...</p>
         </div>
       ) : structures.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-12 text-center">
-          <h3 className="text-sm font-bold text-slate-800">No Salary Structures Defined</h3>
-          <p className="mt-1 text-xs text-slate-500">
+        <div className="rounded-lg border border-dashed border-[#E4E6E1] bg-white p-12 text-center">
+          <h3 className="text-sm font-semibold text-[#1F2933]">No Salary Structures Defined</h3>
+          <p className="mt-1 text-xs text-[#7B8794]">
             Create salary structures to assign earning components and salary bands to employees.
           </p>
           <button
             type="button"
             onClick={handleAddNew}
-            className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-blue-700"
+            className="mt-4 inline-flex h-10 items-center gap-2 rounded-md bg-[#2F5FD0] px-4 text-sm font-medium text-white transition hover:bg-[#264FB0]"
           >
-            <Plus className="h-3.5 w-3.5" />
+            <Plus className="h-4 w-4 shrink-0" />
             Add First Structure
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {structures.map((structure) => (
             <StructureCard
               key={structure.id}

@@ -93,6 +93,22 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   height: 100%;
 }
 
+/* Base focus styles */
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+/* Celebration Scrolling Announcement */
+.celebration-marquee {
+  animation: celebration-scroll var(--marquee-duration, 35s) linear infinite;
+  will-change: transform;
+}
+
+.celebration-marquee:hover {
+  animation-play-state: paused;
+}
+
 .announcement-marquee-fade {
   position: absolute;
   z-index: 1;
@@ -116,7 +132,6 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   from {
     transform: translateX(0);
   }
-
   to {
     transform: translateX(-50%);
   }
@@ -193,6 +208,12 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .celebration-marquee {
+    animation: none;
+  }
+}
+
 /* Payslip printing styles */
 .payslip-paper {
   color: #111827;
@@ -206,44 +227,38 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     size: A4;
     margin: 0;
   }
-
   body {
     background: white;
   }
-
   body * {
     visibility: hidden;
   }
-
   .payslip-modal,
   .payslip-modal .payslip-paper,
   .payslip-modal .payslip-paper * {
     visibility: visible;
   }
-
   .payslip-modal {
     position: static;
     display: block;
     padding: 0;
     background: white;
   }
-
-  .payslip-modal>div {
+  .payslip-modal > div {
     max-height: none;
     max-width: none;
     overflow: visible;
     border-radius: 0;
     box-shadow: none;
   }
-
-  .payslip-modal>div>div:first-child,
+  .payslip-modal > div > div:first-child,
   .payslip-actions {
     display: none;
   }
-
   .payslip-paper {
     width: 100%;
     min-height: 297mm;
     padding: 27px 42px 30px;
   }
+}
 }

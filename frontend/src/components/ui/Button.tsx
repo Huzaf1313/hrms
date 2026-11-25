@@ -14,11 +14,11 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 
 const variantStyles: Record<ButtonVariant, string> = {
   primary:
-    "bg-[#2563EB] text-white hover:bg-[#1D4ED8] active:bg-[#1D4ED8] border-transparent disabled:bg-[#93C5FD] disabled:cursor-not-allowed",
+    "bg-[#2F5FD0] text-white hover:bg-[#264FB0] active:bg-[#264FB0] border-transparent disabled:bg-[#2F5FD0]/50 disabled:cursor-not-allowed",
   secondary:
     "bg-[#F0F1EE] text-[#1F2933] hover:bg-[#E4E6E1] active:bg-[#E4E6E1] border-transparent disabled:bg-[#F6F7F5] disabled:text-[#7B8794] disabled:cursor-not-allowed",
   outline:
-    "bg-white text-[#374151] border-[#E5E7EB] hover:bg-[#F9FAFB] hover:border-[#D1D5DB] active:bg-[#F3F4F6] disabled:bg-[#F3F4F6] disabled:text-[#9CA3AF] disabled:border-[#E5E7EB] disabled:cursor-not-allowed",
+    "bg-white text-[#1F2933] border-[#E4E6E1] hover:bg-[#F0F1EE] hover:border-[#E4E6E1] active:bg-[#E4E6E1] disabled:bg-[#F6F7F5] disabled:text-[#7B8794] disabled:border-[#E4E6E1] disabled:cursor-not-allowed",
   ghost:
     "bg-transparent text-[#52606D] hover:bg-[#F0F1EE] hover:text-[#1F2933] active:bg-[#E4E6E1] border-transparent disabled:text-[#7B8794] disabled:cursor-not-allowed",
   danger:
@@ -27,9 +27,9 @@ const variantStyles: Record<ButtonVariant, string> = {
 
 const sizeStyles: Record<ButtonSize, string> = {
   xs: "h-7 px-2.5 text-xs gap-1.5 rounded-[4px]",
-  sm: "h-9 px-3 text-[12px] font-medium gap-1.5 rounded-lg",
-  md: "h-10 px-3.5 text-[14px] font-medium gap-2 rounded-lg",
-  lg: "h-10 px-4 text-[14px] font-medium gap-2 rounded-lg",
+  sm: "h-[30px] px-3 text-[12px] font-medium gap-1.5 rounded-[6px]",
+  md: "h-[34px] px-3.5 text-[13.5px] font-medium gap-2 rounded-[6px]",
+  lg: "h-10 px-4 text-[14px] font-medium gap-2 rounded-[6px]",
 };
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
@@ -53,7 +53,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         type={type}
         disabled={disabled || isLoading}
-        className={`inline-flex items-center justify-center font-medium border transition-colors select-none focus:outline-none focus-visible:ring-[3px] focus-visible:ring-[#DBEAFE] focus-visible:ring-offset-1 cursor-pointer ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
+        className={`inline-flex items-center justify-center font-medium border transition-colors select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0] focus-visible:ring-offset-1 cursor-pointer ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
         {...props}
       >
         {isLoading ? (
