@@ -3,7 +3,7 @@ import { leaveService, type LeaveRequest, type LeaveStatus } from "../services/l
 import { useToast } from "../../../components/ui/useToast";
 
 export function useLeaveRequests(employeeId: string) {
-  const { success } = useToast();
+  const { success, error: showError } = useToast();
   const [requests, setRequests] = useState<LeaveRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSampleData, setIsSampleData] = useState(false);
@@ -53,13 +53,10 @@ export function useLeaveRequests(employeeId: string) {
       );
       success("Leave request cancelled successfully.", "Request Cancelled");
       return true;
-    } catch {
-      // If mock/offline, update state directly
-      setRequests((prev) =>
-        prev.map((r) => (r.id === requestId ? { ...r, status: "cancelled" as LeaveStatus } : r))
-      );
-      success("Leave request cancelled.", "Request Cancelled");
-      return true;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Unable to cancel leave request.";
+      showError(msg, "Cancellation Failed");
+      return false;
     }
   };
 

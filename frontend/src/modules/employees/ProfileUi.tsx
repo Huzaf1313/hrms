@@ -89,7 +89,7 @@ export function ProfileTabBar({
   onChange: (tab: ProfileTab) => void;
 }) {
   return (
-    <div className="scrollbar-hidden overflow-x-auto border-b border-gray-200">
+    <div className="scrollbar-hidden overflow-x-auto overflow-y-hidden max-w-full border-b border-gray-200">
       <div className="flex min-w-max items-center gap-6">
         {PROFILE_TABS.map((tab) => (
           <button
@@ -97,7 +97,7 @@ export function ProfileTabBar({
             type="button"
             onClick={() => onChange(tab)}
             aria-current={active === tab ? "page" : undefined}
-            className={`-mb-px whitespace-nowrap border-b-2 pb-3 text-sm font-semibold transition ${
+            className={`whitespace-nowrap border-b-2 pb-3 text-sm font-semibold transition ${
               active === tab
                 ? "border-[#2563eb] text-[#2563eb]"
                 : "border-transparent text-gray-500 hover:border-gray-200 hover:text-gray-700"

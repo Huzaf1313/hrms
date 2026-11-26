@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Download, ExternalLink, Plus, X } from "lucide-react";
+import { AlertCircle, CheckCircle2, Download, ExternalLink, FileSpreadsheet, Plus, X } from "lucide-react";
 
 import { Button } from "../../components/ui/Button";
 import {
@@ -8,7 +8,7 @@ import {
   ExitTypeBadge,
 } from "./ExitUi";
 import { INPUT_CLASS, formatDate, formatDateTime, useDialogA11y } from "./exitUiUtils";
-import { adminExitRequestService, formatFileSize, saveBlob } from "./exitRequestService";
+import { adminExitRequestService, downloadExitCsv, formatFileSize, saveBlob } from "./exitRequestService";
 import { ApiError } from "../../services/api";
 import type { ExitRequest, HandoverTask } from "./types";
 
@@ -141,10 +141,27 @@ export default function ExitDetailModal({
   };
 
   const actionable = selected.status === "Pending" || selected.status === "In Progress";
+  const isTermination = selected.exit_type === "Termination";
+  const timelineEvents = [
+    {
+      label: isTermination ? "Termination initiated" : "Resignation submitted",
+      at: selected.submitted_at,
+      by: selected.employee_name ?? selected.employee_id,
+    },
+    ...(selected.reviewed_at
+      ? [
+          {
+            label: `Moved to ${selected.status}`,
+            at: selected.reviewed_at,
+            by: selected.reviewed_by ?? "HR Admin",
+          },
+        ]
+      : []),
+  ];
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4 py-6 backdrop-blur-[2px]"
+      className="fixed inset-0 z-50 flex justify-end bg-slate-900/40 backdrop-blur-[2px]"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget && !acting) onClose();
       }}
@@ -154,7 +171,7 @@ export default function ExitDetailModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="exit-detail-dialog-title"
-        className="flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded border border-[#E5E7EB] bg-white shadow-xl"
+        className="flex h-full w-full max-w-xl flex-col overflow-hidden border-l border-[#E5E7EB] bg-white shadow-2xl"
       >
         <header className="flex items-start justify-between gap-4 border-b border-[#E5E7EB] px-6 py-4">
           <div className="flex min-w-0 items-center gap-3">
@@ -183,15 +200,39 @@ export default function ExitDetailModal({
               onClick={onClose}
               disabled={acting}
               aria-label="Close"
-              className="flex h-8 w-8 items-center justify-center rounded text-[#6B7280] transition hover:bg-[#F0F1EE] hover:text-[#111827] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0]"
+              className="flex h-8 w-8 items-center justify-center rounded-md text-[#6B7280] transition hover:bg-[#F0F1EE] hover:text-[#111827] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0]"
             >
               <X className="h-4 w-4" />
             </button>
           </div>
         </header>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
-          <dl className="grid grid-cols-1 gap-x-6 gap-y-2.5 text-[13px] sm:grid-cols-2">
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5 space-y-6">
+          {/* Compact merged status + settlement info alert */}
+          <div
+            className={`flex items-start gap-2.5 rounded-xl border p-3.5 text-xs leading-5 ${
+              actionable
+                ? "border-blue-200 bg-blue-50/80 text-blue-900"
+                : "border-slate-200 bg-slate-50 text-slate-700"
+            }`}
+          >
+            {actionable ? (
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
+            ) : (
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />
+            )}
+            <div className="min-w-0">
+              <p className="font-medium">
+                {selected.employee_name ?? "This employee"} is currently{" "}
+                <span className="font-semibold">{selected.status.toLowerCase()}</span>.
+              </p>
+              <p className="mt-0.5 text-xs opacity-85">
+                Once final settlement is completed, the employee&apos;s account is marked inactive and system access is revoked.
+              </p>
+            </div>
+          </div>
+
+          <dl className="grid grid-cols-1 gap-x-6 gap-y-2.5 text-sm sm:grid-cols-2">
             <div className="grid grid-cols-[125px_1fr] items-baseline gap-2">
               <dt className="text-xs font-medium text-[#6B7280]">Reason</dt>
               <dd className="font-medium text-[#111827] text-left">{selected.reason}</dd>
@@ -391,57 +432,109 @@ export default function ExitDetailModal({
             </div>
           )}
 
+          {isTermination && (
+            <div className="rounded-xl border border-[#E5E7EB] bg-slate-50/70 p-4">
+              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Termination Timeline
+              </h3>
+              <ol className="space-y-2.5">
+                {timelineEvents.map((ev) => (
+                  <li key={`${ev.label}-${ev.at}`} className="flex items-start justify-between gap-3 text-xs">
+                    <div className="min-w-0">
+                      <p className="font-medium text-[#111827]">{ev.label}</p>
+                      <p className="text-slate-500">by {ev.by}</p>
+                    </div>
+                    <span className="shrink-0 text-slate-500 tabular-nums">
+                      {formatDateTime(ev.at)}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+
           {actionable && (
-            <div className="mt-6 border-t border-[#E5E7EB] pt-5">
+            <div className="border-t border-[#E5E7EB] pt-5">
               <textarea
-                className="h-20 w-full resize-none rounded border border-[#E5E7EB] bg-white p-3 text-[12px] text-[#111827] outline-none transition placeholder:text-[#7B8794] focus:border-[#2F5FD0] focus:ring-1 focus:ring-[#2F5FD0]"
+                className="h-20 w-full resize-none rounded-lg border border-[#E5E7EB] bg-white p-3 text-xs text-[#111827] outline-none transition placeholder:text-[#7B8794] focus:border-[#2F5FD0] focus:ring-1 focus:ring-[#2F5FD0]"
                 maxLength={500}
                 placeholder="Note to the employee (required when rejecting)"
                 value={note}
                 onChange={(event) => setNote(event.target.value)}
               />
 
-              <div className="mt-3 flex flex-wrap justify-end gap-2">
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={acting}
-                  onClick={() => void changeStatus("Rejected")}
-                  className="h-8 px-3 rounded text-[12px] font-medium text-[#9B1C1C] hover:bg-[#FDE8E8] border-[#F8B4B4] hover:border-[#F8B4B4] shadow-none"
+                  onClick={() => downloadExitCsv([selected], `exit-${selected.employee_id}.csv`)}
+                  leftIcon={<FileSpreadsheet className="h-3.5 w-3.5 shrink-0" />}
+                  className="h-8 px-3 rounded-lg text-xs font-medium shadow-none"
                 >
-                  Reject
+                  Exit Report
                 </Button>
 
-                {selected.status === "Pending" ? (
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    disabled={acting}
-                    onClick={() => void changeStatus("In Progress")}
-                    className="h-8 px-3.5 rounded text-[12px] font-medium shadow-none"
-                  >
-                    Approve &amp; Start Clearance
-                  </Button>
-                ) : (
+                <div className="flex flex-wrap gap-2">
                   <Button
                     variant="outline"
                     size="sm"
                     disabled={acting}
+                    onClick={() => void changeStatus("Rejected")}
+                    className="h-8 px-3 rounded-lg text-xs font-medium text-[#9B1C1C] hover:bg-[#FDE8E8] border-[#F8B4B4] hover:border-[#F8B4B4] shadow-none"
+                  >
+                    Reject
+                  </Button>
+
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    disabled={acting || selected.status !== "Pending"}
+                    title={
+                      selected.status !== "Pending"
+                        ? "Already approved and in clearance"
+                        : "Approve request and begin clearance"
+                    }
+                    onClick={() => void changeStatus("In Progress")}
+                    className="h-8 px-3.5 rounded-lg text-xs font-medium shadow-none"
+                  >
+                    Approve &amp; Start Clearance
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={acting || selected.status !== "In Progress"}
+                    title={
+                      selected.status !== "In Progress"
+                        ? "Available after clearance is started"
+                        : "Process final settlement and mark completed"
+                    }
                     onClick={() => void changeStatus("Completed")}
-                    className="h-8 px-3.5 rounded text-[12px] font-medium text-[#03543F] hover:bg-[#DEF7EC] border-[#BCF0DA] shadow-none"
+                    className="h-8 px-3.5 rounded-lg text-xs font-medium text-[#03543F] hover:bg-[#DEF7EC] border-[#BCF0DA] shadow-none"
                   >
                     Mark Completed
                   </Button>
-                )}
+                </div>
               </div>
             </div>
           )}
 
           {!actionable && (
-            <p className="mt-6 flex items-center gap-2 rounded bg-[#F9FAFB] border border-[#E5E7EB] px-4 py-3 text-xs text-[#6B7280]">
-              <ExternalLink className="h-4 w-4 shrink-0" />
-              This request is {selected.status.toLowerCase()} and can no longer be actioned.
-            </p>
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-[#F9FAFB] border border-[#E5E7EB] px-4 py-3 text-xs text-[#6B7280]">
+              <span className="flex items-center gap-2">
+                <ExternalLink className="h-4 w-4 shrink-0" />
+                This request is {selected.status.toLowerCase()} and can no longer be actioned.
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => downloadExitCsv([selected], `exit-${selected.employee_id}.csv`)}
+                leftIcon={<FileSpreadsheet className="h-3.5 w-3.5 shrink-0" />}
+                className="h-8 px-3 rounded-lg text-xs font-medium shadow-none"
+              >
+                Exit Report
+              </Button>
+            </div>
           )}
 
           {actionError && (

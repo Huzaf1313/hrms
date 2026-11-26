@@ -6,7 +6,6 @@ import {
   CalendarDays,
   CheckCircle2,
   ChevronDown,
-  ChevronRight,
   ClipboardList,
   Clock,
   FileText,
@@ -19,6 +18,7 @@ import {
 import SalaryStructureTab from "./SalaryStructureTab";
 import DeductionsTab from "./DeductionsTab";
 import PayslipsTab from "./PayslipsTab";
+import { PageHeading } from "../../components/ui/PageHeading";
 import Reports from "../dashboard/Reports";
 import {
   type MonthlyPayrollItem,
@@ -497,15 +497,8 @@ export default function AdminPayroll() {
 
   return (
     <div className="flex flex-col gap-6 w-full">
-      {/* Page Header Card */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-[20px_24px] rounded-lg border border-[#E4E6E1] shadow-none">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-[20px] font-semibold text-[#1F2933]">Payroll Management</h1>
-          <p className="text-sm text-[#7B8794]">
-            Manage payroll, salary structure, deductions and generate payslips.
-          </p>
-        </div>
-      </div>
+      {/* Page Header */}
+      <PageHeading title="Manage payroll, salary structure, deductions and generate payslips." />
 
       {/* KPI Stats - 4 separate cards in a grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -544,13 +537,13 @@ export default function AdminPayroll() {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-1 border-b border-[#E4E6E1] overflow-x-auto">
+      <div className="flex items-center gap-1 border-b border-[#E4E6E1] overflow-x-auto overflow-y-hidden scrollbar-hidden max-w-full">
         {tabs.map((tab) => (
           <button
             key={tab.key}
             type="button"
             onClick={() => setActiveTab(tab.key)}
-            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors cursor-pointer border-b-2 -mb-[1px] whitespace-nowrap ${
+            className={`flex shrink-0 items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors cursor-pointer border-b-2 whitespace-nowrap ${
               activeTab === tab.key
                 ? "border-[#2F5FD0] text-[#2F5FD0] font-semibold bg-white"
                 : "border-transparent text-[#52606D] hover:text-[#1F2933] hover:bg-[#F6F7F5]"
@@ -563,9 +556,8 @@ export default function AdminPayroll() {
 
       {activeTab === "overview" && (
         <div className="flex flex-col gap-6">
-          {/* Chart + Quick actions */}
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
-            <div className="min-w-0 rounded-lg border border-[#E4E6E1] bg-white p-6 shadow-none lg:col-span-3 flex flex-col justify-between">
+          {/* Payroll Charts (Full Width) */}
+          <div className="min-w-0 rounded-xl border border-[#E5E7EB] bg-white p-6 shadow-none flex flex-col justify-between">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h2 className="text-base font-semibold text-[#1F2933]">Payroll Charts</h2>
@@ -685,159 +677,163 @@ export default function AdminPayroll() {
               )}
             </div>
 
-            <div className="min-w-0 rounded-lg border border-[#E4E6E1] bg-white p-6 shadow-none lg:col-span-2 flex flex-col justify-between">
-              <div>
-                <h2 className="mb-4 text-base font-semibold text-[#1F2933]">Quick Actions</h2>
+            {/* Quick Actions (2x2 image style) + Recent Payroll Runs */}
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 items-stretch">
+              <div className="min-w-0 rounded-xl border border-[#E5E7EB] bg-white p-6 shadow-none flex flex-col justify-between">
+                <div>
+                  <h2 className="mb-4 text-base font-semibold text-[#1F2933]">Quick Actions</h2>
 
-                <div className="flex flex-col gap-2.5">
-                  {quickActions.map(({ label, icon: Icon, onClick, iconBg, iconColor }) => (
-                    <button
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {quickActions.map(({ label, icon: Icon, onClick, iconBg, iconColor }) => (
+                      <button
+                        key={label}
+                        type="button"
+                        onClick={onClick}
+                        className="flex min-w-0 items-center gap-3 rounded-xl border border-[#E5E7EB] bg-white px-4 py-3.5 text-left transition hover:border-[#CBD5E1] hover:bg-[#F8FAFC] cursor-pointer"
+                      >
+                        <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${iconBg} ${iconColor}`}>
+                          <Icon className="h-4 w-4 shrink-0" />
+                        </span>
+                        <span className="min-w-0 flex-1 text-[13px] font-medium text-[#1F2937] leading-tight truncate">
+                          {label}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="min-w-0 rounded-xl border border-[#E5E7EB] bg-white p-6 shadow-none">
+                <div className="mb-4 flex items-center justify-between">
+                  <h2 className="text-base font-semibold text-[#1F2933]">Recent Payroll Runs</h2>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("reports")}
+                    className="text-xs font-semibold text-[#2F5FD0] hover:underline cursor-pointer"
+                  >
+                    View Reports
+                  </button>
+                </div>
+
+                <div className="divide-y divide-[#E5E7EB]">
+                  {recentRuns.length > 0 ? (
+                    recentRuns.map((run) => (
+                      <div
+                        key={run.month}
+                        className="flex flex-wrap items-center justify-between gap-3 py-3 hover:bg-[#F6F7F5]/50 transition-colors"
+                      >
+                        <div>
+                          <p className="text-sm font-semibold text-[#1F2933]">{run.month}</p>
+                          <p className="text-xs text-[#7B8794]">Processed on {run.processed_on}</p>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs text-[#52606D] font-medium">{run.progress}</span>
+                          <StatusBadge status={run.status} />
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-[#E5E7EB] p-6 text-center text-xs text-[#7B8794]">
+                      No recent payroll runs recorded.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Department summary + Pending Items */}
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-12 items-stretch">
+              <div className="xl:col-span-7 h-full min-w-0 rounded-xl border border-[#E5E7EB] bg-white p-6 shadow-none flex flex-col justify-between">
+                <div>
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <h2 className="text-base font-semibold text-[#1F2933]">Payroll Summary by Department</h2>
+                  </div>
+
+                  {departmentRows.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full min-w-[540px] text-sm">
+                        <thead>
+                          <tr className="border-b border-[#E5E7EB] text-xs font-medium uppercase tracking-wide text-[#7B8794]">
+                            <th className="pb-3 pr-4 text-left">Department</th>
+                            <th className="pb-3 px-4 text-right">Employees</th>
+                            <th className="pb-3 px-4 text-right">Gross Salary</th>
+                            <th className="pb-3 px-4 text-right">Net Salary</th>
+                            <th className="pb-3 pl-4 text-left">Status</th>
+                          </tr>
+                        </thead>
+
+                        <tbody>
+                          {departmentRows.map((row) => (
+                            <tr key={row.department} className="border-b border-[#E5E7EB]/60 last:border-0 hover:bg-[#F6F7F5]/50 transition-colors">
+                              <td className="py-3.5 pr-4 text-left font-semibold text-[#1F2933]">{row.department}</td>
+                              <td className="py-3.5 px-4 text-right tabular-nums text-[#52606D]">{row.employees}</td>
+                              <td className="py-3.5 px-4 text-right tabular-nums font-medium text-[#1F2933]">{formatCurrency(row.gross)}</td>
+                              <td className="py-3.5 px-4 text-right tabular-nums font-medium text-[#1F2933]">{formatCurrency(row.net)}</td>
+                              <td className="py-3.5 pl-4 text-left">
+                                <StatusBadge status={row.status} />
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-[#E5E7EB] p-8 text-center text-xs text-[#7B8794]">
+                      No department payroll records available for this period.
+                    </div>
+                  )}
+                </div>
+
+                {departmentRows.length > 0 && (
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-[#7B8794]">
+                    <span>
+                      Showing 1 to {departmentRows.length} of {departmentRows.length} entries
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="xl:col-span-5 h-full min-w-0 rounded-xl border border-[#E5E7EB] bg-white p-6 shadow-none flex flex-col">
+                <div className="mb-4 flex items-center justify-between">
+                  <h2 className="text-base font-semibold text-[#1F2933]">Pending Items</h2>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPayslipStatusFilter("");
+                      setActiveTab("payslips");
+                    }}
+                    className="text-xs font-semibold text-[#2F5FD0] hover:underline cursor-pointer"
+                  >
+                    Go to Payslips
+                  </button>
+                </div>
+
+                <div className="divide-y divide-[#E5E7EB]">
+                  {pendingItems.map(({ count, label, icon: Icon, action, iconBg, iconColor }) => (
+                    <div
                       key={label}
-                      type="button"
-                      onClick={onClick}
-                      className="flex items-center gap-3 rounded-lg border border-[#E4E6E1] px-3.5 py-3 text-left transition hover:bg-[#F6F7F5] hover:border-[#CBD2D9] cursor-pointer group"
+                      className="flex items-center gap-3 py-3 hover:bg-[#F6F7F5]/50 transition-colors"
                     >
-                      <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${iconBg} ${iconColor} transition-colors`}>
+                      <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${iconBg} ${iconColor}`}>
                         <Icon className="h-4 w-4 shrink-0" />
                       </div>
-                      <span className="flex-1 text-xs sm:text-sm font-medium text-[#1F2933]">{label}</span>
-                      <ChevronRight className="h-4 w-4 shrink-0 text-[#7B8794] opacity-40 group-hover:opacity-100 group-hover:text-[#2F5FD0] transition-all" />
-                    </button>
+
+                      <span className="text-base font-semibold text-[#1F2933] min-w-[20px]">{count}</span>
+                      <span className="flex-1 text-sm text-[#52606D]">{label}</span>
+
+                      <button
+                        type="button"
+                        onClick={action}
+                        className="rounded-md border border-[#E5E7EB] px-3 py-1.5 text-xs font-medium text-[#1F2933] hover:bg-[#F0F1EE] cursor-pointer"
+                      >
+                        View
+                      </button>
+                    </div>
                   ))}
                 </div>
               </div>
             </div>
-          </div>
-
-          {/* Recent runs + pending items */}
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <div className="min-w-0 rounded-lg border border-[#E4E6E1] bg-white p-6 shadow-none">
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-base font-semibold text-[#1F2933]">Recent Payroll Runs</h2>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("reports")}
-                  className="text-xs font-semibold text-[#2F5FD0] hover:underline cursor-pointer"
-                >
-                  View Reports
-                </button>
-              </div>
-
-              <div className="divide-y divide-[#E4E6E1]">
-                {recentRuns.length > 0 ? (
-                  recentRuns.map((run) => (
-                    <div
-                      key={run.month}
-                      className="flex items-center justify-between gap-3 py-3 hover:bg-[#F6F7F5]/50 transition-colors"
-                    >
-                      <div>
-                        <p className="text-sm font-semibold text-[#1F2933]">{run.month}</p>
-                        <p className="text-xs text-[#7B8794]">Processed on {run.processed_on}</p>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs text-[#52606D] font-medium">{run.progress}</span>
-                        <StatusBadge status={run.status} />
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-[#E4E6E1] p-6 text-center text-xs text-[#7B8794]">
-                    No recent payroll runs recorded.
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="min-w-0 rounded-lg border border-[#E4E6E1] bg-white p-6 shadow-none">
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-base font-semibold text-[#1F2933]">Pending Items</h2>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPayslipStatusFilter("");
-                    setActiveTab("payslips");
-                  }}
-                  className="text-xs font-semibold text-[#2F5FD0] hover:underline cursor-pointer"
-                >
-                  Go to Payslips
-                </button>
-              </div>
-
-              <div className="divide-y divide-[#E4E6E1]">
-                {pendingItems.map(({ count, label, icon: Icon, action, iconBg, iconColor }) => (
-                  <div
-                    key={label}
-                    className="flex items-center gap-3 py-3 hover:bg-[#F6F7F5]/50 transition-colors"
-                  >
-                    <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${iconBg} ${iconColor}`}>
-                      <Icon className="h-4 w-4 shrink-0" />
-                    </div>
-
-                    <span className="text-base font-semibold text-[#1F2933] min-w-[20px]">{count}</span>
-                    <span className="flex-1 text-sm text-[#52606D]">{label}</span>
-
-                    <button
-                      type="button"
-                      onClick={action}
-                      className="rounded-md border border-[#E4E6E1] px-3 py-1.5 text-xs font-medium text-[#1F2933] hover:bg-[#F0F1EE] cursor-pointer"
-                    >
-                      View
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Department summary table */}
-          <div className="rounded-lg border border-[#E4E6E1] bg-white p-6 shadow-none">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-base font-semibold text-[#1F2933]">Payroll Summary by Department</h2>
-            </div>
-
-            {departmentRows.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[720px] text-sm">
-                  <thead>
-                    <tr className="border-b border-[#E4E6E1] text-xs font-medium uppercase tracking-wide text-[#7B8794]">
-                      <th className="pb-3 pr-4 text-left">Department</th>
-                      <th className="pb-3 px-4 text-right">Employees</th>
-                      <th className="pb-3 px-4 text-right">Gross Salary</th>
-                      <th className="pb-3 px-4 text-right">Net Salary</th>
-                      <th className="pb-3 pl-4 text-left">Status</th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    {departmentRows.map((row) => (
-                      <tr key={row.department} className="border-b border-[#E4E6E1]/50 last:border-0 hover:bg-[#F6F7F5]/50 transition-colors">
-                        <td className="py-3.5 pr-4 text-left font-semibold text-[#1F2933]">{row.department}</td>
-                        <td className="py-3.5 px-4 text-right tabular-nums text-[#52606D]">{row.employees}</td>
-                        <td className="py-3.5 px-4 text-right tabular-nums font-medium text-[#1F2933]">{formatCurrency(row.gross)}</td>
-                        <td className="py-3.5 px-4 text-right tabular-nums font-medium text-[#1F2933]">{formatCurrency(row.net)}</td>
-                        <td className="py-3.5 pl-4 text-left">
-                          <StatusBadge status={row.status} />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-[#E4E6E1] p-8 text-center text-xs text-[#7B8794]">
-                No department payroll records available for this period.
-              </div>
-            )}
-
-            {departmentRows.length > 0 && (
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-[#7B8794]">
-                <span>
-                  Showing 1 to {departmentRows.length} of {departmentRows.length} entries
-                </span>
-              </div>
-            )}
-          </div>
         </div>
       )}
 

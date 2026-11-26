@@ -210,7 +210,7 @@ export const EmployeeRegularizationHistory: React.FC<EmployeeRegularizationHisto
             </div>
 
             {/* Side-by-side Punches */}
-            <div className="grid grid-cols-2 gap-3 p-3 rounded border border-slate-100 bg-slate-50 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded border border-slate-100 bg-slate-50 text-xs">
               <div>
                 <span className="text-xs text-slate-400 block font-medium">Original Logged Times</span>
                 <span className="font-mono text-slate-600 mt-1 block">

@@ -212,7 +212,7 @@ export function Header({
   const fullName = user?.full_name ?? "Admin User";
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between gap-4 border-b border-[#E4E6E1] bg-white px-6">
+    <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between gap-2 sm:gap-4 border-b border-[#E4E6E1] bg-white px-3 sm:px-6">
       {/* Skip link for keyboard users */}
       <a
         href="#main-content"
@@ -222,14 +222,14 @@ export function Header({
       </a>
 
       {/* Left: Hamburger & Page Title */}
-      <div className="flex min-w-0 items-center gap-3">
+      <div className="flex min-w-0 items-center gap-2 sm:gap-3">
         <button
           type="button"
           onClick={() => {
             if (onOpenSidebar) onOpenSidebar();
             else onToggleSidebar?.();
           }}
-          className="flex h-8 w-8 items-center justify-center rounded-[6px] text-[#52606D] hover:bg-[#F0F1EE] transition-colors lg:hidden focus:outline-none focus:ring-2 focus:ring-[#2F5FD0]"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] text-[#52606D] hover:bg-[#F0F1EE] transition-colors lg:hidden focus:outline-none focus:ring-2 focus:ring-[#2F5FD0]"
           aria-label="Toggle navigation"
         >
           <Menu className="h-4 w-4" />
@@ -239,7 +239,7 @@ export function Header({
           <button
             type="button"
             onClick={onToggleSidebar}
-            className="hidden h-8 w-8 items-center justify-center rounded-[6px] text-[#52606D] hover:bg-[#F0F1EE] transition-colors lg:flex focus:outline-none focus:ring-2 focus:ring-[#2F5FD0]"
+            className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-[6px] text-[#52606D] hover:bg-[#F0F1EE] transition-colors lg:flex focus:outline-none focus:ring-2 focus:ring-[#2F5FD0]"
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
@@ -249,7 +249,7 @@ export function Header({
 
         {/* Sole page title on screen */}
         <div className="flex items-center min-w-0">
-          <h1 className="text-[20px] font-semibold text-[#1F2933] truncate">
+          <h1 className="text-[16px] sm:text-[20px] font-semibold text-[#1F2933] truncate">
             {pageTitle}
           </h1>
         </div>
@@ -308,9 +308,11 @@ export function Header({
       </div>
 
       {/* Right Controls */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 sm:gap-4 shrink-0">
         {/* Date Badge */}
-        <DatePicker canManageHolidays={isAdminRole(user?.role)} />
+        <div className="hidden sm:block">
+          <DatePicker canManageHolidays={isAdminRole(user?.role)} />
+        </div>
 
         {/* Notification Bell */}
         <div ref={notificationRef} className="relative">

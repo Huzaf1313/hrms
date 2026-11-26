@@ -143,7 +143,7 @@ export default function DepartmentDonut({
               x="80"
               y="77"
               textAnchor="middle"
-              className="fill-slate-900 text-[24px] font-extrabold font-manrope"
+              className="fill-[#111827] text-[24px] font-bold tabular-nums"
             >
               {Math.round(animatedTotal)}
             </text>

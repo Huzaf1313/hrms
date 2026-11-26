@@ -4,7 +4,6 @@ import {
   AlertCircle,
   Check,
   Loader2,
-  LockKeyhole,
   Mail,
   RefreshCw,
   ShieldCheck,
@@ -938,7 +937,10 @@ function AdminEmployeeForm({
                     required
                     type="email"
                     value={form.email}
-                    onChange={(event) => handleEmailChange(event.target.value)}
+                    onChange={(event) => {
+                      setEmailError("");
+                      handleEmailChange(event.target.value);
+                    }}
                     placeholder="employee@company.com"
                     className={`w-full rounded border px-4 py-3 pr-32 text-sm outline-none transition focus:ring-2 ${isEmailVerified
                         ? "border-emerald-300 bg-emerald-50/20 text-gray-900 focus:border-emerald-500 focus:ring-emerald-500/10"
@@ -1044,6 +1046,14 @@ function AdminEmployeeForm({
                       </p>
                     )}
                   </div>
+                )}
+
+                {/* Email validation error */}
+                {emailError && (
+                  <p className="flex items-center gap-1 text-xs font-medium text-red-600">
+                    <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                    {emailError}
+                  </p>
                 )}
 
                 {/* Pre-OTP error or guidance */}

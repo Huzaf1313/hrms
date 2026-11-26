@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import {
-  Settings as SettingsIcon,
+  Briefcase,
   Building2,
   Users2,
   CalendarDays,
+  HeartPulse,
   Layers,
+  Repeat,
   Wallet,
-  FileText,
+  Umbrella,
   Pencil,
   Plus,
   Trash2,
@@ -19,6 +21,7 @@ import { holidayService } from "../holidays/holidayService";
 import type { Holiday } from "../holidays/types";
 import { ApiError } from "../../services/api";
 import NoticePopup from "../../components/ui/NoticePopup";
+import { PageHeading } from "../../components/ui/PageHeading";
 import { departmentService } from "../departments/departmentService";
 import {
   formatDuration,
@@ -32,7 +35,7 @@ import type { Department } from "../departments/types";
 
 const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-type CardId = "organization" | "workingDays" | "payroll";
+type CardId = "organization" | "workingDays" | "payroll" | "leave";
 
 interface ShiftForm {
   name: string;
@@ -74,6 +77,12 @@ interface SettingsData {
     payrollCycle: string;
     paymentDate: string;
   };
+  leave: {
+    casualQuota: string;
+    sickQuota: string;
+    earnedQuota: string;
+    carryForward: string;
+  };
 }
 
 const STORAGE_KEY = "hrms_settings";
@@ -86,10 +95,16 @@ function freshDefaults(): SettingsData {
       contactEmail: "hr@peoplesync.io",
       phoneNumber: "+91 98765 43210",
     },
-    workingDays: ["Wed", "Thu", "Fri"],
+    workingDays: ["Mon", "Tue", "Wed", "Thu", "Fri"],
     payroll: {
       payrollCycle: "Monthly",
       paymentDate: "1",
+    },
+    leave: {
+      casualQuota: "12",
+      sickQuota: "10",
+      earnedQuota: "18",
+      carryForward: "Allowed (Up to 10 Days)",
     },
   };
 }
@@ -106,10 +121,17 @@ function readSettings(): SettingsData {
 
     const parsed = JSON.parse(raw) as Partial<SettingsData>;
 
+    const parsedLeave = parsed.leave as Partial<SettingsData["leave"]> | undefined;
+    const hasCurrentLeaveSchema =
+      parsedLeave && typeof parsedLeave.earnedQuota === "string";
+
     return {
       organization: { ...defaults.organization, ...(parsed.organization ?? {}) },
       workingDays: Array.isArray(parsed.workingDays) ? parsed.workingDays : defaults.workingDays,
       payroll: { ...defaults.payroll, ...(parsed.payroll ?? {}) },
+      leave: hasCurrentLeaveSchema
+        ? { ...defaults.leave, ...parsedLeave }
+        : defaults.leave,
     };
   } catch {
     return defaults;
@@ -159,18 +181,21 @@ interface SettingsCardProps {
 
 function SettingsCard({ icon, iconBg, title, children, action, headerAction }: SettingsCardProps) {
   return (
-    <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm flex flex-col">
-      <div className="flex items-center gap-2.5 mb-4">
-        <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${iconBg}`}>
-          {icon}
-        </span>
-        <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
-        {headerAction && <div className="ml-auto">{headerAction}</div>}
+    <div className="h-full rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.03)] flex flex-col transition-colors">
+      <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-3.5 mb-4">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${iconBg}`}>
+            {icon}
+          </span>
+          <h3 className="text-[15px] font-semibold text-slate-900 truncate">{title}</h3>
+        </div>
+        <div className="flex items-center gap-3 shrink-0">
+          {headerAction}
+          {action}
+        </div>
       </div>
 
       <div className="flex-1">{children}</div>
-
-      {action && <div className="mt-4 flex justify-end">{action}</div>}
     </div>
   );
 }
@@ -194,7 +219,7 @@ function EditActions({
       <button
         type="button"
         onClick={onEdit}
-        className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700"
+        className="inline-flex items-center gap-1.5 rounded-lg border border-[#E5E7EB] bg-white px-3 py-1.5 text-xs font-medium text-[#374151] transition hover:border-[#2F5FD0]/40 hover:bg-[#EFF6FF] hover:text-[#2F5FD0] cursor-pointer"
       >
         <Pencil className="h-3.5 w-3.5" />
         Edit
@@ -207,7 +232,7 @@ function EditActions({
       <button
         type="button"
         onClick={onCancel}
-        className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+        className="flex items-center gap-1.5 rounded-lg border border-[#E5E7EB] bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50 cursor-pointer"
       >
         <X className="h-3.5 w-3.5" />
         Cancel
@@ -217,7 +242,7 @@ function EditActions({
         type="button"
         onClick={onSave}
         disabled={!canSave}
-        className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex items-center gap-1.5 rounded-lg bg-[#2F5FD0] px-3 py-1.5 text-xs font-medium text-white shadow-xs transition hover:bg-[#244EB3] disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
       >
         <Check className="h-3.5 w-3.5" />
         Save
@@ -228,9 +253,9 @@ function EditActions({
 
 function Field({ label, value }: { label: string; value: string }) {
   return (
-    <div className="mb-3 last:mb-0">
-      <p className="text-xs text-slate-400">{label}</p>
-      <p className="text-sm font-medium text-slate-800">{value}</p>
+    <div className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC]/70 px-3.5 py-2.5 min-w-0">
+      <p className="text-xs font-medium text-slate-500">{label}</p>
+      <p className="mt-0.5 text-sm font-semibold text-slate-900 break-words">{value || "—"}</p>
     </div>
   );
 }
@@ -415,7 +440,7 @@ function ShiftDetailItem({ shift, index, onEdit, onDelete, isDeleting }: ShiftDe
         </div>
       </div>
 
-      <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 rounded-xl border border-gray-100 bg-gray-50 p-4">
+      <dl className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3 rounded-xl border border-gray-100 bg-gray-50 p-4">
         <DetailRow label="Start Time" value={formatShiftTime(shift.start_time)} />
         <DetailRow label="End Time" value={formatShiftTime(shift.end_time)} />
         <DetailRow
@@ -496,6 +521,7 @@ function DepartmentDetailItem({
 // ---- Page -----------------------------------------------------------------
 
 export default function AdminSettings() {
+  const [activeSection, setActiveSection] = useState<"all" | "organization" | "schedule" | "payroll">("all");
   const [settings, setSettings] = useState<SettingsData>(readSettings);
   const [draft, setDraft] = useState<SettingsData | null>(null);
   const [editingCard, setEditingCard] = useState<CardId | null>(null);
@@ -537,6 +563,7 @@ export default function AdminSettings() {
   const isEditingOrganization = editingCard === "organization";
   const isEditingWorkingDays = editingCard === "workingDays";
   const isEditingPayroll = editingCard === "payroll";
+  const isEditingLeave = editingCard === "leave";
 
   const shiftDurationPreview = previewShiftDurationMinutes(
     shiftForm.start_time,
@@ -614,8 +641,23 @@ export default function AdminSettings() {
   }, []);
 
   useEffect(() => {
-    void loadHolidays();
-  }, [loadHolidays]);
+    let active = true;
+    void holidayService
+      .list()
+      .then((data) => {
+        if (active) setHolidays(data);
+      })
+      .catch(() => {
+        // ignore
+      })
+      .finally(() => {
+        if (active) setHolidaysLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   async function deleteHoliday(id: string, name: string) {
     if (!window.confirm(`Are you sure you want to delete holiday "${name}"?`)) {
@@ -684,6 +726,14 @@ export default function AdminSettings() {
     }
 
     setDraft({ ...draft, payroll: { ...draft.payroll, [key]: value } });
+  }
+
+  function updateLeave(key: keyof SettingsData["leave"], value: string) {
+    if (!draft) {
+      return;
+    }
+
+    setDraft({ ...draft, leave: { ...draft.leave, [key]: value } });
   }
 
   async function reloadShifts() {
@@ -915,7 +965,7 @@ export default function AdminSettings() {
         onChange={(value) => updateShiftForm("name", value)}
       />
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className="block text-xs text-slate-400 mb-1">
             Start Time
@@ -951,7 +1001,7 @@ export default function AdminSettings() {
         </p>
       )}
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className="block text-xs text-slate-400 mb-1">
             Grace Period (minutes)
@@ -1062,29 +1112,46 @@ export default function AdminSettings() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 px-6 py-6">
+    <div className="flex flex-col gap-5 pb-10 w-full">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-600 shrink-0">
-          <SettingsIcon className="h-5 w-5 text-white" />
-        </span>
-        <div>
-          <h1 className="text-xl font-bold text-slate-900">Settings</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
-            Manage your HRMS platform settings and preferences.
-          </p>
-        </div>
+      <PageHeading title="Manage your HRMS platform settings and preferences." />
 
-        {/* Fixed-position, so where it sits in the header does not matter.
-            It closes itself; showNotice no longer needs a timer. */}
-        <NoticePopup
-          notice={notice ? { type: "success", text: notice } : null}
-          onDismiss={() => setNotice("")}
-        />
+      {/* Clean section filter pills */}
+      <div className="flex items-center gap-2 overflow-x-auto scrollbar-hidden border-b border-[#E5E7EB]">
+        {[
+          { id: "all" as const, label: "All Settings" },
+          { id: "organization" as const, label: "Organization & Departments" },
+          { id: "schedule" as const, label: "Shifts & Holidays" },
+          { id: "payroll" as const, label: "Payroll & Leave" },
+        ].map((tab) => {
+          const active = activeSection === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveSection(tab.id)}
+              className={`shrink-0 whitespace-nowrap border-b-2 px-3.5 py-2.5 text-[13px] font-medium transition-colors cursor-pointer ${
+                active
+                  ? "border-[#2F5FD0] text-[#2F5FD0]"
+                  : "border-transparent text-[#4B5563] hover:border-[#D1D5DB] hover:text-[#111827]"
+              }`}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      {/* Fixed-position, so where it sits does not matter.
+          It closes itself; showNotice no longer needs a timer. */}
+      <NoticePopup
+        notice={notice ? { type: "success", text: notice } : null}
+        onDismiss={() => setNotice("")}
+      />
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch">
         {/* Organization Details */}
+        {(activeSection === "all" || activeSection === "organization") && (
         <SettingsCard
           icon={<Building2 className="h-4 w-4 text-blue-600" />}
           iconBg="bg-blue-50"
@@ -1100,7 +1167,7 @@ export default function AdminSettings() {
           }
         >
           {isEditingOrganization ? (
-            <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <InputField
                 label="Company Name"
                 value={view.organization.companyName}
@@ -1121,18 +1188,20 @@ export default function AdminSettings() {
                 value={view.organization.phoneNumber}
                 onChange={(value) => updateOrganization("phoneNumber", value)}
               />
-            </>
+            </div>
           ) : (
-            <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Field label="Company Name" value={view.organization.companyName} />
               <Field label="Address" value={view.organization.address} />
               <Field label="Contact Email" value={view.organization.contactEmail} />
               <Field label="Phone Number" value={view.organization.phoneNumber} />
-            </>
+            </div>
           )}
         </SettingsCard>
+        )}
 
         {/* Shift Management */}
+        {(activeSection === "all" || activeSection === "schedule") && (
         <SettingsCard
           icon={<Users2 className="h-4 w-4 text-violet-600" />}
           iconBg="bg-violet-50"
@@ -1142,7 +1211,7 @@ export default function AdminSettings() {
               <button
                 type="button"
                 onClick={() => setIsShiftDetailModalOpen(true)}
-                className="text-xs font-semibold text-blue-600 hover:text-blue-700"
+                className="text-xs font-medium text-[#2F5FD0] hover:text-[#244EB3] cursor-pointer"
               >
                 View All →
               </button>
@@ -1153,7 +1222,7 @@ export default function AdminSettings() {
               <button
                 type="button"
                 onClick={openShiftCreate}
-                className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[#2F5FD0] px-3 py-1.5 text-xs font-medium text-white shadow-xs hover:bg-[#244EB3] transition cursor-pointer"
               >
                 <Plus className="h-3.5 w-3.5" />
                 Add Shift
@@ -1164,10 +1233,11 @@ export default function AdminSettings() {
           {isShiftFormOpen && !isShiftDetailModalOpen ? (
             shiftFormView
           ) : (
-            <div className="h-[192px] overflow-y-auto pr-1">
+            <div className="min-h-[120px] max-h-[220px] overflow-y-auto pr-1">
               {shiftsLoading ? (
-                <div className="flex h-full items-center justify-center">
-                  <p className="text-sm text-slate-500">Loading shifts...</p>
+                <div className="space-y-2.5 py-2">
+                  <div className="h-14 animate-pulse rounded-xl bg-slate-100" />
+                  <div className="h-14 animate-pulse rounded-xl bg-slate-100" />
                 </div>
               ) : shiftError ? (
                 <div className="flex h-full items-center justify-center px-4">
@@ -1187,7 +1257,7 @@ export default function AdminSettings() {
                   {shifts.slice(0, 2).map((shift) => (
                     <li
                       key={shift.id}
-                      className={`rounded-xl border border-slate-100 p-3 ${shift.is_active ? "bg-white" : "bg-slate-50 opacity-70"
+                      className={`rounded-xl border border-slate-200/80 p-3 ${shift.is_active ? "bg-slate-50/50" : "bg-slate-50 opacity-70"
                         }`}
                     >
                       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -1259,8 +1329,10 @@ export default function AdminSettings() {
             </div>
           )}
         </SettingsCard>
+        )}
 
         {/* Working Days & Holidays */}
+        {(activeSection === "all" || activeSection === "schedule") && (
         <SettingsCard
           icon={<CalendarDays className="h-4 w-4 text-blue-600" />}
           iconBg="bg-blue-50"
@@ -1275,47 +1347,49 @@ export default function AdminSettings() {
             />
           }
         >
-          <p className="text-xs text-slate-400 mb-2">Work Week</p>
-          <div className="flex flex-wrap gap-2 mb-4">
-            {weekDays.map((day) => {
-              const isSelected = view.workingDays.includes(day);
+          <div className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC]/70 p-3.5 mb-4">
+            <p className="text-xs font-medium text-slate-500 mb-2.5">Work Week</p>
+            <div className="flex flex-wrap gap-2">
+              {weekDays.map((day) => {
+                const isSelected = view.workingDays.includes(day);
 
-              if (!isEditingWorkingDays) {
+                if (!isEditingWorkingDays) {
+                  return (
+                    <span
+                      key={day}
+                      className={`inline-flex h-9 w-11 items-center justify-center rounded-lg text-xs font-semibold ${isSelected ? "bg-[#2F5FD0] text-white shadow-xs" : "bg-white border border-[#E5E7EB] text-slate-500"
+                        }`}
+                    >
+                      {day}
+                    </span>
+                  );
+                }
+
                 return (
-                  <span
+                  <button
                     key={day}
-                    className={`inline-flex h-9 w-11 items-center justify-center rounded-lg text-xs font-semibold ${isSelected ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"
+                    type="button"
+                    onClick={() => toggleDay(day)}
+                    aria-pressed={isSelected}
+                    className={`inline-flex h-9 w-11 items-center justify-center rounded-lg text-xs font-semibold transition cursor-pointer ${isSelected
+                      ? "bg-[#2F5FD0] text-white shadow-xs"
+                      : "bg-white border border-[#E5E7EB] text-slate-500 hover:bg-slate-100"
                       }`}
                   >
                     {day}
-                  </span>
+                  </button>
                 );
-              }
-
-              return (
-                <button
-                  key={day}
-                  type="button"
-                  onClick={() => toggleDay(day)}
-                  aria-pressed={isSelected}
-                  className={`inline-flex h-9 w-11 items-center justify-center rounded-lg text-xs font-semibold transition ${isSelected
-                    ? "bg-blue-600 text-white"
-                    : "bg-slate-100 text-slate-500 hover:bg-slate-200"
-                    }`}
-                >
-                  {day}
-                </button>
-              );
-            })}
+              })}
+            </div>
           </div>
-          <div className="mt-5 border-t border-slate-100 pt-4">
+          <div className="border-t border-slate-100 pt-4">
             <div className="mb-3 flex items-center justify-between">
               <div>
                 <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                   Holidays ({holidays.length})
                 </h4>
-                <p className="text-[11px] text-slate-400">
-                  Public, company, optional, & department-specific holidays
+                <p className="text-xs text-slate-400">
+                  Public, company, optional, &amp; department-specific holidays
                 </p>
               </div>
               <button
@@ -1324,7 +1398,7 @@ export default function AdminSettings() {
                   setEditingHoliday(null);
                   setIsHolidayModalOpen(true);
                 }}
-                className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-2.5 py-1.5 text-xs font-semibold text-blue-600 transition hover:bg-blue-100"
+                className="inline-flex items-center gap-1 rounded-lg border border-[#DBEAFE] bg-[#EFF6FF] px-3 py-1.5 text-xs font-medium text-[#2F5FD0] transition hover:bg-[#DBEAFE]/70 cursor-pointer"
               >
                 <Plus className="h-3.5 w-3.5" />
                 Add Holiday
@@ -1423,8 +1497,10 @@ export default function AdminSettings() {
             )}
           </div>
         </SettingsCard>
+        )}
 
         {/* Department Management */}
+        {(activeSection === "all" || activeSection === "organization") && (
         <SettingsCard
           icon={<Layers className="h-4 w-4 text-blue-600" />}
           iconBg="bg-blue-50"
@@ -1434,7 +1510,7 @@ export default function AdminSettings() {
               <button
                 type="button"
                 onClick={() => setIsDepartmentDetailModalOpen(true)}
-                className="text-xs font-semibold text-blue-600 hover:text-blue-700"
+                className="text-xs font-medium text-[#2F5FD0] hover:text-[#244EB3] cursor-pointer"
               >
                 View All →
               </button>
@@ -1445,7 +1521,7 @@ export default function AdminSettings() {
               <button
                 type="button"
                 onClick={openDepartmentCreate}
-                className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[#2F5FD0] px-3 py-1.5 text-xs font-medium text-white shadow-xs hover:bg-[#244EB3] transition cursor-pointer"
               >
                 <Plus className="h-3.5 w-3.5" />
                 Add Department
@@ -1456,12 +1532,11 @@ export default function AdminSettings() {
           {isDepartmentFormOpen && !isDepartmentDetailModalOpen ? (
             departmentFormView
           ) : (
-            <div className="h-[192px] overflow-y-auto pr-1">
+            <div className="min-h-[120px] max-h-[220px] overflow-y-auto pr-1">
               {departmentsLoading ? (
-                <div className="flex h-full items-center justify-center">
-                  <p className="text-sm text-slate-500">
-                    Loading departments...
-                  </p>
+                <div className="space-y-2.5 py-2">
+                  <div className="h-14 animate-pulse rounded-xl bg-slate-100" />
+                  <div className="h-14 animate-pulse rounded-xl bg-slate-100" />
                 </div>
               ) : departmentError ? (
                 <div className="flex h-full items-center justify-center px-4">
@@ -1481,7 +1556,7 @@ export default function AdminSettings() {
                   {departments.slice(0, 2).map((department) => (
                     <li
                       key={department.id}
-                      className="rounded-xl border border-slate-100 p-3"
+                      className="rounded-xl border border-slate-200/80 bg-slate-50/50 p-3"
                     >
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <div className="min-w-0">
@@ -1523,8 +1598,10 @@ export default function AdminSettings() {
             </div>
           )}
         </SettingsCard>
+        )}
 
         {/* Payroll Settings */}
+        {(activeSection === "all" || activeSection === "payroll") && (
         <SettingsCard
           icon={<Wallet className="h-4 w-4 text-blue-600" />}
           iconBg="bg-blue-50"
@@ -1540,7 +1617,7 @@ export default function AdminSettings() {
           }
         >
           {isEditingPayroll ? (
-            <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <SelectField
                 label="Payroll Cycle"
                 value={view.payroll.payrollCycle}
@@ -1552,32 +1629,116 @@ export default function AdminSettings() {
                 value={view.payroll.paymentDate}
                 onChange={(value) => updatePayroll("paymentDate", value)}
               />
-            </>
+            </div>
           ) : (
-            <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Field label="Payroll Cycle" value={view.payroll.payrollCycle} />
               <Field label="Payment Date" value={view.payroll.paymentDate} />
-            </>
+            </div>
           )}
         </SettingsCard>
+        )}
 
-        {/* Document Settings */}
+        {/* Leave Settings */}
+        {(activeSection === "all" || activeSection === "payroll") && (
         <SettingsCard
-          icon={<FileText className="h-4 w-4 text-purple-600" />}
+          icon={<Umbrella className="h-4 w-4 text-purple-600" />}
           iconBg="bg-purple-50"
-          title="Document Settings"
+          title="Leave Settings"
           action={
-            <button
-              type="button"
-              className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition"
-            >
-              Save
-            </button>
+            <EditActions
+              editing={isEditingLeave}
+              onEdit={() => startEdit("leave")}
+              onSave={saveEdit}
+              onCancel={cancelEdit}
+              canSave={canSave}
+            />
           }
         >
-          <Field label="Allowed File Types" value="PDF, DOC, DOCX, XLS, XLSX, JPG, PNG" />
-          <Field label="Max File Size" value="10 MB" />
+          {isEditingLeave ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <InputField
+                label="Casual Leave Quota (Days)"
+                value={view.leave.casualQuota}
+                onChange={(value) => updateLeave("casualQuota", value)}
+              />
+              <InputField
+                label="Sick Leave Quota (Days)"
+                value={view.leave.sickQuota}
+                onChange={(value) => updateLeave("sickQuota", value)}
+              />
+              <InputField
+                label="Earned Leave Quota (Days)"
+                value={view.leave.earnedQuota}
+                onChange={(value) => updateLeave("earnedQuota", value)}
+              />
+              <SelectField
+                label="Earned Leave Carry Forward"
+                value={view.leave.carryForward}
+                options={[
+                  "Allowed (Up to 10 Days)",
+                  "Allowed (Up to 5 Days)",
+                  "Not Allowed",
+                ]}
+                onChange={(value) => updateLeave("carryForward", value)}
+              />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {[
+                {
+                  id: "casual",
+                  label: "Casual Leave",
+                  icon: Umbrella,
+                  iconBg: "bg-[#EFF6FF]",
+                  iconColor: "text-[#2563EB]",
+                },
+                {
+                  id: "sick",
+                  label: "Sick Leave",
+                  icon: HeartPulse,
+                  iconBg: "bg-[#ECFDF5]",
+                  iconColor: "text-[#059669]",
+                },
+                {
+                  id: "earned",
+                  label: "Earned Leave",
+                  icon: Briefcase,
+                  iconBg: "bg-[#FFFBEB]",
+                  iconColor: "text-[#D97706]",
+                },
+                {
+                  id: "carry-forward",
+                  label: "Carry Forward",
+                  icon: Repeat,
+                  iconBg: "bg-[#F5F3FF]",
+                  iconColor: "text-[#7C3AED]",
+                },
+              ].map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => startEdit("leave")}
+                    title="Click to configure leave settings"
+                    className="flex min-w-0 items-center gap-3 rounded-xl border border-[#E5E7EB] bg-white px-3.5 py-3 text-left transition hover:border-[#CBD5E1] hover:bg-[#F8FAFC] cursor-pointer"
+                  >
+                    <span
+                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${item.iconBg} ${item.iconColor}`}
+                    >
+                      <Icon className="h-4 w-4 shrink-0" />
+                    </span>
+                    <span className="min-w-0 text-[13px] font-medium text-[#1F2937] leading-tight truncate">
+                      {item.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </SettingsCard>
+        )}
       </div>
 
       {/* Mounted only while open, so the form always starts blank. */}

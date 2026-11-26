@@ -40,35 +40,12 @@ interface BackendRequest {
   requested_check_out?: string;
 }
 
-const FALLBACK_REGULARIZATIONS: RegularizationRequest[] = [
-  {
-    id: "reg-1",
-    employeeName: "Aiman Mulla",
-    employeeCode: "AAR001",
-    department: "Engineering",
-    date: "2026-11-18",
-    reason: "Missing Check-Out (Biometric Gate Offline)",
-    status: "Pending",
-    requestedCheckIn: "09:30 AM",
-    requestedCheckOut: "06:30 PM",
-    note: "Worked full shift; biometric reader failed at exit turnstile.",
-  },
-  {
-    id: "reg-2",
-    employeeName: "Shruti Ugale",
-    employeeCode: "AAR003",
-    department: "Engineering",
-    date: "2026-11-17",
-    reason: "Late Arrival (Pune Metro Line Disruption)",
-    status: "Pending",
-    requestedCheckIn: "09:30 AM",
-    requestedCheckOut: "06:45 PM",
-    note: "Metro train stalled between Garware & Civil Court for 40 mins.",
-  },
-];
-
-export const RegularizationRequestsCard: React.FC<{ onReviewed?: () => void }> = ({
+export const RegularizationRequestsCard: React.FC<{
+  onReviewed?: () => void;
+  compact?: boolean;
+}> = ({
   onReviewed,
+  compact = false,
 }) => {
   const navigate = useNavigate();
   const { success, error } = useToast();
@@ -104,12 +81,12 @@ export const RegularizationRequestsCard: React.FC<{ onReviewed?: () => void }> =
           }));
           setRequests(mapped);
         } else {
-          setRequests(FALLBACK_REGULARIZATIONS);
+          setRequests([]);
         }
       })
       .catch(() => {
         if (!isMounted) return;
-        setRequests(FALLBACK_REGULARIZATIONS);
+        setRequests([]);
       })
       .finally(() => {
         if (isMounted) setIsLoading(false);
@@ -158,8 +135,8 @@ export const RegularizationRequestsCard: React.FC<{ onReviewed?: () => void }> =
 
   const pendingRequests = requests.filter((r) => r.status === "Pending");
 
-  // When there are 0 pending requests, collapse to a single slim row (about 48px)
-  if (pendingRequests.length === 0 && !isLoading) {
+  // When there are 0 pending requests in full-width view, collapse to a single slim row (about 48px)
+  if (pendingRequests.length === 0 && !isLoading && !compact) {
     return (
       <div className="rounded-lg border border-[#E4E6E1] bg-white h-[48px] px-6 py-4 flex items-center justify-between shadow-none">
         <div className="flex items-center gap-2">
@@ -186,15 +163,39 @@ export const RegularizationRequestsCard: React.FC<{ onReviewed?: () => void }> =
   }
 
   return (
-    <div className="rounded-lg border border-[#E4E6E1] bg-white overflow-hidden shadow-none">
+    <div
+      className={
+        compact
+          ? "rounded-xl border border-[#E5E7EB] bg-white overflow-hidden shadow-none"
+          : "rounded-lg border border-[#E4E6E1] bg-white overflow-hidden shadow-none"
+      }
+    >
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-[#E4E6E1]">
-        <div className="flex items-center gap-2">
+      <div
+        className={
+          compact
+            ? "flex items-center justify-between gap-2 px-5 py-4 border-b border-[#F3F4F6]"
+            : "flex items-center justify-between px-6 py-4 border-b border-[#E4E6E1]"
+        }
+      >
+        <div className="flex min-w-0 items-center gap-2">
           <Clock className="w-4 h-4 shrink-0 text-[#8A5A00]" />
-          <h3 className="text-[14px] font-semibold text-[#1F2933]">
+          <h3
+            className={
+              compact
+                ? "truncate text-[14px] font-semibold text-[#111827]"
+                : "text-[14px] font-semibold text-[#1F2933]"
+            }
+          >
             Pending Regularization
           </h3>
-          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-[#FBF0D9] text-[#8A5A00]">
+          <span
+            className={`shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full ${
+              pendingRequests.length > 0
+                ? "bg-[#FBF0D9] text-[#8A5A00]"
+                : "bg-[#EEEFEC] text-[#5F6B76]"
+            }`}
+          >
             {pendingRequests.length}
           </span>
         </div>
@@ -202,9 +203,13 @@ export const RegularizationRequestsCard: React.FC<{ onReviewed?: () => void }> =
         <button
           type="button"
           onClick={() => navigate("/dashboard/regularization")}
-          className="text-[13px] font-medium text-[#2F5FD0] hover:text-[#264FB0] transition-colors cursor-pointer"
+          className={
+            compact
+              ? "shrink-0 whitespace-nowrap text-[11px] font-semibold text-[#2563EB] hover:underline cursor-pointer"
+              : "shrink-0 whitespace-nowrap text-[13px] font-medium text-[#2F5FD0] hover:text-[#264FB0] transition-colors cursor-pointer"
+          }
         >
-          View all requests
+          {compact ? "View All →" : "View all requests"}
         </button>
       </div>
 
@@ -215,6 +220,49 @@ export const RegularizationRequestsCard: React.FC<{ onReviewed?: () => void }> =
         ) : pendingRequests.length === 0 ? (
           <div className="p-4 text-center text-xs text-[#7B8794]">
             No pending regularization requests requiring review.
+          </div>
+        ) : compact ? (
+          <div className="divide-y divide-[#E4E6E1]">
+            {pendingRequests.slice(0, 4).map((req) => (
+              <div
+                key={req.id}
+                className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-[#FAFAF8] transition-colors"
+              >
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <Avatar name={req.employeeName} size="xs" />
+                  <div className="min-w-0">
+                    <p className="truncate text-[12px] font-medium text-[#1F2933]">
+                      {req.employeeName}
+                    </p>
+                    <p className="truncate text-[11px] text-[#7B8794]">
+                      {formatDisplayDate(req.date)} · {req.reason}
+                    </p>
+                  </div>
+                </div>
+                {canApprove ? (
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenDecision(req, "Approved")}
+                      aria-label={`Approve ${req.employeeName}'s regularization`}
+                      className="flex h-7 w-7 items-center justify-center rounded-md border border-[#E4E6E1] text-[#1E6B45] hover:bg-[#E3F3EA]"
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenDecision(req, "Rejected")}
+                      aria-label={`Reject ${req.employeeName}'s regularization`}
+                      className="flex h-7 w-7 items-center justify-center rounded-md border border-[#E4E6E1] text-[#A12D22] hover:bg-[#FBE4E1]"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <StatusPill variant="warn">Pending</StatusPill>
+                )}
+              </div>
+            ))}
           </div>
         ) : (
           <table className="w-full min-w-[650px] text-left text-sm border-collapse">

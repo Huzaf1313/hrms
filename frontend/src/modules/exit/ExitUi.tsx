@@ -11,24 +11,24 @@ import type { InlineNotice } from "./exitUiUtils";
 
 const STATUS_STYLES: Record<ExitStatus, { pill: string; dot: string }> = {
   Pending: {
-    pill: "bg-[#FEF3C7] text-[#92400E] border border-[#FCD34D]",
-    dot: "bg-[#92400E]",
+    pill: "bg-amber-50 text-amber-800 border border-amber-200",
+    dot: "bg-amber-600",
   },
   "In Progress": {
-    pill: "bg-[#E8EEFB] text-[#2F5FD0]",
-    dot: "bg-[#2F5FD0]",
+    pill: "bg-blue-50 text-blue-700 border border-blue-200",
+    dot: "bg-blue-600",
   },
   Completed: {
-    pill: "bg-[#DEF7EC] text-[#03543F] border border-[#BCF0DA]",
-    dot: "bg-[#03543F]",
+    pill: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+    dot: "bg-emerald-600",
   },
   Rejected: {
-    pill: "bg-[#FDE8E8] text-[#9B1C1C] border border-[#F8B4B4]",
-    dot: "bg-[#9B1C1C]",
+    pill: "bg-red-50 text-red-700 border border-red-200",
+    dot: "bg-red-600",
   },
   Cancelled: {
-    pill: "bg-[#F3F4F6] text-[#4B5563] border border-[#E5E7EB]",
-    dot: "bg-[#7B8794]",
+    pill: "bg-slate-100 text-slate-600 border border-slate-200",
+    dot: "bg-slate-500",
   },
 };
 
@@ -37,7 +37,7 @@ export function ExitStatusBadge({ status }: { status: ExitStatus }) {
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 h-[22px] whitespace-nowrap rounded-full px-2.5 py-0.5 text-[12px] font-medium leading-normal ${tone.pill}`}
+      className={`inline-flex items-center gap-1.5 h-6 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium leading-normal ${tone.pill}`}
     >
       <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${tone.dot}`} />
       <span>{status}</span>
@@ -46,8 +46,8 @@ export function ExitStatusBadge({ status }: { status: ExitStatus }) {
 }
 
 const TYPE_CHIP: Record<ExitType, string> = {
-  Resignation: "bg-[#E8EEFB] text-[#2F5FD0]",
-  Termination: "bg-[#FDE8E8] text-[#9B1C1C] border border-[#F8B4B4]",
+  Resignation: "bg-blue-50 text-blue-700 border border-blue-200",
+  Termination: "bg-red-50 text-red-700 border border-red-200",
 };
 
 export function ExitTypeBadge({ type }: { type: string }) {
@@ -55,8 +55,8 @@ export function ExitTypeBadge({ type }: { type: string }) {
 
   return (
     <span
-      className={`inline-flex items-center h-[22px] whitespace-nowrap rounded-full px-2.5 py-0.5 text-[12px] font-medium leading-normal ${
-        TYPE_CHIP[type as ExitType] ?? "bg-[#F3F4F6] text-[#4B5563] border border-[#E5E7EB]"
+      className={`inline-flex items-center h-6 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium leading-normal ${
+        TYPE_CHIP[type as ExitType] ?? "bg-slate-100 text-slate-600 border border-slate-200"
       }`}
     >
       {meta?.label ?? type}
@@ -101,13 +101,13 @@ export function Panel({
   bodyClassName?: string;
 }) {
   return (
-    <section className={`${PANEL_CLASS} flex min-w-0 flex-col ${className}`}>
+    <section className={`${PANEL_CLASS} rounded-xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] flex min-w-0 flex-col ${className}`}>
       {title && (
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E5E7EB] bg-white px-6 py-3.5">
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E5E7EB] bg-white px-6 py-4">
           <div className="min-w-0">
-            <h3 className="text-[13px] font-semibold text-[#111827]">{title}</h3>
+            <h3 className="text-[15px] font-semibold text-[#111827]">{title}</h3>
             {description && (
-              <p className="mt-0.5 text-xs text-[#4B5563]">{description}</p>
+              <p className="mt-0.5 text-xs text-[#6B7280]">{description}</p>
             )}
           </div>
           {action}
@@ -129,6 +129,8 @@ export interface StatCardSpec {
   icon: ReactNode;
   iconBg: string;
   iconClass: string;
+  active?: boolean;
+  onClick?: () => void;
 }
 
 export function StatCards({
@@ -139,33 +141,48 @@ export function StatCards({
   className?: string;
 }) {
   return (
-    <div className={`grid gap-4 ${className}`}>
-      {cards.map((card) => (
-        <div
-          key={card.label}
-          className="rounded-lg border border-[#E5E7EB] bg-white p-4 h-[104px] shadow-kpi flex flex-col justify-between min-w-0"
-        >
-          <div className="flex items-center justify-between gap-2 min-w-0">
-            <span className="text-xs font-medium text-[#4B5563] truncate">
-              {card.label}
-            </span>
-            <span
-              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md ${card.iconBg}`}
-            >
-              {card.icon}
-            </span>
-          </div>
+    <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 ${className}`}>
+      {cards.map((card) => {
+        const baseClass = `rounded-xl border bg-white p-4 min-h-[108px] shadow-kpi flex flex-col justify-between min-w-0 text-left transition-all duration-150 ${
+          card.active
+            ? "border-[#2F5FD0] ring-2 ring-[#2F5FD0]/15"
+            : "border-[#E5E7EB] hover:border-[#CBD5E1] hover:shadow-sm"
+        } ${card.onClick ? "cursor-pointer" : ""}`;
 
-          <div>
-            <span className="text-[24px] font-semibold text-[#111827] tabular-nums tracking-tight leading-none block">
-              {card.value}
-            </span>
-            <span className={`text-[11px] mt-1 truncate block leading-none ${card.noteClass}`}>
-              {card.note}
-            </span>
+        const inner = (
+          <>
+            <div className="flex items-center justify-between gap-2 min-w-0">
+              <span className="text-xs font-medium text-[#4B5563] truncate">
+                {card.label}
+              </span>
+              <span
+                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${card.iconBg}`}
+              >
+                {card.icon}
+              </span>
+            </div>
+
+            <div>
+              <span className="text-[24px] font-semibold text-[#111827] tabular-nums tracking-tight leading-none block">
+                {card.value}
+              </span>
+              <span className={`text-xs mt-1.5 truncate block leading-none ${card.noteClass}`}>
+                {card.note}
+              </span>
+            </div>
+          </>
+        );
+
+        return card.onClick ? (
+          <button key={card.label} type="button" onClick={card.onClick} className={baseClass}>
+            {inner}
+          </button>
+        ) : (
+          <div key={card.label} className={baseClass}>
+            {inner}
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -225,10 +242,24 @@ export function LoadingRows({
   );
 }
 
-export function EmptyState({ message }: { message: string }) {
-  return <p className="py-10 text-center text-xs text-[#6B7280]">{message}</p>;
+export function EmptyState({
+  message,
+  action,
+}: {
+  message: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-3 py-12 px-6 text-center">
+      <div className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+        <AlertCircle className="h-5 w-5" />
+      </div>
+      <p className="text-sm font-medium text-[#374151]">{message}</p>
+      {action}
+    </div>
+  );
 }
 
 export function ErrorState({ message }: { message: string }) {
-  return <p className="py-10 text-center text-xs text-[#9B1C1C]">{message}</p>;
+  return <p className="py-10 text-center text-sm text-[#9B1C1C]">{message}</p>;
 }

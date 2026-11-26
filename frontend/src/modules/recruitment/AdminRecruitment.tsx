@@ -16,6 +16,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 
+import { PageHeading } from "../../components/ui/PageHeading";
 import {
   CandidateModal,
   JobModal,
@@ -675,22 +676,20 @@ function AdminRecruitment() {
   return (
     <div className="flex w-full flex-col gap-5 pb-10">
       {/* Title */}
-      <div className="flex flex-col gap-3 border-b border-[#E5E7EB] pb-5 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-[20px] font-semibold leading-tight text-[#111827]">Recruitment</h1>
-          <p className="mt-1 text-[13px] text-[#6B7280]">
-            Find the right talent for a better tomorrow
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => setCandidateModalOpen(true)} leftIcon={<Plus className="h-4 w-4" />}>
-            Add Candidate
-          </Button>
-          <Button variant="primary" size="sm" onClick={() => setJobModal({ job: null })} leftIcon={<Plus className="h-4 w-4" />}>
-            Add Job Position
-          </Button>
-        </div>
-      </div>
+      <PageHeading
+        as="h3"
+        title="Find the right talent for a better tomorrow"
+        actions={
+          <>
+            <Button variant="outline" size="sm" onClick={() => setCandidateModalOpen(true)} leftIcon={<Plus className="h-4 w-4" />}>
+              Add Candidate
+            </Button>
+            <Button variant="primary" size="sm" onClick={() => setJobModal({ job: null })} leftIcon={<Plus className="h-4 w-4" />}>
+              Add Job Position
+            </Button>
+          </>
+        }
+      />
 
       {/* Successes close themselves; errors now stay until dismissed. */}
       <NoticePopup notice={notice} onDismiss={() => setNotice(null)} />

@@ -13,10 +13,6 @@ import { Button } from "../../components/ui/Button";
 import { useGlobalDate } from "../../context/globalDateContext";
 import { useDepartments } from "../../hooks/useDepartments";
 import { attendanceService } from "./attendanceService";
-import {
-  SAMPLE_ATTENDANCE_RECORDS,
-  SAMPLE_ATTENDANCE_SUMMARY,
-} from "./services/attendanceFallbackData";
 import { canCurrentUser } from "../../lib/permissions";
 import { ShieldAlert, UserCheck, Calendar, BarChart3 } from "lucide-react";
 import { AttendanceReportsView } from "./components/AttendanceReportsView";
@@ -86,39 +82,23 @@ export const AdminAttendance: React.FC = () => {
           setTotalRecords(listRes.value.total ?? (listRes.value.items || []).length);
           setIsSampleData(false);
         } else {
-          // API failed: use fallback data only on failure
-          let filtered = [...SAMPLE_ATTENDANCE_RECORDS];
-          if (departmentId) {
-            filtered = filtered.filter((r) => r.employee.department_id === departmentId);
-          }
-          if (status) {
-            filtered = filtered.filter((r) => r.status === status);
-          }
-          if (search) {
-            const q = search.toLowerCase();
-            filtered = filtered.filter(
-              (r) =>
-                r.employee.first_name.toLowerCase().includes(q) ||
-                r.employee.last_name.toLowerCase().includes(q) ||
-                r.employee.employee_code.toLowerCase().includes(q),
-            );
-          }
-          setRecords(filtered);
-          setTotalRecords(filtered.length);
-          setIsSampleData(true);
+          setRecords([]);
+          setTotalRecords(0);
+          setIsSampleData(false);
         }
 
         if (summaryRes.status === "fulfilled" && summaryRes.value) {
           setSummary(summaryRes.value);
         } else {
-          setSummary(SAMPLE_ATTENDANCE_SUMMARY);
+          setSummary(null);
         }
       })
       .catch(() => {
         if (!isCurrent) return;
-        setRecords(SAMPLE_ATTENDANCE_RECORDS);
-        setTotalRecords(SAMPLE_ATTENDANCE_RECORDS.length);
-        setSummary(SAMPLE_ATTENDANCE_SUMMARY);
+        setRecords([]);
+        setTotalRecords(0);
+        setSummary(null);
+        setIsSampleData(false);
       })
       .finally(() => {
         if (isCurrent) {

@@ -184,7 +184,7 @@ export const DailyAttendanceTable: React.FC<DailyAttendanceTableProps> = ({
 
     {
       key: "check_in",
-      header: "Check In",
+      header: "Punch In",
       width: "120px",
       sortable: true,
       render: (row) => {
@@ -207,7 +207,7 @@ export const DailyAttendanceTable: React.FC<DailyAttendanceTableProps> = ({
 
     {
       key: "check_out",
-      header: "Check Out",
+      header: "Punch Out",
       width: "120px",
       sortable: true,
       render: (row) => {
@@ -216,12 +216,7 @@ export const DailyAttendanceTable: React.FC<DailyAttendanceTableProps> = ({
         }
         const outVal = row.out_time || row.check_out;
         return (
-          <div>
-            <span className="font-mono text-[#1F2933] text-sm block leading-tight">{outVal || "-"}</span>
-            {!outVal && (row.in_time || row.check_in) && (
-              <span className="block text-xs text-[#8A5A00] font-medium mt-0.5 leading-tight">Incomplete</span>
-            )}
-          </div>
+          <span className="font-mono text-[#1F2933] text-sm block leading-tight">{outVal || "-"}</span>
         );
       },
     },
@@ -345,21 +340,21 @@ export const DailyAttendanceTable: React.FC<DailyAttendanceTableProps> = ({
         /* Single horizontal toolbar row: search | date | department | status | Export CSV */
         filters={
           <>
-            <div className="w-[160px] shrink-0">
+            <div className="w-full sm:w-[160px] shrink-0">
               <DatePicker
                 value={date}
                 onChange={(e) => onDateChange(e.target.value)}
                 className="h-10 text-sm px-3 w-full"
-                wrapperClassName="w-[160px]"
+                wrapperClassName="w-full sm:w-[160px]"
               />
             </div>
 
-            <div className="w-[180px] shrink-0">
+            <div className="w-full sm:w-[180px] shrink-0">
               <Select
                 value={departmentId}
                 onChange={(e) => onDepartmentChange(e.target.value)}
                 className="h-10 text-sm px-3 w-full"
-                wrapperClassName="w-[180px]"
+                wrapperClassName="w-full sm:w-[180px]"
               >
                 <option value="">All Departments</option>
                 {departments.map((d) => (
@@ -370,12 +365,12 @@ export const DailyAttendanceTable: React.FC<DailyAttendanceTableProps> = ({
               </Select>
             </div>
 
-            <div className="w-[160px] shrink-0">
+            <div className="w-full sm:w-[160px] shrink-0">
               <Select
                 value={status}
                 onChange={(e) => onStatusChange(e.target.value)}
                 className="h-10 text-sm px-3 w-full"
-                wrapperClassName="w-[160px]"
+                wrapperClassName="w-full sm:w-[160px]"
               >
                 <option value="">All Statuses</option>
                 <option value="present">Present</option>

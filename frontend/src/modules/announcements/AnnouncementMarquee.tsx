@@ -363,9 +363,11 @@ export function AnnouncementMarquee({
     return () => observer.disconnect();
   }, [sequenceItems.length, prefersReducedMotion]);
 
-  useEffect(() => {
+  const [prevDisplayLen, setPrevDisplayLen] = useState(displayAnnouncements.length);
+  if (displayAnnouncements.length !== prevDisplayLen) {
+    setPrevDisplayLen(displayAnnouncements.length);
     setActiveIndex((index) => Math.min(index, Math.max(displayAnnouncements.length - 1, 0)));
-  }, [displayAnnouncements.length]);
+  }
 
   // Clean, generous margin-bottom so there is a distinct gap between the marquee and the KPI cards below
   const cardClass = `${DASHBOARD_CARD_CLASS} !mt-4 !mb-6 !h-[60px] !w-full !rounded-xl !p-0 shadow-xs border border-[#E5E7EB] bg-white`;

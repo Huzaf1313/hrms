@@ -93,8 +93,8 @@ function PayslipDetailModal({ payslip, onClose, onStatusUpdated }: PayslipDetail
       });
       onStatusUpdated();
       onClose();
-    } catch (err: any) {
-      setUpdateError(err?.message || "Failed to mark payslip as paid");
+    } catch (err: unknown) {
+      setUpdateError(err instanceof Error ? err.message : "Failed to mark payslip as paid");
     } finally {
       setUpdating(false);
     }
@@ -107,8 +107,8 @@ function PayslipDetailModal({ payslip, onClose, onStatusUpdated }: PayslipDetail
     try {
       const res = await adminPayrollService.sendEmail(payslip.id);
       setEmailStatus(res.message || "Payslip email dispatched successfully");
-    } catch (err: any) {
-      setUpdateError(err?.message || "Failed to send email");
+    } catch (err: unknown) {
+      setUpdateError(err instanceof Error ? err.message : "Failed to send email");
     } finally {
       setSendingEmail(false);
     }
@@ -273,36 +273,52 @@ function PayslipDetailModal({ payslip, onClose, onStatusUpdated }: PayslipDetail
             </div>
           </section>
 
-          {(payslip as any).attendance_summary && ((payslip as any).attendance_summary.total_days || 0) > 0 && (
-            <section className="mt-4">
-              <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">
-                Attendance & Leave Summary
-              </h4>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-2 rounded-lg bg-slate-50 p-3 text-xs sm:grid-cols-4">
-                <div>
-                  <span className="text-slate-400">Working Days:</span>{" "}
-                  <span className="font-semibold text-slate-800">{(payslip as any).attendance_summary.total_days}</span>
+          {(() => {
+            const attendanceSummary = (
+              payslip as typeof payslip & {
+                attendance_summary?: {
+                  total_days?: number;
+                  present_days?: number;
+                  paid_leave_days?: number;
+                  lop_days?: number;
+                  lop_deduction?: number;
+                };
+              }
+            ).attendance_summary;
+
+            if (!attendanceSummary || (attendanceSummary.total_days || 0) <= 0) return null;
+
+            return (
+              <section className="mt-4">
+                <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">
+                  Attendance & Leave Summary
+                </h4>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-2 rounded-lg bg-slate-50 p-3 text-xs sm:grid-cols-4">
+                  <div>
+                    <span className="text-slate-400">Working Days:</span>{" "}
+                    <span className="font-semibold text-slate-800">{attendanceSummary.total_days}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Present Days:</span>{" "}
+                    <span className="font-semibold text-emerald-700">{attendanceSummary.present_days}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Paid Leaves:</span>{" "}
+                    <span className="font-semibold text-blue-700">{attendanceSummary.paid_leave_days || 0}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Loss of Pay (LOP):</span>{" "}
+                    <span className={`font-semibold ${(attendanceSummary.lop_days || 0) > 0 ? "text-rose-600 font-bold" : "text-slate-700"}`}>
+                      {attendanceSummary.lop_days || 0} days
+                      {(attendanceSummary.lop_deduction || 0) > 0 && (
+                        <span className="ml-1 text-[11px] text-rose-600">(-₹{(attendanceSummary.lop_deduction || 0).toLocaleString("en-IN")})</span>
+                      )}
+                    </span>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-slate-400">Present Days:</span>{" "}
-                  <span className="font-semibold text-emerald-700">{(payslip as any).attendance_summary.present_days}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400">Paid Leaves:</span>{" "}
-                  <span className="font-semibold text-blue-700">{(payslip as any).attendance_summary.paid_leave_days || 0}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400">Loss of Pay (LOP):</span>{" "}
-                  <span className={`font-semibold ${((payslip as any).attendance_summary.lop_days || 0) > 0 ? "text-rose-600 font-bold" : "text-slate-700"}`}>
-                    {((payslip as any).attendance_summary.lop_days || 0)} days
-                    {((payslip as any).attendance_summary.lop_deduction || 0) > 0 && (
-                      <span className="ml-1 text-[11px] text-rose-600">(-₹{((payslip as any).attendance_summary.lop_deduction).toLocaleString("en-IN")})</span>
-                    )}
-                  </span>
-                </div>
-              </div>
-            </section>
-          )}
+              </section>
+            );
+          })()}
 
           <section className="mt-6">
             <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">
@@ -404,8 +420,8 @@ function GeneratePayslipModal({ onClose, onGenerated, employees }: GenerateModal
       });
       onGenerated();
       onClose();
-    } catch (err: any) {
-      setError(err?.message || "Failed to generate payslip");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to generate payslip");
     } finally {
       setLoading(false);
     }
@@ -449,7 +465,7 @@ function GeneratePayslipModal({ onClose, onGenerated, employees }: GenerateModal
             </select>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="mb-1 block font-semibold text-slate-700">Month</label>
               <select
@@ -542,8 +558,8 @@ function BulkGeneratePayslipModal({ onClose, onCompleted, totalEmployees }: Bulk
         queryKey: ["admin", "payslips"],
       });
       onCompleted();
-    } catch (err: any) {
-      setError(err?.message || "Failed to execute bulk payroll run");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to execute bulk payroll run");
     } finally {
       setLoading(false);
     }
@@ -613,7 +629,7 @@ function BulkGeneratePayslipModal({ onClose, onCompleted, totalEmployees }: Bulk
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="mb-1 block font-semibold text-slate-700">Month</label>
               <select
@@ -689,8 +705,8 @@ function BulkEmailPayslipModal({
         year,
       });
       setStatusMsg(`Dispatched ${res.sent} payslip emails successfully (${res.failed} failed).`);
-    } catch (err: any) {
-      setError(err?.message || "Failed to dispatch payslip emails");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to dispatch payslip emails");
     } finally {
       setLoading(false);
     }
@@ -786,58 +802,79 @@ export default function PayslipsTab({ initialStatusFilter = "" }: PayslipsTabPro
   const [showBulkModal, setShowBulkModal] = useState<boolean>(false);
   const [showBulkEmailModal, setShowBulkEmailModal] = useState<boolean>(false);
 
-  useEffect(() => {
+  const [prevInitialStatus, setPrevInitialStatus] = useState(initialStatusFilter);
+  if (initialStatusFilter !== prevInitialStatus) {
+    setPrevInitialStatus(initialStatusFilter);
     if (initialStatusFilter !== undefined) {
       setStatusFilter(initialStatusFilter);
       setPage(1);
     }
-  }, [initialStatusFilter]);
+  }
 
-  const fetchEmployees = async () => {
-    try {
-      const data = await employeeService.list({ status: "active", page: 1, limit: 100 });
-      setEmployees(data || []);
-    } catch {
-      // Non-critical if fails, employee selection will use empty list
-    }
-  };
+  const buildParams = useCallback((): Record<string, string | number> => {
+    const params: Record<string, string | number> = {
+      page,
+      limit: 20,
+    };
+    if (monthValue) params.month = monthValue;
+    if (search.trim()) params.search = search.trim();
+    if (statusFilter) params.status = statusFilter;
+    return params;
+  }, [page, monthValue, search, statusFilter]);
 
   const fetchPayslips = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const params: Record<string, any> = {
-        page,
-        limit: 20,
-      };
-      if (monthValue) {
-        params.month = monthValue;
-      }
-      if (search.trim()) {
-        params.search = search.trim();
-      }
-      if (statusFilter) {
-        params.status = statusFilter;
-      }
-
-      const response = await adminPayrollService.getPayslips(params);
+      const response = await adminPayrollService.getPayslips(buildParams());
       setPayslips(response.items || []);
       setTotalPages(response.total_pages || 1);
       setTotalCount(response.total || 0);
-    } catch (err: any) {
-      setError(err?.message || "Failed to load payslips");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to load payslips");
     } finally {
       setLoading(false);
     }
-  }, [page, monthValue, search, statusFilter]);
+  }, [buildParams]);
 
   useEffect(() => {
-    fetchEmployees();
+    let active = true;
+    void employeeService
+      .list({ status: "active", page: 1, limit: 100 })
+      .then((data) => {
+        if (active) setEmployees(data || []);
+      })
+      .catch(() => {
+        // Non-critical if fails, employee selection will use empty list
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
-    fetchPayslips();
-  }, [fetchPayslips]);
+    let active = true;
+    void adminPayrollService
+      .getPayslips(buildParams())
+      .then((response) => {
+        if (!active) return;
+        setPayslips(response.items || []);
+        setTotalPages(response.total_pages || 1);
+        setTotalCount(response.total || 0);
+        setError(null);
+      })
+      .catch((err: unknown) => {
+        if (active) {
+          setError(err instanceof Error ? err.message : "Failed to load payslips");
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [buildParams]);
 
   const handleSearchChange = (val: string) => {
     setSearch(val);
@@ -942,7 +979,7 @@ export default function PayslipsTab({ initialStatusFilter = "" }: PayslipsTabPro
           </div>
         </div>
 
-        <div className="w-[160px]">
+        <div className="w-full sm:w-[160px]">
           <label className="mb-1.5 block text-xs font-medium text-[#7B8794]">Payment Status</label>
           <select
             value={statusFilter}
@@ -1022,9 +1059,8 @@ export default function PayslipsTab({ initialStatusFilter = "" }: PayslipsTabPro
                       </td>
                       <td className="px-5 py-3.5 text-left">
                         <span
-                          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                            statusBadgeStyles[status] || "bg-[#FDF3D6] text-[#8A5A00] border border-[#F6DE95]"
-                          }`}
+                          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusBadgeStyles[status] || "bg-[#FDF3D6] text-[#8A5A00] border border-[#F6DE95]"
+                            }`}
                         >
                           {status}
                         </span>

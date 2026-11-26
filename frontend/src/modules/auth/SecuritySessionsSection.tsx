@@ -83,7 +83,23 @@ export default function SecuritySessionsSection() {
   };
 
   useEffect(() => {
-    loadData();
+    let active = true;
+    void Promise.all([
+      authService.getSessions().catch(() => []),
+      authService.getLoginHistory().catch(() => []),
+    ])
+      .then(([sessionsData, historyData]) => {
+        if (!active) return;
+        setSessions(sessionsData);
+        setLoginHistory(historyData);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const handleRevokeSession = async (sessionId: string) => {

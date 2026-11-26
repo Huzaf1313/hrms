@@ -62,12 +62,12 @@ function EmployeeAnnouncementTicker({
   const [isHovered, setIsHovered] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const [mountTime] = useState(() => Date.now());
   const dashboardTone = tone === "dashboard";
   const rotationPaused = isHovered || isFocused;
   const visibleAnnouncements = useMemo(() => {
-    const now = Date.now();
     return announcements
-      .filter((announcement) => !isExpired(announcement, now))
+      .filter((announcement) => !isExpired(announcement, mountTime))
       .sort((a, b) => {
         const pinnedDifference = Number(Boolean(b.pinned)) - Number(Boolean(a.pinned));
         if (pinnedDifference !== 0) return pinnedDifference;
@@ -81,7 +81,7 @@ function EmployeeAnnouncementTicker({
         const newestB = dateValue(b.published_at) || dateValue(b.publish_date) || dateValue(b.created_at);
         return newestB - newestA;
       });
-  }, [announcements]);
+  }, [announcements, mountTime]);
 
   useEffect(() => {
     const media = window.matchMedia?.("(prefers-reduced-motion: reduce)");
@@ -102,10 +102,6 @@ function EmployeeAnnouncementTicker({
 
     return () => window.clearInterval(interval);
   }, [prefersReducedMotion, rotationPaused, visibleAnnouncements.length]);
-
-  useEffect(() => {
-    setActiveIndex((index) => Math.min(index, Math.max(visibleAnnouncements.length - 1, 0)));
-  }, [visibleAnnouncements.length]);
 
   if (visibleAnnouncements.length === 0) return null;
 

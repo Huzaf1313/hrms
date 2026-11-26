@@ -184,7 +184,7 @@ function EmployeeResignation() {
   };
 
   return (
-    <div className="grid gap-6 w-full max-w-[1280px] mx-auto px-4 sm:px-6 py-4 xl:grid-cols-[1fr_340px]">
+    <div className="grid gap-6 w-full xl:grid-cols-[1fr_340px]">
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-1 bg-white p-5 rounded-lg border border-[#E5E7EB] shadow-none">
           <Link

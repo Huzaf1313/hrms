@@ -17,8 +17,8 @@ import AdminEmployeeDetailsPage from "./AdminEmployeeDetailsPage";
 import AdminEmployeeForm from "./AdminEmployeeForm";
 import AdminEmployeeTable from "./AdminEmployeeTable";
 import { TableSkeleton } from "../../components/ui";
-import { Button } from "../../components/ui/Button";
 import { ErrorState } from "../../components/ui/ErrorState";
+import { PageHeading } from "../../components/ui/PageHeading";
 import { ApiError } from "../../services/api";
 import {
   salaryStructureService,
@@ -41,74 +41,6 @@ import type {
 import type { Shift } from "../shifts/types";
 
 const DEFAULT_PAGE_SIZE = 5;
-
-const SAMPLE_EMPLOYEES: Employee[] = [
-  {
-    id: "sample-1",
-    employee_id: "AAR001",
-    first_name: "Aiman",
-    last_name: "Mulla",
-    email: "aiman@trimarkity.com",
-    phone: "+91 98765 43210",
-    department_id: "dep-dev",
-    designation: "Jr. DevOps Engineer",
-    status: "active",
-    employment_type: "full_time",
-    joining_date: "2024-11-15",
-  },
-  {
-    id: "sample-2",
-    employee_id: "AAR003",
-    first_name: "Shruti",
-    last_name: "Ugale",
-    email: "shruti@trimarkity.com",
-    phone: "+91 98765 43211",
-    department_id: "dep-dev",
-    designation: "Jr.Software Engineer",
-    status: "inactive",
-    employment_type: "full_time",
-    joining_date: "2024-08-10",
-  },
-  {
-    id: "sample-3",
-    employee_id: "AAR004",
-    first_name: "Rohit",
-    last_name: "Kumar",
-    email: "rohit@trimarkity.com",
-    phone: "+91 98765 43212",
-    department_id: "dep-mkt",
-    designation: "Marketing Executive",
-    status: "active",
-    employment_type: "full_time",
-    joining_date: "2025-01-01",
-  },
-  {
-    id: "sample-4",
-    employee_id: "AAR005",
-    first_name: "Priya",
-    last_name: "Sharma",
-    email: "priya@trimarkity.com",
-    phone: "+91 98765 43213",
-    department_id: "dep-hr",
-    designation: "HR Executive",
-    status: "active",
-    employment_type: "full_time",
-    joining_date: "2025-02-20",
-  },
-  {
-    id: "sample-5",
-    employee_id: "AAR006",
-    first_name: "Amit",
-    last_name: "Kapoor",
-    email: "amit@trimarkity.com",
-    phone: "+91 98765 43214",
-    department_id: "dep-sales",
-    designation: "Sales Executive",
-    status: "on_leave",
-    employment_type: "full_time",
-    joining_date: "2026-11-12",
-  },
-];
 
 function CredentialsModal({
   credentials,
@@ -596,13 +528,8 @@ function AdminEmployees({
     URL.revokeObjectURL(url);
   }
 
-  // Active pool of employees (either live data or fallback sample data)
-  const activePool = useMemo(() => {
-    return employees.length > 0 ? employees : SAMPLE_EMPLOYEES;
-  }, [employees]);
-
   // Client filtering
-  const filteredEmployees = activePool.filter((emp) => {
+  const filteredEmployees = employees.filter((emp) => {
     if (search.trim()) {
       const q = search.toLowerCase();
       const fullName = `${emp.first_name} ${emp.last_name}`.toLowerCase();
@@ -629,12 +556,12 @@ function AdminEmployees({
     return true;
   });
 
-  const totalEmployeesCount = metrics.totalEmployees ?? 24;
-  const presentTodayCount = metrics.presentToday ?? 22;
-  const presentPercent = metrics.presentPercent ?? 91.7;
-  const onLeaveCount = metrics.onLeaveToday ?? 2;
-  const onLeavePercent = metrics.onLeavePercent ?? 8.3;
-  const pendingLeaveRequests = metrics.pendingLeaveRequests ?? 3;
+  const totalEmployeesCount = metrics.totalEmployees ?? employees.length;
+  const presentTodayCount = metrics.presentToday ?? 0;
+  const presentPercent = metrics.presentPercent ?? 0;
+  const onLeaveCount = metrics.onLeaveToday ?? 0;
+  const onLeavePercent = metrics.onLeavePercent ?? 0;
+  const pendingLeaveRequests = metrics.pendingLeaveRequests ?? 0;
 
   const totalPages = Math.ceil(filteredEmployees.length / rowsPerPage) || 1;
   const paginatedEmployees = useMemo(() => {
@@ -692,96 +619,104 @@ function AdminEmployees({
   return (
     <div className="space-y-5 pb-12">
       {/* 1. Header Row */}
-      <div className="flex flex-col gap-3 border-b border-[#E5E7EB] pb-5 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-[20px] font-semibold leading-tight text-[#111827]">
-            Employees
-          </h1>
-          <p className="mt-1 text-[13px] text-[#6B7280]">
-            Manage and view your team · {totalEmployeesCount} employees
-          </p>
-        </div>
+      <PageHeading
+        title="Manage and view your team"
+        actions={
+          <>
+            <button
+              type="button"
+              onClick={exportCsv}
+              disabled={filteredEmployees.length === 0}
+              className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Download className="h-[18px] w-[18px] shrink-0 text-gray-500" />
+              <span>Export CSV</span>
+            </button>
+            <button
+              type="button"
+              onClick={openCreateForm}
+              className="inline-flex items-center gap-2 rounded-full bg-[#0066ff] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0052cc] active:scale-95"
+            >
+              <UserPlus className="h-[18px] w-[18px] shrink-0" />
+              <span>Add Employee</span>
+            </button>
+          </>
+        }
+      />
 
-        <button
-          type="button"
-          onClick={openCreateForm}
-          className="inline-flex items-center gap-2 rounded-full bg-[#0066ff] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0052cc] active:scale-95"
-        >
-          <UserPlus className="h-[18px] w-[18px] shrink-0" />
-          <span>Add Employee</span>
-        </button>
-      </div>
-
-      {/* 2. Top 4 Metric KPI Cards (Matches Mockup) */}
+      {/* 2. Top 4 Metric KPI Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {/* Total Employees */}
-        <div className="relative overflow-hidden rounded-3xl border border-slate-100 bg-white p-5 shadow-kpi flex items-center justify-between">
-          <div className="flex items-center gap-3.5">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-50 text-[#0066ff]">
-              <Users className="h-6 w-6" />
+        <div className="relative flex flex-col justify-between overflow-hidden rounded-3xl border border-slate-100 bg-white p-5 shadow-kpi">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate text-[12px] font-medium text-[#6B7280]">Total Employees</p>
+              <p className="mt-2 text-[28px] font-semibold leading-none text-[#111827] tabular-nums">{totalEmployeesCount}</p>
             </div>
-            <div>
-              <p className="text-[12px] font-medium text-[#6B7280]">Total Employees</p>
-              <p className="mt-2 text-[28px] font-semibold leading-none text-[#111827]">{totalEmployeesCount}</p>
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-[#0066ff]">
+              <Users className="h-5 w-5" />
             </div>
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#F3F4F6] text-[#4B5563]">
-              <Users className="h-[18px] w-[18px]" />
-            </span>
           </div>
-          <p className="mt-auto pt-3 text-[12px] text-[#6B7280]">Across all departments</p>
+          <p className="mt-3 text-[12px] text-[#6B7280]">Across all departments</p>
         </div>
 
         {/* Present Today */}
-        <div className="relative overflow-hidden rounded-3xl border border-slate-100 bg-white p-5 shadow-kpi flex items-center justify-between">
-          <div className="flex items-center gap-3.5">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-[#16a34a]">
-              <CalendarCheck className="h-6 w-6" />
+        <div className="relative flex flex-col justify-between overflow-hidden rounded-3xl border border-slate-100 bg-white p-5 shadow-kpi">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate text-[12px] font-medium text-[#6B7280]">Present Today</p>
+              <p className="mt-2 text-[28px] font-semibold leading-none text-[#111827] tabular-nums">{presentTodayCount}</p>
             </div>
-            <div>
-              <p className="text-[12px] font-medium text-[#6B7280]">Present Today</p>
-              <p className="mt-2 text-[28px] font-semibold leading-none text-[#111827]">{presentTodayCount}</p>
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-[#16a34a]">
+              <CalendarCheck className="h-5 w-5" />
             </div>
           </div>
-          <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-bold text-emerald-700 border border-emerald-100">
-            {presentPercent}%
-          </span>
+          <div className="mt-3 flex items-center justify-between">
+            <span className="text-[12px] text-[#6B7280]">Attendance rate</span>
+            <span className="rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-0.5 text-xs font-bold text-emerald-700">
+              {presentPercent}%
+            </span>
+          </div>
           <div className="pointer-events-none absolute -bottom-6 -right-6 h-20 w-24 rounded-full bg-emerald-50/60 blur-xl" />
         </div>
 
         {/* On Leave */}
-        <div className="relative overflow-hidden rounded-3xl border border-slate-100 bg-white p-5 shadow-kpi flex items-center justify-between">
-          <div className="flex items-center gap-3.5">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-orange-50 text-[#ea580c]">
-              <Umbrella className="h-6 w-6" />
+        <div className="relative flex flex-col justify-between overflow-hidden rounded-3xl border border-slate-100 bg-white p-5 shadow-kpi">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate text-[12px] font-medium text-[#6B7280]">On Leave</p>
+              <p className="mt-2 text-[28px] font-semibold leading-none text-[#111827] tabular-nums">{onLeaveCount}</p>
             </div>
-            <div>
-              <p className="text-[12px] font-medium text-[#6B7280]">On Leave</p>
-              <p className="mt-2 text-[28px] font-semibold leading-none text-[#111827]">{onLeaveCount}</p>
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-[#ea580c]">
+              <Umbrella className="h-5 w-5" />
             </div>
           </div>
-          <span className="rounded-full bg-orange-50 px-2.5 py-0.5 text-xs font-bold text-orange-700 border border-orange-100">
-            {onLeavePercent}%
-          </span>
+          <div className="mt-3 flex items-center justify-between">
+            <span className="text-[12px] text-[#6B7280]">Approved leaves</span>
+            <span className="rounded-full border border-orange-100 bg-orange-50 px-2.5 py-0.5 text-xs font-bold text-orange-700">
+              {onLeavePercent}%
+            </span>
+          </div>
           <div className="pointer-events-none absolute -bottom-6 -right-6 h-20 w-24 rounded-full bg-orange-50/60 blur-xl" />
         </div>
 
         {/* Pending Leave Requests */}
-        <div className="relative overflow-hidden rounded-3xl border border-slate-100 bg-white p-5 shadow-kpi flex items-center justify-between">
-          <div className="flex items-center gap-3.5">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-purple-50 text-[#7c3aed]">
-              <Clock className="h-6 w-6" />
+        <div className="relative flex flex-col justify-between overflow-hidden rounded-3xl border border-slate-100 bg-white p-5 shadow-kpi">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate text-[12px] font-medium text-[#6B7280]">Pending Leave Requests</p>
+              <p className="mt-2 text-[28px] font-semibold leading-none text-[#111827] tabular-nums">{pendingLeaveRequests}</p>
             </div>
-            <div>
-              <p className="text-[12px] font-medium text-[#6B7280]">Pending Leave Requests</p>
-              <p className="mt-2 text-[28px] font-semibold leading-none text-[#111827]">{pendingLeaveRequests}</p>
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-[#7c3aed]">
+              <Clock className="h-5 w-5" />
             </div>
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#FFFBEB] text-[#B45309]">
-              <Clock className="h-[18px] w-[18px]" />
-            </span>
           </div>
-          <button type="button" onClick={() => navigate("/dashboard/leave")} className="mt-auto self-start pt-3 text-[12px] font-medium text-[#2563EB] hover:underline">
-            View
-          </button>
+          <div className="mt-3 flex items-center justify-between">
+            <span className="text-[12px] text-[#6B7280]">Awaiting review</span>
+            <button type="button" onClick={() => navigate("/dashboard/leave")} className="text-[12px] font-medium text-[#2563EB] hover:underline">
+              View
+            </button>
+          </div>
         </div>
       </div>
 

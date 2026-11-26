@@ -30,7 +30,7 @@ export const ApplyLeaveDrawer: React.FC<ApplyLeaveDrawerProps> = ({
   initialType,
   onSuccess,
 }) => {
-  const { success } = useToast();
+  const { success, error: showError } = useToast();
 
   const [leaveType, setLeaveType] = useState(initialType || "Casual Leave");
   const [startDate, setStartDate] = useState("");
@@ -117,11 +117,9 @@ export const ApplyLeaveDrawer: React.FC<ApplyLeaveDrawerProps> = ({
       success(`Leave request for ${workingDaysCalc.days} days submitted successfully.`, "Request Filed");
       onSuccess?.();
       handleClose();
-    } catch {
-      // Offline / mock fallback: accept and update UI
-      success(`Leave request for ${workingDaysCalc.days} days submitted.`, "Request Filed");
-      onSuccess?.();
-      handleClose();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to submit leave request.";
+      showError(msg, "Submission Failed");
     } finally {
       setIsSubmitting(false);
     }
@@ -191,7 +189,7 @@ export const ApplyLeaveDrawer: React.FC<ApplyLeaveDrawerProps> = ({
         </div>
 
         {/* Date Range Selection */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Input
             label="Start Date *"
             type="date"

@@ -69,8 +69,8 @@ export default function AttendanceTodayTable({
             <th className="py-4 px-4 font-bold text-slate-800">Employee</th>
             <th className="py-4 px-4 font-bold text-slate-800">Department</th>
             <th className="py-4 px-4 font-bold text-slate-800">Designation</th>
-            <th className="py-4 px-4 font-bold text-slate-800">Check In</th>
-            <th className="py-4 px-4 font-bold text-slate-800">Check Out</th>
+            <th className="py-4 px-4 font-bold text-slate-800">Punch In</th>
+            <th className="py-4 px-4 font-bold text-slate-800">Punch Out</th>
             <th className="py-4 px-4 font-bold text-slate-800">Status</th>
             <th className="py-4 pr-6 pl-4 font-bold text-slate-800 text-right">
               Action

@@ -148,7 +148,10 @@ function EmployeeHelpSupport() {
       .getElementById("support-tickets")
       ?.scrollIntoView({ behavior: "smooth", block: "start" });
 
-    setShouldScrollToTicketForm(false);
+    const rafId = requestAnimationFrame(() => {
+      setShouldScrollToTicketForm(false);
+    });
+    return () => cancelAnimationFrame(rafId);
   }, [isTicketFormOpen, shouldScrollToTicketForm]);
 
   const pageSize = 5;
@@ -191,8 +194,32 @@ function EmployeeHelpSupport() {
   }, []);
 
   useEffect(() => {
-    void loadTickets(1);
-  }, [loadTickets]);
+    let active = true;
+    void employeeSupportTicketService
+      .list(1, pageSize)
+      .then((response) => {
+        if (!active) return;
+        setTickets(response.tickets);
+        setTotalTickets(response.total);
+        setTotalPages(response.total_pages);
+        setCurrentPage(response.page);
+        setTicketsError("");
+      })
+      .catch(() => {
+        if (active) {
+          setTicketsError(
+            "Unable to load your support tickets. Please try again.",
+          );
+        }
+      })
+      .finally(() => {
+        if (active) setTicketsLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleTicketSubmit = async (
     event: FormEvent<HTMLFormElement>,

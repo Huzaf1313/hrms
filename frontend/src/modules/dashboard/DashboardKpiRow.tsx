@@ -89,26 +89,22 @@ export default function DashboardKpiRow({
         return (
           <button
             key={card.id}
-            className="group relative rounded-3xl border border-slate-100 bg-white p-5 shadow-kpi shadow-kpi-hover transition-all duration-200 flex items-center justify-between"
+            type="button"
+            onClick={card.onClick}
+            className="group relative flex w-full cursor-pointer flex-col justify-between rounded-xl border border-[#E5E7EB] bg-white p-5 text-left shadow-kpi shadow-kpi-hover transition-all duration-200 hover:border-[#D1D5DB]"
           >
-            <div className="flex items-center gap-4">
-              <div
-                className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${card.iconBg} ${card.iconColor}`}
-              >
-                <Icon className="h-6 w-6" />
-              </div>
-
-              <div>
-                <p className="text-[12px] font-medium text-[#6B7280]">{card.label}</p>
-                <p className="mt-2 text-[28px] font-semibold leading-none tracking-tight text-[#111827]">
+            <div className="flex w-full items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate text-[12px] font-medium text-[#6B7280]">{card.label}</p>
+                <p className="mt-2 text-[28px] font-semibold leading-none tracking-tight text-[#111827] tabular-nums">
                   {card.value}
                 </p>
               </div>
-              <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${card.iconBg} ${card.iconColor}`}>
-                <Icon className="h-[18px] w-[18px]" />
+              <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${card.iconBg} ${card.iconColor}`}>
+                <Icon className="h-5 w-5" />
               </span>
             </div>
-            <p className="mt-auto pt-3 text-[12px] text-[#6B7280]">{card.helper}</p>
+            <p className="mt-3 text-[12px] text-[#6B7280]">{card.helper}</p>
           </button>
         );
       })}

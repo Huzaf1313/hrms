@@ -227,7 +227,7 @@ export const TodayPunchCard: React.FC<TodayPunchCardProps> = ({
               className="w-full sm:w-auto px-6 h-[40px] text-[13.5px] font-medium"
               leftIcon={<Clock className="w-4 h-4" />}
             >
-              Check In
+              Punch In
             </Button>
           ) : punchState === "checked_in" ? (
             <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -245,7 +245,7 @@ export const TodayPunchCard: React.FC<TodayPunchCardProps> = ({
                 className="w-full sm:w-auto px-6 h-[40px] text-sm font-medium"
                 leftIcon={<Clock className="w-4 h-4" />}
               >
-                Check Out
+                Punch Out
               </Button>
             </div>
           ) : (

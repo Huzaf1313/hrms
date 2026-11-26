@@ -1,13 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowLeft,
+  CalendarRange,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ClipboardCheck,
   Download,
+  FileSpreadsheet,
   FileText,
+  Flag,
   Layers,
   LogOut,
+  PlayCircle,
   Plus,
   Search,
   SlidersHorizontal,
@@ -17,15 +21,11 @@ import {
 } from "lucide-react";
 
 import { Button } from "../../components/ui/Button";
+import { PageHeading } from "../../components/ui/PageHeading";
 import CreateExitRequestModal from "./CreateExitRequestModal";
 import ExitDetailModal from "./ExitDetailModal";
-import ExitQuickFilters from "./ExitQuickFilters";
-import ExitRequestsTable, {
-  type ExitTableVariant,
-} from "./ExitRequestsTable";
+import ExitRequestsTable from "./ExitRequestsTable";
 import ExitTypeDonut from "./ExitTypeDonut";
-import ResignationPanel from "./ResignationPanel";
-import TerminationPanel from "./TerminationPanel";
 import {
   ErrorState,
   InlineNoticeBanner,
@@ -36,6 +36,7 @@ import {
 import {
   EMPTY_EXIT_FILTERS,
   EXIT_STATUSES,
+  hasActiveFilters,
   percent,
   useDialogA11y,
   type ExitFilters,
@@ -79,12 +80,10 @@ function errorText(cause: unknown, fallback: string): string {
 }
 
 function DeleteConfirmDialog({
-  request,
   deleting,
   onCancel,
   onConfirm,
 }: {
-  request: ExitRequest;
   deleting: boolean;
   onCancel: () => void;
   onConfirm: () => void;
@@ -123,8 +122,8 @@ function DeleteConfirmDialog({
           </button>
         </div>
 
-        <div className="px-6 py-5 text-[13px] text-[#4B5563]">
-          Delete {request.employee_name ?? request.employee_id}&apos;s exit request? This cannot be undone.
+        <div className="px-6 py-5 text-sm text-[#4B5563]">
+          Delete this exit request? This cannot be undone.
         </div>
 
         <div className="flex items-center justify-end gap-2 border-t border-[#E5E7EB] bg-[#F9FAFB] px-6 py-3.5">
@@ -133,7 +132,7 @@ function DeleteConfirmDialog({
             size="sm"
             onClick={onCancel}
             disabled={deleting}
-            className="h-8 px-3 text-[12px] font-medium shadow-none"
+            className="h-9 px-3.5 text-[13px] font-medium shadow-none"
           >
             Cancel
           </Button>
@@ -142,7 +141,7 @@ function DeleteConfirmDialog({
             size="sm"
             onClick={onConfirm}
             isLoading={deleting}
-            className="h-8 px-3 text-[12px] font-medium text-[#9B1C1C] border-[#F8B4B4] hover:bg-[#FDE8E8] hover:border-[#F8B4B4] shadow-none"
+            className="h-9 px-3.5 text-[13px] font-medium text-[#9B1C1C] border-[#F8B4B4] hover:bg-[#FDE8E8] hover:border-[#F8B4B4] shadow-none"
           >
             Delete
           </Button>
@@ -162,21 +161,25 @@ export default function AdminExitRequests() {
   const [total, setTotal] = useState(0);
   const [pages, setPages] = useState(1);
   const [summary, setSummary] = useState<ExitRequestSummary | null>(null);
+  const [overallSummary, setOverallSummary] = useState<ExitRequestSummary | null>(null);
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [selected, setSelected] = useState<ExitRequest | null>(null);
+  const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<ExitRequest | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [notice, setNotice] = useState<InlineNotice>(null);
   const [creating, setCreating] = useState<ExitType | "any" | null>(null);
   const [version, setVersion] = useState(0);
+  const fetchIdRef = useRef(0);
 
   const refresh = useCallback(() => setVersion((v) => v + 1), []);
 
-  // Departments populate the rail's dropdown once; they rarely change.
+  // Departments populate the toolbar dropdown once; they rarely change.
   useEffect(() => {
     let active = true;
 
@@ -194,29 +197,42 @@ export default function AdminExitRequests() {
     };
   }, []);
 
-  // Filters apply as they are changed. The debounce keeps a half-typed search
-  // term from firing a request per keystroke, and any filter change restarts
-  // the list from the first page.
+  // Debounce draft filter changes; skip initial mount when draft === applied.
   useEffect(() => {
+    const unchanged =
+      draft.search === applied.search &&
+      draft.status === applied.status &&
+      draft.department_id === applied.department_id &&
+      draft.from === applied.from &&
+      draft.to === applied.to;
+
+    if (unchanged) return;
+
     const timer = setTimeout(() => {
       setApplied(draft);
       setPage(1);
     }, FILTER_DEBOUNCE_MS);
 
     return () => clearTimeout(timer);
-  }, [draft]);
+  }, [draft, applied]);
 
-  // Requests + summary. The tab drives the exit type, and the single-type tabs
-  // scope the summary too so their KPI cards count only that type.
-  useEffect(() => {
-    let active = true;
+  const fetchKey = `${view}|${applied.status}|${applied.department_id}|${applied.from}|${applied.to}|${applied.search}|${page}|${version}`;
+  const [prevFetchKey, setPrevFetchKey] = useState(fetchKey);
+  if (fetchKey !== prevFetchKey) {
+    setPrevFetchKey(fetchKey);
     setLoading(true);
     setError(null);
+  }
+
+  // Requests + summary. Guarded by fetchIdRef so out-of-order responses never
+  // leave stale rows or stuck skeleton loading state.
+  useEffect(() => {
+    const currentFetchId = ++fetchIdRef.current;
 
     const exitType = view === "all" ? undefined : view;
 
     const load = async () => {
-      const [list, stats] = await Promise.all([
+      const [list, stats, allStats] = await Promise.all([
         adminExitRequestService.list({
           page,
           limit: PAGE_SIZE,
@@ -228,40 +244,74 @@ export default function AdminExitRequests() {
           search: applied.search.trim() || undefined,
         }),
         adminExitRequestService.summary(exitType),
+        exitType ? adminExitRequestService.summary() : Promise.resolve(null),
       ]);
 
-      if (!active) return;
+      if (fetchIdRef.current !== currentFetchId) return;
 
       setRequests(list.items);
       setTotal(list.total);
       setPages(list.pages);
       setSummary(stats);
+      setOverallSummary(allStats ?? stats);
       setError(null);
     };
 
     load()
       .catch((cause: unknown) => {
-        if (active) setError(errorText(cause, "Unable to load exit requests."));
+        if (fetchIdRef.current === currentFetchId) {
+          setError(errorText(cause, "Unable to load exit requests."));
+        }
       })
       .finally(() => {
-        if (active) setLoading(false);
+        if (fetchIdRef.current === currentFetchId) {
+          setLoading(false);
+        }
       });
-
-    return () => {
-      active = false;
-    };
   }, [view, applied, page, version]);
 
-  // Any filter change starts the list from the first page again.
-  const changeView = (next: View) => {
-    setView(next);
-    setPage(1);
+  const changeView = useCallback((next: View) => {
+    setView((prev) => {
+      if (prev === next) return prev;
+      setRequests([]);
+      setTotal(0);
+      setPage(1);
+      setSelectedRowId(null);
+      return next;
+    });
+  }, []);
+
+  const handleQuickStatus = async (
+    request: ExitRequest,
+    nextStatus: "In Progress" | "Completed",
+  ) => {
+    try {
+      await adminExitRequestService.updateStatus(request.id, nextStatus);
+      refresh();
+      setNotice({
+        type: "success",
+        text: `${request.employee_name ?? request.employee_id} moved to ${nextStatus}.`,
+      });
+    } catch (cause: unknown) {
+      setNotice({
+        type: "error",
+        text: errorText(cause, "Unable to update exit request status."),
+      });
+    }
   };
 
   const resetFilters = () => {
     setDraft(EMPTY_EXIT_FILTERS);
-    changeView("all");
+    setApplied(EMPTY_EXIT_FILTERS);
+    setPage(1);
   };
+
+  const toggleStatusFilter = useCallback((status: ExitFilters["status"]) => {
+    setDraft((prev) => ({
+      ...prev,
+      status: prev.status === status ? "" : status,
+    }));
+  }, []);
 
   const executeDelete = async (request: ExitRequest) => {
     setDeletingId(request.id);
@@ -287,16 +337,16 @@ export default function AdminExitRequests() {
   };
 
   const totalFor = useCallback(
-    (type: ExitType) => summary?.by_type?.[type] ?? 0,
-    [summary],
+    (type: ExitType) => (overallSummary ?? summary)?.by_type?.[type] ?? 0,
+    [overallSummary, summary],
   );
 
-  const overallTotal = summary?.total ?? 0;
+  const overallTotal = (overallSummary ?? summary)?.total ?? 0;
 
   const overviewCards: StatCardSpec[] = useMemo(
     () => [
       {
-        label: "Total Exit Requests",
+        label: "Total Requests",
         value: overallTotal,
         note: "All recorded exits",
         noteClass: "text-[#6B7280]",
@@ -305,28 +355,39 @@ export default function AdminExitRequests() {
         iconClass: "text-[#2F5FD0]",
       },
       ...EXIT_TYPES.map((type) => ({
-        label: type,
+        label: type === "Resignation" ? "Resignations" : "Terminations",
         value: totalFor(type),
         note: `${percent(totalFor(type), overallTotal)} of total`,
         noteClass: "text-[#6B7280]",
         icon: (
           <FileText
-            className={`h-4 w-4 shrink-0 ${type === "Termination" ? "text-[#9B1C1C]" : "text-[#2F5FD0]"
-              }`}
+            className={`h-4 w-4 shrink-0 ${type === "Termination" ? "text-[#9B1C1C]" : "text-[#2F5FD0]"}`}
           />
         ),
         iconBg: type === "Termination" ? "bg-[#FDE8E8]" : "bg-[#E8EEFB]",
         iconClass: "text-current",
+        onClick: () => changeView(type),
       })),
+      {
+        label: "Pending / In Progress",
+        value: ((overallSummary ?? summary)?.pending ?? 0) + ((overallSummary ?? summary)?.in_progress ?? 0),
+        note: "Active exit queue",
+        noteClass: "text-[#6B7280]",
+        icon: <SlidersHorizontal className="h-4 w-4 shrink-0 text-[#92400E]" />,
+        iconBg: "bg-[#FEF3C7]",
+        iconClass: "text-[#92400E]",
+        active: draft.status === "Pending",
+        onClick: () => toggleStatusFilter("Pending"),
+      },
     ],
-    [overallTotal, totalFor],
+    [overallTotal, totalFor, overallSummary, summary, draft.status, toggleStatusFilter, changeView],
   );
 
   /** Single-type tabs get their own four-card row with type-relevant labels. */
   const typedCards: StatCardSpec[] = useMemo(() => {
     if (view === "all") return overviewCards;
 
-    const total = summary?.total ?? 0;
+    const scopedTotal = summary?.total ?? 0;
     const pending = summary?.pending ?? 0;
     const inProgress = summary?.in_progress ?? 0;
     const completed = summary?.completed ?? 0;
@@ -337,6 +398,7 @@ export default function AdminExitRequests() {
       note: string,
       icon: StatCardSpec["icon"],
       iconBg: string,
+      statusToFilter?: ExitFilters["status"],
     ): StatCardSpec => ({
       label,
       value,
@@ -345,6 +407,8 @@ export default function AdminExitRequests() {
       icon,
       iconBg,
       iconClass: "text-current",
+      active: statusToFilter ? draft.status === statusToFilter : false,
+      onClick: statusToFilter ? () => toggleStatusFilter(statusToFilter) : undefined,
     });
 
     const counterIcon = <LogOut className="h-4 w-4 shrink-0 text-[#2F5FD0]" />;
@@ -353,7 +417,7 @@ export default function AdminExitRequests() {
       return [
         card(
           "Total Terminations",
-          total,
+          scopedTotal,
           "All terminations on record",
           counterIcon,
           "bg-[#E8EEFB]",
@@ -361,202 +425,237 @@ export default function AdminExitRequests() {
         card(
           "In Progress",
           inProgress,
-          `${percent(inProgress, total)} of total`,
+          `${percent(inProgress, scopedTotal)} of total`,
           <SlidersHorizontal className="h-4 w-4 shrink-0 text-[#2F5FD0]" />,
           "bg-[#E8EEFB]",
+          "In Progress",
         ),
         card(
           "Completed",
           completed,
-          `${percent(completed, total)} of total`,
+          `${percent(completed, scopedTotal)} of total`,
           <LogOut className="h-4 w-4 shrink-0 text-[#03543F]" />,
           "bg-[#DEF7EC]",
+          "Completed",
         ),
         card(
           "Pending Clearance",
           pending,
-          `${percent(pending, total)} of total`,
+          `${percent(pending, scopedTotal)} of total`,
           <Wallet className="h-4 w-4 shrink-0 text-[#92400E]" />,
           "bg-[#FEF3C7]",
-        ),
-      ];
-    }
-
-    if (view === "Resignation") {
-      return [
-        card(
-          "Total Resignations",
-          total,
-          "All resignations on record",
-          counterIcon,
-          "bg-[#E8EEFB]",
-        ),
-        card(
-          "In Clearance",
-          inProgress,
-          `${percent(inProgress, total)} of total`,
-          <SlidersHorizontal className="h-4 w-4 shrink-0 text-[#2F5FD0]" />,
-          "bg-[#E8EEFB]",
-        ),
-        card(
-          "Pending Settlement",
-          pending,
-          `${percent(pending, total)} of total`,
-          <Wallet className="h-4 w-4 shrink-0 text-[#92400E]" />,
-          "bg-[#FEF3C7]",
-        ),
-        card(
-          "Completed",
-          completed,
-          `${percent(completed, total)} of total`,
-          <LogOut className="h-4 w-4 shrink-0 text-[#03543F]" />,
-          "bg-[#DEF7EC]",
+          "Pending",
         ),
       ];
     }
 
     return [
       card(
-        `Total ${view}`,
-        total,
-        "All recorded on record",
+        "Total Resignations",
+        scopedTotal,
+        "All resignations on record",
         counterIcon,
         "bg-[#E8EEFB]",
       ),
       card(
-        "Pending",
-        pending,
-        `${percent(pending, total)} of total`,
-        <SlidersHorizontal className="h-4 w-4 shrink-0 text-[#92400E]" />,
-        "bg-[#FEF3C7]",
-      ),
-      card(
-        "In Progress",
+        "In Clearance",
         inProgress,
-        `${percent(inProgress, total)} of total`,
+        `${percent(inProgress, scopedTotal)} of total`,
         <SlidersHorizontal className="h-4 w-4 shrink-0 text-[#2F5FD0]" />,
         "bg-[#E8EEFB]",
+        "In Progress",
+      ),
+      card(
+        "Pending Settlement",
+        pending,
+        `${percent(pending, scopedTotal)} of total`,
+        <Wallet className="h-4 w-4 shrink-0 text-[#92400E]" />,
+        "bg-[#FEF3C7]",
+        "Pending",
       ),
       card(
         "Completed",
         completed,
-        `${percent(completed, total)} of total`,
+        `${percent(completed, scopedTotal)} of total`,
         <LogOut className="h-4 w-4 shrink-0 text-[#03543F]" />,
         "bg-[#DEF7EC]",
+        "Completed",
       ),
     ];
-  }, [view, summary, overviewCards]);
+  }, [view, summary, overviewCards, draft.status, toggleStatusFilter]);
 
   const isOverview = view === "all";
-  const tableVariant: ExitTableVariant = isOverview ? "overview" : "typed";
+  const activeRow = useMemo(
+    () => requests.find((item) => item.id === selectedRowId) ?? null,
+    [requests, selectedRowId],
+  );
 
-  const heading = isOverview
-    ? { title: "Exit / Offboarding", subtitle: "Manage employee resignation, termination and other exit processes." }
-    : view === "Termination"
-      ? { title: "Termination Management", subtitle: "Handle terminations and exit-related processes." }
-      : { title: "Exit / Offboarding Management", subtitle: `Manage ${view.toLowerCase()} and clearance processes.` };
+  const tabCountFor = (tabId: View) => {
+    if (tabId === "all") return overallTotal;
+    return totalFor(tabId);
+  };
+
+  const noRowTooltip = "Select a request from the table first";
+
+  const quickActions = [
+    {
+      label: "Approve Resignation",
+      icon: PlayCircle,
+      iconBg: "bg-[#ECFDF5]",
+      iconColor: "text-[#059669]",
+      enabled: activeRow?.status === "Pending",
+      disabledReason: !activeRow
+        ? noRowTooltip
+        : activeRow.status === "In Progress"
+          ? "Already approved and in clearance"
+          : `Not available for ${activeRow.status.toLowerCase()} requests`,
+      onClick: () => activeRow && setSelected(activeRow),
+    },
+    {
+      label: "Update Clearance",
+      icon: ClipboardCheck,
+      iconBg: "bg-[#EFF6FF]",
+      iconColor: "text-[#2563EB]",
+      enabled: activeRow?.status === "In Progress",
+      disabledReason: !activeRow
+        ? noRowTooltip
+        : activeRow.status === "Pending"
+          ? "Approve the request first to start clearance"
+          : `Clearance is closed for ${activeRow.status.toLowerCase()} requests`,
+      onClick: () => activeRow && setSelected(activeRow),
+    },
+    {
+      label: "Process Final Settlement",
+      icon: Wallet,
+      iconBg: "bg-[#F5F3FF]",
+      iconColor: "text-[#7C3AED]",
+      enabled: activeRow?.status === "In Progress",
+      disabledReason: !activeRow
+        ? noRowTooltip
+        : activeRow.status === "Pending"
+          ? "Available after clearance is started"
+          : `Not available for ${activeRow.status.toLowerCase()} requests`,
+      onClick: () => activeRow && setSelected(activeRow),
+    },
+    {
+      label: "Initiate Termination",
+      icon: Flag,
+      iconBg: "bg-[#FEF2F2]",
+      iconColor: "text-[#DC2626]",
+      enabled: Boolean(activeRow),
+      disabledReason: noRowTooltip,
+      onClick: () => setCreating("Termination"),
+    },
+    {
+      label: "Export Exit Report",
+      icon: FileSpreadsheet,
+      iconBg: "bg-[#F0FDFA]",
+      iconColor: "text-[#0D9488]",
+      enabled: requests.length > 0,
+      disabledReason: "No visible exit requests to export",
+      onClick: () =>
+        downloadExitCsv(
+          requests,
+          isOverview ? "exit-requests.csv" : `exit-${view.toLowerCase()}.csv`,
+        ),
+    },
+  ];
 
   const firstRow = total ? (page - 1) * PAGE_SIZE + 1 : 0;
   const lastRow = Math.min(page * PAGE_SIZE, total);
 
   return (
-    <div className="flex flex-col gap-6 w-full max-w-[1280px] mx-auto px-4 sm:px-6 py-4">
-      {/* Page header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-5 rounded-lg border border-[#E5E7EB] shadow-none">
-        <div className="flex min-w-0 items-center gap-3">
-          {!isOverview && (
-            <button
-              type="button"
-              onClick={() => changeView("all")}
-              aria-label="Back to all exit requests"
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[#E4E6E1] bg-white text-[#4B5563] transition hover:bg-[#F0F1EE] hover:text-[#111827] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0]"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </button>
-          )}
-
-          <div className="flex flex-col gap-0.5 min-w-0">
-            <h1 className="truncate text-[18px] font-semibold text-[#111827]">
-              {heading.title}
-            </h1>
-            <p className="text-xs text-[#4B5563]">{heading.subtitle}</p>
-          </div>
-        </div>
-
-        <div className="flex items-center shrink-0">
+    <div className="flex flex-col gap-6 w-full min-w-0 pb-10">
+      {/* A. Page header (consistent across all 3 tabs, no back arrow) */}
+      <PageHeading
+        title="Manage employee resignation, termination and other exit processes."
+        actions={
           <Button
             variant="primary"
-            onClick={() => setCreating("any")}
+            onClick={() => setCreating(isOverview ? "any" : view)}
             className="inline-flex flex-row items-center justify-center gap-2 whitespace-nowrap h-10 px-4 text-sm font-medium shadow-none [&>span]:inline-flex [&>span]:flex-row [&>span]:items-center [&>span]:justify-center [&>span]:gap-2"
           >
             <Plus className="w-[18px] h-[18px] shrink-0" />
             <span>Create Exit Request</span>
           </Button>
-        </div>
-      </div>
+        }
+      />
 
       <InlineNoticeBanner notice={notice} onDismiss={() => setNotice(null)} />
 
-      {isOverview && <ExitProcessFlow />}
-
-      {/* KPI Section */}
+      {/* B. Stats row: always 4 equal-width cards */}
       <div className="flex flex-col gap-2.5">
-        <div className="flex items-center justify-between">
-          <h2 className="text-[11px] font-semibold uppercase tracking-wider text-[#6B7280]">
-            EXIT OVERVIEW
-          </h2>
-        </div>
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+          EXIT OVERVIEW
+        </h2>
 
-        <StatCards
-          cards={typedCards}
-          className={
-            isOverview
-              ? "grid-cols-1 md:grid-cols-3"
-              : "grid-cols-1 md:grid-cols-2 xl:grid-cols-4"
-          }
-        />
+        <StatCards cards={typedCards} />
       </div>
 
-      {/* Tabs + Main Grid */}
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center gap-2 border-b border-[#E5E7EB] overflow-x-auto">
+      {/* C. Tabs (never shift vertically) */}
+      <div className="flex flex-col gap-5">
+        <div className="flex items-center gap-2 border-b border-[#E5E7EB] overflow-x-auto overflow-y-hidden scrollbar-hidden max-w-full">
           {TABS.map((tab) => {
             const active = view === tab.id;
             const Icon = tab.icon;
+            const count = tabCountFor(tab.id);
 
             return (
               <button
                 key={tab.id}
                 type="button"
                 onClick={() => changeView(tab.id)}
-                className={`flex items-center gap-1.5 whitespace-nowrap px-3.5 py-2.5 text-[13px] font-medium transition-colors cursor-pointer border-b-2 -mb-[1px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0] ${active
+                className={`flex items-center gap-2 shrink-0 whitespace-nowrap px-3.5 py-2.5 text-sm font-medium transition-colors cursor-pointer border-b-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0] ${active
                   ? "border-[#2F5FD0] text-[#2F5FD0]"
                   : "border-transparent text-[#4B5563] hover:text-[#111827] hover:border-[#D1D5DB]"
                   }`}
               >
                 <Icon className="w-4 h-4 shrink-0" />
                 <span>{tab.label}</span>
+                <span
+                  className={`inline-flex items-center justify-center rounded-full px-2 py-0.5 text-xs font-medium tabular-nums ${active
+                    ? "bg-[#EFF6FF] text-[#2F5FD0]"
+                    : "bg-slate-100 text-slate-600"
+                    }`}
+                >
+                  {count}
+                </span>
               </button>
             );
           })}
         </div>
 
-        <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
-          <div className="flex min-w-0 flex-col gap-4">
-            {/* Toolbar */}
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="relative min-w-[220px] flex-1">
-                <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#7B8794]" />
+        {/* D. Unified Toolbar */}
+        <div className="rounded-xl border border-[#E5E7EB] bg-white p-3.5 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+          <div className="flex flex-col gap-2.5 lg:flex-row lg:flex-wrap lg:items-center">
+            <div className="flex items-center gap-2 flex-1 min-w-[180px]">
+              <div className="relative flex-1 min-w-0">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7B8794]" />
                 <input
                   type="text"
                   value={draft.search}
                   onChange={(event) => setDraft((d) => ({ ...d, search: event.target.value }))}
                   placeholder="Search employee name, ID..."
                   aria-label="Search employee name, ID"
-                  className="h-8 w-full rounded-md border border-[#E5E7EB] bg-white pl-8 pr-3 text-[12px] text-[#111827] outline-none transition placeholder:text-[#7B8794] focus:border-[#2F5FD0] focus:ring-1 focus:ring-[#2F5FD0]"
+                  className="h-9 w-full rounded-lg border border-[#E5E7EB] bg-white pl-9 pr-3 text-sm text-[#111827] outline-none transition placeholder:text-[#7B8794] hover:border-[#D1D5DB] focus:border-[#2F5FD0] focus:ring-1 focus:ring-[#2F5FD0]"
                 />
               </div>
 
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setMobileFiltersOpen((prev) => !prev)}
+                leftIcon={<SlidersHorizontal className="h-3.5 w-3.5 shrink-0" />}
+                className="h-9 px-3 text-xs font-medium lg:hidden shrink-0"
+              >
+                Filters
+              </Button>
+            </div>
+
+            <div
+              className={`${mobileFiltersOpen ? "flex" : "hidden"
+                } lg:flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2`}
+            >
               <div className="relative">
                 <select
                   value={draft.status}
@@ -564,7 +663,7 @@ export default function AdminExitRequests() {
                   onChange={(event) =>
                     setDraft((d) => ({ ...d, status: event.target.value as ExitFilters["status"] }))
                   }
-                  className="h-8 w-40 appearance-none rounded-md border border-[#E5E7EB] bg-white pl-2.5 pr-7 text-[12px] text-[#111827] outline-none transition focus:border-[#2F5FD0] focus:ring-1 focus:ring-[#2F5FD0] cursor-pointer"
+                  className="h-9 w-full sm:w-36 appearance-none rounded-lg border border-[#E5E7EB] bg-white pl-3 pr-8 text-xs text-[#111827] outline-none transition hover:border-[#D1D5DB] focus:border-[#2F5FD0] focus:ring-1 focus:ring-[#2F5FD0] cursor-pointer"
                 >
                   <option value="">All Status</option>
                   {EXIT_STATUSES.map((status) => (
@@ -576,10 +675,64 @@ export default function AdminExitRequests() {
                 <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#6B7280]" />
               </div>
 
+              <div className="relative">
+                <select
+                  value={draft.department_id}
+                  aria-label="Filter by department"
+                  onChange={(event) =>
+                    setDraft((d) => ({ ...d, department_id: event.target.value }))
+                  }
+                  className="h-9 w-full sm:w-40 appearance-none rounded-lg border border-[#E5E7EB] bg-white pl-3 pr-8 text-xs text-[#111827] outline-none transition hover:border-[#D1D5DB] focus:border-[#2F5FD0] focus:ring-1 focus:ring-[#2F5FD0] cursor-pointer"
+                >
+                  <option value="">All Departments</option>
+                  {departments.map((dept) => (
+                    <option key={dept.id} value={dept.id}>
+                      {dept.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#6B7280]" />
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <div className="relative flex-1 sm:flex-none">
+                  <CalendarRange className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#6B7280]" />
+                  <input
+                    type="date"
+                    aria-label="Submitted from"
+                    value={draft.from}
+                    onChange={(event) => setDraft((d) => ({ ...d, from: event.target.value }))}
+                    className="h-9 w-full sm:w-[134px] rounded-lg border border-[#E5E7EB] bg-white pl-8 pr-2 text-xs text-[#111827] outline-none transition hover:border-[#D1D5DB] focus:border-[#2F5FD0] focus:ring-1 focus:ring-[#2F5FD0]"
+                  />
+                </div>
+                <span className="text-xs text-slate-400">–</span>
+                <div className="relative flex-1 sm:flex-none">
+                  <CalendarRange className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#6B7280]" />
+                  <input
+                    type="date"
+                    aria-label="Submitted to"
+                    value={draft.to}
+                    onChange={(event) => setDraft((d) => ({ ...d, to: event.target.value }))}
+                    className="h-9 w-full sm:w-[134px] rounded-lg border border-[#E5E7EB] bg-white pl-8 pr-2 text-xs text-[#111827] outline-none transition hover:border-[#D1D5DB] focus:border-[#2F5FD0] focus:ring-1 focus:ring-[#2F5FD0]"
+                  />
+                </div>
+              </div>
+
+              {hasActiveFilters(draft) && (
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  className="h-9 px-2.5 text-xs font-medium text-[#2F5FD0] hover:underline whitespace-nowrap cursor-pointer"
+                >
+                  Reset
+                </button>
+              )}
+
               <Button
                 variant="outline"
                 size="sm"
                 disabled={requests.length === 0}
+                title={requests.length === 0 ? "No rows available to export" : "Export visible exit requests to CSV"}
                 onClick={() =>
                   downloadExitCsv(
                     requests,
@@ -587,124 +740,184 @@ export default function AdminExitRequests() {
                   )
                 }
                 leftIcon={<Download className="h-3.5 w-3.5 shrink-0" />}
-                className="h-8 px-3 text-[12px] font-medium shadow-none whitespace-nowrap"
+                className="h-9 px-3 text-xs font-medium shadow-none whitespace-nowrap"
               >
                 Export
               </Button>
             </div>
+          </div>
+        </div>
 
-            {/* Requests table */}
-            <Panel
-              title={isOverview ? "Recent Exit Requests" : `${view} Requests`}
-              bodyClassName="p-0"
-              action={
-                !isOverview ? (
-                  <span className="inline-flex items-center rounded-full bg-[#F3F4F6] border border-[#E5E7EB] px-2 py-0.5 text-[11px] font-medium text-[#4B5563]">
-                    {view}
+        {/* E. Main Content: Full-width flow */}
+        <div className="flex flex-col gap-5">
+          {/* Compact centered stepper strip (same position across all tabs) */}
+          <ExitProcessFlow status={activeRow?.status ?? null} />
+
+          {/* Full-width Requests table */}
+          <Panel
+            title={isOverview ? "Recent Exit Requests" : `${view} Requests`}
+            bodyClassName="p-0"
+            action={
+              <span className="inline-flex items-center rounded-full bg-[#EFF6FF] border border-[#DBEAFE] px-2.5 py-0.5 text-xs font-medium text-[#2F5FD0] tabular-nums">
+                {total} {total === 1 ? "request" : "requests"}
+              </span>
+            }
+          >
+            <ExitRequestsTable
+              requests={requests}
+              loading={loading}
+              error={error}
+              selectedId={activeRow?.id ?? null}
+              onSelect={(req) =>
+                setSelectedRowId((prev) => (prev === req.id ? null : req.id))
+              }
+              onOpen={setSelected}
+              onQuickStatus={(req, next) => void handleQuickStatus(req, next)}
+              onDelete={setConfirmDelete}
+              onCreate={() => setCreating(isOverview ? "any" : view)}
+              deletingId={deletingId}
+              emptyMessage={
+                isOverview
+                  ? "No exit requests found."
+                  : `No ${view.toLowerCase()} requests found.`
+              }
+            />
+
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#E5E7EB] bg-white px-6 py-3.5">
+              <p className="text-xs text-[#6B7280] tabular-nums">
+                Showing {firstRow} to {lastRow} of {total} entries
+              </p>
+
+              {pages > 1 && (
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    aria-label="Previous page"
+                    disabled={page <= 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    className="flex h-8 w-8 items-center justify-center rounded-md border border-[#E4E6E1] bg-white text-[#7B8794] transition hover:bg-[#F0F1EE] hover:text-[#1F2933] disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0]"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+
+                  <span className="px-2 text-xs font-medium text-[#111827] tabular-nums">
+                    {page} / {pages}
                   </span>
-                ) : undefined
+
+                  <button
+                    type="button"
+                    aria-label="Next page"
+                    disabled={page >= pages}
+                    onClick={() => setPage((p) => Math.min(pages, p + 1))}
+                    className="flex h-8 w-8 items-center justify-center rounded-md border border-[#E4E6E1] bg-white text-[#7B8794] transition hover:bg-[#F0F1EE] hover:text-[#1F2933] disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0]"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+            </div>
+          </Panel>
+
+          {activeRow && (
+            <Panel
+              title="Exit Process Checklist"
+              description={`Clearance steps for ${activeRow.employee_name ?? activeRow.employee_id}.`}
+              action={
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelected(activeRow)}
+                  className="h-8 px-3 text-[13px] font-medium shadow-none"
+                >
+                  Open Drawer
+                </Button>
               }
             >
-              <ExitRequestsTable
-                requests={requests}
-                loading={loading}
-                error={error}
-                onOpen={setSelected}
-                onDelete={setConfirmDelete}
-                deletingId={deletingId}
-                variant={tableVariant}
-                emptyMessage={
-                  isOverview
-                    ? "No exit requests match the current filters."
-                    : `No ${view.toLowerCase()} requests match the current filters.`
-                }
-              />
-
-              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#E5E7EB] bg-white px-6 py-3.5">
-                <p className="text-[12px] text-[#6B7280] tabular-nums">
-                  Showing {firstRow} to {lastRow} of {total} entries
+              {activeRow.handover_tasks.length === 0 ? (
+                <p className="text-sm text-slate-500">
+                  No clearance steps recorded for this request yet.
                 </p>
-
-                {pages > 1 && (
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      aria-label="Previous page"
-                      disabled={page <= 1}
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      className="flex h-8 w-8 items-center justify-center rounded-[6px] border border-[#E4E6E1] bg-white text-[#7B8794] transition hover:bg-[#F0F1EE] hover:text-[#1F2933] disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0]"
+              ) : (
+                <ul className="divide-y divide-[#E5E7EB]">
+                  {activeRow.handover_tasks.map((task, idx) => (
+                    <li
+                      key={`${task.task}-${idx}`}
+                      className="flex items-center justify-between gap-3 py-2.5 text-sm"
                     >
-                      <ChevronLeft className="h-4 w-4" />
-                    </button>
+                      <div className="min-w-0">
+                        <p className="font-medium text-[#111827] truncate">
+                          {idx + 1}. {task.task}
+                        </p>
+                        {task.remarks && (
+                          <p className="text-xs text-slate-500 truncate">{task.remarks}</p>
+                        )}
+                      </div>
+                      <span className="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs font-medium text-slate-700">
+                        {task.status}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Panel>
+          )}
 
-                    <span className="px-2 text-[12px] font-medium text-[#111827] tabular-nums">
-                      {page} / {pages}
-                    </span>
+          {error && !loading && requests.length > 0 && <ErrorState message={error} />}
 
+          {/* Bottom 2-column row: Exit Requests by Type | Quick Actions */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+            <ExitTypeDonut
+              byType={(overallSummary ?? summary)?.by_type ?? {}}
+              total={overallTotal}
+            />
+
+            <Panel
+              title="Quick Actions"
+              className="h-full"
+              description={
+                activeRow
+                  ? `Actions for: ${activeRow.employee_name ?? activeRow.employee_id}`
+                  : "Select a request from the table first."
+              }
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {quickActions.map((action, index) => {
+                  const Icon = action.icon;
+                  const isExport = index === quickActions.length - 1;
+                  return (
                     <button
+                      key={action.label}
                       type="button"
-                      aria-label="Next page"
-                      disabled={page >= pages}
-                      onClick={() => setPage((p) => Math.min(pages, p + 1))}
-                      className="flex h-8 w-8 items-center justify-center rounded-[6px] border border-[#E4E6E1] bg-white text-[#7B8794] transition hover:bg-[#F0F1EE] hover:text-[#1F2933] disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0]"
+                      disabled={!action.enabled}
+                      title={!action.enabled ? action.disabledReason : undefined}
+                      onClick={action.onClick}
+                      className={`flex h-10 w-full items-center gap-3 rounded-xl border px-3.5 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0] ${
+                        isExport ? "sm:col-span-2 sm:w-[calc(50%-0.375rem)] sm:mx-auto" : ""
+                      } ${
+                        action.enabled
+                          ? "border-[#E5E7EB] bg-white text-[#1F2937] hover:border-[#CBD5E1] hover:bg-[#F8FAFC] cursor-pointer"
+                          : "cursor-not-allowed border-[#E5E7EB] bg-[#F8FAFC] text-[#94A3B8] opacity-75"
+                      }`}
                     >
-                      <ChevronRight className="h-4 w-4" />
+                      <span
+                        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${action.iconBg} ${action.iconColor}`}
+                      >
+                        <Icon className="h-4 w-4 shrink-0" />
+                      </span>
+                      <span className="min-w-0 flex-1 text-[13px] font-medium leading-tight truncate">
+                        {action.label}
+                      </span>
                     </button>
-                  </div>
-                )}
+                  );
+                })}
               </div>
             </Panel>
-
-            {error && !loading && (
-              <ErrorState message={error} />
-            )}
-
-            {/* Type-specific panels */}
-            {view === "Resignation" && (
-              <ResignationPanel requests={requests} onOpenRequest={setSelected} />
-            )}
-
-            {view === "Termination" && (
-              <TerminationPanel
-                requests={requests}
-                summary={summary}
-                onOpenRequest={setSelected}
-                onInitiateTermination={() => setCreating("Termination")}
-              />
-            )}
           </div>
-
-          {/* Right rail */}
-          <aside className="flex min-w-0 flex-col gap-4">
-            <ExitQuickFilters
-              filters={draft}
-              departments={departments}
-              onChange={setDraft}
-              onReset={resetFilters}
-            />
-
-            <ExitTypeDonut
-              byType={summary?.by_type ?? {}}
-              total={summary?.by_type ? Object.values(summary.by_type).reduce((a, b) => a + b, 0) : 0}
-            />
-
-            {!isOverview && (
-              <Button
-                variant="outline"
-                onClick={() => setCreating(view)}
-                leftIcon={<UserMinus className="h-4 w-4 shrink-0" />}
-                className="h-9 w-full border-dashed text-[12px] font-medium shadow-none"
-              >
-                Record a {view.toLowerCase()}
-              </Button>
-            )}
-          </aside>
         </div>
       </div>
 
       {confirmDelete && (
         <DeleteConfirmDialog
-          request={confirmDelete}
           deleting={deletingId === confirmDelete.id}
           onCancel={() => setConfirmDelete(null)}
           onConfirm={() => void executeDelete(confirmDelete)}

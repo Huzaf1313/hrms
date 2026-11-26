@@ -48,120 +48,6 @@ export interface BackendRegularizationRequest {
   reviewer_comment?: string;
 }
 
-export const SAMPLE_REGULARIZATION_REQUESTS: RegularizationRequestItem[] = [
-  {
-    id: "reg-001",
-    employeeId: "emp-001",
-    employeeName: "Aarav Sharma",
-    employeeCode: "AAR001",
-    department: "Engineering",
-    date: "2026-11-18",
-    displayDate: "18 Nov 2026",
-    issueType: "Missing Check-Out",
-    reason: "Turnstile reader power failure at South Campus gate.",
-    status: "Pending",
-    currentCheckIn: "09:28 AM",
-    currentCheckOut: "--:--",
-    requestedCheckIn: "09:28 AM",
-    requestedCheckOut: "06:35 PM",
-    note: "Worked full shift; biometric reader failed at exit turnstile.",
-    attachmentName: "gate_log_acknowledgement.pdf",
-    requestedAt: "2026-11-18T19:00:00Z",
-    displayRequestedAt: "18 Nov 2026, 07:00 PM",
-    isSampleData: true,
-  },
-  {
-    id: "reg-002",
-    employeeId: "emp-002",
-    employeeName: "Priya Patel",
-    employeeCode: "PRI002",
-    department: "Product & Design",
-    date: "2026-11-17",
-    displayDate: "17 Nov 2026",
-    issueType: "Late Arrival",
-    reason: "Metro Line 1 power trip between Garware and Civil Court.",
-    status: "Pending",
-    currentCheckIn: "10:14 AM",
-    currentCheckOut: "07:15 PM",
-    requestedCheckIn: "09:30 AM",
-    requestedCheckOut: "07:15 PM",
-    note: "Train stalled for 45 minutes; Pune Metro official delay notification attached.",
-    attachmentName: "metro_service_delay.png",
-    requestedAt: "2026-11-17T20:10:00Z",
-    displayRequestedAt: "17 Nov 2026, 08:10 PM",
-    isSampleData: true,
-  },
-  {
-    id: "reg-003",
-    employeeId: "emp-003",
-    employeeName: "Rohan Verma",
-    employeeCode: "ROH003",
-    department: "Engineering",
-    date: "2026-11-15",
-    displayDate: "15 Nov 2026",
-    issueType: "On-Duty / Client Visit",
-    reason: "On-site deployment at client datacenter in Hinjawadi Phase 2.",
-    status: "Approved",
-    currentCheckIn: "--:--",
-    currentCheckOut: "--:--",
-    requestedCheckIn: "09:00 AM",
-    requestedCheckOut: "06:00 PM",
-    note: "Deployed Release 2.4 to client private cloud. Verified by Client Lead Vikram.",
-    requestedAt: "2026-11-15T18:30:00Z",
-    displayRequestedAt: "15 Nov 2026, 06:30 PM",
-    reviewedBy: "Ananya Iyer (HR Admin)",
-    reviewedAt: "2026-11-16T10:15:00Z",
-    reviewerComment: "Approved based on client signoff confirmation.",
-    isSampleData: true,
-  },
-  {
-    id: "reg-004",
-    employeeId: "emp-005",
-    employeeName: "Vikram Malhotra",
-    employeeCode: "VIK005",
-    department: "Sales & Marketing",
-    date: "2026-11-12",
-    displayDate: "12 Nov 2026",
-    issueType: "Missing Check-In",
-    reason: "Direct travel to client presentation in BKC Mumbai.",
-    status: "Approved",
-    currentCheckIn: "--:--",
-    currentCheckOut: "07:45 PM",
-    requestedCheckIn: "09:15 AM",
-    requestedCheckOut: "07:45 PM",
-    note: "Attended pitch meeting at 09:30 AM. Check-out logged upon return to office.",
-    requestedAt: "2026-11-12T20:00:00Z",
-    displayRequestedAt: "12 Nov 2026, 08:00 PM",
-    reviewedBy: "Ananya Iyer (HR Admin)",
-    reviewedAt: "2026-11-13T09:45:00Z",
-    reviewerComment: "Verified with Sales Director schedule.",
-    isSampleData: true,
-  },
-  {
-    id: "reg-005",
-    employeeId: "emp-006",
-    employeeName: "Sneha Kulkarni",
-    employeeCode: "SNE006",
-    department: "Finance & Operations",
-    date: "2026-11-10",
-    displayDate: "10 Nov 2026",
-    issueType: "Missing Check-Out",
-    reason: "Emergency medical departure without card punch.",
-    status: "Rejected",
-    currentCheckIn: "09:30 AM",
-    currentCheckOut: "--:--",
-    requestedCheckIn: "09:30 AM",
-    requestedCheckOut: "06:30 PM",
-    note: "Left at 2:00 PM due to fever. Requesting full day credit.",
-    requestedAt: "2026-11-10T19:30:00Z",
-    displayRequestedAt: "10 Nov 2026, 07:30 PM",
-    reviewedBy: "Ananya Iyer (HR Admin)",
-    reviewedAt: "2026-11-11T11:20:00Z",
-    reviewerComment: "Cannot credit full day since early departure was at 2:00 PM. Please apply for Half-Day Sick Leave instead.",
-    isSampleData: true,
-  },
-];
-
 function formatTime(value?: string | null): string {
   if (!value) return "--:--";
   const text = value.trim();
@@ -211,12 +97,12 @@ export const regularizationService = {
       }
       return { requests: [], isSampleData: false };
     } catch {
-      // Backend failed or endpoint unavailable -> return realistic sample data
-      return { requests: SAMPLE_REGULARIZATION_REQUESTS, isSampleData: true };
+      return { requests: [], isSampleData: false };
     }
   },
 
-  async getMyRequests(employeeId = "AAR001"): Promise<{ requests: RegularizationRequestItem[]; isSampleData: boolean }> {
+  async getMyRequests(_employeeId = ""): Promise<{ requests: RegularizationRequestItem[]; isSampleData: boolean }> {
+    void _employeeId;
     try {
       const data = await api.get<BackendRegularizationRequest[]>("/employee-attendance/regularization/me");
       if (Array.isArray(data)) {
@@ -224,11 +110,7 @@ export const regularizationService = {
       }
       return { requests: [], isSampleData: false };
     } catch {
-      // Filter fallback by employeeId or employeeCode
-      const mine = SAMPLE_REGULARIZATION_REQUESTS.filter(
-        (r) => r.employeeId === employeeId || r.employeeCode === employeeId || r.employeeCode === "AAR001",
-      );
-      return { requests: mine, isSampleData: true };
+      return { requests: [], isSampleData: false };
     }
   },
 

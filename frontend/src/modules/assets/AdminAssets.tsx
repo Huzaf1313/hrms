@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { DependencyList, ReactNode } from "react";
 import { Avatar, Button, TableSkeleton } from "../../components/ui";
+import { PageHeading } from "../../components/ui/PageHeading";
 import {
   BarChart3,
   Check,
@@ -424,8 +425,8 @@ function Pagination({
               onClick={() => onPageChange(entry)}
               aria-current={entry === page ? "page" : undefined}
               className={`flex h-8 min-w-8 items-center justify-center rounded-md border px-2 text-xs font-semibold tabular-nums transition cursor-pointer ${entry === page
-                  ? "border-[#2F5FD0] bg-[#2F5FD0] text-white"
-                  : "border-[#E5E7EB] text-[#4B5563] hover:bg-[#F0F1EE] hover:text-[#111827]"
+                ? "border-[#2F5FD0] bg-[#2F5FD0] text-white"
+                : "border-[#E5E7EB] text-[#4B5563] hover:bg-[#F0F1EE] hover:text-[#111827]"
                 }`}
             >
               {entry}
@@ -574,7 +575,7 @@ function AssetOverview({
       />
 
       <div className="flex flex-wrap items-center gap-2 px-6 py-3 border-b border-[#E5E7EB] bg-white">
-        <div className="relative flex-1 max-w-[360px] min-w-[200px]">
+        <div className="relative w-full sm:flex-1 sm:max-w-[360px] sm:min-w-[200px]">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#7B8794]" />
           <input
             type="text"
@@ -816,8 +817,8 @@ function MenuItem({
       type="button"
       onClick={onClick}
       className={`flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-left text-xs font-medium transition cursor-pointer ${tone === "danger"
-          ? "text-[#9B1C1C] hover:bg-[#FDE8E8]"
-          : "text-[#4B5563] hover:bg-[#F0F1EE] hover:text-[#111827]"
+        ? "text-[#9B1C1C] hover:bg-[#FDE8E8]"
+        : "text-[#4B5563] hover:bg-[#F0F1EE] hover:text-[#111827]"
         }`}
     >
       <Icon
@@ -1042,6 +1043,7 @@ interface QuickActionsPanelProps {
   onReturn: () => void;
   onViewAll: () => void;
   onGenerateReport: () => void;
+  onSettings: () => void;
   /** True while the report is being assembled, so the tile can show progress. */
   generatingReport: boolean;
 }
@@ -1052,6 +1054,7 @@ function QuickActionsPanel({
   onReturn,
   onViewAll,
   onGenerateReport,
+  onSettings,
   generatingReport,
 }: QuickActionsPanelProps) {
   const actions: QuickAction[] = [
@@ -1059,40 +1062,40 @@ function QuickActionsPanel({
       id: "add",
       label: "Add Asset",
       icon: Plus,
-      iconBg: "bg-[#E8EEFB]",
-      iconColor: "text-[#2F5FD0]",
+      iconBg: "bg-[#EFF6FF]",
+      iconColor: "text-[#2563EB]",
       run: onAdd,
     },
     {
       id: "assign",
       label: "Assign Asset",
       icon: UserPlus,
-      iconBg: "bg-[#DEF7EC]",
-      iconColor: "text-[#03543F]",
+      iconBg: "bg-[#ECFDF5]",
+      iconColor: "text-[#059669]",
       run: onAssign,
     },
     {
       id: "return",
       label: "Request Return",
       icon: RotateCcw,
-      iconBg: "bg-[#FEF3C7]",
-      iconColor: "text-[#92400E]",
+      iconBg: "bg-[#FFFBEB]",
+      iconColor: "text-[#D97706]",
       run: onReturn,
     },
     {
       id: "view-all",
       label: "View All Assets",
       icon: Eye,
-      iconBg: "bg-[#F3E8FF]",
-      iconColor: "text-[#7E22CE]",
+      iconBg: "bg-[#F5F3FF]",
+      iconColor: "text-[#7C3AED]",
       run: onViewAll,
     },
     {
       id: "generate-report",
       label: generatingReport ? "Building..." : "Generate Report",
       icon: BarChart3,
-      iconBg: "bg-[#E8EEFB]",
-      iconColor: "text-[#2F5FD0]",
+      iconBg: "bg-[#F0FDFA]",
+      iconColor: "text-[#0D9488]",
       run: generatingReport ? undefined : onGenerateReport,
       busy: generatingReport,
     },
@@ -1100,17 +1103,18 @@ function QuickActionsPanel({
       id: "settings",
       label: "Asset Settings",
       icon: Settings2,
-      iconBg: "bg-[#F3F4F6]",
-      iconColor: "text-[#7B8794]",
+      iconBg: "bg-[#F1F5F9]",
+      iconColor: "text-[#475569]",
+      run: onSettings,
     },
   ];
 
   return (
-    <div className={`${PANEL_CLASS} flex min-w-0 flex-col w-full`}>
+    <div className={`${PANEL_CLASS} flex min-w-0 flex-col w-full rounded-xl`}>
       <SectionTitle title="Quick Actions" />
 
       <div className="p-4">
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {actions.map((action) => {
             const Icon = action.icon;
             const disabled = !action.run;
@@ -1122,24 +1126,22 @@ function QuickActionsPanel({
                 disabled={disabled}
                 onClick={action.run}
                 title={
-                  disabled
-                    ? action.busy
-                      ? "Generating the report"
-                      : "Not available yet: this action is not wired up yet"
+                  disabled && action.busy
+                    ? "Generating the report"
                     : undefined
                 }
-                className={`flex min-w-0 items-center gap-2.5 rounded-lg border border-[#E5E7EB] h-12 px-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0] ${disabled
-                    ? `bg-[#F6F7F5] text-[#7B8794] cursor-not-allowed ${action.busy ? "animate-pulse" : ""}`
-                    : "bg-white text-[#111827] hover:bg-[#F0F1EE] cursor-pointer group"
+                className={`flex min-w-0 items-center gap-3 rounded-xl border border-[#E5E7EB] px-4 py-3.5 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0] ${disabled
+                  ? `bg-[#F8FAFC] text-[#64748B] cursor-not-allowed ${action.busy ? "animate-pulse" : ""}`
+                  : "bg-white text-[#1F2937] hover:border-[#CBD5E1] hover:bg-[#F8FAFC] cursor-pointer group"
                   }`}
               >
                 <span
-                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md ${action.iconBg} ${action.iconColor}`}
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${action.iconBg} ${action.iconColor}`}
                 >
                   <Icon className="h-4 w-4 shrink-0" />
                 </span>
                 <span
-                  className={`min-w-0 text-[12px] font-medium leading-tight whitespace-nowrap ${disabled ? "text-[#7B8794]" : "text-[#111827]"
+                  className={`min-w-0 text-[13px] font-medium leading-tight truncate ${disabled ? "text-[#64748B]" : "text-[#1F2937]"
                     }`}
                 >
                   {action.label}
@@ -1215,8 +1217,8 @@ function AssetAllocationPanel({
               setPage(1);
             }}
             className={`h-7 px-3 text-[12px] rounded-md whitespace-nowrap transition-colors cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-[#2F5FD0] ${tab === "employee"
-                ? "bg-white text-[#2F5FD0] border border-[#E5E7EB] font-semibold shadow-xs"
-                : "text-[#4B5563] hover:text-[#111827] font-medium"
+              ? "bg-white text-[#2F5FD0] border border-[#E5E7EB] font-semibold shadow-xs"
+              : "text-[#4B5563] hover:text-[#111827] font-medium"
               }`}
           >
             By Employee
@@ -1228,8 +1230,8 @@ function AssetAllocationPanel({
               setPage(1);
             }}
             className={`h-7 px-3 text-[12px] rounded-md whitespace-nowrap transition-colors cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-[#2F5FD0] ${tab === "department"
-                ? "bg-white text-[#2F5FD0] border border-[#E5E7EB] font-semibold shadow-xs"
-                : "text-[#4B5563] hover:text-[#111827] font-medium"
+              ? "bg-white text-[#2F5FD0] border border-[#E5E7EB] font-semibold shadow-xs"
+              : "text-[#4B5563] hover:text-[#111827] font-medium"
               }`}
           >
             By Department
@@ -1783,16 +1785,9 @@ export default function AdminAssets() {
   ];
 
   return (
-    <div className="flex flex-col gap-6 w-full max-w-[1280px] mx-auto px-4 sm:px-6 py-4">
+    <div className="flex flex-col gap-5 w-full pb-10">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-5 rounded-lg border border-[#E5E7EB] shadow-none">
-        <div className="flex flex-col gap-0.5">
-          <h1 className="text-[18px] font-semibold text-[#111827]">Asset Management</h1>
-          <p className="text-xs text-[#4B5563]">
-            Track, assign and manage company assets assigned to employees.
-          </p>
-        </div>
-      </div>
+      <PageHeading title="Track, assign and manage company assets assigned to employees." />
 
       {statsError && (
         <p className="rounded-lg bg-[#FDE8E8] border border-[#F8B4B4] px-4 py-3 text-xs text-[#9B1C1C]">
@@ -1869,7 +1864,21 @@ export default function AdminAssets() {
             categoryCounts={stats?.category_counts ?? []}
             total={stats?.total_assets ?? 0}
           />
-          <RecentAllocationPanel className="flex-1" version={version} />
+          <RecentAllocationPanel version={version} />
+          <QuickActionsPanel
+            onAdd={() => setModal({ kind: "form", asset: null })}
+            onAssign={() => setModal({ kind: "assign" })}
+            onReturn={() => setModal({ kind: "return" })}
+            onViewAll={handleViewAllAssets}
+            onGenerateReport={handleGenerateReport}
+            onSettings={() =>
+              setNotice({
+                type: "success",
+                text: "Asset categories and organization policies can be managed in Settings.",
+              })
+            }
+            generatingReport={generatingReport}
+          />
         </div>
       </div>
 
@@ -1882,18 +1891,6 @@ export default function AdminAssets() {
         <AssetReturnRequestsPanel
           version={version}
           onConfirmReturn={(request) => setModal({ kind: "markReturned", request })}
-        />
-      </div>
-
-      {/* Row 4: Quick Actions, full width */}
-      <div className="w-full">
-        <QuickActionsPanel
-          onAdd={() => setModal({ kind: "form", asset: null })}
-          onAssign={() => setModal({ kind: "assign" })}
-          onReturn={() => setModal({ kind: "return" })}
-          onViewAll={handleViewAllAssets}
-          onGenerateReport={handleGenerateReport}
-          generatingReport={generatingReport}
         />
       </div>
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Banknote,
   CalendarDays,
@@ -53,6 +53,55 @@ const tabs: PayrollTab[] = [
 
 const ITEMS_PER_PAGE = 5;
 
+interface BackendPayrollRecord {
+  id: string;
+  _id?: string;
+  month: string;
+  pay_period_start: string;
+  pay_period_end: string;
+  salary: {
+    basic: number;
+    gross: number;
+    hra?: number;
+    allowances?: number;
+    earnings?: Array<{ name?: string; label?: string; amount: number }>;
+    [key: string]: number | string | Array<{ name?: string; label?: string; amount: number }> | undefined;
+  };
+  deductions: {
+    total: number;
+    pf?: number;
+    pt?: number;
+    tds?: number;
+    items?: Array<{ name?: string; label?: string; amount: number }>;
+    [key: string]: number | string | Array<{ name?: string; label?: string; amount: number }> | undefined;
+  };
+  net_salary: number;
+  bank_details?: {
+    bank_name?: string;
+    account_last4?: string;
+    account_number?: string;
+    ifsc_code?: string;
+    branch?: string;
+  };
+  attendance_summary?: {
+    total_days?: number;
+    present_days?: number;
+    paid_leave_days?: number;
+    lop_days?: number;
+    lop_deduction?: number;
+  };
+  tax_details?: {
+    taxable_income?: number;
+    tax_deducted?: number;
+    regime?: string;
+    standard_deduction?: number;
+  };
+  payment?: {
+    paid_on?: string;
+    status?: string;
+  };
+}
+
 function formatCurrency(amount: number): string {
   return `₹${amount.toLocaleString("en-IN")}`;
 }
@@ -62,10 +111,10 @@ function EmployeePayroll() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedPayslip, setSelectedPayslip] = useState<Payslip | null>(null);
 
-  const [payrollData, setPayrollData] = useState<any[]>([]);
+  const [payrollData, setPayrollData] = useState<BackendPayrollRecord[]>([]);
   const [, setLoading] = useState(true);
   const [, setError] = useState("");
-  const [latestPayroll, setLatestPayroll] = useState<any | null>(null);
+  const [latestPayroll, setLatestPayroll] = useState<BackendPayrollRecord | null>(null);
   const [selectedPayrollId, setSelectedPayrollId] = useState("");
   const [bankInformation, setBankInformation] = useState<{
     bank_name?: string;
@@ -94,7 +143,7 @@ function EmployeePayroll() {
         }
 
         const response = await api.get<{
-          items: any[];
+          items: BackendPayrollRecord[];
           total: number;
           page: number;
           limit: number;
@@ -104,9 +153,13 @@ function EmployeePayroll() {
           limit: 100,
         });
 
-        setPayrollData(response.items || []);
+        const items = response.items || [];
+        setPayrollData(items);
+        if (items.length > 0) {
+          setSelectedPayrollId((prev) => prev || String(items[0].id ?? items[0]._id ?? ""));
+        }
 
-        const latestResponse = await api.get<any>(
+        const latestResponse = await api.get<BackendPayrollRecord>(
           `/employee-payroll/employees/${employeeId}/latest`
         );
 
@@ -195,13 +248,6 @@ function EmployeePayroll() {
         ? "Processing"
         : "Credited",
   }));
-
-  useEffect(() => {
-    if (payslips.length > 0 && !selectedPayrollId) {
-      setSelectedPayrollId(payslips[0].id);
-    }
-  }, [payslips, selectedPayrollId]);
-
 
   const salaryComponents: SalaryComponent[] = latestPayroll
     ? [
@@ -298,11 +344,8 @@ function EmployeePayroll() {
 
   const totalPages = Math.ceil(payslips.length / ITEMS_PER_PAGE);
 
-  const currentPayslips = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-
-    return payslips.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [currentPage]);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const currentPayslips = payslips.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
   const pageStart =
     payslips.length === 0
@@ -342,7 +385,7 @@ function EmployeePayroll() {
         {/* Page Header */}
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 font-manrope">
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
               My Payslip
             </h1>
             <p className="mt-1 text-sm font-medium text-slate-500">
@@ -387,10 +430,10 @@ function EmployeePayroll() {
             <div>
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 font-manrope">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
                     Net Take-Home Salary
                   </p>
-                  <p className="mt-2 text-2xl font-bold font-manrope text-slate-900">
+                  <p className="mt-2 text-2xl font-bold text-slate-900">
                     {latestPayroll
                       ? formatCurrency(Number(latestPayroll.net_salary ?? 0))
                       : "—"}
@@ -1125,7 +1168,7 @@ function EmployeePayroll() {
                         <span className={`font-semibold ${(att.lop_days || 0) > 0 ? "text-rose-600 font-bold" : "text-slate-700"}`}>
                           {att.lop_days || 0} days
                           {(att.lop_deduction || 0) > 0 && (
-                            <span className="ml-1 text-[11px] text-rose-600">(-₹{att.lop_deduction.toLocaleString("en-IN")})</span>
+                            <span className="ml-1 text-[11px] text-rose-600">(-₹{(att.lop_deduction ?? 0).toLocaleString("en-IN")})</span>
                           )}
                         </span>
                       </div>
@@ -1157,7 +1200,7 @@ function EmployeePayroll() {
                               {row.earning ? formatCurrency(row.earning.amount) : "-"}
                             </td>
                             <td className="px-4 py-2 text-slate-700">
-                              {row.deduction?.label || row.deduction?.name || "-"}
+                              {row.deduction?.label || (row.deduction && "name" in row.deduction ? row.deduction.name : undefined) || "-"}
                             </td>
                             <td className="px-4 py-2 text-right text-slate-900">
                               {row.deduction ? formatCurrency(row.deduction.amount) : "-"}
@@ -1343,7 +1386,7 @@ function TaxDetails({
   taxableIncome,
   taxDeducted,
 }: {
-  latestPayroll: any | null;
+  latestPayroll: BackendPayrollRecord | null;
   taxableIncome: number;
   taxDeducted: number;
 }) {

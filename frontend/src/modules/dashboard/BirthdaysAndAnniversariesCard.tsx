@@ -226,7 +226,7 @@ export default function BirthdaysAndAnniversariesCard() {
   const rows = upcoming[tab];
 
   const tabClass = (value: CelebrationTab) =>
-    `-mb-px flex items-center gap-1 border-b-2 px-2 pb-2 text-[11px] font-bold transition ${
+    `flex items-center gap-1 border-b-2 px-2 pb-2 text-[11px] font-bold transition ${
       tab === value
         ? "border-[#2563eb] text-[#2563eb]"
         : "border-transparent text-black hover:opacity-70"

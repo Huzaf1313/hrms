@@ -85,28 +85,32 @@ export default function TerminationPanel({
     {
       label: "Initiate Termination",
       icon: Flag,
-      tone: "border-[#E8EEFB] bg-[#E8EEFB] text-[#2F5FD0]",
+      iconBg: "bg-[#EFF6FF]",
+      iconColor: "text-[#2563EB]",
       enabled: true,
       onClick: onInitiateTermination,
     },
     {
       label: "Update Status",
       icon: RefreshCw,
-      tone: "border-[#FCD34D] bg-[#FEF3C7] text-[#92400E]",
+      iconBg: "bg-[#FFFBEB]",
+      iconColor: "text-[#D97706]",
       enabled: Boolean(actionable),
       onClick: () => actionable && onOpenRequest(actionable),
     },
     {
       label: "Process Settlement",
       icon: Wallet,
-      tone: "border-[#BCF0DA] bg-[#DEF7EC] text-[#03543F]",
+      iconBg: "bg-[#ECFDF5]",
+      iconColor: "text-[#059669]",
       enabled: actionable?.status === "In Progress",
       onClick: () => actionable && onOpenRequest(actionable),
     },
     {
       label: "Download Reports",
       icon: Download,
-      tone: "border-[#E4E6E1] bg-white text-[#1F2933] hover:bg-[#F0F1EE]",
+      iconBg: "bg-[#F0FDFA]",
+      iconColor: "text-[#0D9488]",
       enabled: requests.length > 0,
       onClick: exportCsv,
     },
@@ -192,7 +196,7 @@ export default function TerminationPanel({
 
       <div className="flex flex-col gap-4">
         <Panel title="Quick Actions">
-          <div className="space-y-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {actions.map((action) => {
               const Icon = action.icon;
 
@@ -202,26 +206,32 @@ export default function TerminationPanel({
                   type="button"
                   disabled={!action.enabled}
                   onClick={action.onClick}
-                  className={`flex w-full items-center gap-2.5 rounded-md border px-3 py-2 text-left text-[12px] font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0] ${
+                  className={`flex min-w-0 items-center gap-3 rounded-xl border px-3.5 py-3 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0] ${
                     action.enabled
-                      ? `${action.tone} cursor-pointer`
-                      : "cursor-not-allowed border-[#E5E7EB] bg-[#F9FAFB] text-[#7B8794]"
+                      ? "border-[#E5E7EB] bg-white text-[#1F2937] hover:border-[#CBD5E1] hover:bg-[#F8FAFC] cursor-pointer"
+                      : "cursor-not-allowed border-[#E5E7EB] bg-[#F8FAFC] text-[#94A3B8] opacity-75"
                   }`}
                 >
-                  <Icon className="h-4 w-4 shrink-0" />
-                  <span className="min-w-0 flex-1">{action.label}</span>
+                  <span
+                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${action.iconBg} ${action.iconColor}`}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                  </span>
+                  <span className="min-w-0 flex-1 text-[13px] font-medium leading-tight truncate">
+                    {action.label}
+                  </span>
                 </button>
               );
             })}
           </div>
         </Panel>
 
-        <div className="rounded-lg border border-[#E8EEFB] bg-[#E8EEFB] p-4">
+        <div className="rounded-xl border border-[#DBEAFE] bg-[#EFF6FF] p-4">
           <div className="flex items-start gap-2.5">
-            <FileText className="mt-0.5 h-4 w-4 shrink-0 text-[#2F5FD0]" />
+            <FileText className="mt-0.5 h-4 w-4 shrink-0 text-[#2563EB]" />
             <div className="min-w-0">
-              <p className="text-[13px] font-semibold text-[#111827]">Notes</p>
-              <p className="mt-1 text-xs leading-5 text-[#2F5FD0]">
+              <p className="text-[13px] font-semibold text-[#1E3A8A]">Notes</p>
+              <p className="mt-1 text-xs leading-5 text-[#1D4ED8]">
                 Ensure all documents are collected, access is revoked and final
                 settlement is processed before marking the exit as completed.
               </p>

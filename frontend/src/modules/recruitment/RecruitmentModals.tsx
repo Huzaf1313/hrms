@@ -146,7 +146,7 @@ export function JobModal({ job, departments, onClose, onSaved }: JobModalProps) 
           </datalist>
         </Field>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Location">
             <input
               className={inputClass}
@@ -315,7 +315,7 @@ export function CandidateModal({ jobs, onClose, onSaved }: CandidateModalProps) 
             />
           </Field>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Email">
               <input
                 className={inputClass}
@@ -401,7 +401,7 @@ export function OfferModal({ candidate, onClose, onSaved }: OfferModalProps) {
     existing ? String(existing.offered_salary) : ""
   );
   const [joiningDate, setJoiningDate] = useState(
-    existing?.joining_date ?? new Date(Date.now() + 15 * 86400000).toISOString().slice(0, 10)
+    () => existing?.joining_date ?? new Date(Date.now() + 15 * 86400000).toISOString().slice(0, 10)
   );
   const [designation, setDesignation] = useState(
     existing?.designation ?? candidate.job_title
@@ -410,7 +410,7 @@ export function OfferModal({ candidate, onClose, onSaved }: OfferModalProps) {
     existing?.work_location ?? "Office"
   );
   const [expiryDate, setExpiryDate] = useState(
-    existing?.expiry_date ?? new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10)
+    () => existing?.expiry_date ?? new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10)
   );
   const [notes, setNotes] = useState(existing?.notes ?? "");
   const [sendEmail, setSendEmail] = useState(true);
@@ -461,7 +461,7 @@ export function OfferModal({ candidate, onClose, onSaved }: OfferModalProps) {
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Annual CTC (₹)" required>
             <input
               className={inputClass}
@@ -483,7 +483,7 @@ export function OfferModal({ candidate, onClose, onSaved }: OfferModalProps) {
           </Field>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Designation">
             <input
               className={inputClass}
@@ -622,7 +622,7 @@ export function OnboardCandidateModal({
           <p className="text-emerald-600">{candidate.email} {candidate.phone ? `· ${candidate.phone}` : ""}</p>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Official Joining Date" required>
             <input
               className={inputClass}
@@ -645,7 +645,7 @@ export function OnboardCandidateModal({
           </Field>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Work Location">
             <input
               className={inputClass}

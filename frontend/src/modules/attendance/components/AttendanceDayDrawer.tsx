@@ -81,7 +81,7 @@ export const AttendanceDayDrawer: React.FC<AttendanceDayDrawerProps> = ({
         {/* Punch Summary Grid */}
         <div className="grid grid-cols-2 gap-3 p-4 rounded-[8px] bg-[#F6F7F5] border border-[#E4E6E1]">
           <div>
-            <span className="text-[#7B8794] block text-xs uppercase font-medium">Check In</span>
+            <span className="text-[#7B8794] block text-xs uppercase font-medium">Punch In</span>
             <span className="text-sm font-semibold text-[#1F2933] mt-0.5 block">
               {record.status === "absent" ? "-" : (record.in_time || record.check_in || "-")}
             </span>
@@ -93,15 +93,10 @@ export const AttendanceDayDrawer: React.FC<AttendanceDayDrawerProps> = ({
           </div>
 
           <div>
-            <span className="text-[#7B8794] block text-xs uppercase font-medium">Check Out</span>
+            <span className="text-[#7B8794] block text-xs uppercase font-medium">Punch Out</span>
             <span className="text-sm font-semibold text-[#1F2933] mt-0.5 block">
               {record.status === "absent" ? "-" : (record.out_time || record.check_out || "-")}
             </span>
-            {!record.out_time && !record.check_out && record.in_time && (
-              <span className="text-xs text-[#8A5A00] font-medium mt-0.5 block">
-                Incomplete
-              </span>
-            )}
           </div>
 
           <div className="pt-2 border-t border-[#E4E6E1]">

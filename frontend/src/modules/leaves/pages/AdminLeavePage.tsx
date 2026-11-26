@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback } from "react";
 import { Plus, CheckCircle2, History, CalendarDays, Clock, Calendar, TrendingUp } from "lucide-react";
 import { Button } from "../../../components/ui/Button";
+import { PageHeading } from "../../../components/ui/PageHeading";
 import { useToast } from "../../../components/ui/useToast";
 import { useLeaveBalances } from "../hooks/useLeaveBalances";
 import { useLeaveRequests } from "../hooks/useLeaveRequests";
@@ -10,7 +11,6 @@ import { LeaveBalanceHistory } from "../components/LeaveBalanceHistory";
 import { LeaveCalendarView } from "../components/LeaveCalendarView";
 import { ApplyLeaveDrawer } from "../components/ApplyLeaveDrawer";
 import { leaveService, type LeaveRequest } from "../services/leaveService";
-import { MOCK_PENDING_APPROVALS } from "../../../services/mock/leaveMockService";
 
 export const AdminLeavePage: React.FC = () => {
   const { success } = useToast();
@@ -18,7 +18,7 @@ export const AdminLeavePage: React.FC = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Pending approval list
-  const [approvalRequests, setApprovalRequests] = useState<LeaveRequest[]>(MOCK_PENDING_APPROVALS);
+  const [approvalRequests, setApprovalRequests] = useState<LeaveRequest[]>([]);
 
   const { balances, reload: reloadBalances } = useLeaveBalances("EMP001");
   const { allRequests, cancelRequest, reload: reloadRequests } = useLeaveRequests("EMP001");
@@ -103,16 +103,11 @@ export const AdminLeavePage: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col gap-6 w-full max-w-[1280px] mx-auto px-4 sm:px-6 py-4">
+    <div className="flex flex-col gap-5 sm:gap-6 w-full pb-10">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-5 rounded-lg border border-[#E5E7EB] shadow-none">
-        <div className="flex flex-col gap-0.5">
-          <h1 className="text-[18px] font-semibold text-[#111827]">Leave Management</h1>
-          <p className="text-xs text-[#4B5563]">
-            Review employee time-off requests, monitor team coverage, and audit balance records.
-          </p>
-        </div>
-        <div className="flex items-center shrink-0">
+      <PageHeading
+        title="Review employee time-off requests, monitor team coverage, and audit balance records."
+        actions={
           <Button
             variant="primary"
             onClick={() => setDrawerOpen(true)}
@@ -121,8 +116,8 @@ export const AdminLeavePage: React.FC = () => {
             <Plus className="w-[18px] h-[18px] shrink-0" />
             <span>Apply Leave</span>
           </Button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Organization Overview Stat Strip */}
       <div className="flex flex-col gap-2.5">
@@ -176,11 +171,11 @@ export const AdminLeavePage: React.FC = () => {
       {/* Tabs & Content */}
       <div className="flex flex-col gap-4">
         {/* Navigation Tabs */}
-        <div className="flex items-center gap-2 border-b border-[#E5E7EB]">
+        <div className="flex items-center gap-2 border-b border-[#E5E7EB] overflow-x-auto overflow-y-hidden scrollbar-hidden max-w-full">
           <button
             type="button"
             onClick={() => setActiveTab("approvals")}
-            className={`flex items-center gap-1.5 px-3.5 py-2.5 text-[13px] font-medium transition-colors cursor-pointer border-b-2 -mb-[1px] ${activeTab === "approvals"
+            className={`flex shrink-0 whitespace-nowrap items-center gap-1.5 px-3.5 py-2.5 text-[13px] font-medium transition-colors cursor-pointer border-b-2 ${activeTab === "approvals"
                 ? "border-[#2F5FD0] text-[#2F5FD0]"
                 : "border-transparent text-[#4B5563] hover:text-[#111827] hover:border-[#D1D5DB]"
               }`}
@@ -197,7 +192,7 @@ export const AdminLeavePage: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveTab("records")}
-            className={`flex items-center gap-1.5 px-3.5 py-2.5 text-[13px] font-medium transition-colors cursor-pointer border-b-2 -mb-[1px] ${activeTab === "records"
+            className={`flex shrink-0 whitespace-nowrap items-center gap-1.5 px-3.5 py-2.5 text-[13px] font-medium transition-colors cursor-pointer border-b-2 ${activeTab === "records"
                 ? "border-[#2F5FD0] text-[#2F5FD0]"
                 : "border-transparent text-[#4B5563] hover:text-[#111827] hover:border-[#D1D5DB]"
               }`}
@@ -209,7 +204,7 @@ export const AdminLeavePage: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveTab("calendar")}
-            className={`flex items-center gap-1.5 px-3.5 py-2.5 text-[13px] font-medium transition-colors cursor-pointer border-b-2 -mb-[1px] ${activeTab === "calendar"
+            className={`flex shrink-0 whitespace-nowrap items-center gap-1.5 px-3.5 py-2.5 text-[13px] font-medium transition-colors cursor-pointer border-b-2 ${activeTab === "calendar"
                 ? "border-[#2F5FD0] text-[#2F5FD0]"
                 : "border-transparent text-[#4B5563] hover:text-[#111827] hover:border-[#D1D5DB]"
               }`}
@@ -232,11 +227,11 @@ export const AdminLeavePage: React.FC = () => {
 
         {activeTab === "records" && (
           <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between bg-white px-5 py-3 rounded-lg border border-[#E5E7EB]">
-              <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-white px-4 sm:px-5 py-3 rounded-lg border border-[#E5E7EB]">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="text-[13px] font-semibold text-[#111827]">Your Leave Records & Balances</span>
                 <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#E8EEFB] text-[#2F5FD0] font-medium border border-[#2F5FD0]/20">
-                  Personal (Sarah Jenkins • EMP001)
+                  Personal
                 </span>
               </div>
               <span className="text-[11px] text-[#6B7280]">

@@ -284,56 +284,59 @@ export const AttendanceReportsView: React.FC<AttendanceReportsViewProps> = ({ cl
   }, [reportType, reportTabs]);
 
   return (
-    <div className={`flex flex-col gap-5 w-full ${className}`}>
-      {/* Filter Bar (One Row at >= 1100px; 32px / h-8 Controls; Compact py-2 Padding) */}
-      <div className="flex flex-col min-[1100px]:flex-row min-[1100px]:items-center justify-between gap-3 bg-white px-3.5 py-2 rounded-lg border border-[#E5E7EB] shadow-none">
-        {/* Left: Sub-Tab Pills */}
-        <div className="flex items-center gap-1 bg-[#F3F4F6] p-0.5 rounded-lg border border-[#E5E7EB] overflow-x-auto shrink-0">
-          {reportTabs.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => {
-                setReportType(tab.id);
-                setSortField(null);
-                setSortDirection(null);
-              }}
-              className={`h-7 px-3 text-[12px] font-medium rounded-md whitespace-nowrap transition-colors cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-[#2F5FD0] ${
-                reportType === tab.id
-                  ? "bg-white text-[#2F5FD0] font-semibold shadow-xs border border-[#E5E7EB]"
-                  : "text-[#4B5563] hover:text-[#111827]"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+    <div className={`@container flex flex-col gap-5 w-full ${className}`}>
+      {/* Filter Bar */}
+      <div className="flex flex-wrap @[1160px]:flex-nowrap items-center justify-between gap-4 bg-white px-4 py-3.5 sm:px-5 sm:py-4 rounded-lg border border-[#E5E7EB] shadow-none">
+        {/* Left: Segmented Control Sub-Tabs */}
+        <div
+          role="tablist"
+          aria-label="Attendance report types"
+          className="inline-flex items-center gap-1 shrink-0 overflow-visible bg-[#F3F4F6] p-1 rounded-lg border border-[#E5E7EB]"
+        >
+          {reportTabs.map((tab) => {
+            const isActive = reportType === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => {
+                  setReportType(tab.id);
+                  setSortField(null);
+                  setSortDirection(null);
+                }}
+                className={`inline-flex items-center justify-center h-8 px-3.5 py-0 text-[14px] leading-none rounded-md whitespace-nowrap transition-all duration-150 cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-[#2F5FD0] ${
+                  isActive
+                    ? "bg-white text-[#2F5FD0] font-semibold shadow-xs border border-[#E5E7EB]"
+                    : "text-[#6B7280] font-medium hover:bg-white/60 hover:text-[#111827]"
+                }`}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
 
-        {/* Right: Controls in Exact Order: [Sample data], Month, Department, Search, Export CSV */}
-        <div className="flex flex-wrap min-[1100px]:flex-nowrap items-center gap-2 w-full min-[1100px]:w-auto justify-start min-[1100px]:justify-end">
-          {/* 1. Sample data badge (32px / h-8) */}
-          {reportData?.isMock && (
-            <span className="inline-flex items-center gap-1 h-8 px-2.5 rounded-md text-[11px] font-medium bg-[#FEF3C7] text-[#92400E] border border-[#FCD34D] shrink-0">
-              Sample data
-            </span>
-          )}
+        {/* Right: Controls: Month, Department, Search, Export CSV */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full @[1160px]:w-auto @[1160px]:flex-1 min-w-0 sm:justify-end">
 
-          {/* 2. Month input (~150px, 32px / h-8) */}
+          {/* Month input */}
           <input
             type="month"
             value={month}
             onChange={(e) => setMonth(e.target.value)}
             aria-label="Select report month"
-            className="h-8 w-[150px] shrink-0 px-2.5 text-[13px] rounded-md border border-[#E5E7EB] bg-white text-[#111827] focus:outline-none focus:ring-1 focus:ring-[#2F5FD0] cursor-pointer"
+            className="h-10 w-full sm:w-[160px] shrink-0 px-3 text-[14px] rounded-md border border-[#E5E7EB] bg-white text-[#111827] focus:outline-none focus:ring-1 focus:ring-[#2F5FD0] cursor-pointer"
           />
 
-          {/* 3. Department filter (~170px, 32px / h-8, custom dropdown chevron) */}
-          <div className="relative w-[170px] shrink-0">
+          {/* Department filter */}
+          <div className="relative w-full sm:w-[170px] shrink-0">
             <select
               value={department}
               onChange={(e) => setDepartment(e.target.value)}
               aria-label="Filter by department"
-              className="appearance-none h-8 w-full pl-3 pr-8 text-[13px] rounded-md border border-[#E5E7EB] bg-white text-[#111827] focus:outline-none focus:ring-1 focus:ring-[#2F5FD0] cursor-pointer truncate"
+              className="appearance-none h-10 w-full pl-3 pr-8 text-[14px] rounded-md border border-[#E5E7EB] bg-white text-[#111827] focus:outline-none focus:ring-1 focus:ring-[#2F5FD0] cursor-pointer truncate"
             >
               <option value="all">All Departments</option>
               <option value="Engineering">Engineering</option>
@@ -342,30 +345,30 @@ export const AttendanceReportsView: React.FC<AttendanceReportsViewProps> = ({ cl
               <option value="Sales & Marketing">Sales & Marketing</option>
               <option value="Finance & Operations">Finance & Operations</option>
             </select>
-            <ChevronDown className="w-3.5 h-3.5 text-[#6B7280] pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" />
+            <ChevronDown className="w-4 h-4 text-[#6B7280] pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" />
           </div>
 
-          {/* 4. Search input (min-width 200px, flexible, 32px / h-8) */}
-          <div className="relative min-w-[200px] flex-1 max-w-xs">
-            <Search className="w-3.5 h-3.5 text-[#6B7280] pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2" />
+          {/* Search input */}
+          <div className="relative w-full sm:flex-1 sm:min-w-[150px] sm:max-w-[240px]">
+            <Search className="w-4 h-4 text-[#6B7280] pointer-events-none absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search employee..."
               aria-label="Search employee"
-              className="h-8 w-full pl-8 pr-3 text-[13px] rounded-md border border-[#E5E7EB] bg-white text-[#111827] placeholder:text-[#9CA3AF] focus:outline-none focus:ring-1 focus:ring-[#2F5FD0]"
+              className="h-10 w-full pl-9 pr-3 text-[14px] rounded-md border border-[#E5E7EB] bg-white text-[#111827] placeholder:text-[#9CA3AF] focus:outline-none focus:ring-1 focus:ring-[#2F5FD0]"
             />
           </div>
 
-          {/* 5. Export CSV button (32px / h-8, auto width, shrink-0) */}
+          {/* Export CSV button */}
           <button
             type="button"
             onClick={handleExportCsv}
             disabled={!reportData || isLoading}
-            className="h-8 w-auto shrink-0 px-3 text-[12px] font-medium inline-flex items-center gap-1.5 rounded-md border border-[#E5E7EB] bg-white text-[#374151] hover:bg-[#F9FAFB] hover:text-[#111827] focus:outline-none focus:ring-1 focus:ring-[#2F5FD0] cursor-pointer transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+            className="h-10 w-full sm:w-auto shrink-0 px-3.5 text-[14px] font-medium inline-flex items-center justify-center gap-1.5 rounded-md border border-[#E5E7EB] bg-white text-[#374151] hover:bg-[#F9FAFB] hover:text-[#111827] focus:outline-none focus:ring-1 focus:ring-[#2F5FD0] cursor-pointer transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Download className="w-3.5 h-3.5 shrink-0" />
+            <Download className="w-4 h-4 shrink-0" />
             <span>Export CSV</span>
           </button>
         </div>
@@ -456,8 +459,15 @@ export const AttendanceReportsView: React.FC<AttendanceReportsViewProps> = ({ cl
           </div>
         ) : reportType === "monthly_summary" ? (
           /* TAB 1: MONTHLY SUMMARY */
+          sortedMonthlySummary.length === 0 ? (
+            <div className="py-12 px-4 text-center text-[#6B7280]">
+              <FileSpreadsheet className="w-8 h-8 text-[#9CA3AF] mx-auto mb-2" />
+              <p className="text-[13px] font-medium text-[#111827]">No records for this month and filters</p>
+              <p className="text-[11px] text-[#6B7280] mt-0.5">Try selecting a different department or clearing the search query.</p>
+            </div>
+          ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-[13px] border-collapse min-w-[1060px]">
+            <table className="w-full text-left text-[13px] border-collapse min-w-[920px]">
               <thead className="bg-[#F9FAFB] border-b border-[#E5E7EB] text-[#6B7280] sticky top-0 z-10">
                 <tr className="h-10">
                   <th className="py-0 px-4 bg-[#F9FAFB] w-56 min-w-[200px] whitespace-nowrap">
@@ -649,10 +659,18 @@ export const AttendanceReportsView: React.FC<AttendanceReportsViewProps> = ({ cl
               )}
             </table>
           </div>
+          )
         ) : reportType === "late_arrivals" ? (
           /* TAB 2: LATE ARRIVALS */
+          sortedLateArrivals.length === 0 ? (
+            <div className="py-12 px-4 text-center text-[#6B7280]">
+              <FileSpreadsheet className="w-8 h-8 text-[#9CA3AF] mx-auto mb-2" />
+              <p className="text-[13px] font-medium text-[#111827]">No records for this month and filters</p>
+              <p className="text-[11px] text-[#6B7280] mt-0.5">No late arrival incidents recorded under current filters.</p>
+            </div>
+          ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-[13px] border-collapse min-w-[1040px]">
+            <table className="w-full text-left text-[13px] border-collapse min-w-[880px]">
               <thead className="bg-[#F9FAFB] border-b border-[#E5E7EB] text-[#6B7280] sticky top-0 z-10">
                 <tr className="h-10">
                   <th className="py-0 px-4 bg-[#F9FAFB] w-56 min-w-[200px] whitespace-nowrap">
@@ -747,8 +765,16 @@ export const AttendanceReportsView: React.FC<AttendanceReportsViewProps> = ({ cl
               </tbody>
             </table>
           </div>
+          )
         ) : reportType === "absenteeism" ? (
           /* TAB 3: ABSENTEEISM */
+          sortedAbsenteeism.length === 0 ? (
+            <div className="py-12 px-4 text-center text-[#6B7280]">
+              <FileSpreadsheet className="w-8 h-8 text-[#9CA3AF] mx-auto mb-2" />
+              <p className="text-[13px] font-medium text-[#111827]">No records for this month and filters</p>
+              <p className="text-[11px] text-[#6B7280] mt-0.5">No absent records under current filters.</p>
+            </div>
+          ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-[13px] border-collapse min-w-[870px]">
               <thead className="bg-[#F9FAFB] border-b border-[#E5E7EB] text-[#6B7280] sticky top-0 z-10">
@@ -771,16 +797,7 @@ export const AttendanceReportsView: React.FC<AttendanceReportsViewProps> = ({ cl
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E5E7EB] bg-white text-[#111827]">
-                {sortedAbsenteeism.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="py-12 text-center text-[#6B7280]">
-                      <FileSpreadsheet className="w-8 h-8 text-[#9CA3AF] mx-auto mb-2" />
-                      <p className="text-[13px] font-medium text-[#111827]">No records for this month and filters</p>
-                      <p className="text-[11px] text-[#6B7280] mt-0.5">No absent records under current filters.</p>
-                    </td>
-                  </tr>
-                ) : (
-                  sortedAbsenteeism.map((row) => (
+                {sortedAbsenteeism.map((row) => (
                     <tr key={row.id} className="h-12 hover:bg-[#F9FAFB] transition-colors">
                       <td className="py-0 px-4 align-middle whitespace-nowrap">
                         <div className="flex items-center gap-2.5">
@@ -812,13 +829,20 @@ export const AttendanceReportsView: React.FC<AttendanceReportsViewProps> = ({ cl
                       </td>
                       <td className="py-0 px-4 align-middle text-[13px] text-[#4B5563] whitespace-nowrap">{row.reporting_manager}</td>
                     </tr>
-                  ))
-                )}
+                  ))}
               </tbody>
             </table>
           </div>
+          )
         ) : (
           /* TAB 4: WORKING HOURS */
+          sortedWorkingHours.length === 0 ? (
+            <div className="py-12 px-4 text-center text-[#6B7280]">
+              <FileSpreadsheet className="w-8 h-8 text-[#9CA3AF] mx-auto mb-2" />
+              <p className="text-[13px] font-medium text-[#111827]">No records for this month and filters</p>
+              <p className="text-[11px] text-[#6B7280] mt-0.5">No working hours data found under current filters.</p>
+            </div>
+          ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-[13px] border-collapse min-w-[965px]">
               <thead className="bg-[#F9FAFB] border-b border-[#E5E7EB] text-[#6B7280] sticky top-0 z-10">
@@ -844,16 +868,7 @@ export const AttendanceReportsView: React.FC<AttendanceReportsViewProps> = ({ cl
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E5E7EB] bg-white text-[#111827]">
-                {sortedWorkingHours.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="py-12 text-center text-[#6B7280]">
-                      <FileSpreadsheet className="w-8 h-8 text-[#9CA3AF] mx-auto mb-2" />
-                      <p className="text-[13px] font-medium text-[#111827]">No records for this month and filters</p>
-                      <p className="text-[11px] text-[#6B7280] mt-0.5">No working hours data found under current filters.</p>
-                    </td>
-                  </tr>
-                ) : (
-                  sortedWorkingHours.map((row) => {
+                {sortedWorkingHours.map((row) => {
                     const percentOfTarget = Math.min(100, Math.round((row.logged_hours / row.expected_hours) * 100));
 
                     return (
@@ -931,11 +946,11 @@ export const AttendanceReportsView: React.FC<AttendanceReportsViewProps> = ({ cl
                         </td>
                       </tr>
                     );
-                  })
-                )}
+                  })}
               </tbody>
             </table>
           </div>
+          )
         )}
       </div>
     </div>

@@ -154,7 +154,7 @@ export default function AdminEmployeeDocuments({
     }
 
     return (
-        <div className="rounded-3xl bg-white p-6 shadow-sm">
+        <div className="h-full rounded-3xl bg-white p-6 shadow-sm">
             <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-gray-800">
                 <FileText size={20} className="text-gray-700" />
                 Employee Documents

@@ -196,8 +196,37 @@ export default function EmployeeAssets() {
   }, []);
 
   useEffect(() => {
-    void loadData();
-  }, [loadData]);
+    let active = true;
+    void Promise.all([
+      assetService.listAssets(),
+      assetService.listAssets({ status: "available" }),
+      assetService.listRequests(),
+    ])
+      .then(([myResponse, availableResponse, requestResponse]) => {
+        if (!active) return;
+        const allAssets = extractItems<Asset>(myResponse);
+        const availableInventory = extractItems<Asset>(availableResponse);
+        const employeeRequests = extractItems<AssetRequest>(requestResponse);
+        setAssets(allAssets);
+        setAvailableAssets(
+          availableInventory.filter(
+            (asset) => normalize(asset.status) === "available",
+          ),
+        );
+        setRequests(employeeRequests);
+        setError("");
+      })
+      .catch((err) => {
+        if (active) setError(getErrorMessage(err));
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const filteredAssets = useMemo(
     () =>
@@ -411,11 +440,10 @@ export default function EmployeeAssets() {
                     setError("");
                     setSuccess("");
                   }}
-                  className={`px-3.5 py-2.5 text-[13px] font-medium transition-colors cursor-pointer border-b-2 -mb-[1px] whitespace-nowrap ${
-                    activeTab === tab.id
-                      ? "border-[#2F5FD0] text-[#2F5FD0]"
-                      : "border-transparent text-[#4B5563] hover:text-[#111827] hover:border-[#D1D5DB]"
-                  }`}
+                  className={`px-3.5 py-2.5 text-[13px] font-medium transition-colors cursor-pointer border-b-2 -mb-[1px] whitespace-nowrap ${activeTab === tab.id
+                    ? "border-[#2F5FD0] text-[#2F5FD0]"
+                    : "border-transparent text-[#4B5563] hover:text-[#111827] hover:border-[#D1D5DB]"
+                    }`}
                 >
                   {tab.label}
                 </button>
@@ -555,8 +583,8 @@ export default function EmployeeAssets() {
                               <span className="text-right font-medium tabular-nums text-[#111827]">
                                 {asset.issue_date
                                   ? new Date(
-                                      asset.issue_date,
-                                    ).toLocaleDateString()
+                                    asset.issue_date,
+                                  ).toLocaleDateString()
                                   : "—"}
                               </span>
                             </div>
@@ -606,11 +634,10 @@ export default function EmployeeAssets() {
                         type="button"
                         key={asset.id}
                         onClick={() => setSelectedAsset(asset.id)}
-                        className={`rounded-lg border p-4 text-left transition cursor-pointer ${
-                          selectedAsset === asset.id
-                            ? "border-[#2F5FD0] bg-[#E8EEFB] ring-1 ring-[#2F5FD0]"
-                            : "border-[#E5E7EB] hover:border-[#D1D5DB] hover:bg-[#F9FAFB]"
-                        }`}
+                        className={`rounded-lg border p-4 text-left transition cursor-pointer ${selectedAsset === asset.id
+                          ? "border-[#2F5FD0] bg-[#E8EEFB] ring-1 ring-[#2F5FD0]"
+                          : "border-[#E5E7EB] hover:border-[#D1D5DB] hover:bg-[#F9FAFB]"
+                          }`}
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div>
@@ -719,8 +746,8 @@ export default function EmployeeAssets() {
                               <td className="px-4 py-2.5 tabular-nums text-[#4B5563]">
                                 {request.created_at
                                   ? new Date(
-                                      request.created_at,
-                                    ).toLocaleDateString()
+                                    request.created_at,
+                                  ).toLocaleDateString()
                                   : "—"}
                               </td>
                               <td className="px-6 py-2.5">

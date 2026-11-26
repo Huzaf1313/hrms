@@ -7,11 +7,9 @@ import {
   type EmployeeLeaveBalance,
   type LeaveStatus,
 } from "../admin_leave_service";
-import {
-  leaveMockService,
-  MOCK_DEFAULT_BALANCES,
-  type MockHoliday,
-  type MockTeamLeave,
+import type {
+  MockHoliday,
+  MockTeamLeave,
 } from "../../../services/mock/leaveMockService";
 
 export interface ApplyLeavePayload {
@@ -36,9 +34,9 @@ export const leaveService = {
         return { data: res, isSampleData: false };
       }
     } catch {
-      // Graceful fallback to default balances
+      // Request failed
     }
-    return { data: MOCK_DEFAULT_BALANCES, isSampleData: true };
+    return { data: [], isSampleData: false };
   },
 
   /** Fetch employee's own requests list */
@@ -52,50 +50,9 @@ export const leaveService = {
         return { items: res.items, total: res.total ?? res.items.length, isSampleData: false };
       }
     } catch {
-      // Fallback
+      // Request failed
     }
-    const sampleItems: LeaveRequest[] = [
-      {
-        id: "mock-lr-1",
-        employee_id: employeeId,
-        employee_name: "Sarah Jenkins",
-        department_name: "Engineering",
-        leave_type: "Casual Leave",
-        start_date: "2026-11-26",
-        end_date: "2026-11-27",
-        total_days: 2,
-        reason: "Personal family commitment and travel",
-        status: "pending",
-        created_at: "2026-11-18T10:00:00Z",
-      },
-      {
-        id: "mock-lr-2",
-        employee_id: employeeId,
-        employee_name: "Sarah Jenkins",
-        department_name: "Engineering",
-        leave_type: "Sick Leave",
-        start_date: "2026-11-04",
-        end_date: "2026-11-04",
-        total_days: 1,
-        reason: "Doctor consultation and seasonal flu recovery",
-        status: "approved",
-        created_at: "2026-11-03T16:30:00Z",
-      },
-      {
-        id: "mock-lr-3",
-        employee_id: employeeId,
-        employee_name: "Sarah Jenkins",
-        department_name: "Engineering",
-        leave_type: "Earned Leave",
-        start_date: "2026-10-15",
-        end_date: "2026-10-19",
-        total_days: 3,
-        reason: "Annual vacation trip",
-        status: "approved",
-        created_at: "2026-10-01T09:15:00Z",
-      },
-    ];
-    return { items: sampleItems, total: sampleItems.length, isSampleData: true };
+    return { items: [], total: 0, isSampleData: false };
   },
 
   /** Apply for leave */
@@ -121,12 +78,12 @@ export const leaveService = {
 
   /** Fetch company holidays */
   async getHolidays(): Promise<MockHoliday[]> {
-    return leaveMockService.getHolidays();
+    return [];
   },
 
   /** Fetch team leaves for team calendar / overlap checking */
   async getTeamLeaves(): Promise<MockTeamLeave[]> {
-    return leaveMockService.getTeamLeaves();
+    return [];
   },
 };
 

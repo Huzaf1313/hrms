@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   CheckCircle2,
@@ -125,21 +125,26 @@ function EmployeeExit() {
   const fileInput = useRef<HTMLInputElement>(null);
   const pendingKey = useRef<string | null>(null);
 
-  const load = useCallback(async () => {
-    try {
-      const data = await exitRequestService.listMine({ page: 1, limit: 1 });
-      setRequest(data.items[0] ?? null);
-      setError("");
-    } catch (err) {
-      setError(errorText(err, "Unable to load your exit request."));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
-    void load();
-  }, [load]);
+    let active = true;
+    void exitRequestService
+      .listMine({ page: 1, limit: 1 })
+      .then((data) => {
+        if (!active) return;
+        setRequest(data.items[0] ?? null);
+        setError("");
+      })
+      .catch((err) => {
+        if (active) setError(errorText(err, "Unable to load your exit request."));
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleCancel = () => {
     if (!request || cancelling) return;
@@ -224,7 +229,7 @@ function EmployeeExit() {
     "flex w-full items-center gap-3 rounded-md border border-[#E5E7EB] bg-white px-3.5 py-2.5 text-left text-[12px] font-medium transition";
 
   return (
-    <div className="flex flex-col gap-6 w-full max-w-[1280px] mx-auto px-4 sm:px-6 py-4">
+    <div className="flex flex-col gap-6 w-full">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-5 rounded-lg border border-[#E5E7EB] shadow-none">
         <div className="flex items-center gap-3">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#E8EEFB] text-[#2F5FD0]">
@@ -248,10 +253,10 @@ function EmployeeExit() {
             <div key={label} className="flex items-center gap-3">
               <span
                 className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold tabular-nums ${done
-                    ? "bg-[#03543F] text-white"
-                    : current
-                      ? "bg-[#2F5FD0] text-white"
-                      : "bg-[#F3F4F6] text-[#6B7280] border border-[#E5E7EB]"
+                  ? "bg-[#03543F] text-white"
+                  : current
+                    ? "bg-[#2F5FD0] text-white"
+                    : "bg-[#F3F4F6] text-[#6B7280] border border-[#E5E7EB]"
                   }`}
               >
                 {done ? <CheckCircle2 className="h-4 w-4" /> : i + 1}
@@ -332,6 +337,57 @@ function EmployeeExit() {
               >
                 {request ? "Start New Resignation" : "Start Resignation"}
               </Link>
+            )}
+
+            {cancelConfirmOpen && (
+              <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
+                <div
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="cancel-exit-title"
+                  className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-red-100">
+                      <LogOut className="h-5 w-5 text-red-600" />
+                    </div>
+
+                    <div>
+                      <h3
+                        id="cancel-exit-title"
+                        className="text-lg font-semibold text-slate-900"
+                      >
+                        Cancel Resignation Request?
+                      </h3>
+
+                      <p className="mt-2 text-sm leading-6 text-slate-600">
+                        Are you sure you want to cancel your resignation request?
+                        This action cannot be undone.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 flex justify-end gap-3">
+                    <button
+                      type="button"
+                      disabled={cancelling}
+                      onClick={() => setCancelConfirmOpen(false)}
+                      className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-gray-50 disabled:opacity-50"
+                    >
+                      Keep Request
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={cancelling}
+                      onClick={() => void confirmCancel()}
+                      className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {cancelling ? "Cancelling..." : "Yes, Cancel Request"}
+                    </button>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
         </section>

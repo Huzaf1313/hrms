@@ -41,6 +41,7 @@ export default function ResignationPanel({
   const actionable = pickActionable(requests);
   const checklistSource = actionable ?? requests[0] ?? null;
   const tasks = checklistSource?.handover_tasks ?? [];
+  const completedCount = tasks.filter((t) => t.status === "Completed").length;
 
   const exportCsv = () => downloadExitCsv(requests, "resignation-requests.csv");
 
@@ -48,41 +49,52 @@ export default function ResignationPanel({
     {
       label: "Approve Resignation",
       icon: PlayCircle,
-      tone: "border-[#BCF0DA] bg-[#DEF7EC] text-[#03543F]",
+      iconBg: "bg-[#ECFDF5]",
+      iconColor: "text-[#059669]",
       enabled: actionable?.status === "Pending",
       onClick: () => actionable && onOpenRequest(actionable),
     },
     {
-      label: "Update Clearance Status",
+      label: "Update Clearance",
       icon: ClipboardCheck,
-      tone: "border-[#E8EEFB] bg-[#E8EEFB] text-[#2F5FD0]",
+      iconBg: "bg-[#EFF6FF]",
+      iconColor: "text-[#2563EB]",
       enabled: actionable?.status === "In Progress",
       onClick: () => actionable && onOpenRequest(actionable),
     },
     {
-      label: "Process Final Settlement",
+      label: "Final Settlement",
       icon: Wallet,
-      tone: "border-[#F3E8FF] bg-[#F3E8FF] text-[#7E22CE]",
+      iconBg: "bg-[#F5F3FF]",
+      iconColor: "text-[#7C3AED]",
       enabled: actionable?.status === "In Progress",
       onClick: () => actionable && onOpenRequest(actionable),
     },
     {
-      label: "Download Exit Report",
+      label: "Exit Report",
       icon: FileSpreadsheet,
-      tone: "border-[#E4E6E1] bg-white text-[#1F2933] hover:bg-[#F0F1EE]",
+      iconBg: "bg-[#F0FDFA]",
+      iconColor: "text-[#0D9488]",
       enabled: requests.length > 0,
       onClick: exportCsv,
     },
   ];
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+    <div className="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] items-stretch">
       <Panel
         title="Exit Process Checklist"
         description={
           checklistSource
             ? `Clearance steps for ${checklistSource.employee_name}.`
             : "Ensure all steps are completed for a smooth exit."
+        }
+        action={
+          tasks.length > 0 ? (
+            <span className="inline-flex items-center rounded-full bg-[#ECFDF5] border border-[#A7F3D0] px-2.5 py-0.5 text-[11px] font-medium text-[#047857] tabular-nums">
+              {completedCount} / {tasks.length} completed
+            </span>
+          ) : undefined
         }
         bodyClassName="p-0"
       >
@@ -137,7 +149,7 @@ export default function ResignationPanel({
 
       <div className="flex flex-col gap-4">
         <Panel title="Quick Actions">
-          <div className="space-y-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {actions.map((action) => {
               const Icon = action.icon;
 
@@ -147,14 +159,20 @@ export default function ResignationPanel({
                   type="button"
                   disabled={!action.enabled}
                   onClick={action.onClick}
-                  className={`flex w-full items-center gap-2.5 rounded-md border px-3 py-2 text-left text-[12px] font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0] ${
+                  className={`flex min-w-0 items-center gap-3 rounded-xl border px-3.5 py-3 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0] ${
                     action.enabled
-                      ? `${action.tone} cursor-pointer`
-                      : "cursor-not-allowed border-[#E5E7EB] bg-[#F9FAFB] text-[#7B8794]"
+                      ? "border-[#E5E7EB] bg-white text-[#1F2937] hover:border-[#CBD5E1] hover:bg-[#F8FAFC] cursor-pointer"
+                      : "cursor-not-allowed border-[#E5E7EB] bg-[#F8FAFC] text-[#94A3B8] opacity-75"
                   }`}
                 >
-                  <Icon className="h-4 w-4 shrink-0" />
-                  <span className="min-w-0 flex-1">{action.label}</span>
+                  <span
+                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${action.iconBg} ${action.iconColor}`}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                  </span>
+                  <span className="min-w-0 flex-1 text-[13px] font-medium leading-tight truncate">
+                    {action.label}
+                  </span>
                 </button>
               );
             })}
@@ -167,12 +185,12 @@ export default function ResignationPanel({
           )}
         </Panel>
 
-        <div className="rounded-lg border border-[#E8EEFB] bg-[#E8EEFB] p-4">
+        <div className="rounded-xl border border-[#DBEAFE] bg-[#EFF6FF] p-4">
           <div className="flex items-start gap-2.5">
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#2F5FD0]" />
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#2563EB]" />
             <div className="min-w-0">
-              <p className="text-[13px] font-semibold text-[#111827]">Note</p>
-              <p className="mt-1 text-xs leading-5 text-[#2F5FD0]">
+              <p className="text-[13px] font-semibold text-[#1E3A8A]">Note</p>
+              <p className="mt-1 text-xs leading-5 text-[#1D4ED8]">
                 Once the final settlement is processed the employee&apos;s account is
                 marked inactive and all system access is revoked.
               </p>
@@ -181,9 +199,9 @@ export default function ResignationPanel({
         </div>
 
         {actionable && (
-          <div className="flex items-start gap-2.5 rounded-lg border border-[#BCF0DA] bg-[#DEF7EC] p-4">
-            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#03543F]" />
-            <p className="min-w-0 text-xs leading-5 text-[#03543F]">
+          <div className="flex items-start gap-2.5 rounded-xl border border-[#A7F3D0] bg-[#ECFDF5] p-4">
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#059669]" />
+            <p className="min-w-0 text-xs leading-5 text-[#065F46]">
               {actionable.employee_name} is currently{" "}
               <strong>{actionable.status.toLowerCase()}</strong>. Open the request to
               advance it.
@@ -197,7 +215,7 @@ export default function ResignationPanel({
           disabled={requests.length === 0}
           onClick={exportCsv}
           leftIcon={<Download className="h-3.5 w-3.5 shrink-0" />}
-          className="h-9 w-full text-[12px] font-medium shadow-none"
+          className="h-9 w-full rounded-xl text-[12px] font-medium shadow-none"
         >
           Export visible rows
         </Button>

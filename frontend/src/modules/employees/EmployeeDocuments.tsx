@@ -159,12 +159,57 @@ export default function EmployeeDocuments() {
     }
   }, [activeTab, searchTerm]);
 
-  useEffect(() => {
-    void fetchDocuments();
-  }, [fetchDocuments]);
+  const [prevDocFilterKey, setPrevDocFilterKey] = useState(`${activeTab}|${searchTerm}`);
+  const docFilterKey = `${activeTab}|${searchTerm}`;
+  if (docFilterKey !== prevDocFilterKey) {
+    setPrevDocFilterKey(docFilterKey);
+    setCurrentPage(1);
+    setLoading(true);
+    setError("");
+  }
 
   useEffect(() => {
-    setCurrentPage(1);
+    let active = true;
+    const documentType =
+      activeTab === "All Documents" ? undefined : activeTab;
+
+    void api
+      .get<EmployeeDocumentsResponse>("/employee-documents", {
+        search: searchTerm.trim() || undefined,
+        document_type: documentType,
+      })
+      .then((response) => {
+        if (!active) return;
+        setDocuments(response.documents ?? []);
+        setSummary(
+          response.summary ?? {
+            total_documents: 0,
+            categories: {},
+          }
+        );
+        setError("");
+      })
+      .catch((err) => {
+        if (!active) return;
+        console.error("Failed to fetch employee documents:", err);
+        if (err instanceof ApiError) {
+          setError(err.message);
+        } else {
+          setError("Unable to load your documents. Please try again.");
+        }
+        setDocuments([]);
+        setSummary({
+          total_documents: 0,
+          categories: {},
+        });
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, [activeTab, searchTerm]);
 
   useEffect(() => {

@@ -9,7 +9,6 @@ import { ErrorState } from "../../components/ui/ErrorState";
 import { StatCardSkeleton, TableSkeleton } from "../../components/ui/Skeleton";
 import { Button } from "../../components/ui/Button";
 import { employeeAttendance } from "./attendanceService";
-import { generateSampleMonthRecords } from "./services/attendanceFallbackData";
 import { currentSessionUser } from "../../lib/session";
 import { FileEdit, Calendar, ClipboardList } from "lucide-react";
 import type { EmployeeAttendanceRecord } from "./types";
@@ -54,9 +53,8 @@ export const EmployeeAttendance: React.FC = () => {
       })
       .catch(() => {
         if (!isCurrent) return;
-        // Fallback shown ONLY when API fails, with sample data badge
-        setRecords(generateSampleMonthRecords(employeeId, year, month));
-        setIsSampleData(true);
+        setRecords([]);
+        setIsSampleData(false);
       })
       .finally(() => {
         if (isCurrent) {
@@ -96,13 +94,13 @@ export const EmployeeAttendance: React.FC = () => {
       }
     });
 
-    const avg = countWithHours > 0 ? (totalHours / countWithHours).toFixed(1) + "h" : "8.2h";
+    const avg = countWithHours > 0 ? (totalHours / countWithHours).toFixed(1) + "h" : "0.0h";
 
     return {
-      present: present || 18,
-      late: late || 2,
-      absent: absent || 1,
-      onLeave: onLeave || 1,
+      present,
+      late,
+      absent,
+      onLeave,
       avgHours: avg,
     };
   }, [records]);

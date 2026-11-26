@@ -163,6 +163,26 @@ export default function AttendanceTrendChart({
   ).replace(/ /g, " L ")} L ${CHART_WIDTH},${CHART_HEIGHT} Z`;
 
   const shortMonth = monthLabelOf(month).split(" ")[0]?.slice(0, 3) ?? "Nov";
+
+  const xAxisIndices = useMemo(() => {
+    const len = series.length;
+    if (len <= 6) return series.map((_, i) => i);
+    const step = Math.ceil((len - 1) / 5);
+    const indices: number[] = [];
+    for (let i = 0; i < len; i += step) {
+      indices.push(i);
+    }
+    const last = len - 1;
+    if (indices[indices.length - 1] !== last) {
+      if (last - indices[indices.length - 1] < Math.max(2, Math.floor(step / 2))) {
+        indices[indices.length - 1] = last;
+      } else {
+        indices.push(last);
+      }
+    }
+    return indices;
+  }, [series]);
+
   const showComparison =
     Boolean(summary) &&
     !isPending &&
@@ -338,15 +358,23 @@ export default function AttendanceTrendChart({
             </svg>
 
             {/* X Axis Date labels */}
-            <div className="relative mt-2 h-4 text-xs font-medium text-slate-500">
-              {series.map((point, index) => {
+            <div className="relative mt-2 h-4 text-[11px] font-medium text-slate-500">
+              {xAxisIndices.map((index) => {
+                const point = series[index];
+                if (!point) return null;
                 const percent =
                   (index / Math.max(series.length - 1, 1)) * 100;
+                const alignClass =
+                  index === 0
+                    ? "translate-x-0"
+                    : index === series.length - 1
+                      ? "-translate-x-full"
+                      : "-translate-x-1/2";
 
                 return (
                   <span
                     key={point.day}
-                    className="absolute -translate-x-1/2 whitespace-nowrap"
+                    className={`absolute whitespace-nowrap ${alignClass}`}
                     style={{ left: `${percent}%` }}
                   >
                     {shortMonth} {point.day}

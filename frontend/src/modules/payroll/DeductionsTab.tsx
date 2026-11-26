@@ -457,7 +457,7 @@ function ComponentModal({
                   (slab, index) => (
                     <div
                       key={index}
-                      className="grid grid-cols-[1fr_1fr_auto] gap-3 rounded border border-gray-200 p-3"
+                      className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-3 rounded border border-gray-200 p-3"
                     >
                       <div>
                         <label className="mb-1 block text-xs text-gray-500">

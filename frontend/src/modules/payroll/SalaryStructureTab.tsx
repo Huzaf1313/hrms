@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   AlertCircle,
   AlertTriangle,
@@ -89,11 +89,10 @@ function StructureCard({
               {structure.deductions.map((deduction) => (
                 <span
                   key={deduction.id}
-                  className={`inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-medium border ${
-                    deduction.type === "contribution"
-                      ? "bg-[#E3F5E1] text-[#1E6B45] border-[#BCE8B5]"
-                      : "bg-[#FDF3D6] text-[#8A5A00] border-[#F6DE95]"
-                  }`}
+                  className={`inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-medium border ${deduction.type === "contribution"
+                    ? "bg-[#E3F5E1] text-[#1E6B45] border-[#BCE8B5]"
+                    : "bg-[#FDF3D6] text-[#8A5A00] border-[#F6DE95]"
+                    }`}
                 >
                   {deduction.name}
                 </span>
@@ -469,9 +468,8 @@ function EditStructureModal({
             <div className="flex items-center justify-between rounded bg-slate-50 px-4 py-3">
               <span className="text-sm font-bold text-slate-900">Total Gross Salary</span>
               <span
-                className={`text-sm font-bold ${
-                  limitError ? "text-rose-600" : "text-blue-600"
-                }`}
+                className={`text-sm font-bold ${limitError ? "text-rose-600" : "text-blue-600"
+                  }`}
               >
                 {formatCurrency(gross)}
               </span>
@@ -530,13 +528,15 @@ function SalaryStructureTab() {
   const [showCreateSuccessModal, setShowCreateSuccessModal] = useState(false);
   const [createdStructureName, setCreatedStructureName] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (structuresData) {
-      setStructures(structuresData);
-    }
-  }, [structuresData]);
+  const [prevStructuresData, setPrevStructuresData] = useState(structuresData);
+  if (structuresData && structuresData !== prevStructuresData) {
+    setPrevStructuresData(structuresData);
+    setStructures(structuresData);
+  }
 
-  useEffect(() => {
+  const [prevQueryError, setPrevQueryError] = useState(queryError);
+  if (queryError !== prevQueryError) {
+    setPrevQueryError(queryError);
     if (queryError) {
       setError(
         queryError instanceof Error
@@ -544,7 +544,7 @@ function SalaryStructureTab() {
           : "Failed to load salary structures."
       );
     }
-  }, [queryError]);
+  }
 
   async function handleSave(updated: SalaryStructure) {
     const payload = {

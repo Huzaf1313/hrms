@@ -150,28 +150,26 @@ function EmployeeNotificationDropdown({
     onUnreadCountChange?.(count);
   };
 
-  const fetchNotifications = async () => {
-    try {
-      setIsLoading(true);
-
-      const response =
-        await employeeNotificationService.getNotifications({
-          page: 1,
-          limit: 20,
-        });
-
-      setNotifications(response.notifications);
-      updateUnreadCount(response.unread_count);
-    } catch (error) {
-      console.error("Failed to fetch employee notifications:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchNotifications();
-  }, []);
+    let active = true;
+    void employeeNotificationService
+      .getNotifications({ page: 1, limit: 20 })
+      .then((response) => {
+        if (!active) return;
+        setNotifications(response.notifications);
+        onUnreadCountChange?.(response.unread_count);
+      })
+      .catch((error) => {
+        console.error("Failed to fetch employee notifications:", error);
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [onUnreadCountChange]);
 
   const handleNotificationClick = async (
     notification: EmployeeNotification,
@@ -332,8 +330,8 @@ function EmployeeNotificationDropdown({
                 onClick={() => handleNotificationClick(notification)}
                 disabled={isProcessing}
                 className={`group flex w-full gap-3 border-b border-gray-100 px-4 py-3.5 text-left transition last:border-b-0 ${notification.is_read
-                    ? "bg-white hover:bg-gray-50"
-                    : "bg-blue-50/40 hover:bg-blue-50/70"
+                  ? "bg-white hover:bg-gray-50"
+                  : "bg-blue-50/40 hover:bg-blue-50/70"
                   } disabled:cursor-wait`}
               >
                 {/* Icon */}
@@ -350,8 +348,8 @@ function EmployeeNotificationDropdown({
                   <div className="flex items-start justify-between gap-2">
                     <h4
                       className={`line-clamp-1 text-sm ${notification.is_read
-                          ? "font-medium text-gray-700"
-                          : "font-semibold text-gray-900"
+                        ? "font-medium text-gray-700"
+                        : "font-semibold text-gray-900"
                         }`}
                     >
                       {notification.title}

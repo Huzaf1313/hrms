@@ -698,7 +698,7 @@ export default function AdminAccounts() {
       {/* Page header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="truncate text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 font-manrope">
+          <h1 className="truncate text-lg sm:text-xl font-semibold tracking-tight leading-[1.3] text-slate-900">
             Admin Accounts
           </h1>
           <p className="mt-1 text-sm font-medium text-slate-500">

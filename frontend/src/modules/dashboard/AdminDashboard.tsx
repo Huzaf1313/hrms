@@ -8,7 +8,6 @@ import DashboardKpiRow from "./DashboardKpiRow";
 import DepartmentDonut from "../departments/DepartmentDonut";
 import PayrollExpenseSummaryCard from "../payroll/PayrollExpenseSummaryCard";
 import PendingLeaveRequestsCard from "../leaves/PendingLeaveRequestsCard";
-import PerformanceSummaryCard from "./PerformanceSummaryCard";
 import RecentActivityCard from "./RecentActivityCard";
 import RecruitmentFunnel from "../recruitment/RecruitmentFunnel";
 import UpcomingInterviewsCard from "../recruitment/UpcomingInterviewsCard";
@@ -35,11 +34,18 @@ interface AdminDashboardProps {
 function readUserFirstName(): string {
   try {
     const raw = localStorage.getItem("user");
-    const user = raw ? (JSON.parse(raw) as { full_name?: string }) : null;
-    const fullName = user?.full_name?.trim();
-    return fullName ? fullName.split(" ")[0] : "Atharv";
+    const user = raw
+      ? (JSON.parse(raw) as { full_name?: string | null; name?: string | null })
+      : null;
+    const rawName = (user?.full_name ?? user?.name ?? "").trim();
+    if (!rawName) return "";
+    const first = rawName.split(/\s+/)[0]?.trim() ?? "";
+    if (!first || first.toLowerCase() === "undefined" || first.toLowerCase() === "null") {
+      return "";
+    }
+    return first.toUpperCase();
   } catch {
-    return "Atharv";
+    return "";
   }
 }
 
@@ -53,20 +59,11 @@ export default function AdminDashboard({
 
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
-    if (hour < 12) return "Good Morning";
-    if (hour < 17) return "Good Afternoon";
-    return "Good Evening";
+    if (hour >= 5 && hour < 12) return "Good morning";
+    if (hour >= 12 && hour < 17) return "Good afternoon";
+    if (hour >= 17 && hour < 21) return "Good evening";
+    return "Good night";
   }, []);
-
-  const displayDate = useMemo(
-    () =>
-      new Date().toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      }),
-    [],
-  );
 
   const showHrWidgets = isHrAdmin();
   const { metrics, refresh } = useDashboardMetrics(totalHeadcount ?? null);
@@ -81,10 +78,9 @@ export default function AdminDashboard({
       {/* Slim page header */}
       <div className="flex flex-col gap-4 border-b border-[#E5E7EB] pb-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-[20px] font-semibold leading-tight text-[#111827]">Dashboard</h1>
-          <p className="mt-1 text-[12px] text-[#6B7280]">
-            {greeting.toLowerCase()}, {firstName} · {displayDate}
-          </p>
+          <h1 className="text-lg sm:text-xl font-semibold tracking-tight leading-[1.3] text-slate-900">
+            {firstName ? `${greeting}, ${firstName}` : greeting}
+          </h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button
@@ -151,26 +147,21 @@ export default function AdminDashboard({
             onOpenLeave={() => onNavigate("Leave")}
             onChanged={refresh}
           />
-          <RegularizationRequestsCard onReviewed={refresh} />
+          <RegularizationRequestsCard compact onReviewed={refresh} />
         </div>
       </div>
 
-      {/* 4. People and performance */}
+      {/* 4. People and activity */}
       <div className="grid grid-cols-12 items-stretch gap-4">
         <DepartmentDonut
           counts={metrics.departmentCounts}
-          className="col-span-12 lg:col-span-4"
+          className="col-span-12 lg:col-span-6"
           onViewAll={() => onNavigate("Employees")}
         />
 
         <RecentActivityCard
           activities={recentActivities}
-          className="col-span-12 lg:col-span-4"
-          onViewAll={() => onNavigate("Announcement")}
-        />
-        <PerformanceSummaryCard
-          className="col-span-12 lg:col-span-4"
-          onViewDetails={() => onNavigate("Employees")}
+          className="col-span-12 lg:col-span-6"
         />
       </div>
 

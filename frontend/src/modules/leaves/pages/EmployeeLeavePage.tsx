@@ -57,30 +57,30 @@ export const EmployeeLeavePage: React.FC = () => {
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex items-center gap-[8px] border-b border-[#E4E6E1] pb-[8px]">
+      <div className="flex items-center gap-[8px] border-b border-[#E4E6E1] pb-[8px] overflow-x-auto max-w-full">
         <button
           type="button"
           onClick={() => setActiveTab("dashboard")}
-          className={`flex items-center gap-[6px] px-[12px] py-[6px] rounded-[6px] text-[13px] font-medium transition-colors ${
+          className={`flex shrink-0 whitespace-nowrap items-center gap-[6px] px-[12px] py-[6px] rounded-[6px] text-[13px] font-medium transition-colors ${
             activeTab === "dashboard"
               ? "bg-[#2F5FD0] text-[#FFFFFF]"
               : "text-[#4B5563] hover:text-[#1F2933] hover:bg-[#F6F7F5]"
           }`}
         >
-          <LayoutDashboard className="w-[14px] h-[14px]" />
+          <LayoutDashboard className="w-[14px] h-[14px] shrink-0" />
           <span>Overview & Balances</span>
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab("history")}
-          className={`flex items-center gap-[6px] px-[12px] py-[6px] rounded-[6px] text-[13px] font-medium transition-colors ${
+          className={`flex shrink-0 whitespace-nowrap items-center gap-[6px] px-[12px] py-[6px] rounded-[6px] text-[13px] font-medium transition-colors ${
             activeTab === "history"
               ? "bg-[#2F5FD0] text-[#FFFFFF]"
               : "text-[#4B5563] hover:text-[#1F2933] hover:bg-[#F6F7F5]"
           }`}
         >
-          <History className="w-[14px] h-[14px]" />
+          <History className="w-[14px] h-[14px] shrink-0" />
           <span>My History & Entitlements</span>
           {pendingCount > 0 && (
             <span
@@ -98,13 +98,13 @@ export const EmployeeLeavePage: React.FC = () => {
         <button
           type="button"
           onClick={() => setActiveTab("calendar")}
-          className={`flex items-center gap-[6px] px-[12px] py-[6px] rounded-[6px] text-[13px] font-medium transition-colors ${
+          className={`flex shrink-0 whitespace-nowrap items-center gap-[6px] px-[12px] py-[6px] rounded-[6px] text-[13px] font-medium transition-colors ${
             activeTab === "calendar"
               ? "bg-[#2F5FD0] text-[#FFFFFF]"
               : "text-[#4B5563] hover:text-[#1F2933] hover:bg-[#F6F7F5]"
           }`}
         >
-          <CalendarDays className="w-[14px] h-[14px]" />
+          <CalendarDays className="w-[14px] h-[14px] shrink-0" />
           <span>Team Calendar</span>
         </button>
       </div>

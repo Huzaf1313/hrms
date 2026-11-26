@@ -309,6 +309,7 @@ export default function EmployeeProfile() {
         if (!isMounted) return;
 
         setEmployee(employeeProfile);
+        setProfilePhotoUrl(employeeProfile?.avatar_url ?? null);
         setDepartments(departmentList);
         setShifts(shiftList);
 
@@ -347,14 +348,6 @@ export default function EmployeeProfile() {
       isMounted = false;
     };
   }, []);
-
-  useEffect(() => {
-    if (employee?.avatar_url) {
-      setProfilePhotoUrl(employee.avatar_url);
-    } else {
-      setProfilePhotoUrl(null);
-    }
-  }, [employee?.avatar_url]);
 
   const handleProfilePhotoChange = async (
     event: React.ChangeEvent<HTMLInputElement>,
@@ -619,7 +612,7 @@ const handleChangePassword = async (
         (department) => department.id === employee.department_id,
       )?.name ?? "Not provided"
     );
-  }, [departments, employee?.department_id]);
+  }, [departments, employee]);
 
   const shiftName = useMemo(() => {
     if (!employee?.shift_id) return "Not assigned";
@@ -628,7 +621,7 @@ const handleChangePassword = async (
       shifts.find((shift) => shift.id === employee.shift_id)?.name ??
       "Not assigned"
     );
-  }, [shifts, employee?.shift_id]);
+  }, [shifts, employee]);
 
   const displayName = employee
     ? `${employee.first_name} ${employee.last_name}`.trim()
@@ -657,7 +650,7 @@ const handleChangePassword = async (
   if (isLoading) {
     return (
       <div className="min-h-full bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-6xl space-y-6">
+        <div className="w-full space-y-6">
           <div className="h-9 w-24 animate-pulse rounded-lg bg-slate-200" />
 
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -694,7 +687,7 @@ const handleChangePassword = async (
 
   return (
     <div className="min-h-full bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-6xl space-y-6">
+      <div className="w-full space-y-6">
         {/* Back */}
         <button
           type="button"

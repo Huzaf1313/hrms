@@ -34,12 +34,12 @@ export default function ExitTypeDonut({ byType, total }: ExitTypeDonutProps) {
   });
 
   return (
-    <div className={PANEL_CLASS}>
-      <div className="border-b border-[#E5E7EB] bg-white px-5 py-3.5">
-        <h3 className="text-[13px] font-semibold text-[#111827]">Exit Requests by Type</h3>
+    <div className={`${PANEL_CLASS} h-full flex flex-col rounded-xl shadow-[0_1px_2px_rgba(15,23,42,0.03)]`}>
+      <div className="border-b border-[#E5E7EB] bg-white px-6 py-4">
+        <h3 className="text-[15px] font-semibold text-[#111827]">Exit Requests by Type</h3>
       </div>
 
-      <div className="flex items-center gap-4 p-5">
+      <div className="flex-1 flex flex-col sm:flex-row items-center justify-center gap-6 p-6">
         <svg
           viewBox="0 0 140 140"
           className="h-[104px] w-[104px] shrink-0"
@@ -72,14 +72,14 @@ export default function ExitTypeDonut({ byType, total }: ExitTypeDonutProps) {
           <text x="70" y="68" textAnchor="middle" className="fill-[#111827] text-[22px] font-semibold tabular-nums">
             {total}
           </text>
-          <text x="70" y="86" textAnchor="middle" className="fill-[#6B7280] text-[11px] font-medium">
+          <text x="70" y="86" textAnchor="middle" className="fill-[#6B7280] text-xs font-medium">
             Total
           </text>
         </svg>
 
         <ul className="min-w-0 flex-1 space-y-2.5">
           {segments.map((segment) => (
-            <li key={segment.type} className="flex items-center justify-between gap-2 text-[12px]">
+            <li key={segment.type} className="flex items-center justify-between gap-2 text-xs">
               <span className="flex items-center gap-2 min-w-0">
                 <span
                   className="h-2 w-2 shrink-0 rounded-full"

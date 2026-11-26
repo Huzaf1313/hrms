@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   AlertCircle,
@@ -74,27 +74,22 @@ export function Login() {
 
   // Status alerts & busy state
   const [error, setError] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [showDeactivatedModal, setShowDeactivatedModal] = useState(false);
-
-  // Handle redirect notices (e.g. session expired, password changed)
-  useEffect(() => {
+  const [successMessage, setSuccessMessage] = useState(() => {
     const notice =
       consumeLoginRedirectNotice() ??
       (new URLSearchParams(window.location.search).get("reason") ===
-      "session_expired"
+        "session_expired"
         ? "session_expired"
         : null);
 
-    if (!notice) return;
+    if (!notice) return "";
 
-    setSuccessMessage(
-      notice === "password_changed"
-        ? "Your password was changed successfully. Please log in with your new credentials."
-        : "Your session has expired. Please sign in again.",
-    );
-  }, []);
+    return notice === "password_changed"
+      ? "Your password was changed successfully. Please log in with your new credentials."
+      : "Your session has expired. Please sign in again.";
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [showDeactivatedModal, setShowDeactivatedModal] = useState(false);
 
   const handleLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -206,7 +201,7 @@ export function Login() {
       setForgotEmail(trimmedEmail);
       setSuccessMessage(
         result.message ||
-          "If an account with this email exists, a password reset OTP has been sent.",
+        "If an account with this email exists, a password reset OTP has been sent.",
       );
       setForgotStep("otp");
     } catch (err: unknown) {

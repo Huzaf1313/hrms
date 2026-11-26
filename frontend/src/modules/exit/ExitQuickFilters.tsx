@@ -28,9 +28,11 @@ export default function ExitQuickFilters({
     onChange({ ...filters, [key]: value });
 
   return (
-    <div className={PANEL_CLASS}>
-      <div className="flex items-center gap-2 border-b border-[#E5E7EB] bg-white px-5 py-3.5">
-        <Filter className="h-4 w-4 shrink-0 text-[#2F5FD0]" />
+    <div className={`${PANEL_CLASS} rounded-xl shadow-[0_1px_2px_rgba(15,23,42,0.03)]`}>
+      <div className="flex items-center gap-2.5 border-b border-[#E5E7EB] bg-white px-5 py-3.5">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#EFF6FF] text-[#2F5FD0]">
+          <Filter className="h-3.5 w-3.5 shrink-0" />
+        </span>
         <h3 className="text-[13px] font-semibold text-[#111827]">Quick Filters</h3>
       </div>
 

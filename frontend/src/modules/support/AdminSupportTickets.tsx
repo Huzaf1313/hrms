@@ -23,6 +23,7 @@ import {
 import { ApiError } from "../../services/api";
 import { Avatar } from "../../components/ui/Avatar";
 import { Button } from "../../components/ui/Button";
+import { PageHeading } from "../../components/ui/PageHeading";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { TableRowSkeleton } from "../../components/ui/Skeleton";
 import { adminSupportTicketService } from "./adminSupportTicketService";
@@ -302,20 +303,11 @@ function AdminSupportTickets() {
   }
 
   return (
-    <div className="flex flex-col gap-6 w-full max-w-[1280px] mx-auto px-4 sm:px-6 py-4">
+    <div className="flex flex-col gap-5 w-full pb-10">
       {/* Page header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-5 rounded-lg border border-[#E5E7EB] shadow-none">
-        <div className="flex flex-col gap-0.5">
-          <h1 className="text-[18px] font-semibold text-[#111827]">
-            Support Tickets
-          </h1>
-          <p className="text-xs text-[#4B5563]">
-            Every request raised by your team, with the queues that need
-            attention first.
-          </p>
-        </div>
-
-        <div className="flex items-center shrink-0">
+      <PageHeading
+        title="Every request raised by your team, with the queues that need attention first."
+        actions={
           <Button
             variant="outline"
             onClick={() => loadTickets(currentPage)}
@@ -329,8 +321,8 @@ function AdminSupportTickets() {
           >
             Refresh
           </Button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Ticket Overview KPI Strip */}
       <div className="flex flex-col gap-2.5">
@@ -341,7 +333,7 @@ function AdminSupportTickets() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-          <div className="rounded-lg border border-[#E5E7EB] bg-white p-4 h-[104px] shadow-kpi flex flex-col justify-between min-w-0">
+          <div className="rounded-xl border border-[#E5E7EB] bg-white p-4 h-[108px] shadow-kpi flex flex-col justify-between min-w-0 transition-all duration-150 hover:border-[#CBD5E1] hover:shadow-sm">
             <div className="flex items-center justify-between gap-2 min-w-0">
               <span className="text-xs font-medium text-[#4B5563] truncate">
                 Total tickets
@@ -361,7 +353,7 @@ function AdminSupportTickets() {
             </div>
           </div>
 
-          <div className="rounded-lg border border-[#E5E7EB] bg-white p-4 h-[104px] shadow-kpi flex flex-col justify-between min-w-0">
+          <div className="rounded-xl border border-[#E5E7EB] bg-white p-4 h-[108px] shadow-kpi flex flex-col justify-between min-w-0 transition-all duration-150 hover:border-[#CBD5E1] hover:shadow-sm">
             <div className="flex items-center justify-between gap-2 min-w-0">
               <span className="text-xs font-medium text-[#4B5563] truncate">
                 Awaiting reply
@@ -383,7 +375,7 @@ function AdminSupportTickets() {
             </div>
           </div>
 
-          <div className="rounded-lg border border-[#E5E7EB] bg-white p-4 h-[104px] shadow-kpi flex flex-col justify-between min-w-0">
+          <div className="rounded-xl border border-[#E5E7EB] bg-white p-4 h-[108px] shadow-kpi flex flex-col justify-between min-w-0 transition-all duration-150 hover:border-[#CBD5E1] hover:shadow-sm">
             <div className="flex items-center justify-between gap-2 min-w-0">
               <span className="text-xs font-medium text-[#4B5563] truncate">
                 Avg resolution
@@ -402,7 +394,7 @@ function AdminSupportTickets() {
             </div>
           </div>
 
-          <div className="rounded-lg border border-[#E5E7EB] bg-white p-4 h-[104px] shadow-kpi flex flex-col justify-between min-w-0">
+          <div className="rounded-xl border border-[#E5E7EB] bg-white p-4 h-[108px] shadow-kpi flex flex-col justify-between min-w-0 transition-all duration-150 hover:border-[#CBD5E1] hover:shadow-sm">
             <div className="flex items-center justify-between gap-2 min-w-0">
               <span className="text-xs font-medium text-[#4B5563] truncate">
                 Resolution rate
@@ -424,20 +416,23 @@ function AdminSupportTickets() {
       </div>
 
       {/* Breakdown + aging */}
-      <section className="grid grid-cols-1 items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <section className="grid grid-cols-1 items-stretch gap-4 md:grid-cols-2 xl:grid-cols-3">
         {/* Status distribution + By priority */}
-        <div className="flex flex-col rounded-lg border border-[#E5E7EB] bg-white overflow-hidden shadow-none">
-          <div className="flex items-center gap-3 px-6 py-3.5 border-b border-[#E5E7EB]">
-            <Tile icon={TrendingUp} tone="bg-[#E8EEFB] text-[#2F5FD0]" />
-            <div>
-              <h3 className="text-[13px] font-semibold text-[#111827]">
-                By status
-              </h3>
-              <p className="text-xs text-[#4B5563]">Where the queue sits.</p>
+        <div className="flex h-full flex-col rounded-xl border border-[#E5E7EB] bg-white overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+          <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-[#E5E7EB]">
+            <div className="flex items-center gap-3">
+              <Tile icon={TrendingUp} tone="bg-[#E8EEFB] text-[#2F5FD0]" />
+              <div>
+                <h3 className="text-[13px] font-semibold text-[#111827]">
+                  By status
+                </h3>
+                <p className="text-xs text-[#4B5563]">Click a status or priority to filter.</p>
+              </div>
             </div>
           </div>
 
-          <div className="p-5">
+          <div className="flex-1 p-5 flex flex-col justify-between">
+            <div>
             {statusSegments.length === 0 ? (
               <p className="text-[12px] text-[#6B7280]">No tickets yet.</p>
             ) : (
@@ -469,58 +464,87 @@ function AdminSupportTickets() {
                   ))}
                 </div>
 
-                <ul className="mt-4 space-y-2">
-                  {statusSegments.map((segment) => (
-                    <li
-                      key={segment.status}
-                      className="flex items-center justify-between text-[12px]"
-                    >
-                      <span className="inline-flex items-center gap-2 text-[#4B5563]">
-                        <span
-                          className={`inline-flex items-center gap-1.5 h-[22px] rounded-full px-2.5 py-0.5 font-medium ${getStatusStyle(
-                            segment.status,
-                          )}`}
+                <ul className="mt-4 space-y-1.5">
+                  {statusSegments.map((segment) => {
+                    const isSelected = statusFilter === segment.status;
+                    return (
+                      <li key={segment.status}>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            changeFilter(
+                              setStatusFilter,
+                              isSelected ? "" : segment.status,
+                            )
+                          }
+                          className={`w-full flex items-center justify-between rounded-lg px-2 py-1.5 text-[12px] transition cursor-pointer ${
+                            isSelected
+                              ? "bg-[#EFF6FF] ring-1 ring-[#2F5FD0]/30"
+                              : "hover:bg-[#F8FAFC]"
+                          }`}
                         >
-                          <span
-                            className={`h-1.5 w-1.5 rounded-full shrink-0 ${getStatusDotColor(segment.status)}`}
-                          />
-                          <span>{segment.status}</span>
-                        </span>
-                      </span>
-                      <span className="font-semibold text-[#111827] tabular-nums">
-                        {segment.count}
-                      </span>
-                    </li>
-                  ))}
+                          <span className="inline-flex items-center gap-2 text-[#4B5563]">
+                            <span
+                              className={`inline-flex items-center gap-1.5 h-[22px] rounded-full px-2.5 py-0.5 font-medium ${getStatusStyle(
+                                segment.status,
+                              )}`}
+                            >
+                              <span
+                                className={`h-1.5 w-1.5 rounded-full shrink-0 ${getStatusDotColor(segment.status)}`}
+                              />
+                              <span>{segment.status}</span>
+                            </span>
+                          </span>
+                          <span className="font-semibold text-[#111827] tabular-nums">
+                            {segment.count}
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
                 </ul>
               </>
             )}
+            </div>
 
             <div className="mt-4 border-t border-[#E5E7EB] pt-4">
               <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-[#6B7280]">
                 By priority
               </p>
 
-              <ul className="grid grid-cols-2 gap-2">
+              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {TICKET_PRIORITIES.map((priority) => {
                   const total = analytics?.counts_by_priority[priority] ?? 0;
+                  const isSelected = priorityFilter === priority;
 
                   return (
-                    <li
-                      key={priority}
-                      className="flex items-center justify-between rounded-md bg-[#F9FAFB] px-2.5 py-2 text-[12px]"
-                    >
-                      <span
-                        className={`inline-flex items-center gap-1.5 h-[22px] rounded-full px-2.5 py-0.5 font-medium ${getPriorityStyle(priority)}`}
+                    <li key={priority}>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          changeFilter(
+                            setPriorityFilter,
+                            isSelected ? "" : priority,
+                          )
+                        }
+                        className={`w-full flex items-center justify-between rounded-lg border px-2.5 py-2 text-[12px] transition cursor-pointer ${
+                          isSelected
+                            ? "border-[#2F5FD0] bg-[#EFF6FF] ring-1 ring-[#2F5FD0]/20"
+                            : "border-[#E5E7EB] bg-white hover:border-[#CBD5E1] hover:bg-[#F8FAFC]"
+                        }`}
                       >
                         <span
-                          className={`h-1.5 w-1.5 rounded-full shrink-0 ${getPriorityDotColor(priority)}`}
-                        />
-                        <span>{priority}</span>
-                      </span>
-                      <span className="font-semibold text-[#111827] tabular-nums">
-                        {total}
-                      </span>
+                          className={`inline-flex items-center gap-1.5 h-[22px] rounded-full px-2.5 py-0.5 font-medium ${getPriorityStyle(priority)}`}
+                        >
+                          <span
+                            className={`h-1.5 w-1.5 rounded-full shrink-0 ${getPriorityDotColor(priority)}`}
+                          />
+                          <span>{priority}</span>
+                        </span>
+                        <span className="font-semibold text-[#111827] tabular-nums">
+                          {total}
+                        </span>
+                      </button>
                     </li>
                   );
                 })}
@@ -530,45 +554,61 @@ function AdminSupportTickets() {
         </div>
 
         {/* Category */}
-        <div className="flex flex-col rounded-lg border border-[#E5E7EB] bg-white overflow-hidden shadow-none">
-          <div className="flex items-center gap-3 px-6 py-3.5 border-b border-[#E5E7EB]">
+        <div className="flex h-full flex-col rounded-xl border border-[#E5E7EB] bg-white overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+          <div className="flex items-center gap-3 px-5 py-3.5 border-b border-[#E5E7EB]">
             <Tile icon={Headphones} tone="bg-[#F3E8FF] text-[#7E22CE]" />
             <div>
               <h3 className="text-[13px] font-semibold text-[#111827]">
                 By category
               </h3>
-              <p className="text-xs text-[#4B5563]">Which team is loaded.</p>
+              <p className="text-xs text-[#4B5563]">Click a category to filter.</p>
             </div>
           </div>
 
-          <div className="p-5">
-            <ul className="space-y-3">
+          <div className="flex-1 p-5">
+            <ul className="space-y-2.5">
               {TICKET_CATEGORIES.map((category) => {
                 const total = analytics?.counts_by_category[category] ?? 0;
                 const open = analytics?.open_by_category[category] ?? 0;
+                const isSelected = categoryFilter === category;
 
                 return (
                   <li key={category}>
-                    <div className="flex items-center justify-between text-[12px]">
-                      <span className="font-medium text-[#111827]">
-                        {category}
-                      </span>
-                      <span className="text-[#4B5563] tabular-nums">
-                        <span className="font-semibold text-[#111827]">
-                          {open}
-                        </span>{" "}
-                        open / {total}
-                      </span>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        changeFilter(
+                          setCategoryFilter,
+                          isSelected ? "" : category,
+                        )
+                      }
+                      className={`w-full text-left rounded-lg px-2.5 py-2 transition cursor-pointer ${
+                        isSelected
+                          ? "bg-[#EFF6FF] ring-1 ring-[#2F5FD0]/30"
+                          : "hover:bg-[#F8FAFC]"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between text-[12px]">
+                        <span className="font-medium text-[#111827]">
+                          {category}
+                        </span>
+                        <span className="text-[#4B5563] tabular-nums">
+                          <span className="font-semibold text-[#111827]">
+                            {open}
+                          </span>{" "}
+                          open / {total}
+                        </span>
+                      </div>
 
-                    <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-[#E5E7EB]">
-                      <div
-                        className="h-full rounded-full bg-[#2F5FD0]"
-                        style={{
-                          width: `${(total / categoryMax) * 100}%`,
-                        }}
-                      />
-                    </div>
+                      <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-[#E5E7EB]">
+                        <div
+                          className="h-full rounded-full bg-[#2F5FD0] transition-all duration-300"
+                          style={{
+                            width: `${(total / categoryMax) * 100}%`,
+                          }}
+                        />
+                      </div>
+                    </button>
                   </li>
                 );
               })}
@@ -577,8 +617,8 @@ function AdminSupportTickets() {
         </div>
 
         {/* Aging */}
-        <div className="flex flex-col rounded-lg border border-[#E5E7EB] bg-white overflow-hidden shadow-none md:col-span-2 xl:col-span-1">
-          <div className="flex items-center gap-3 px-6 py-3.5 border-b border-[#E5E7EB]">
+        <div className="flex h-full flex-col rounded-xl border border-[#E5E7EB] bg-white overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.03)] md:col-span-2 xl:col-span-1">
+          <div className="flex items-center gap-3 px-5 py-3.5 border-b border-[#E5E7EB]">
             <Tile icon={Clock3} tone="bg-[#FEF3C7] text-[#92400E]" />
             <div>
               <h3 className="text-[13px] font-semibold text-[#111827]">
@@ -590,9 +630,9 @@ function AdminSupportTickets() {
             </div>
           </div>
 
-          <div className="p-5">
+          <div className="flex-1 p-5 flex flex-col justify-between gap-4">
             <dl className="space-y-3">
-              <div className="flex items-center justify-between rounded-md bg-[#F9FAFB] px-3.5 py-2.5">
+              <div className="flex items-center justify-between rounded-lg border border-[#F1F5F9] bg-[#F8FAFC] px-3.5 py-2.5">
                 <dt className="text-[12px] font-medium text-[#4B5563]">
                   Oldest unanswered
                 </dt>
@@ -601,7 +641,7 @@ function AdminSupportTickets() {
                 </dd>
               </div>
 
-              <div className="flex items-center justify-between rounded-md bg-[#F9FAFB] px-3.5 py-2.5">
+              <div className="flex items-center justify-between rounded-lg border border-[#F1F5F9] bg-[#F8FAFC] px-3.5 py-2.5">
                 <dt className="text-[12px] font-medium text-[#4B5563]">
                   Average age
                 </dt>
@@ -610,7 +650,7 @@ function AdminSupportTickets() {
                 </dd>
               </div>
 
-              <div className="flex items-center justify-between rounded-md bg-[#F9FAFB] px-3.5 py-2.5">
+              <div className="flex items-center justify-between rounded-lg border border-[#F1F5F9] bg-[#F8FAFC] px-3.5 py-2.5">
                 <dt className="text-[12px] font-medium text-[#4B5563]">
                   Older than {analytics?.stale_after_days ?? 3} days
                 </dt>
@@ -621,7 +661,7 @@ function AdminSupportTickets() {
             </dl>
 
             {(analytics?.stale_open_count ?? 0) > 0 && (
-              <div className="mt-4 flex items-start gap-2 rounded-md border border-[#FCD34D] bg-[#FEF3C7] p-3 text-[12px] text-[#92400E]">
+              <div className="flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50/90 p-3 text-[12px] text-[#92400E]">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                 <span className="leading-5">
                   {analytics?.stale_open_count} ticket
@@ -637,11 +677,11 @@ function AdminSupportTickets() {
       {/* Filter bar + Ticket queue */}
       <div className="flex flex-col gap-4">
         {/* Filters */}
-        <section className="rounded-lg border border-[#E5E7EB] bg-white p-4 shadow-none">
-          <div className="flex flex-col gap-2 min-[900px]:flex-row min-[900px]:items-center">
+        <section className="rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+          <div className="flex flex-col gap-2.5 min-[900px]:flex-row min-[900px]:items-center">
             <div className="relative w-full min-[900px]:flex-1">
               <Search
-                className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#6B7280]"
+                className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#6B7280]"
                 strokeWidth={1.5}
               />
               <input
@@ -650,7 +690,7 @@ function AdminSupportTickets() {
                 onChange={(event) => changeFilter(setSearch, event.target.value)}
                 placeholder="Search subject, description or employee..."
                 aria-label="Search subject, description or employee"
-                className="h-8 w-full rounded-md border border-[#E5E7EB] bg-white pl-8 pr-3 text-[12px] text-[#111827] placeholder:text-[#7B8794] transition hover:border-[#D1D5DB] focus:border-[#2F5FD0] focus:ring-1 focus:ring-[#2F5FD0] focus:outline-none"
+                className="h-9 w-full rounded-lg border border-[#E5E7EB] bg-white pl-9 pr-3 text-[12px] text-[#111827] placeholder:text-[#7B8794] transition hover:border-[#D1D5DB] focus:border-[#2F5FD0] focus:ring-1 focus:ring-[#2F5FD0] focus:outline-none"
               />
             </div>
 
@@ -660,7 +700,7 @@ function AdminSupportTickets() {
                   value={statusFilter}
                   onChange={(event) => changeFilter(setStatusFilter, event.target.value)}
                   aria-label="Filter by status"
-                  className="h-8 w-full appearance-none rounded-md border border-[#E5E7EB] bg-white pl-2.5 pr-7 text-[12px] text-[#111827] transition hover:border-[#D1D5DB] focus:border-[#2F5FD0] focus:ring-1 focus:ring-[#2F5FD0] focus:outline-none cursor-pointer truncate"
+                  className="h-9 w-full appearance-none rounded-lg border border-[#E5E7EB] bg-white pl-3 pr-8 text-[12px] text-[#111827] transition hover:border-[#D1D5DB] focus:border-[#2F5FD0] focus:ring-1 focus:ring-[#2F5FD0] focus:outline-none cursor-pointer truncate"
                 >
                   <option value="">All statuses</option>
                   {TICKET_STATUSES.map((status) => (
@@ -680,7 +720,7 @@ function AdminSupportTickets() {
                   value={categoryFilter}
                   onChange={(event) => changeFilter(setCategoryFilter, event.target.value)}
                   aria-label="Filter by category"
-                  className="h-8 w-full appearance-none rounded-md border border-[#E5E7EB] bg-white pl-2.5 pr-7 text-[12px] text-[#111827] transition hover:border-[#D1D5DB] focus:border-[#2F5FD0] focus:ring-1 focus:ring-[#2F5FD0] focus:outline-none cursor-pointer truncate"
+                  className="h-9 w-full appearance-none rounded-lg border border-[#E5E7EB] bg-white pl-3 pr-8 text-[12px] text-[#111827] transition hover:border-[#D1D5DB] focus:border-[#2F5FD0] focus:ring-1 focus:ring-[#2F5FD0] focus:outline-none cursor-pointer truncate"
                 >
                   <option value="">All categories</option>
                   {TICKET_CATEGORIES.map((category) => (
@@ -700,7 +740,7 @@ function AdminSupportTickets() {
                   value={priorityFilter}
                   onChange={(event) => changeFilter(setPriorityFilter, event.target.value)}
                   aria-label="Filter by priority"
-                  className="h-8 w-full appearance-none rounded-md border border-[#E5E7EB] bg-white pl-2.5 pr-7 text-[12px] text-[#111827] transition hover:border-[#D1D5DB] focus:border-[#2F5FD0] focus:ring-1 focus:ring-[#2F5FD0] focus:outline-none cursor-pointer truncate"
+                  className="h-9 w-full appearance-none rounded-lg border border-[#E5E7EB] bg-white pl-3 pr-8 text-[12px] text-[#111827] transition hover:border-[#D1D5DB] focus:border-[#2F5FD0] focus:ring-1 focus:ring-[#2F5FD0] focus:outline-none cursor-pointer truncate"
                 >
                   <option value="">All priorities</option>
                   {TICKET_PRIORITIES.map((priority) => (
@@ -721,7 +761,7 @@ function AdminSupportTickets() {
                 variant="outline"
                 size="sm"
                 onClick={clearFilters}
-                className="h-8 px-2.5 text-[12px] shrink-0"
+                className="h-9 px-3 text-[12px] shrink-0"
               >
                 Clear
               </Button>
@@ -730,7 +770,7 @@ function AdminSupportTickets() {
         </section>
 
         {/* Ticket queue */}
-        <section className="rounded-lg border border-[#E5E7EB] bg-white overflow-hidden shadow-none">
+        <section className="rounded-xl border border-[#E5E7EB] bg-white overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
           <div className="flex items-center justify-between gap-3 px-6 py-3.5 border-b border-[#E5E7EB]">
             <div className="flex items-center gap-3">
               <Tile icon={Ticket} tone="bg-[#E8EEFB] text-[#2F5FD0]" />
@@ -857,7 +897,7 @@ function AdminSupportTickets() {
                       }}
                       tabIndex={0}
                       role="button"
-                      className="min-h-[56px] h-[56px] hover:bg-[#F9FAFB] transition-colors cursor-pointer group focus:outline-none focus-visible:bg-[#F9FAFB] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#2F5FD0]"
+                      className="min-h-[60px] h-[60px] hover:bg-[#F8FAFC] transition-colors cursor-pointer group focus:outline-none focus-visible:bg-[#F8FAFC] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#2F5FD0]"
                     >
                       <td className="px-6 py-2 align-middle">
                         <div className="flex items-center gap-2 min-w-0">

@@ -1,5 +1,4 @@
 import { parseDateOnly, isWeekendDate } from "../../../utils/workingDays";
-import { MOCK_HOLIDAYS_2026 } from "../../../services/mock/leaveMockService";
 
 export interface LeaveTypeMeta {
   key: string;
@@ -73,7 +72,7 @@ export function calculateWorkingDaysWithHolidays(
   startDate: string,
   endDate: string,
   isHalfDay = false,
-  holidayDates = MOCK_HOLIDAYS_2026.map((h) => h.date)
+  holidayDates: string[] = []
 ): { days: number; excludedWeekends: number; excludedHolidays: number } {
   const start = parseDateOnly(startDate);
   const end = parseDateOnly(endDate);

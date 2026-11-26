@@ -188,8 +188,8 @@ export const EmployeeAttendanceRegularizationModal: React.FC<EmployeeAttendanceR
               className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 focus:outline-none focus:border-blue-600"
               required
             >
-              <option value="Missing Check-In">Missing Check-In</option>
-              <option value="Missing Check-Out">Missing Check-Out</option>
+              <option value="Missing Check-In">Missing Punch-In</option>
+              <option value="Missing Check-Out">Missing Punch-Out</option>
               <option value="Incorrect In/Out Timings">Incorrect In/Out Timings</option>
               <option value="Biometric / Technical Glitch">Biometric / Technical Glitch</option>
               <option value="On-Duty / Client Visit">On-Duty / Client Visit</option>
@@ -230,7 +230,7 @@ export const EmployeeAttendanceRegularizationModal: React.FC<EmployeeAttendanceR
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="block text-xs font-medium text-slate-700 mb-1">
-              Corrected Check-In Time
+              Corrected Punch-In Time
             </label>
             <Input
               type="time"
@@ -242,7 +242,7 @@ export const EmployeeAttendanceRegularizationModal: React.FC<EmployeeAttendanceR
 
           <div>
             <label className="block text-xs font-medium text-slate-700 mb-1">
-              Corrected Check-Out Time
+              Corrected Punch-Out Time
             </label>
             <Input
               type="time"

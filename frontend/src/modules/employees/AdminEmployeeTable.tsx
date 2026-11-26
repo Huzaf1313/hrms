@@ -261,9 +261,6 @@ export default function AdminEmployeeTable({
                       </button>
                       {openMenuId === employee.id && (
                         <div className="absolute right-0 top-9 z-30 w-36 rounded-lg border border-[#E5E7EB] bg-white py-1 shadow-lg">
-                          <button type="button" onClick={() => { setOpenMenuId(null); onView(employee); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] text-[#374151] hover:bg-[#F9FAFB]">
-                            <Eye className="h-3.5 w-3.5" /> View
-                          </button>
                           <button type="button" onClick={() => { setOpenMenuId(null); onEdit(employee); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] text-[#374151] hover:bg-[#F9FAFB]">
                             <Pencil className="h-3.5 w-3.5" /> Edit
                           </button>

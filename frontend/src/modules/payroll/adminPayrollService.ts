@@ -86,7 +86,7 @@ export interface AdminPayslipItem {
   deductions: {
     total: number;
     items?: SalaryBreakdownItem[];
-    [key: string]: any;
+    [key: string]: unknown;
   };
   net_salary: number;
   bank_details?: {

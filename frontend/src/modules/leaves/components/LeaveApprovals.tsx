@@ -132,7 +132,7 @@ export const LeaveApprovals: React.FC<LeaveApprovalsProps> = ({
   return (
     <div className={`rounded-lg border border-[#E5E7EB] bg-white overflow-hidden shadow-none ${className}`}>
       {/* Header Toolbar inside the card */}
-      <div className="flex items-center justify-between px-6 py-3.5 border-b border-[#E5E7EB]">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6 py-3.5 border-b border-[#E5E7EB]">
         <div className="flex items-center gap-2">
           <h3 className="text-[13px] font-semibold text-[#111827]">Pending Leave Approvals</h3>
           <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-[#FEF3C7] text-[#92400E] border border-[#FCD34D]">
@@ -153,6 +153,15 @@ export const LeaveApprovals: React.FC<LeaveApprovalsProps> = ({
       </div>
 
       {/* Main Table */}
+      {isLoading ? (
+        <div className="py-10 px-4 text-center text-xs text-[#6B7280]">
+          Loading pending leave requests...
+        </div>
+      ) : pendingRequests.length === 0 ? (
+        <div className="py-10 px-4 text-center text-xs text-[#6B7280]">
+          No pending leave applications requiring approval.
+        </div>
+      ) : (
       <div className="overflow-x-auto w-full">
         <table className="min-w-[960px] w-full border-collapse text-left text-[12px]">
           <thead className="bg-[#F9FAFB] border-b border-[#E5E7EB] text-[#4B5563] font-semibold text-[11px] uppercase tracking-wider">
@@ -186,20 +195,7 @@ export const LeaveApprovals: React.FC<LeaveApprovalsProps> = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-[#E5E7EB] bg-white text-[#111827]">
-            {isLoading ? (
-              <tr>
-                <td colSpan={6} className="py-8 text-center text-xs text-[#6B7280]">
-                  Loading pending leave requests...
-                </td>
-              </tr>
-            ) : pendingRequests.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="py-8 text-center text-xs text-[#6B7280]">
-                  No pending leave applications requiring approval.
-                </td>
-              </tr>
-            ) : (
-              pendingRequests.map((req) => {
+            {pendingRequests.map((req) => {
                 const meta = getLeaveTypeMeta(req.leave_type);
                 const overlaps = getOverlaps(req);
 
@@ -291,11 +287,11 @@ export const LeaveApprovals: React.FC<LeaveApprovalsProps> = ({
                     </td>
                   </tr>
                 );
-              })
-            )}
+              })}
           </tbody>
         </table>
       </div>
+      )}
 
       {/* Rejection Confirmation Modal (Comment is strictly required) */}
       <Dialog

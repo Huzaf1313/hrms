@@ -119,22 +119,43 @@ export default function Reports() {
   const [error, setError] = useState<string | null>(null);
   const [selectedYear, setSelectedYear] = useState<string>("all");
 
-  const fetchReports = async () => {
+  const loadAnalytics = async (yearValue: string) => {
+    const params = yearValue === "all" ? { months: 12 } : { year: parseInt(yearValue, 10) };
+    return adminPayrollService.getAnalytics(params);
+  };
+
+  const fetchReports = () => {
     setLoading(true);
     setError(null);
-    try {
-      const params = selectedYear === "all" ? { months: 12 } : { year: parseInt(selectedYear, 10) };
-      const response = await adminPayrollService.getAnalytics(params);
-      setData(response);
-    } catch (err: any) {
-      setError(err?.message || "Failed to load payroll reports");
-    } finally {
-      setLoading(false);
-    }
+    void loadAnalytics(selectedYear)
+      .then((response) => setData(response))
+      .catch((err: unknown) => {
+        setError(err instanceof Error ? err.message : "Failed to load payroll reports");
+      })
+      .finally(() => setLoading(false));
   };
 
   useEffect(() => {
-    fetchReports();
+    let active = true;
+    void loadAnalytics(selectedYear)
+      .then((response) => {
+        if (active) {
+          setData(response);
+          setError(null);
+        }
+      })
+      .catch((err: unknown) => {
+        if (active) {
+          setError(err instanceof Error ? err.message : "Failed to load payroll reports");
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, [selectedYear]);
 
   const timelineRows = (data?.timeline || [])

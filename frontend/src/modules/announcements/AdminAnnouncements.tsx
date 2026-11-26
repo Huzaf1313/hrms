@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
+import { PageHeading } from "../../components/ui/PageHeading";
 import {
   Megaphone,
   Plus,
@@ -1384,7 +1385,7 @@ export default function AdminAnnouncements({
                   Priority
                 </label>
 
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   {(["Normal", "Important", "Urgent"] as Priority[]).map(
                     (item) => (
                       <button
@@ -1928,20 +1929,14 @@ export default function AdminAnnouncements({
     <div className="flex w-full flex-col gap-5 pb-10">
       {/* Header ------------------------------------------------------------- */}
 
-      <div className="flex flex-col gap-3 border-b border-[#E5E7EB] pb-5 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-[20px] font-semibold leading-tight text-[#111827]">
-            Announcements
-          </h1>
-          <p className="mt-1 text-[13px] text-[#6B7280]">
-            Share important updates, policies and news with your team
-          </p>
-        </div>
-
-        <Button variant="primary" size="sm" onClick={handleCreateAnnouncement} leftIcon={<Plus className="h-4 w-4" />}>
-          Create Announcement
-        </Button>
-      </div>
+      <PageHeading
+        title="Share important updates, policies and news with your team"
+        actions={
+          <Button variant="primary" size="sm" onClick={handleCreateAnnouncement} leftIcon={<Plus className="h-4 w-4" />}>
+            Create Announcement
+          </Button>
+        }
+      />
 
       {error && (
         <ErrorState

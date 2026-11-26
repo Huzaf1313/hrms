@@ -438,7 +438,7 @@ function EmployeeDashboard() {
             👋
           </div>
           <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 font-manrope">
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
               {greeting}, {firstName}!
             </h1>
             <p className="mt-1 text-sm font-medium text-slate-500">
@@ -511,10 +511,10 @@ function EmployeeDashboard() {
           </div>
 
           <div className="mt-4">
-            <p className="text-2xl font-bold font-manrope text-slate-900">
+            <p className="text-2xl font-bold text-slate-900">
               {todayAttendance?.check_in ? "Checked In" : "Not Marked"}
             </p>
-            <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-slate-400 font-manrope">
+            <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
               Today's Attendance
             </p>
           </div>
@@ -540,10 +540,10 @@ function EmployeeDashboard() {
           </div>
 
           <div className="mt-4">
-            <p className="text-2xl font-bold font-manrope text-slate-900">
+            <p className="text-2xl font-bold text-slate-900">
               {loadingLeave ? "..." : `${totalLeaveBalance} Days`}
             </p>
-            <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-slate-400 font-manrope">
+            <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
               Available Leave Balance
             </p>
           </div>
@@ -569,10 +569,10 @@ function EmployeeDashboard() {
           </div>
 
           <div className="mt-4">
-            <p className="text-2xl font-bold font-manrope text-slate-900">
+            <p className="text-2xl font-bold text-slate-900">
               {pendingLeaveCount}
             </p>
-            <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-slate-400 font-manrope">
+            <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
               Pending Leave Requests
             </p>
           </div>
@@ -597,14 +597,14 @@ function EmployeeDashboard() {
           </div>
 
           <div className="mt-4">
-            <p className="text-2xl font-bold font-manrope text-slate-900">
+            <p className="text-2xl font-bold text-slate-900">
               {loadingPayroll
                 ? "..."
                 : latestPayroll
                   ? `₹${latestPayroll.net_salary.toLocaleString("en-IN")}`
                   : "No Payslip"}
             </p>
-            <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-slate-400 font-manrope">
+            <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
               Latest Net Salary
             </p>
           </div>
@@ -625,7 +625,7 @@ function EmployeeDashboard() {
             <div>
               <div className="flex items-center gap-2">
                 <CalendarCheck className="h-5 w-5 text-blue-600" />
-                <h2 className="text-base font-bold font-manrope text-slate-900">
+                <h2 className="text-base font-bold text-slate-900">
                   Attendance Overview
                 </h2>
               </div>
@@ -718,7 +718,7 @@ function EmployeeDashboard() {
           <div>
             <div className="flex items-center gap-2">
               <span className="text-blue-600 font-bold">⚡</span>
-              <h2 className="text-base font-bold font-manrope text-slate-900">
+              <h2 className="text-base font-bold text-slate-900">
                 Quick Actions
               </h2>
             </div>
@@ -800,7 +800,7 @@ function EmployeeDashboard() {
       <section className="rounded-3xl border border-slate-100 bg-white p-6 shadow-xs">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-base font-bold font-manrope text-slate-900">
+            <h2 className="text-base font-bold text-slate-900">
               My Leave Requests
             </h2>
             <p className="mt-1 text-xs text-slate-500">
@@ -833,7 +833,7 @@ function EmployeeDashboard() {
           ) : (
             <table className="w-full min-w-[600px] text-left text-sm">
               <thead>
-                <tr className="border-b border-slate-100 text-xs font-semibold uppercase tracking-wider text-slate-400 font-manrope">
+                <tr className="border-b border-slate-100 text-xs font-semibold uppercase tracking-wider text-slate-400">
                   <th className="pb-3">Date Range</th>
                   <th className="pb-3">Category</th>
                   <th className="pb-3">Duration</th>
