@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ElementType } from "react";
-import { useNavigate } from "react-router-dom";
 import {
-  ArrowLeft,
   Banknote,
   BriefcaseBusiness,
   Building2,
   CalendarDays,
   Camera,
+  Check,
   CheckCircle2,
   Clock3,
   CreditCard,
@@ -28,6 +27,8 @@ import {
   X,
 } from "lucide-react";
 import SecuritySessionsSection from "../auth/SecuritySessionsSection";
+import { Button } from "../../components/ui/Button";
+import { Tabs } from "../../components/ui/Tabs";
 
 import { employeeService } from "./employeeService";
 import { departmentService } from "../departments/departmentService";
@@ -63,22 +64,23 @@ function InfoItem({
   icon: Icon,
   label,
   value,
-  muted = false,
 }: InfoItemProps) {
+  const isMissing = !value;
+
   return (
-    <div className="group flex items-start gap-3 rounded-xl border border-slate-100 bg-slate-50/70 p-4 transition-all duration-200 hover:border-slate-200 hover:bg-white hover:shadow-sm">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-slate-500 shadow-sm ring-1 ring-slate-100 transition-colors group-hover:text-slate-700">
-        <Icon size={17} strokeWidth={1.8} />
+    <div className="flex items-start gap-3 rounded-lg border border-[#E5E7EB] bg-[#F9FAFB]/60 px-3.5 py-2.5 transition-colors hover:bg-[#F9FAFB]">
+      <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-[#6B7280] ring-1 ring-[#E5E7EB]">
+        <Icon size={15} strokeWidth={1.8} />
       </div>
 
       <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+        <p className="text-[11px] font-medium uppercase tracking-wider text-[#6B7280]">
           {label}
         </p>
 
         <p
-          className={`mt-1 break-words text-sm font-medium ${
-            muted ? "text-slate-400" : "text-slate-700"
+          className={`mt-0.5 break-words text-[13px] font-medium ${
+            isMissing ? "text-[#9CA3AF]" : "text-[#111827]"
           }`}
         >
           {value || "Not provided"}
@@ -98,42 +100,14 @@ function EmptyInformation({
   description: string;
 }) {
   return (
-    <div className="flex items-center gap-4 rounded-xl border border-dashed border-slate-200 bg-slate-50/60 px-5 py-5">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-slate-400 shadow-sm ring-1 ring-slate-100">
+    <div className="flex items-center gap-3.5 rounded-xl border border-dashed border-[#D1D5DB] bg-[#F9FAFB]/70 px-4 py-5">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-[#6B7280] ring-1 ring-[#E5E7EB]">
         <Icon size={18} />
       </div>
 
       <div>
-        <p className="text-sm font-semibold text-slate-600">{title}</p>
-        <p className="mt-0.5 text-xs text-slate-400">{description}</p>
-      </div>
-    </div>
-  );
-}
-
-function ProfileSummary({
-  label,
-  value,
-  icon: Icon,
-}: {
-  label: string;
-  value: string;
-  icon: ElementType;
-}) {
-  return (
-    <div className="flex items-center gap-3">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500">
-        <Icon size={18} strokeWidth={1.8} />
-      </div>
-
-      <div className="min-w-0">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-          {label}
-        </p>
-
-        <p className="mt-0.5 truncate text-sm font-semibold text-slate-700">
-          {value}
-        </p>
+        <p className="text-[13px] font-semibold text-[#374151]">{title}</p>
+        <p className="mt-0.5 text-[12px] text-[#6B7280]">{description}</p>
       </div>
     </div>
   );
@@ -149,8 +123,8 @@ function StatusRow({
   active?: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between gap-4 border-b border-slate-100 py-3 last:border-b-0">
-      <span className="text-sm text-slate-500">{label}</span>
+    <div className="flex items-center justify-between gap-4 border-b border-[#E5E7EB] py-3 last:border-b-0">
+      <span className="text-[13px] text-[#6B7280]">{label}</span>
 
       <div className="flex items-center gap-2">
         {active !== undefined && (
@@ -161,7 +135,7 @@ function StatusRow({
           />
         )}
 
-        <span className="text-right text-sm font-semibold text-slate-700">
+        <span className="text-right text-[13px] font-semibold text-[#111827]">
           {value}
         </span>
       </div>
@@ -211,8 +185,10 @@ function maskAccountNumber(accountNumber?: string) {
   return `•••• •••• ${accountNumber.slice(-4)}`;
 }
 
+type ProfileTabKey = "overview" | "employment" | "security";
+
 export default function EmployeeProfile() {
-  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<ProfileTabKey>("overview");
 
   const [user, setUser] = useState<UserResponse | null>(null);
   const [employee, setEmployee] = useState<Employee | null>(null);
@@ -276,6 +252,16 @@ export default function EmployeeProfile() {
   const [photoSuccess, setPhotoSuccess] = useState("");
   const [photoError, setPhotoError] = useState("");
   const [showDeletePhotoModal, setShowDeletePhotoModal] = useState(false);
+  const [showPhotoPreviewModal, setShowPhotoPreviewModal] = useState(false);
+
+  useEffect(() => {
+    if (!showPhotoPreviewModal) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setShowPhotoPreviewModal(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [showPhotoPreviewModal]);
 
   useEffect(() => {
     let isMounted = true;
@@ -387,8 +373,9 @@ export default function EmployeeProfile() {
           ? { ...current, avatar_url: response.avatar_url }
           : current,
       );
+      setProfilePhotoUrl(response.avatar_url);
 
-    setPhotoSuccess("Profile photo updated successfully.");
+      setPhotoSuccess("Profile photo updated successfully.");
       } catch (error) {
         console.error("Profile photo upload failed:", error);
         setPhotoError("Unable to update profile photo. Please try again.");
@@ -647,110 +634,114 @@ const handleChangePassword = async (
         ? false
         : user?.is_active ?? false;
 
+  const passwordRules = useMemo(() => {
+    return [
+      {
+        label: "At least 8 characters",
+        met: newPassword.length >= 8 && newPassword.length <= 128,
+      },
+      {
+        label: "Uppercase & lowercase letters",
+        met: /[A-Z]/.test(newPassword) && /[a-z]/.test(newPassword),
+      },
+      {
+        label: "At least one number",
+        met: /[0-9]/.test(newPassword),
+      },
+      {
+        label: "One special character",
+        met: /[^A-Za-z0-9]/.test(newPassword),
+      },
+      {
+        label: "Matches confirmation",
+        met: Boolean(confirmPassword) && newPassword === confirmPassword,
+      },
+    ];
+  }, [newPassword, confirmPassword]);
+
+  const missingHints = useMemo(() => {
+    const hints: string[] = [];
+    if (!employee?.emergency_contact?.name) hints.push("Emergency contact");
+    if (!employee?.bank_information?.bank_name) hints.push("Bank details (HR)");
+    if (!employee?.address) hints.push("Address");
+    return hints;
+  }, [employee]);
+
   if (isLoading) {
     return (
-      <div className="min-h-full bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
-        <div className="w-full space-y-6">
-          <div className="h-9 w-24 animate-pulse rounded-lg bg-slate-200" />
-
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="h-32 animate-pulse bg-slate-200" />
-
-            <div className="space-y-4 px-6 pb-8 pt-16 sm:px-8">
-              <div className="h-7 w-56 animate-pulse rounded bg-slate-200" />
-              <div className="h-4 w-72 animate-pulse rounded bg-slate-100" />
-
-              <div className="mt-6 flex gap-3">
-                <div className="h-10 w-28 animate-pulse rounded-xl bg-slate-100" />
-                <div className="h-10 w-28 animate-pulse rounded-xl bg-slate-100" />
-              </div>
-            </div>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {Array.from({ length: 4 }).map((_, index) => (
-              <div
-                key={index}
-                className="h-20 animate-pulse rounded-2xl bg-white shadow-sm"
-              />
-            ))}
-          </div>
-
-          <div className="grid gap-6 lg:grid-cols-3">
-            <div className="h-96 animate-pulse rounded-2xl bg-white shadow-sm lg:col-span-2" />
-            <div className="h-96 animate-pulse rounded-2xl bg-white shadow-sm" />
-          </div>
+      <div className="flex w-full flex-col gap-5 pb-10">
+        <div className="h-36 animate-pulse rounded-xl border border-[#E5E7EB] bg-white" />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div
+              key={index}
+              className="h-24 animate-pulse rounded-xl border border-[#E5E7EB] bg-white"
+            />
+          ))}
+        </div>
+        <div className="grid grid-cols-12 gap-5">
+          <div className="col-span-12 h-80 animate-pulse rounded-xl border border-[#E5E7EB] bg-white lg:col-span-7" />
+          <div className="col-span-12 h-80 animate-pulse rounded-xl border border-[#E5E7EB] bg-white lg:col-span-5" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-full bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
-      <div className="w-full space-y-6">
-        {/* Back */}
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="inline-flex items-center gap-2 rounded-lg px-1 py-1 text-sm font-medium text-slate-500 transition-colors hover:text-slate-800"
-        >
-          <ArrowLeft size={17} />
-          <span>Back</span>
-        </button>
-
-        {/* Error */}
-        {employeeLoadError && (
-          <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-            <div className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-amber-500" />
-            <div>
-              <p className="font-semibold">Profile information unavailable</p>
-              <p className="mt-0.5 text-amber-600">{employeeLoadError}</p>
-            </div>
+    <div className="flex w-full flex-col gap-5 pb-10">
+      {/* Error */}
+      {employeeLoadError && (
+        <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-amber-500" />
+          <div>
+            <p className="font-semibold">Profile information unavailable</p>
+            <p className="mt-0.5 text-xs text-amber-700">{employeeLoadError}</p>
           </div>
-        )}
+        </div>
+      )}
 
-        
-        {/* Profile Hero */}
-        <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
-          {/* Cover */}
-          <div className="relative h-32 overflow-hidden bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900">
-            <div className="absolute -right-12 -top-24 h-64 w-64 rounded-full bg-white/5" />
-
-            <div className="absolute -bottom-32 left-1/3 h-72 w-72 rounded-full bg-white/[0.03]" />
-
-            <div className="absolute inset-0 bg-[linear-gradient(120deg,transparent_0%,rgba(255,255,255,0.04)_50%,transparent_100%)]" />
-
-            <div className="absolute bottom-4 right-5 hidden items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-xs font-medium text-white/80 backdrop-blur-sm sm:flex">
-              <ShieldCheck size={13} />
-              Employee Profile
-            </div>
-          </div>
-
-          {/* Identity */}
-          <div className="relative px-6 pb-7 pt-16 sm:px-8 sm:pb-8 sm:pt-16">
-            {/* Avatar */}
-            <div className="absolute left-6 top-0 -translate-y-1/2 sm:left-8">
-              <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl border-4 border-white bg-slate-100 text-2xl font-bold text-slate-600 shadow-lg">
+      {/* Clean Profile Header Card */}
+      <section className="rounded-xl border border-[#E5E7EB] bg-white p-5 sm:p-6">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          {/* Left: Avatar & Identity */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+            <div className="relative shrink-0 self-start sm:self-auto">
+              <button
+                type="button"
+                onClick={() => {
+                  if (profilePhotoUrl) {
+                    setShowPhotoPreviewModal(true);
+                  } else {
+                    profilePhotoInputRef.current?.click();
+                  }
+                }}
+                title={profilePhotoUrl ? "View profile photo" : "Upload profile photo"}
+                aria-label={profilePhotoUrl ? "View profile photo" : "Upload profile photo"}
+                className="group relative flex h-20 w-20 cursor-pointer items-center justify-center overflow-hidden rounded-2xl border border-[#E5E7EB] bg-[#F3F4F6] text-xl font-bold text-[#4B5563] transition hover:border-[#2563EB]"
+              >
                 {profilePhotoUrl ? (
-                  <img
-                    src={profilePhotoUrl}
-                    alt={displayName}
-                    className="h-full w-full rounded-xl object-cover"
-                  />
+                  <>
+                    <img
+                      src={profilePhotoUrl}
+                      alt={displayName}
+                      className="h-full w-full object-cover transition duration-200 group-hover:scale-105"
+                    />
+                    <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/0 text-white opacity-0 transition group-hover:bg-black/30 group-hover:opacity-100">
+                      <Eye size={18} />
+                    </span>
+                  </>
                 ) : (
-                  initials || <UserRound size={34} />
+                  initials || <UserRound size={30} />
                 )}
-              </div>
-
-              {/* Employee Status Indicator */}
+              </button>
               <span
-                className={`absolute bottom-1 right-1 h-4 w-4 rounded-full border-[3px] border-white ${
+                title={isActive ? "Active" : "Inactive"}
+                className={`absolute -bottom-1 -right-1 h-4 w-4 rounded-full border-2 border-white ${
                   isActive ? "bg-emerald-500" : "bg-slate-400"
                 }`}
               />
             </div>
 
-            {/* Hidden File Input */}
             <input
               ref={profilePhotoInputRef}
               type="file"
@@ -759,256 +750,309 @@ const handleChangePassword = async (
               onChange={handleProfilePhotoChange}
             />
 
-            <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-                    {displayName}
-                  </h1>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-xl font-bold tracking-tight text-[#111827]">
+                  {displayName}
+                </h1>
 
-                  {isActive && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-100">
-                      <CheckCircle2 size={12} />
-                      Active
-                    </span>
-                  )}
-
-                  {!isActive && employee && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600">
+                {isActive ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700">
+                    <CheckCircle2 size={12} />
+                    Active
+                  </span>
+                ) : (
+                  employee && (
+                    <span className="inline-flex items-center rounded-full bg-[#F3F4F6] px-2.5 py-0.5 text-[11px] font-semibold text-[#4B5563]">
                       {formatStatus(employee.status)}
                     </span>
-                  )}
-                </div>
-
-                <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-500">
-                  <span className="inline-flex items-center gap-1.5">
-                    <BriefcaseBusiness size={15} />
-                    {employee?.designation || roleLabel}
-                  </span>
-
-                  {employee?.employee_id && (
-                    <span className="inline-flex items-center gap-1.5">
-                      <ShieldCheck size={15} />
-                      {employee.employee_id}
-                    </span>
-                  )}
-                </div>
+                  )
+                )}
               </div>
 
-              {/* Profile Actions & Completion */}
-              <div className="flex shrink-0 flex-col gap-3">
-                {/* Profile Photo Actions */}
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
+              <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-[#6B7280]">
+                <span className="inline-flex items-center gap-1.5">
+                  <BriefcaseBusiness size={14} className="text-[#9CA3AF]" />
+                  {employee?.designation || roleLabel}
+                </span>
+
+                {employee?.employee_id && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <ShieldCheck size={14} className="text-[#9CA3AF]" />
+                    {employee.employee_id}
+                  </span>
+                )}
+
+                {employee?.work_location && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <MapPin size={14} className="text-[#9CA3AF]" />
+                    {employee.work_location}
+                  </span>
+                )}
+              </div>
+
+              {/* Photo Actions */}
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => profilePhotoInputRef.current?.click()}
+                  disabled={isUploadingPhoto}
+                  leftIcon={<Camera size={14} />}
+                >
+                  {isUploadingPhoto
+                    ? "Uploading..."
+                    : profilePhotoUrl
+                      ? "Change Photo"
+                      : "Upload Photo"}
+                </Button>
+
+                {profilePhotoUrl && (
+                  <Button
                     type="button"
-                    onClick={() => profilePhotoInputRef.current?.click()}
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowDeletePhotoModal(true)}
                     disabled={isUploadingPhoto}
-                    title="Upload Profile Photo"
-                    aria-label="Upload Profile Photo"
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-slate-700 shadow-sm transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60"
+                    leftIcon={<Trash2 size={14} />}
+                    className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
                   >
-                    {isUploadingPhoto ? (
-                      <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-400/40 border-t-slate-700" />
-                    ) : (
-                      <Camera size={16} />
-                    )}
-                  </button>
+                    Remove
+                  </Button>
+                )}
 
-                  {profilePhotoUrl && (
-                    <button
-                      type="button"
-                      onClick={() => setShowDeletePhotoModal(true)}
-                      disabled={isUploadingPhoto}
-                      title="Delete Profile Photo"
-                      aria-label="Delete Profile Photo"
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-200 bg-white text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  )}
-                </div>
-
-                {/* Profile Completion */}
-                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-                    Profile completion
-                  </p>
-
-                  <div className="mt-2 flex items-center gap-3">
-                    <div className="h-2 w-28 overflow-hidden rounded-full bg-slate-200">
-                      <div
-                        className="h-full rounded-full bg-slate-700 transition-all duration-500"
-                        style={{ width: `${profileCompletion}%` }}
-                      />
-                    </div>
-
-                    <span className="text-sm font-bold text-slate-700">
-                      {profileCompletion}%
-                    </span>
-                  </div>
-                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setActiveTab("security")}
+                  leftIcon={<KeyRound size={14} />}
+                >
+                  Security &amp; Password
+                </Button>
               </div>
             </div>
+          </div>
 
+          {/* Right: Profile Completion Widget */}
+          <div className="w-full rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] p-4 lg:w-72 lg:shrink-0">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[#6B7280]">
+                Profile Completion
+              </p>
+              <span className="text-[14px] font-bold text-[#111827]">
+                {profileCompletion}%
+              </span>
+            </div>
+
+            <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-[#E5E7EB]">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${
+                  profileCompletion >= 90
+                    ? "bg-emerald-500"
+                    : "bg-[#2563EB]"
+                }`}
+                style={{ width: `${profileCompletion}%` }}
+              />
+            </div>
+
+            <p className="mt-2 text-[11px] text-[#6B7280]">
+              {profileCompletion === 100
+                ? "Your profile is complete."
+                : missingHints.length > 0
+                  ? `Pending: ${missingHints.join(", ")}`
+                  : "Keep your profile details up to date."}
+            </p>
+          </div>
+        </div>
+
+        {(photoSuccess || photoError) && (
+          <div className="mt-3 border-t border-[#E5E7EB] pt-3">
             {photoSuccess && (
-              <p className="mt-3 text-sm font-medium text-emerald-600">
+              <p className="text-xs font-medium text-emerald-600">
                 {photoSuccess}
               </p>
             )}
-
             {photoError && (
-              <p className="mt-3 text-sm font-medium text-red-600">
-                {photoError}
-              </p>
+              <p className="text-xs font-medium text-rose-600">{photoError}</p>
             )}
           </div>
-        </section>
+        )}
+      </section>
 
-        {/* Summary */}
-        <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
-            <ProfileSummary
-              icon={Mail}
-              label="Email"
-              value={employee?.email || user?.email || "Not provided"}
-            />
-          </div>
+      {/* 4 Quick Info KPI Cards */}
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {[
+          {
+            label: "Email",
+            value: employee?.email || user?.email || "Not provided",
+            icon: Mail,
+            tone: "bg-blue-50 text-[#2563EB]",
+          },
+          {
+            label: "Phone",
+            value: employee?.phone || "Not provided",
+            icon: Phone,
+            tone: "bg-emerald-50 text-emerald-600",
+          },
+          {
+            label: "Department",
+            value: departmentName,
+            icon: Building2,
+            tone: "bg-purple-50 text-purple-600",
+          },
+          {
+            label: "Joining Date",
+            value: formatDate(employee?.joining_date),
+            icon: CalendarDays,
+            tone: "bg-amber-50 text-amber-600",
+          },
+        ].map((card) => {
+          const CardIcon = card.icon;
+          return (
+            <div
+              key={card.label}
+              className="flex items-start justify-between gap-3 rounded-xl border border-[#E5E7EB] bg-white p-4"
+            >
+              <div className="min-w-0">
+                <p className="text-[12px] font-medium text-[#6B7280]">
+                  {card.label}
+                </p>
+                <p className="mt-1.5 truncate text-[14px] font-semibold text-[#111827]">
+                  {card.value}
+                </p>
+              </div>
+              <span
+                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${card.tone}`}
+              >
+                <CardIcon size={16} />
+              </span>
+            </div>
+          );
+        })}
+      </section>
 
-          <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
-            <ProfileSummary
-              icon={Phone}
-              label="Phone"
-              value={employee?.phone || "Not provided"}
-            />
-          </div>
+      {/* Section Navigation Tabs */}
+      <div className="rounded-xl border border-[#E5E7EB] bg-white px-5 pt-2">
+        <Tabs
+          variant="underline"
+          activeTab={activeTab}
+          onChange={(tab) => setActiveTab(tab as ProfileTabKey)}
+          tabs={[
+            { id: "overview", label: "Overview" },
+            { id: "employment", label: "Employment & Bank" },
+            { id: "security", label: "Security & Activity" },
+          ]}
+        />
+      </div>
 
-          <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
-            <ProfileSummary
-              icon={Building2}
-              label="Department"
-              value={departmentName}
-            />
-          </div>
-
-          <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
-            <ProfileSummary
-              icon={CalendarDays}
-              label="Joined"
-              value={formatDate(employee?.joining_date)}
-            />
-          </div>
-        </section>
-
-        {/* Main Content */}
-        <div className="grid gap-6 lg:grid-cols-3">
+      {/* TAB 1: OVERVIEW (Personal Info + Emergency Contact) */}
+      {activeTab === "overview" && (
+        <div className="grid grid-cols-12 items-stretch gap-5">
           {/* Personal Information */}
-          <section className="rounded-2xl border border-gray-100 bg-white shadow-sm lg:col-span-2">
-            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
+          <section className="col-span-12 flex flex-col rounded-xl border border-[#E5E7EB] bg-white lg:col-span-7">
+            <div className="flex items-center justify-between border-b border-[#E5E7EB] px-5 py-4">
               <div>
-                <h2 className="text-base font-bold text-slate-900">
+                <h2 className="text-[14px] font-semibold text-[#111827]">
                   Personal Information
                 </h2>
-
-            <p className="mt-1 text-xs text-slate-400">
-              Your personal information and contact details
-            </p>
-          </div>
-
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 text-slate-500">
-            <UserRound size={18} />
-          </div>
-        </div>
-
-        <div className="space-y-6 p-6">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <InfoItem
-              icon={User}
-              label="First Name"
-              value={employee?.first_name}
-            />
-
-            <InfoItem
-              icon={User}
-              label="Last Name"
-              value={employee?.last_name}
-            />
-
-            <InfoItem
-              icon={CalendarDays}
-              label="Date of Birth"
-              value={formatDate(employee?.date_of_birth)}
-            />
-
-            <InfoItem
-              icon={Users}
-              label="Gender"
-              value={employee?.gender}
-            />
-
-            <InfoItem
-              icon={Mail}
-              label="Email"
-              value={employee?.email || user?.email}
-            />
-
-            <InfoItem
-              icon={Phone}
-              label="Contact Number"
-              value={employee?.phone}
-            />
-
-            <div className="sm:col-span-2">
-              <InfoItem
-                icon={MapPin}
-                label="Address"
-                value={employee?.address}
-              />
-            </div>
-          </div>
-        </div>
-
-          </section>
-
-          {/* Emergency Contact */}
-          <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
-              <div>
-                <h2 className="text-base font-bold text-slate-900">
-                  Emergency Contact
-                </h2>
-
-                <p className="mt-1 text-xs text-slate-400">
-                  Someone to contact in case of an emergency
+                <p className="mt-0.5 text-[12px] text-[#6B7280]">
+                  Your personal details and contact information
                 </p>
               </div>
 
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 text-slate-500">
-                <Phone size={18} />
-              </div>
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#F3F4F6] text-[#6B7280]">
+                <UserRound size={16} />
+              </span>
             </div>
 
-            <div className="p-6">
+            <div className="grid flex-1 gap-3 p-5 sm:grid-cols-2">
+              <InfoItem
+                icon={User}
+                label="First Name"
+                value={employee?.first_name}
+              />
+              <InfoItem
+                icon={User}
+                label="Last Name"
+                value={employee?.last_name}
+              />
+              <InfoItem
+                icon={CalendarDays}
+                label="Date of Birth"
+                value={formatDate(employee?.date_of_birth)}
+              />
+              <InfoItem
+                icon={Users}
+                label="Gender"
+                value={employee?.gender}
+              />
+              <InfoItem
+                icon={Mail}
+                label="Email"
+                value={employee?.email || user?.email}
+              />
+              <InfoItem
+                icon={Phone}
+                label="Contact Number"
+                value={employee?.phone}
+              />
+              <div className="sm:col-span-2">
+                <InfoItem
+                  icon={MapPin}
+                  label="Address"
+                  value={employee?.address}
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* Emergency Contact */}
+          <section className="col-span-12 flex flex-col rounded-xl border border-[#E5E7EB] bg-white lg:col-span-5">
+            <div className="flex items-center justify-between border-b border-[#E5E7EB] px-5 py-4">
+              <div>
+                <h2 className="text-[14px] font-semibold text-[#111827]">
+                  Emergency Contact
+                </h2>
+                <p className="mt-0.5 text-[12px] text-[#6B7280]">
+                  Someone to reach in case of an emergency
+                </p>
+              </div>
+
+              {!isEditingEmergencyContact && employee?.emergency_contact && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleEditEmergencyContact}
+                  leftIcon={<Edit3 size={13} />}
+                >
+                  Edit
+                </Button>
+              )}
+            </div>
+
+            <div className="flex-1 p-5">
               {emergencyContactSuccess && (
-                <div className="mb-4 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-medium text-emerald-800">
-                  <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+                <div className="mb-4 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-xs font-medium text-emerald-800">
+                  <CheckCircle2 size={15} className="shrink-0 text-emerald-600" />
                   <span>{emergencyContactSuccess}</span>
                 </div>
               )}
 
               {emergencyContactError && (
-                <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-medium text-rose-800">
+                <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-xs font-medium text-rose-800">
                   {emergencyContactError}
                 </div>
               )}
 
               {isEditingEmergencyContact ? (
-                /* Edit Form */
-                <div className="space-y-4">
+                <div className="space-y-3.5">
                   <div>
-                    <label className="mb-1.5 block text-xs font-semibold text-slate-600">
-                      Name <span className="text-red-500">*</span>
+                    <label className="mb-1 block text-xs font-medium text-[#374151]">
+                      Name <span className="text-rose-500">*</span>
                     </label>
-
                     <input
                       type="text"
                       value={emergencyContactForm.name}
@@ -1019,53 +1063,52 @@ const handleChangePassword = async (
                         }))
                       }
                       placeholder="Enter emergency contact name"
-                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+                      className="h-9 w-full rounded-lg border border-[#D1D5DB] bg-white px-3 text-[13px] text-[#111827] outline-none transition focus:border-[#2563EB] focus:ring-[3px] focus:ring-[#DBEAFE]"
                     />
                   </div>
 
-                  <div>
-                    <label className="mb-1.5 block text-xs font-semibold text-slate-600">
-                      Relationship <span className="text-red-500">*</span>
-                    </label>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-[#374151]">
+                        Relationship <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={emergencyContactForm.relationship}
+                        onChange={(e) =>
+                          setEmergencyContactForm((prev) => ({
+                            ...prev,
+                            relationship: e.target.value,
+                          }))
+                        }
+                        placeholder="e.g. Father, Spouse"
+                        className="h-9 w-full rounded-lg border border-[#D1D5DB] bg-white px-3 text-[13px] text-[#111827] outline-none transition focus:border-[#2563EB] focus:ring-[3px] focus:ring-[#DBEAFE]"
+                      />
+                    </div>
 
-                    <input
-                      type="text"
-                      value={emergencyContactForm.relationship}
-                      onChange={(e) =>
-                        setEmergencyContactForm((prev) => ({
-                          ...prev,
-                          relationship: e.target.value,
-                        }))
-                      }
-                      placeholder="e.g. Father, Mother, Spouse"
-                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
-                    />
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-[#374151]">
+                        Phone <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="tel"
+                        value={emergencyContactForm.phone}
+                        onChange={(e) =>
+                          setEmergencyContactForm((prev) => ({
+                            ...prev,
+                            phone: e.target.value,
+                          }))
+                        }
+                        placeholder="Phone number"
+                        className="h-9 w-full rounded-lg border border-[#D1D5DB] bg-white px-3 text-[13px] text-[#111827] outline-none transition focus:border-[#2563EB] focus:ring-[3px] focus:ring-[#DBEAFE]"
+                      />
+                    </div>
                   </div>
 
                   <div>
-                    <label className="mb-1.5 block text-xs font-semibold text-slate-600">
-                      Phone <span className="text-red-500">*</span>
-                    </label>
-
-                    <input
-                      type="tel"
-                      value={emergencyContactForm.phone}
-                      onChange={(e) =>
-                        setEmergencyContactForm((prev) => ({
-                          ...prev,
-                          phone: e.target.value,
-                        }))
-                      }
-                      placeholder="Enter phone number"
-                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+                    <label className="mb-1 block text-xs font-medium text-[#374151]">
                       Alternate Phone
                     </label>
-
                     <input
                       type="tel"
                       value={emergencyContactForm.alternate_phone}
@@ -1075,16 +1118,15 @@ const handleChangePassword = async (
                           alternate_phone: e.target.value,
                         }))
                       }
-                      placeholder="Enter alternate phone number"
-                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+                      placeholder="Optional alternate number"
+                      className="h-9 w-full rounded-lg border border-[#D1D5DB] bg-white px-3 text-[13px] text-[#111827] outline-none transition focus:border-[#2563EB] focus:ring-[3px] focus:ring-[#DBEAFE]"
                     />
                   </div>
 
                   <div>
-                    <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+                    <label className="mb-1 block text-xs font-medium text-[#374151]">
                       Address
                     </label>
-
                     <textarea
                       value={emergencyContactForm.address}
                       onChange={(e) =>
@@ -1093,25 +1135,28 @@ const handleChangePassword = async (
                           address: e.target.value,
                         }))
                       }
-                      placeholder="Enter emergency contact address"
-                      rows={3}
-                      className="w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+                      placeholder="Emergency contact address"
+                      rows={2}
+                      className="w-full resize-none rounded-lg border border-[#D1D5DB] bg-white px-3 py-2 text-[13px] text-[#111827] outline-none transition focus:border-[#2563EB] focus:ring-[3px] focus:ring-[#DBEAFE]"
                     />
                   </div>
 
-                  <div className="flex items-center justify-end gap-2 pt-2">
-                    <button
+                  <div className="flex items-center justify-end gap-2 pt-1">
+                    <Button
                       type="button"
+                      variant="outline"
+                      size="sm"
                       onClick={() => setIsEditingEmergencyContact(false)}
                       disabled={isSavingEmergencyContact}
-                      className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      leftIcon={<X size={14} />}
                     >
-                      <X size={15} />
                       Cancel
-                    </button>
+                    </Button>
 
-                    <button
+                    <Button
                       type="button"
+                      variant="primary"
+                      size="sm"
                       onClick={handleSaveEmergencyContact}
                       disabled={
                         isSavingEmergencyContact ||
@@ -1119,51 +1164,29 @@ const handleChangePassword = async (
                         !emergencyContactForm.relationship.trim() ||
                         !emergencyContactForm.phone.trim()
                       }
-                      className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                      leftIcon={<Save size={14} />}
                     >
-                      <Save size={15} />
-                      {isSavingEmergencyContact ? "Saving..." : "Save"}
-                    </button>
+                      {isSavingEmergencyContact ? "Saving..." : "Save Contact"}
+                    </Button>
                   </div>
                 </div>
               ) : employee?.emergency_contact ? (
-                /* Existing Contact */
                 <div className="space-y-3">
-                  <div className="mb-4 flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-medium text-slate-400">
-                        Current emergency contact
-                      </p>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={handleEditEmergencyContact}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
-                    >
-                      <Edit3 size={14} />
-                      Edit
-                    </button>
-                  </div>
-
                   <InfoItem
                     icon={User}
                     label="Name"
                     value={employee.emergency_contact.name}
                   />
-
                   <InfoItem
                     icon={Users}
                     label="Relationship"
                     value={employee.emergency_contact.relationship}
                   />
-
                   <InfoItem
                     icon={Phone}
                     label="Phone"
                     value={employee.emergency_contact.phone}
                   />
-
                   {employee.emergency_contact.alternate_phone && (
                     <InfoItem
                       icon={Phone}
@@ -1171,7 +1194,6 @@ const handleChangePassword = async (
                       value={employee.emergency_contact.alternate_phone}
                     />
                   )}
-
                   {employee.emergency_contact.address && (
                     <InfoItem
                       icon={MapPin}
@@ -1181,73 +1203,129 @@ const handleChangePassword = async (
                   )}
                 </div>
               ) : (
-                /* No Contact */
-                <div className="flex flex-col items-center py-5 text-center">
-                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-50 text-slate-400">
-                    <Phone size={21} />
+                <div className="flex h-full flex-col items-center justify-center py-6 text-center">
+                  <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-[#F3F4F6] text-[#6B7280]">
+                    <Phone size={20} />
                   </div>
-
-                  <h3 className="text-sm font-bold text-slate-800">
+                  <h3 className="text-[13px] font-semibold text-[#111827]">
                     No emergency contact
                   </h3>
-
-                  <p className="mt-1 max-w-xs text-xs leading-5 text-slate-400">
-                    Add someone we can contact in case of an emergency.
+                  <p className="mt-1 max-w-xs text-[12px] text-[#6B7280]">
+                    Add someone we can reach in case of an emergency.
                   </p>
-
-                  <button
+                  <Button
                     type="button"
+                    variant="primary"
+                    size="sm"
                     onClick={handleEditEmergencyContact}
-                    className="mt-4 inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+                    leftIcon={<Plus size={14} />}
+                    className="mt-4"
                   >
-                    <Plus size={15} />
                     Add Emergency Contact
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>
           </section>
-          </div>
+        </div>
+      )}
+
+      {/* TAB 2: EMPLOYMENT & BANK */}
+      {activeTab === "employment" && (
+        <div className="space-y-5">
+          {/* Employment Information */}
+          <section className="rounded-xl border border-[#E5E7EB] bg-white">
+            <div className="flex items-center justify-between border-b border-[#E5E7EB] px-5 py-4">
+              <div>
+                <h2 className="text-[14px] font-semibold text-[#111827]">
+                  Employment Information
+                </h2>
+                <p className="mt-0.5 text-[12px] text-[#6B7280]">
+                  Your current role, reporting structure, and shift details
+                </p>
+              </div>
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#F3F4F6] text-[#6B7280]">
+                <BriefcaseBusiness size={16} />
+              </span>
+            </div>
+
+            <div className="grid gap-3 p-5 sm:grid-cols-2 lg:grid-cols-3">
+              <InfoItem
+                icon={ShieldCheck}
+                label="Employee ID"
+                value={employee?.employee_id}
+              />
+              <InfoItem
+                icon={BriefcaseBusiness}
+                label="Designation"
+                value={employee?.designation}
+              />
+              <InfoItem
+                icon={Building2}
+                label="Department"
+                value={departmentName}
+              />
+              <InfoItem
+                icon={CalendarDays}
+                label="Joining Date"
+                value={formatDate(employee?.joining_date)}
+              />
+              <InfoItem
+                icon={Clock3}
+                label="Employment Type"
+                value={formatEmploymentType(employee?.employment_type)}
+              />
+              <InfoItem
+                icon={MapPin}
+                label="Work Location"
+                value={employee?.work_location}
+              />
+              <InfoItem
+                icon={User}
+                label="Reporting Manager"
+                value={employee?.reporting_manager}
+              />
+              <InfoItem
+                icon={Banknote}
+                label="Salary Structure"
+                value={employee?.salary_structure}
+              />
+              <InfoItem icon={Clock3} label="Shift" value={shiftName} />
+            </div>
+          </section>
 
           {/* Account Overview + Bank Information */}
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            {/* Account Overview */}
-            <section className="rounded-2xl border border-gray-100 bg-white shadow-sm">
-              <div className="border-b border-slate-100 px-6 py-5">
-                <h2 className="text-base font-bold text-slate-900">
+          <div className="grid grid-cols-12 items-stretch gap-5">
+            <section className="col-span-12 flex flex-col rounded-xl border border-[#E5E7EB] bg-white lg:col-span-5">
+              <div className="border-b border-[#E5E7EB] px-5 py-4">
+                <h2 className="text-[14px] font-semibold text-[#111827]">
                   Account Overview
                 </h2>
-
-                <p className="mt-1 text-xs text-slate-400">
-                  Current account status
+                <p className="mt-0.5 text-[12px] text-[#6B7280]">
+                  Current portal account status
                 </p>
               </div>
 
-              <div className="px-6 py-3">
+              <div className="flex-1 px-5 py-2">
                 <StatusRow
                   label="Account status"
                   value={isActive ? "Active" : "Inactive"}
                   active={isActive}
                 />
-
                 <StatusRow
                   label="Security status"
                   value={user?.is_locked ? "Locked" : "Secure"}
                   active={!user?.is_locked}
                 />
-
                 <StatusRow label="Account role" value={roleLabel} />
-
                 <StatusRow
                   label="Member since"
                   value={formatDate(user?.created_at)}
                 />
-
                 <StatusRow
                   label="Employment"
                   value={formatEmploymentType(employee?.employment_type)}
                 />
-
                 <StatusRow
                   label="Status"
                   value={formatStatus(employee?.status)}
@@ -1256,25 +1334,22 @@ const handleChangePassword = async (
               </div>
             </section>
 
-            {/* Bank Information */}
-            <section className="rounded-2xl border border-gray-100 bg-white shadow-sm">
-              <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
+            <section className="col-span-12 flex flex-col rounded-xl border border-[#E5E7EB] bg-white lg:col-span-7">
+              <div className="flex items-center justify-between border-b border-[#E5E7EB] px-5 py-4">
                 <div>
-                  <h2 className="text-base font-bold text-slate-900">
+                  <h2 className="text-[14px] font-semibold text-[#111827]">
                     Bank Information
                   </h2>
-
-                  <p className="mt-1 text-xs text-slate-400">
+                  <p className="mt-0.5 text-[12px] text-[#6B7280]">
                     Your salary and banking details
                   </p>
                 </div>
-
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 text-slate-500">
-                  <CreditCard size={18} />
-                </div>
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#F3F4F6] text-[#6B7280]">
+                  <CreditCard size={16} />
+                </span>
               </div>
 
-              <div className="p-6">
+              <div className="flex-1 p-5">
                 {employee?.bank_information ? (
                   <div className="grid gap-3 sm:grid-cols-2">
                     <InfoItem
@@ -1282,13 +1357,11 @@ const handleChangePassword = async (
                       label="Bank Name"
                       value={employee.bank_information.bank_name}
                     />
-
                     <InfoItem
                       icon={User}
                       label="Account Holder"
                       value={employee.bank_information.account_holder_name}
                     />
-
                     <InfoItem
                       icon={CreditCard}
                       label="Account Number"
@@ -1296,13 +1369,11 @@ const handleChangePassword = async (
                         employee.bank_information.account_number,
                       )}
                     />
-
                     <InfoItem
                       icon={ShieldCheck}
                       label="IFSC Code"
                       value={employee.bank_information.ifsc_code}
                     />
-
                     {employee.bank_information.branch && (
                       <InfoItem
                         icon={MapPin}
@@ -1315,200 +1386,165 @@ const handleChangePassword = async (
                   <EmptyInformation
                     icon={CreditCard}
                     title="Bank information not added"
-                    description="Your bank information has not been provided by HR."
+                    description="Your bank information has not been provided by HR yet."
                   />
                 )}
               </div>
             </section>
           </div>
-
-        {/* Employment Information */}
-        <section className="rounded-2xl border border-gray-100 bg-white shadow-sm">
-          <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
-            <div>
-              <h2 className="text-base font-bold text-slate-900">
-                Employment Information
-              </h2>
-
-              <p className="mt-1 text-xs text-slate-400">
-                Your current employment details
-              </p>
-            </div>
-
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 text-slate-500">
-              <BriefcaseBusiness size={18} />
-            </div>
-          </div>
-
-          <div className="grid gap-3 p-6 sm:grid-cols-2 lg:grid-cols-3">
-            <InfoItem
-              icon={ShieldCheck}
-              label="Employee ID"
-              value={employee?.employee_id}
-            />
-
-            <InfoItem
-              icon={BriefcaseBusiness}
-              label="Designation"
-              value={employee?.designation}
-            />
-
-            <InfoItem
-              icon={Building2}
-              label="Department"
-              value={departmentName}
-            />
-
-            <InfoItem
-              icon={CalendarDays}
-              label="Joining Date"
-              value={formatDate(employee?.joining_date)}
-            />
-
-            <InfoItem
-              icon={Clock3}
-              label="Employment Type"
-              value={formatEmploymentType(employee?.employment_type)}
-            />
-
-            <InfoItem
-              icon={MapPin}
-              label="Work Location"
-              value={employee?.work_location}
-            />
-
-            <InfoItem
-              icon={User}
-              label="Reporting Manager"
-              value={employee?.reporting_manager}
-            />
-
-            <InfoItem
-              icon={Banknote}
-              label="Salary Structure"
-              value={employee?.salary_structure}
-            />
-
-            <InfoItem icon={Clock3} label="Shift" value={shiftName} />
-          </div>
-        </section>
-
-      <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-        <div className="mb-6 flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
-            <KeyRound size={21} />
-          </div>
-
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">
-              Change Password
-            </h2>
-            <p className="mt-1 text-sm text-gray-500">
-              Update your account password securely.
-            </p>
-          </div>
         </div>
+      )}
 
-        <form onSubmit={handleChangePassword} className="space-y-5">
-          {[
-            {
-              label: "Current Password",
-              value: currentPassword,
-              setValue: setCurrentPassword,
-              visible: showCurrentPassword,
-              setVisible: setShowCurrentPassword,
-              placeholder: "Enter current password",
-            },
-            {
-              label: "New Password",
-              value: newPassword,
-              setValue: setNewPassword,
-              visible: showNewPassword,
-              setVisible: setShowNewPassword,
-              placeholder: "Enter new password",
-            },
-            {
-              label: "Confirm New Password",
-              value: confirmPassword,
-              setValue: setConfirmPassword,
-              visible: showConfirmPassword,
-              setVisible: setShowConfirmPassword,
-              placeholder: "Confirm new password",
-            },
-          ].map((field) => (
-            <div key={field.label}>
-              <label className="mb-2 block text-sm font-medium text-gray-700">
-                {field.label}
-              </label>
+      {/* TAB 3: SECURITY & ACTIVITY */}
+      {activeTab === "security" && (
+        <div className="grid grid-cols-12 items-start gap-5">
+          {/* Change Password */}
+          <section className="col-span-12 rounded-xl border border-[#E5E7EB] bg-white p-5 lg:col-span-5">
+            <div className="mb-5 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-[#2563EB]">
+                <KeyRound size={18} />
+              </div>
 
-              <div className="relative">
-                <input
-                  type={field.visible ? "text" : "password"}
-                  value={field.value}
-                  onChange={(event) => {
-                    field.setValue(event.target.value);
-                    setPasswordError("");
-                    setPasswordSuccess("");
-                  }}
-                  placeholder={field.placeholder}
-                  autoComplete="current-password"
-                  maxLength={128}
-                  required
-                  disabled={isChangingPassword}
-                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 pr-12 text-sm text-gray-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:bg-gray-50"
-                />
-
-                <button
-                  type="button"
-                  onClick={() => field.setVisible(!field.visible)}
-                  aria-label={field.visible ? "Hide password" : "Show password"}
-                  className="absolute inset-y-0 right-0 flex items-center px-4 text-gray-500 hover:text-gray-700"
-                >
-                  {field.visible ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
+              <div>
+                <h2 className="text-[14px] font-semibold text-[#111827]">
+                  Change Password
+                </h2>
+                <p className="mt-0.5 text-[12px] text-[#6B7280]">
+                  Changing your password signs out other active devices.
+                </p>
               </div>
             </div>
-          ))}
 
-          <p className="text-xs leading-5 text-gray-500">
-            Use at least 8 characters, including uppercase and lowercase letters,
-            a number, and a special character.
-          </p>
+            <form onSubmit={handleChangePassword} className="space-y-4">
+              {[
+                {
+                  label: "Current Password",
+                  value: currentPassword,
+                  setValue: setCurrentPassword,
+                  visible: showCurrentPassword,
+                  setVisible: setShowCurrentPassword,
+                  placeholder: "Enter current password",
+                  autoComplete: "current-password",
+                },
+                {
+                  label: "New Password",
+                  value: newPassword,
+                  setValue: setNewPassword,
+                  visible: showNewPassword,
+                  setVisible: setShowNewPassword,
+                  placeholder: "Enter new password",
+                  autoComplete: "new-password",
+                },
+                {
+                  label: "Confirm New Password",
+                  value: confirmPassword,
+                  setValue: setConfirmPassword,
+                  visible: showConfirmPassword,
+                  setVisible: setShowConfirmPassword,
+                  placeholder: "Confirm new password",
+                  autoComplete: "new-password",
+                },
+              ].map((field) => (
+                <div key={field.label}>
+                  <label className="mb-1.5 block text-xs font-medium text-[#374151]">
+                    {field.label}
+                  </label>
 
-          {passwordError && (
-            <div
-              role="alert"
-              className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-            >
-              {passwordError}
-            </div>
-          )}
+                  <div className="relative">
+                    <input
+                      type={field.visible ? "text" : "password"}
+                      value={field.value}
+                      onChange={(event) => {
+                        field.setValue(event.target.value);
+                        setPasswordError("");
+                        setPasswordSuccess("");
+                      }}
+                      placeholder={field.placeholder}
+                      autoComplete={field.autoComplete}
+                      maxLength={128}
+                      required
+                      disabled={isChangingPassword}
+                      className="h-9 w-full rounded-lg border border-[#D1D5DB] bg-white px-3 pr-10 text-[13px] text-[#111827] outline-none transition focus:border-[#2563EB] focus:ring-[3px] focus:ring-[#DBEAFE] disabled:cursor-not-allowed disabled:bg-[#F9FAFB]"
+                    />
 
-          {passwordSuccess && (
-            <div
-              role="status"
-              className="flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700"
-            >
-              <CheckCircle2 size={18} />
-              {passwordSuccess}
-            </div>
-          )}
+                    <button
+                      type="button"
+                      onClick={() => field.setVisible(!field.visible)}
+                      aria-label={field.visible ? "Hide password" : "Show password"}
+                      className="absolute inset-y-0 right-0 flex items-center px-3 text-[#6B7280] hover:text-[#111827]"
+                    >
+                      {field.visible ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
+                </div>
+              ))}
 
-          <div className="flex justify-end">
-            <button
-              type="submit"
-              disabled={isChangingPassword}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <ShieldCheck size={17} />
-              {isChangingPassword ? "Changing Password..." : "Change Password"}
-            </button>
+              {/* Live Password Requirements */}
+              <div className="rounded-lg border border-[#E5E7EB] bg-[#F9FAFB] p-3">
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[#6B7280]">
+                  Password Requirements
+                </p>
+                <ul className="space-y-1.5">
+                  {passwordRules.map((rule) => (
+                    <li
+                      key={rule.label}
+                      className={`flex items-center gap-2 text-[12px] ${
+                        rule.met ? "font-medium text-emerald-700" : "text-[#6B7280]"
+                      }`}
+                    >
+                      <span
+                        className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full ${
+                          rule.met
+                            ? "bg-emerald-100 text-emerald-700"
+                            : "bg-[#E5E7EB] text-[#9CA3AF]"
+                        }`}
+                      >
+                        <Check size={10} />
+                      </span>
+                      {rule.label}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {passwordError && (
+                <div
+                  role="alert"
+                  className="rounded-lg border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-xs font-medium text-rose-700"
+                >
+                  {passwordError}
+                </div>
+              )}
+
+              {passwordSuccess && (
+                <div
+                  role="status"
+                  className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-xs font-medium text-emerald-700"
+                >
+                  <CheckCircle2 size={16} />
+                  {passwordSuccess}
+                </div>
+              )}
+
+              <Button
+                type="submit"
+                variant="primary"
+                size="md"
+                disabled={isChangingPassword}
+                leftIcon={<ShieldCheck size={15} />}
+                className="w-full"
+              >
+                {isChangingPassword ? "Changing Password..." : "Update Password"}
+              </Button>
+            </form>
+          </section>
+
+          {/* Active Sessions & Login History */}
+          <div className="col-span-12 lg:col-span-7">
+            <SecuritySessionsSection />
           </div>
-        </form>
-      </section>
-
-      {/* Security Sessions & Login History */}
-      <SecuritySessionsSection />
+        </div>
+      )}
 
       {passwordChangedConfirmation && (
         <div
@@ -1516,7 +1552,7 @@ const handleChangePassword = async (
           role="presentation"
         >
           <div
-            className="w-full max-w-sm rounded bg-white p-6 text-center shadow-2xl"
+            className="w-full max-w-sm rounded-xl bg-white p-6 text-center shadow-2xl"
             role="dialog"
             aria-modal="true"
             aria-labelledby="password-changed-title"
@@ -1525,80 +1561,135 @@ const handleChangePassword = async (
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
               <CheckCircle2 className="h-7 w-7" />
             </div>
-            <h2 id="password-changed-title" className="mt-4 text-lg font-bold text-slate-900">
+            <h2 id="password-changed-title" className="mt-4 text-lg font-bold text-[#111827]">
               Password changed successfully
             </h2>
-            <p className="mt-2 text-sm text-slate-500">
+            <p className="mt-2 text-sm text-[#6B7280]">
               Your password has been updated and all other sessions were
               logged out. You will now be redirected to the login page.
             </p>
-            <button
+            <Button
               type="button"
+              variant="primary"
+              size="md"
               onClick={finishPasswordChangeRedirect}
-              className="mt-5 inline-flex items-center gap-2 rounded bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700"
+              className="mt-5"
             >
               Go to Login
-              <X className="h-4 w-4" />
-            </button>
+            </Button>
           </div>
         </div>
       )}
-      </div>
-      
-    {/* Delete Profile Photo Confirmation Modal */}
-    {showDeletePhotoModal && (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-        <div className="w-full max-w-md rounded bg-white p-6 shadow-2xl">
-          {/* Icon */}
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
-            <Trash2 size={26} className="text-red-600" />
-          </div>
 
-          {/* Content */}
-          <div className="mt-4 text-center">
-            <h2 className="text-lg font-bold text-slate-900">
-              Delete Profile Photo?
-            </h2>
+      {/* Profile Photo Preview Lightbox */}
+      {showPhotoPreviewModal && profilePhotoUrl && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${displayName} profile photo`}
+          onClick={() => setShowPhotoPreviewModal(false)}
+        >
+          <div
+            className="relative w-full max-w-md overflow-hidden rounded-2xl bg-white p-4 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <div className="min-w-0">
+                <h2 className="truncate text-sm font-semibold text-[#111827]">
+                  {displayName}
+                </h2>
+                <p className="text-xs text-[#6B7280]">
+                  {employee?.designation || roleLabel}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPhotoPreviewModal(false)}
+                aria-label="Close photo preview"
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-[#6B7280] transition hover:bg-[#F3F4F6] hover:text-[#111827]"
+              >
+                <X size={18} />
+              </button>
+            </div>
 
-            <p className="mt-2 text-sm leading-relaxed text-slate-500">
-              Are you sure you want to delete your profile photo?
-              This action cannot be undone.
-            </p>
-          </div>
+            <div className="overflow-hidden rounded-xl bg-[#F3F4F6]">
+              <img
+                src={profilePhotoUrl}
+                alt={displayName}
+                className="max-h-[70vh] w-full object-contain"
+              />
+            </div>
 
-          {/* Actions */}
-          <div className="mt-6 flex justify-center gap-3">
-            <button
-              type="button"
-              onClick={() => setShowDeletePhotoModal(false)}
-              disabled={isUploadingPhoto}
-              className="rounded border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
-            >
-              Cancel
-            </button>
-
-            <button
-              type="button"
-              onClick={handleDeleteProfilePhoto}
-              disabled={isUploadingPhoto}
-              className="inline-flex items-center justify-center gap-2 rounded bg-red-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isUploadingPhoto ? (
-                <>
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-                  Deleting...
-                </>
-              ) : (
-                <>
-                  <Trash2 size={15} />
-                  Delete Photo
-                </>
-              )}
-            </button>
+            <div className="mt-3 flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setShowPhotoPreviewModal(false);
+                  profilePhotoInputRef.current?.click();
+                }}
+                leftIcon={<Camera size={14} />}
+              >
+                Change Photo
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                onClick={() => setShowPhotoPreviewModal(false)}
+              >
+                Close
+              </Button>
+            </div>
           </div>
         </div>
-  </div>
-)}
+      )}
+
+      {/* Delete Profile Photo Confirmation Modal */}
+      {showDeletePhotoModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-rose-50">
+              <Trash2 size={24} className="text-rose-600" />
+            </div>
+
+            <div className="mt-4 text-center">
+              <h2 className="text-lg font-bold text-[#111827]">
+                Delete Profile Photo?
+              </h2>
+              <p className="mt-2 text-sm leading-relaxed text-[#6B7280]">
+                Are you sure you want to delete your profile photo?
+                This action cannot be undone.
+              </p>
+            </div>
+
+            <div className="mt-6 flex justify-center gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                onClick={() => setShowDeletePhotoModal(false)}
+                disabled={isUploadingPhoto}
+              >
+                Cancel
+              </Button>
+
+              <Button
+                type="button"
+                variant="danger"
+                size="md"
+                onClick={handleDeleteProfilePhoto}
+                disabled={isUploadingPhoto}
+                leftIcon={<Trash2 size={15} />}
+              >
+                {isUploadingPhoto ? "Deleting..." : "Delete Photo"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

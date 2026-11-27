@@ -12,6 +12,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { Button } from "../../components/ui/Button";
+import { PageHeading } from "../../components/ui/PageHeading";
 import { assetService } from "./assetService";
 import type { Asset, AssetRequest } from "./types";
 
@@ -351,82 +352,71 @@ export default function EmployeeAssets() {
   ];
 
   return (
-    <div className="flex flex-col gap-6 w-full max-w-[1280px] mx-auto px-4 sm:px-6 py-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-5 rounded-lg border border-[#E5E7EB] shadow-none">
-        <div className="flex flex-col gap-0.5">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-[#6B7280]">
-            Employee Portal
-          </p>
-          <h1 className="text-[18px] font-semibold text-[#111827]">
-            My Assets
-          </h1>
-          <p className="text-xs text-[#4B5563]">
-            View assigned equipment, request available assets, and track
-            requests from your HR team.
-          </p>
-        </div>
-
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => void loadData()}
-          disabled={loading}
-          leftIcon={
-            <RefreshCw
-              className={`h-3.5 w-3.5 shrink-0 ${loading ? "animate-spin" : ""}`}
-            />
-          }
-          className="h-8 px-3 rounded-[6px] text-[12px] font-medium shadow-none shrink-0"
-        >
-          Refresh
-        </Button>
-      </div>
+    <div className="flex w-full flex-col gap-5 pb-10">
+      <PageHeading
+        title="View assigned equipment, request available assets, and track requests from your HR team."
+        actions={
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void loadData()}
+            disabled={loading}
+            leftIcon={
+              <RefreshCw
+                className={`h-3.5 w-3.5 shrink-0 ${loading ? "animate-spin" : ""}`}
+              />
+            }
+          >
+            Refresh
+          </Button>
+        }
+      />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="rounded-lg border border-[#E5E7EB] bg-white p-4 h-[104px] shadow-kpi flex flex-col justify-between min-w-0">
+        <div className="rounded-xl border border-[#E5E7EB] bg-white p-5 min-h-[112px] flex flex-col justify-between min-w-0">
           <div className="flex items-center justify-between gap-2 min-w-0">
-            <span className="text-xs font-medium text-[#4B5563] truncate">
+            <span className="text-[12px] font-medium text-[#6B7280] truncate">
               Assigned Assets
             </span>
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#E8EEFB] text-[#2F5FD0]">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#EFF6FF] text-[#2563EB]">
               <Laptop className="h-4 w-4 shrink-0" />
             </div>
           </div>
-          <span className="text-[24px] font-semibold text-[#111827] tabular-nums tracking-tight leading-none block">
+          <span className="text-[26px] font-semibold text-[#111827] tabular-nums tracking-tight leading-none block">
             {myAllocatedAssets.length}
           </span>
         </div>
 
-        <div className="rounded-lg border border-[#E5E7EB] bg-white p-4 h-[104px] shadow-kpi flex flex-col justify-between min-w-0">
+        <div className="rounded-xl border border-[#E5E7EB] bg-white p-5 min-h-[112px] flex flex-col justify-between min-w-0">
           <div className="flex items-center justify-between gap-2 min-w-0">
-            <span className="text-xs font-medium text-[#4B5563] truncate">
+            <span className="text-[12px] font-medium text-[#6B7280] truncate">
               Pending Requests
             </span>
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#FEF3C7] text-[#92400E]">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
               <Clock3 className="h-4 w-4 shrink-0" />
             </div>
           </div>
-          <span className="text-[24px] font-semibold text-[#111827] tabular-nums tracking-tight leading-none block">
+          <span className="text-[26px] font-semibold text-[#111827] tabular-nums tracking-tight leading-none block">
             {pendingCount}
           </span>
         </div>
 
-        <div className="rounded-lg border border-[#E5E7EB] bg-white p-4 h-[104px] shadow-kpi flex flex-col justify-between min-w-0">
+        <div className="rounded-xl border border-[#E5E7EB] bg-white p-5 min-h-[112px] flex flex-col justify-between min-w-0">
           <div className="flex items-center justify-between gap-2 min-w-0">
-            <span className="text-xs font-medium text-[#4B5563] truncate">
+            <span className="text-[12px] font-medium text-[#6B7280] truncate">
               Approved Requests
             </span>
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#DEF7EC] text-[#03543F]">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
               <CheckCircle2 className="h-4 w-4 shrink-0" />
             </div>
           </div>
-          <span className="text-[24px] font-semibold text-[#111827] tabular-nums tracking-tight leading-none block">
+          <span className="text-[26px] font-semibold text-[#111827] tabular-nums tracking-tight leading-none block">
             {approvedCount}
           </span>
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-[#E5E7EB] bg-white shadow-none">
+      <div className="overflow-hidden rounded-xl border border-[#E5E7EB] bg-white shadow-none">
         <div className="border-b border-[#E5E7EB] px-6 pt-1 pb-3">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-center gap-2 border-b border-[#E5E7EB] lg:border-b-0">

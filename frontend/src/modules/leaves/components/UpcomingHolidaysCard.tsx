@@ -11,23 +11,24 @@ export const UpcomingHolidaysCard: React.FC<UpcomingHolidaysCardProps> = ({
   holidays,
   className = "",
 }) => {
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const futureHolidays = holidays.filter((h) => h.date >= todayStr).slice(0, 4);
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  const futureHolidays = holidays.filter((h) => h.date.slice(0, 10) >= todayStr).slice(0, 4);
 
   return (
-    <div className={`rounded-[8px] bg-white border border-[#E4E6E1] p-[16px_20px] shadow-none flex flex-col justify-between ${className}`}>
+    <div className={`rounded-xl bg-white border border-[#E5E7EB] p-5 shadow-none flex flex-col justify-between h-full ${className}`}>
       <div>
-        <div className="flex items-center justify-between pb-3 border-b border-[#E4E6E1]">
+        <div className="flex items-center justify-between pb-3 border-b border-[#E5E7EB]">
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-[#C2410C]" />
-            <h3 className="text-[14px] font-semibold text-[#1F2933]">Upcoming Holidays</h3>
+            <h3 className="text-[14px] font-semibold text-[#111827]">Upcoming Holidays</h3>
           </div>
-          <span className="text-[12px] text-[#7B8794]">2026 Calendar</span>
+          <span className="text-[12px] text-[#6B7280]">{now.getFullYear()} Calendar</span>
         </div>
 
-        <div className="mt-3 divide-y divide-[#E4E6E1]">
+        <div className="mt-3 divide-y divide-[#E5E7EB]">
           {futureHolidays.length === 0 ? (
-            <div className="py-6 text-center text-[12px] text-[#7B8794]">
+            <div className="py-8 text-center text-[12px] text-[#6B7280]">
               No upcoming company holidays remaining this year.
             </div>
           ) : (

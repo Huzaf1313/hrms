@@ -1,22 +1,30 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  AlertCircle,
   Archive,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Download,
   Eye,
   FileText,
-  Search,
-  X,
-  Loader2,
-  Upload,
   FileUp,
-  CheckCircle2,
-  AlertCircle,
   FolderOpen,
+  Loader2,
+  Plus,
+  Search,
+  ShieldCheck,
   Trash2,
+  Upload,
+  X,
 } from "lucide-react";
 import { api, ApiError, downloadFile } from "../../services/api";
+import { Button } from "../../components/ui/Button";
+import { EmptyState } from "../../components/ui/EmptyState";
+import { PageHeading } from "../../components/ui/PageHeading";
+import { Select } from "../../components/ui/Select";
+import { Skeleton } from "../../components/ui/Skeleton";
+import { Tabs } from "../../components/ui/Tabs";
 
 interface EmployeeDocument {
   id: string;
@@ -45,17 +53,27 @@ interface EmployeeDocumentsResponse {
 
 type CategoryTab =
   | "All Documents"
+  | "Education"
+  | "Certificates"
+  | "Experience"
+  | "Identity"
+  | "Employment"
   | "Payslips"
   | "Tax & Payroll"
-  | "Employment"
-  | "Leave & Attendance";
+  | "Leave & Attendance"
+  | "Other";
 
 const CATEGORY_TABS: CategoryTab[] = [
   "All Documents",
+  "Identity",
+  "Education",
+  "Certificates",
+  "Experience",
+  "Employment",
   "Payslips",
   "Tax & Payroll",
-  "Employment",
   "Leave & Attendance",
+  "Other",
 ];
 
 const DOCUMENTS_PER_PAGE = 8;
@@ -85,6 +103,24 @@ const UPLOAD_CATEGORIES = [
   "Other",
 ];
 
+const QUICK_DOCUMENT_PRESETS = [
+  { name: "Aadhaar Card", category: "Identity" },
+  { name: "PAN Card", category: "Identity" },
+  { name: "12th Marksheet", category: "Education" },
+  { name: "Resume / CV", category: "Experience" },
+];
+
+function inferCategoryFromFilename(filename: string): string | null {
+  const lower = filename.toLowerCase();
+  if (/aadhaar|aadhar|pan\b|passport|voter|license|id/.test(lower)) return "Identity";
+  if (/marksheet|degree|diploma|10th|12th|transcript|college/.test(lower)) return "Education";
+  if (/cert|course|award/.test(lower)) return "Certificates";
+  if (/resume|cv\b|experience|relieving|offer/.test(lower)) return "Experience";
+  if (/payslip|salary/.test(lower)) return "Payslips";
+  if (/tax|form16|form_16|tds|itr/.test(lower)) return "Tax & Payroll";
+  return null;
+}
+
 export default function EmployeeDocuments() {
   const [documents, setDocuments] = useState<EmployeeDocument[]>([]);
   const [summary, setSummary] = useState<EmployeeDocumentSummary>({
@@ -107,15 +143,42 @@ export default function EmployeeDocuments() {
   const [previewMimeType, setPreviewMimeType] = useState("");
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [pendingDeleteDoc, setPendingDeleteDoc] =
+    useState<EmployeeDocument | null>(null);
 
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [uploadDocumentName, setUploadDocumentName] = useState("");
   const [uploadCategory, setUploadCategory] = useState("Education");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
   const [uploadValidationError, setUploadValidationError] = useState("");
   const [uploadNotice, setUploadNotice] = useState("");
+  const [pageSuccessNotice, setPageSuccessNotice] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const selectedFilePreviewUrl = useMemo(() => {
+    if (!selectedFile || !selectedFile.type.startsWith("image/")) {
+      return null;
+    }
+    return URL.createObjectURL(selectedFile);
+  }, [selectedFile]);
+
+  useEffect(() => {
+    if (!selectedFilePreviewUrl) return;
+    return () => URL.revokeObjectURL(selectedFilePreviewUrl);
+  }, [selectedFilePreviewUrl]);
+
+  useEffect(() => {
+    if (!uploadModalOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !isUploading) {
+        setUploadModalOpen(false);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [uploadModalOpen, isUploading]);
 
   const fetchDocuments = useCallback(async () => {
     try {
@@ -243,6 +306,16 @@ export default function EmployeeDocuments() {
       .slice(0, 3).length;
   }, [documents]);
 
+  const personalUploadCount = useMemo(() => {
+    return documents.filter(
+      (doc) => doc.source === "employee" || doc.source === "employee_upload"
+    ).length;
+  }, [documents]);
+
+  const hrAssignedCount = useMemo(() => {
+    return Math.max(0, documents.length - personalUploadCount);
+  }, [documents.length, personalUploadCount]);
+
   const formatDate = (date: string) => {
     if (!date) return "-";
 
@@ -340,6 +413,7 @@ export default function EmployeeDocuments() {
       setError("");
 
       await api.delete<null>(`/employee-documents/${document.id}`);
+      setPendingDeleteDoc(null);
       await fetchDocuments();
     } catch (err) {
       console.error("Failed to delete document:", err);
@@ -375,6 +449,7 @@ export default function EmployeeDocuments() {
     setUploadDocumentName("");
     setUploadCategory("Education");
     setSelectedFile(null);
+    setIsDraggingFile(false);
     setUploadValidationError("");
     setUploadNotice("");
 
@@ -436,6 +511,14 @@ export default function EmployeeDocuments() {
     }
 
     setSelectedFile(file);
+    if (!uploadDocumentName.trim()) {
+      const baseName = file.name.replace(/\.[^/.]+$/, "").replace(/[_-]+/g, " ");
+      setUploadDocumentName(baseName.slice(0, 150));
+    }
+    const inferred = inferCategoryFromFilename(file.name);
+    if (inferred) {
+      setUploadCategory(inferred);
+    }
   };
 
   const handleUploadSubmit = async (
@@ -462,8 +545,9 @@ export default function EmployeeDocuments() {
       return;
     }
 
+    const uploadedTitle = uploadDocumentName.trim();
     const formData = new FormData();
-    formData.append("document_name", uploadDocumentName.trim());
+    formData.append("document_name", uploadedTitle);
     formData.append("document_type", uploadCategory);
     formData.append("file", selectedFile);
 
@@ -475,15 +559,8 @@ export default function EmployeeDocuments() {
       // Refresh the employee's document list and summary.
       await fetchDocuments();
 
-      // Reset the upload form.
-      setUploadDocumentName("");
-      setSelectedFile(null);
-
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-
-      setUploadNotice("Document uploaded successfully.");
+      closeUploadModal();
+      setPageSuccessNotice(`"${uploadedTitle}" uploaded successfully.`);
     } catch (err) {
       console.error("Document upload failed:", err);
 
@@ -498,134 +575,139 @@ export default function EmployeeDocuments() {
   };
 
   return (
-    <div className="space-y-6 p-4 sm:p-6">
-      {/* Page header */}
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-        <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded bg-blue-50 text-blue-600">
-            <FolderOpen size={23} />
-          </div>
+    <div className="flex w-full flex-col gap-5 pb-10">
+      {/* Slim Page Header */}
+      <PageHeading
+        title="View, organize, and securely upload your employment and identity documents."
+        actions={
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            onClick={openUploadModal}
+            disabled={isUploading}
+            leftIcon={<Upload className="h-4 w-4" />}
+          >
+            Upload Document
+          </Button>
+        }
+      />
 
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-gray-900">
-              My Documents
-            </h1>
-            <p className="mt-1 text-sm text-gray-500">
-              View and manage your employment-related documents.
-            </p>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={openUploadModal}
-          disabled={isUploading}
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+      {/* Page success banner */}
+      {pageSuccessNotice && (
+        <div
+          role="status"
+          className="flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
         >
-          <Upload size={17} />
-          Upload Document
-        </button>
-      </div>
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 size={17} className="shrink-0 text-emerald-600" />
+            <span className="font-medium">{pageSuccessNotice}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setPageSuccessNotice("")}
+            aria-label="Dismiss upload notice"
+            className="rounded p-1 text-emerald-700 hover:bg-emerald-100"
+          >
+            <X size={15} />
+          </button>
+        </div>
+      )}
 
       {/* Error banner */}
       {error && (
         <div
           role="alert"
-          className="flex flex-col gap-3 rounded-xl border border-red-200 bg-red-50 p-4 sm:flex-row sm:items-center sm:justify-between"
+          className="flex flex-col gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 sm:flex-row sm:items-center sm:justify-between"
         >
           <div className="flex items-start gap-3">
-            <AlertCircle size={20} className="mt-0.5 shrink-0 text-red-600" />
-            <p className="text-sm text-red-700">{error}</p>
+            <AlertCircle size={18} className="mt-0.5 shrink-0 text-rose-600" />
+            <p className="text-sm text-rose-700">{error}</p>
           </div>
 
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             onClick={handleRetry}
-            className="self-start rounded-lg border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-100 sm:self-auto"
           >
             Retry
-          </button>
+          </Button>
         </div>
       )}
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500">
-                Total Documents
-              </p>
-              <p className="mt-2 text-3xl font-bold text-gray-900">
-                {loading ? "—" : summary.total_documents}
-              </p>
+      {/* 4 KPI Summary Cards */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {[
+          {
+            label: "Total Documents",
+            value: summary.total_documents,
+            helper: "Files stored in your profile",
+            icon: FileText,
+            tone: "bg-blue-50 text-[#2563EB]",
+          },
+          {
+            label: "My Uploads",
+            value: personalUploadCount,
+            helper: "Uploaded by you",
+            icon: Upload,
+            tone: "bg-emerald-50 text-emerald-600",
+          },
+          {
+            label: "HR / Company Docs",
+            value: hrAssignedCount,
+            helper: "Assigned by HR & Payroll",
+            icon: FolderOpen,
+            tone: "bg-purple-50 text-purple-600",
+          },
+          {
+            label: "Recent Additions",
+            value: recentDocuments,
+            helper: "Most recent uploads",
+            icon: Archive,
+            tone: "bg-amber-50 text-amber-600",
+          },
+        ].map((card) => {
+          const Icon = card.icon;
+          return (
+            <div
+              key={card.label}
+              className="flex min-h-[124px] flex-col rounded-xl border border-[#E5E7EB] bg-white p-5"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[12px] font-medium text-[#6B7280]">{card.label}</p>
+                  <p className="mt-2 text-[26px] font-semibold leading-none text-[#111827]">
+                    {loading ? "—" : card.value}
+                  </p>
+                </div>
+                <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${card.tone}`}>
+                  <Icon className="h-4 w-4" />
+                </span>
+              </div>
+              <p className="mt-auto pt-3 text-[12px] text-[#6B7280]">{card.helper}</p>
             </div>
-
-            <div className="flex h-12 w-12 items-center justify-center rounded bg-blue-50 text-blue-600">
-              <FileText size={23} />
-            </div>
-          </div>
-          <p className="mt-3 text-xs text-gray-500">
-            Documents currently available to you
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500">
-                Recent Documents
-              </p>
-              <p className="mt-2 text-3xl font-bold text-gray-900">
-                {loading ? "—" : recentDocuments}
-              </p>
-            </div>
-
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-50 text-purple-600">
-              <Archive size={23} />
-            </div>
-          </div>
-          <p className="mt-3 text-xs text-gray-500">
-            Most recent 3 documents, or fewer if unavailable
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500">
-                Pending Actions
-              </p>
-              <p className="mt-2 text-3xl font-bold text-gray-900">0</p>
-            </div>
-
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
-              <CheckCircle2 size={23} />
-            </div>
-          </div>
-          <p className="mt-3 text-xs text-gray-500">
-            Pending document status is not currently provided by the API
-          </p>
-        </div>
+          );
+        })}
       </div>
 
       {/* Document list */}
-      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
-        <div className="border-b border-gray-100 p-5 sm:p-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div className="overflow-hidden rounded-xl border border-[#E5E7EB] bg-white">
+        <div className="border-b border-[#E5E7EB] px-5 pt-4 pb-0">
+          <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">
+              <h2 className="text-[14px] font-semibold text-[#111827]">
                 Your Documents
               </h2>
-              <p className="mt-1 text-sm text-gray-500">
-                Browse the documents associated with your employee profile.
+              <p className="mt-0.5 text-[12px] text-[#6B7280]">
+                Browse documents assigned to your profile or uploaded by you.
               </p>
             </div>
 
-            <div className="relative w-full lg:max-w-sm">
+            <div className="relative w-full lg:max-w-xs">
               <Search
-                size={18}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                size={15}
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF]"
               />
               <input
                 type="text"
@@ -633,68 +715,82 @@ export default function EmployeeDocuments() {
                 onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder="Search documents..."
                 aria-label="Search documents"
-                className="w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                className="h-9 w-full rounded-lg border border-[#D1D5DB] bg-white pl-9 pr-8 text-[13px] text-[#111827] outline-none transition placeholder:text-[#9CA3AF] focus:border-[#2563EB] focus:ring-[3px] focus:ring-[#DBEAFE]"
               />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm("")}
+                  aria-label="Clear search"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#9CA3AF] hover:text-[#111827]"
+                >
+                  <X size={14} />
+                </button>
+              )}
             </div>
           </div>
 
-          <div className="mt-5 flex gap-2 overflow-x-auto pb-1">
-            {CATEGORY_TABS.map((tab) => {
-              const active = activeTab === tab;
-
-              return (
-                <button
-                  key={tab}
-                  type="button"
-                  onClick={() => handleTabChange(tab)}
-                  className={`inline-flex shrink-0 items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition ${active
-                      ? "bg-blue-600 text-white"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900"
-                    }`}
-                >
-                  {tab}
-                  <span
-                    className={`rounded-md px-1.5 py-0.5 text-xs ${active
-                        ? "bg-white/20 text-white"
-                        : "bg-white text-gray-600"
-                      }`}
-                  >
-                    {loading ? "—" : getCategoryCount(tab)}
-                  </span>
-                </button>
-              );
-            })}
+          <div className="overflow-x-auto">
+            <Tabs
+              variant="underline"
+              activeTab={activeTab}
+              onChange={(tab) => handleTabChange(tab as CategoryTab)}
+              tabs={CATEGORY_TABS.map((tab) => ({
+                id: tab,
+                label: tab,
+                badge: loading ? undefined : getCategoryCount(tab),
+              }))}
+              className="min-w-max"
+            />
           </div>
         </div>
 
         {loading ? (
-          <div className="flex min-h-64 flex-col items-center justify-center gap-3 p-8">
-            <Loader2 size={30} className="animate-spin text-blue-600" />
-            <p className="text-sm text-gray-500">Loading your documents...</p>
+          <div className="space-y-3 p-5">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <Skeleton key={index} className="h-14 w-full rounded-lg" />
+            ))}
           </div>
         ) : paginatedDocuments.length === 0 ? (
-          <div className="flex min-h-64 flex-col items-center justify-center px-6 py-12 text-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 text-gray-400">
-              <FolderOpen size={30} />
-            </div>
-            <h3 className="mt-4 text-base font-semibold text-gray-900">
-              No documents found
-            </h3>
-            <p className="mt-2 max-w-md text-sm text-gray-500">
-              {searchTerm.trim()
-                ? "Try another search term or select a different category."
-                : "Documents assigned to your profile and documents uploaded by you will appear here."}
-            </p>
-
-            {searchTerm.trim() && (
-              <button
-                type="button"
-                onClick={() => setSearchTerm("")}
-                className="mt-4 text-sm font-medium text-blue-600 hover:text-blue-700"
-              >
-                Clear search
-              </button>
-            )}
+          <div className="p-8">
+            <EmptyState
+              icon={<FolderOpen className="h-5 w-5" />}
+              title={
+                searchTerm.trim()
+                  ? "No matching documents"
+                  : activeTab === "All Documents"
+                    ? "No documents uploaded yet"
+                    : `No documents in ${activeTab}`
+              }
+              description={
+                searchTerm.trim()
+                  ? "Try a different search term or switch back to All Documents."
+                  : "Upload your personal certificates, IDs, or records so everything stays organized in one place."
+              }
+              action={
+                searchTerm.trim() ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSearchTerm("")}
+                  >
+                    Clear Search
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    onClick={openUploadModal}
+                    leftIcon={<Plus className="h-4 w-4" />}
+                  >
+                    Upload Document
+                  </Button>
+                )
+              }
+              className="max-w-none py-8"
+            />
           </div>
         ) : (
           <>
@@ -801,8 +897,8 @@ export default function EmployeeDocuments() {
                                 title="Delete document"
                                 aria-label={`Delete ${document.document_name}`}
                                 disabled={deletingId === document.id}
-                                onClick={() => void handleDelete(document)}
-                                className="rounded-lg p-2 text-red-500 transition hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                onClick={() => setPendingDeleteDoc(document)}
+                                className="rounded-lg p-2 text-rose-500 transition hover:bg-rose-50 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
                               >
                                 {deletingId === document.id ? (
                                   <Loader2 size={18} className="animate-spin" />
@@ -1030,7 +1126,7 @@ export default function EmployeeDocuments() {
       {/* Employee document upload modal */}
       {uploadModalOpen && (
         <div
-          className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-gray-950/60 p-4"
+          className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-slate-950/50 p-4 backdrop-blur-xs"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget && !isUploading) {
               closeUploadModal();
@@ -1041,24 +1137,24 @@ export default function EmployeeDocuments() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="upload-document-title"
-            className="my-auto w-full max-w-xl overflow-hidden rounded bg-white shadow-2xl"
+            className="my-auto w-full max-w-lg overflow-hidden rounded-xl border border-[#E5E7EB] bg-white shadow-2xl"
           >
             {/* Modal header */}
-            <div className="flex items-start justify-between border-b border-gray-200 px-6 py-5">
-              <div className="flex items-start gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded bg-blue-50 text-blue-600">
-                  <FileUp size={23} />
+            <div className="flex items-start justify-between border-b border-[#E5E7EB] px-5 py-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-[#2563EB]">
+                  <FileUp size={20} />
                 </div>
 
                 <div>
                   <h2
                     id="upload-document-title"
-                    className="text-lg font-semibold text-gray-900"
+                    className="text-[15px] font-semibold text-[#111827]"
                   >
                     Upload Document
                   </h2>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Upload a document to add it to your employee profile.
+                  <p className="mt-0.5 text-[12px] text-[#6B7280]">
+                    Drag &amp; drop a file or pick one to add to your profile.
                   </p>
                 </div>
               </div>
@@ -1068,79 +1164,22 @@ export default function EmployeeDocuments() {
                 aria-label="Close upload modal"
                 onClick={closeUploadModal}
                 disabled={isUploading}
-                className="rounded p-2 text-gray-500 transition hover:bg-gray-100 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-lg p-1.5 text-[#6B7280] transition hover:bg-[#F3F4F6] hover:text-[#111827] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <X size={19} />
+                <X size={18} />
               </button>
             </div>
 
             {/* Upload form */}
             <form onSubmit={handleUploadSubmit}>
-              <div className="space-y-5 p-6">
-                {/* Document name */}
-                <div>
-                  <label
-                    htmlFor="upload-document-name"
-                    className="mb-2 block text-sm font-medium text-gray-700"
-                  >
-                    Document Name <span className="text-red-500">*</span>
-                  </label>
-
-                  <input
-                    id="upload-document-name"
-                    type="text"
-                    value={uploadDocumentName}
-                    onChange={(event) => {
-                      setUploadDocumentName(event.target.value);
-                      setUploadValidationError("");
-                      setUploadNotice("");
-                    }}
-                    maxLength={150}
-                    disabled={isUploading}
-                    placeholder="e.g. 12th Marksheet, Aadhaar Card, PAN Card"
-                    className="w-full rounded border border-gray-300 px-3.5 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-gray-100"
-                  />
-
-                  <p className="mt-1.5 text-xs text-gray-500">
-                    Enter a clear name so you can identify the document later.
-                  </p>
-                </div>
-
-                {/* Document category */}
-                <div>
-                  <label
-                    htmlFor="upload-document-category"
-                    className="mb-2 block text-sm font-medium text-gray-700"
-                  >
-                    Document Category <span className="text-red-500">*</span>
-                  </label>
-
-                  <select
-                    id="upload-document-category"
-                    value={uploadCategory}
-                    onChange={(event) => {
-                      setUploadCategory(event.target.value);
-                      setUploadValidationError("");
-                      setUploadNotice("");
-                    }}
-                    disabled={isUploading}
-                    className="w-full rounded border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-gray-100"
-                  >
-                    {UPLOAD_CATEGORIES.map((category) => (
-                      <option key={category} value={category}>
-                        {category}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* File selection */}
+              <div className="space-y-4 p-5">
+                {/* Step 1: Drag & Drop File Selection */}
                 <div>
                   <label
                     htmlFor="upload-document-file"
-                    className="mb-2 block text-sm font-medium text-gray-700"
+                    className="mb-1.5 block text-xs font-medium text-[#374151]"
                   >
-                    Select File <span className="text-red-500">*</span>
+                    File <span className="text-rose-500">*</span>
                   </label>
 
                   <input
@@ -1155,49 +1194,179 @@ export default function EmployeeDocuments() {
                     className="sr-only"
                   />
 
-                  <button
-                    type="button"
-                    disabled={isUploading}
-                    onClick={() => fileInputRef.current?.click()}
-                    className="flex w-full flex-col items-center justify-center rounded border-2 border-dashed border-gray-300 bg-gray-50 px-5 py-7 text-center transition hover:border-blue-400 hover:bg-blue-50/50 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-blue-600">
-                      <Upload size={23} />
-                    </div>
+                  {selectedFile ? (
+                    <div className="flex items-center justify-between gap-3 rounded-xl border border-[#2563EB]/30 bg-[#EFF6FF]/40 p-3.5">
+                      <div className="flex min-w-0 items-center gap-3">
+                        {selectedFilePreviewUrl ? (
+                          <img
+                            src={selectedFilePreviewUrl}
+                            alt={selectedFile.name}
+                            className="h-12 w-12 shrink-0 rounded-lg border border-[#E5E7EB] object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-[11px] font-bold uppercase text-[#2563EB]">
+                            {selectedFile.name.split(".").pop()?.slice(0, 4) || "FILE"}
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <p className="truncate text-[13px] font-semibold text-[#111827]">
+                            {selectedFile.name}
+                          </p>
+                          <p className="mt-0.5 text-[11px] text-[#6B7280]">
+                            {formatFileSize(selectedFile.size)} · Ready to upload
+                          </p>
+                        </div>
+                      </div>
 
-                    {selectedFile ? (
-                      <>
-                        <span className="mt-3 max-w-full break-all text-sm font-semibold text-gray-900">
-                          {selectedFile.name}
-                        </span>
-                        <span className="mt-1 text-xs text-gray-500">
-                          {formatFileSize(selectedFile.size)} · Click to change
-                          file
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="mt-3 text-sm font-semibold text-gray-800">
-                          Click to select a file
-                        </span>
-                        <span className="mt-1 text-xs text-gray-500">
-                          PDF, PNG, JPG, WEBP, DOC, DOCX, XLS, XLSX
-                        </span>
-                        <span className="mt-1 text-xs text-gray-500">
-                          Maximum file size: 10 MB
-                        </span>
-                      </>
-                    )}
-                  </button>
+                      <div className="flex shrink-0 items-center gap-1.5">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="xs"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={isUploading}
+                        >
+                          Change
+                        </Button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedFile(null);
+                            if (fileInputRef.current) fileInputRef.current.value = "";
+                          }}
+                          disabled={isUploading}
+                          aria-label="Remove selected file"
+                          className="rounded-lg p-1.5 text-[#6B7280] hover:bg-rose-50 hover:text-rose-600"
+                        >
+                          <X size={15} />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => !isUploading && fileInputRef.current?.click()}
+                      onKeyDown={(event) => {
+                        if ((event.key === "Enter" || event.key === " ") && !isUploading) {
+                          event.preventDefault();
+                          fileInputRef.current?.click();
+                        }
+                      }}
+                      onDragOver={(event) => {
+                        event.preventDefault();
+                        if (!isUploading) setIsDraggingFile(true);
+                      }}
+                      onDragLeave={() => setIsDraggingFile(false)}
+                      onDrop={(event) => {
+                        event.preventDefault();
+                        setIsDraggingFile(false);
+                        if (!isUploading) {
+                          handleFileSelection(event.dataTransfer.files?.[0] ?? null);
+                        }
+                      }}
+                      className={`flex w-full cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-5 py-6 text-center transition ${isDraggingFile
+                        ? "border-[#2563EB] bg-blue-50/70"
+                        : "border-[#D1D5DB] bg-[#F9FAFB]/70 hover:border-[#2563EB]/60 hover:bg-blue-50/30"
+                        }`}
+                    >
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-[#2563EB]">
+                        <Upload size={19} />
+                      </div>
+                      <p className="mt-2.5 text-[13px] font-semibold text-[#111827]">
+                        Click to browse or drag &amp; drop
+                      </p>
+                      <p className="mt-1 text-[11px] text-[#6B7280]">
+                        PDF, PNG, JPG, WEBP, DOC, DOCX, XLS, XLSX · Max 10 MB
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Quick Document Presets */}
+                <div>
+                  <p className="mb-1.5 text-[11px] font-medium text-[#6B7280]">
+                    Quick fill common documents
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {QUICK_DOCUMENT_PRESETS.map((preset) => (
+                      <button
+                        key={preset.name}
+                        type="button"
+                        disabled={isUploading}
+                        onClick={() => {
+                          setUploadDocumentName(preset.name);
+                          setUploadCategory(preset.category);
+                          setUploadValidationError("");
+                        }}
+                        className={`rounded-full border px-2.5 py-1 text-[11px] font-medium transition ${uploadDocumentName === preset.name
+                          ? "border-[#2563EB] bg-[#EFF6FF] text-[#1D4ED8]"
+                          : "border-[#E5E7EB] bg-[#F9FAFB] text-[#4B5563] hover:bg-white"
+                          }`}
+                      >
+                        {preset.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Step 2: Name & Category Side-by-Side */}
+                <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+                  <div>
+                    <label
+                      htmlFor="upload-document-name"
+                      className="mb-1.5 block text-xs font-medium text-[#374151]"
+                    >
+                      Document Name <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      id="upload-document-name"
+                      type="text"
+                      value={uploadDocumentName}
+                      onChange={(event) => {
+                        setUploadDocumentName(event.target.value);
+                        setUploadValidationError("");
+                        setUploadNotice("");
+                      }}
+                      maxLength={150}
+                      disabled={isUploading}
+                      placeholder="e.g. Aadhaar Card"
+                      className="h-10 w-full rounded-[6px] border border-[#E4E6E1] bg-white px-3 text-sm text-[#1F2933] outline-none transition placeholder:text-[#7B8794] hover:border-[#D1D5DB] focus:border-[#2F5FD0] focus:ring-1 focus:ring-[#2F5FD0] disabled:cursor-not-allowed disabled:bg-[#F6F7F5]"
+                    />
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="upload-document-category"
+                      className="mb-1.5 block text-xs font-medium text-[#374151]"
+                    >
+                      Category <span className="text-rose-500">*</span>
+                    </label>
+
+                    <Select
+                      id="upload-document-category"
+                      value={uploadCategory}
+                      onChange={(event) => {
+                        setUploadCategory(event.target.value);
+                        setUploadValidationError("");
+                        setUploadNotice("");
+                      }}
+                      disabled={isUploading}
+                      options={UPLOAD_CATEGORIES.map((category) => ({
+                        value: category,
+                        label: category,
+                      }))}
+                    />
+                  </div>
                 </div>
 
                 {/* Validation error */}
                 {uploadValidationError && (
                   <div
                     role="alert"
-                    className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+                    className="flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 p-2.5 text-xs text-rose-700"
                   >
-                    <AlertCircle size={18} className="mt-0.5 shrink-0" />
+                    <AlertCircle size={16} className="mt-0.5 shrink-0" />
                     <p>{uploadValidationError}</p>
                   </div>
                 )}
@@ -1206,62 +1375,42 @@ export default function EmployeeDocuments() {
                 {uploadNotice && (
                   <div
                     role="status"
-                    className="flex items-start gap-2 rounded border border-green-200 bg-green-50 p-3 text-sm text-green-700"
+                    className="flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-2.5 text-xs text-emerald-700"
                   >
-                    <CheckCircle2 size={18} className="mt-0.5 shrink-0" />
+                    <CheckCircle2 size={16} className="mt-0.5 shrink-0" />
                     <p>{uploadNotice}</p>
                   </div>
                 )}
-
-                {/* Upload information */}
-                <div className="rounded border border-blue-100 bg-blue-50 p-3.5">
-                  <div className="flex items-start gap-2.5">
-                    <AlertCircle
-                      size={18}
-                      className="mt-0.5 shrink-0 text-blue-600"
-                    />
-                    <div>
-                      <p className="text-sm font-semibold text-blue-900">
-                        Secure document upload
-                      </p>
-                      <p className="mt-1 text-xs leading-5 text-blue-800">
-                        Your document will be securely uploaded and associated
-                        with your employee profile. Only supported file types
-                        up to 10 MB are accepted.
-                      </p>
-                    </div>
-                  </div>
-                </div>
               </div>
 
-              {/* Modal footer */}
-              <div className="flex flex-col-reverse gap-3 border-t border-gray-200 bg-gray-50 px-6 py-4 sm:flex-row sm:justify-end">
-                <button
-                  type="button"
-                  onClick={closeUploadModal}
-                  disabled={isUploading}
-                  className="rounded border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Cancel
-                </button>
+              {/* Compact Modal Footer */}
+              <div className="flex flex-col gap-3 border-t border-[#E5E7EB] bg-[#F9FAFB] px-5 py-3.5 sm:flex-row sm:items-center sm:justify-between">
+                <span className="flex items-center gap-1.5 text-[11px] text-[#6B7280]">
+                  <ShieldCheck size={14} className="text-[#2563EB]" />
+                  Encrypted upload · Max 10 MB
+                </span>
 
-                <button
-                  type="submit"
-                  disabled={isUploading}
-                  className="inline-flex items-center justify-center gap-2 rounded bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {isUploading ? (
-                    <>
-                      <Loader2 size={17} className="animate-spin" />
-                      Uploading...
-                    </>
-                  ) : (
-                    <>
-                      <Upload size={17} />
-                      Upload Document
-                    </>
-                  )}
-                </button>
+                <div className="flex items-center justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={closeUploadModal}
+                    disabled={isUploading}
+                  >
+                    Cancel
+                  </Button>
+
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    size="sm"
+                    isLoading={isUploading}
+                    leftIcon={!isUploading ? <Upload size={14} /> : undefined}
+                  >
+                    {isUploading ? "Uploading..." : "Upload Document"}
+                  </Button>
+                </div>
               </div>
             </form>
           </div>
@@ -1358,6 +1507,49 @@ export default function EmployeeDocuments() {
                 <Download size={16} />
                 Download
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Delete confirmation modal */}
+      {pendingDeleteDoc && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !deletingId) {
+              setPendingDeleteDoc(null);
+            }
+          }}
+        >
+          <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-2xl">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-rose-50 text-rose-600">
+              <Trash2 size={22} />
+            </div>
+            <h2 className="mt-4 text-center text-base font-semibold text-[#111827]">
+              Delete Document?
+            </h2>
+            <p className="mt-1.5 text-center text-xs leading-relaxed text-[#6B7280]">
+              Remove <span className="font-semibold text-[#111827]">{pendingDeleteDoc.document_name}</span>? This cannot be undone.
+            </p>
+            <div className="mt-5 flex justify-center gap-2.5">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setPendingDeleteDoc(null)}
+                disabled={Boolean(deletingId)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                size="sm"
+                onClick={() => void handleDelete(pendingDeleteDoc)}
+                isLoading={deletingId === pendingDeleteDoc.id}
+              >
+                Delete
+              </Button>
             </div>
           </div>
         </div>

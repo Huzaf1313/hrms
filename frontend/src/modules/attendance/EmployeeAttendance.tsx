@@ -18,6 +18,10 @@ export const EmployeeAttendance: React.FC = () => {
   const employeeId = user?.employee_id || "AAR001";
 
   const [records, setRecords] = useState<EmployeeAttendanceRecord[]>([]);
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [error] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -33,9 +37,8 @@ export const EmployeeAttendance: React.FC = () => {
 
   useEffect(() => {
     let isCurrent = true;
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth();
+    const year = selectedMonth.getFullYear();
+    const month = selectedMonth.getMonth();
     const startDate = `${year}-${String(month + 1).padStart(2, "0")}-01`;
     const endDate = `${year}-${String(month + 1).padStart(2, "0")}-${new Date(year, month + 1, 0).getDate()}`;
 
@@ -65,7 +68,7 @@ export const EmployeeAttendance: React.FC = () => {
     return () => {
       isCurrent = false;
     };
-  }, [employeeId, refreshKey]);
+  }, [employeeId, refreshKey, selectedMonth]);
 
   // Derived personal statistics
   const stats = useMemo(() => {
@@ -104,6 +107,16 @@ export const EmployeeAttendance: React.FC = () => {
       avgHours: avg,
     };
   }, [records]);
+
+  function handleMonthChange(nextMonth: Date) {
+    setIsLoading(true);
+    setSelectedMonth(nextMonth);
+  }
+
+  function handleRefreshAttendance() {
+    setIsLoading(true);
+    setRefreshKey((k) => k + 1);
+  }
 
   function handleSelectDay(record: EmployeeAttendanceRecord) {
     setSelectedRecord(record);
@@ -169,47 +182,46 @@ export const EmployeeAttendance: React.FC = () => {
       </div>
 
       {viewTab === "calendar" ? (
-        <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-4 items-start w-full">
-          {/* Left Column: 360px Today Punch Panel */}
-          <div className="w-full">
-            <TodayPunchCard
-              shiftName="General Shift"
-              shiftTiming="09:30 AM - 06:30 PM"
-              gracePeriod={15}
-              onPunchSuccess={() => setRefreshKey((k) => k + 1)}
+        <div className="flex flex-col gap-4 w-full">
+          {/* Full-width Today Punch Card */}
+          <TodayPunchCard
+            shiftName="General Shift"
+            shiftTiming="09:30 AM - 06:30 PM"
+            gracePeriod={15}
+            onPunchSuccess={handleRefreshAttendance}
+          />
+
+          {/* Full-width Personal Stats Strip */}
+          {isLoading ? (
+            <StatCardSkeleton count={5} />
+          ) : error ? (
+            <ErrorState
+              message={error}
+              onRetry={handleRefreshAttendance}
             />
-          </div>
+          ) : (
+            <AttendanceStatRow
+              isPersonal
+              presentCount={stats.present}
+              lateCount={stats.late}
+              onLeaveCount={stats.onLeave}
+              absentCount={stats.absent}
+              avgHours={stats.avgHours}
+            />
+          )}
 
-          {/* Right Column: Personal Stats Strip & Calendar/History View */}
-          <div className="flex flex-col gap-4 min-w-0 w-full">
-            {isLoading ? (
-              <StatCardSkeleton count={5} />
-            ) : error ? (
-              <ErrorState
-                message={error}
-                onRetry={() => setRefreshKey((k) => k + 1)}
-              />
-            ) : (
-              <AttendanceStatRow
-                isPersonal
-                presentCount={stats.present}
-                lateCount={stats.late}
-                onLeaveCount={stats.onLeave}
-                absentCount={stats.absent}
-                avgHours={stats.avgHours}
-              />
-            )}
-
-            {isLoading ? (
-              <TableSkeleton rows={8} columns={7} />
-            ) : (
-              <AttendanceHistoryView
-                records={records}
-                onSelectDay={handleSelectDay}
-                onRequestRegularization={handleRequestRegularization}
-              />
-            )}
-          </div>
+          {/* Full-width Calendar / History View */}
+          {isLoading ? (
+            <TableSkeleton rows={8} columns={7} />
+          ) : (
+            <AttendanceHistoryView
+              records={records}
+              currentDate={selectedMonth}
+              onMonthChange={handleMonthChange}
+              onSelectDay={handleSelectDay}
+              onRequestRegularization={handleRequestRegularization}
+            />
+          )}
         </div>
       ) : (
         /* Regularization History View */
@@ -229,10 +241,15 @@ export const EmployeeAttendance: React.FC = () => {
 
       {/* Regularization Request Modal */}
       <EmployeeAttendanceRegularizationModal
+        key={isRegularizationOpen ? (selectedRecord?.date ?? "new") : "closed"}
         isOpen={isRegularizationOpen}
-        onClose={() => setIsRegularizationOpen(false)}
+        onClose={() => {
+          setIsRegularizationOpen(false);
+          setSelectedRecord(null);
+        }}
         attendanceRecords={records}
-        onSuccess={() => setRefreshKey((k) => k + 1)}
+        initialDate={selectedRecord?.date ?? null}
+        onSuccess={handleRefreshAttendance}
       />
     </div>
   );

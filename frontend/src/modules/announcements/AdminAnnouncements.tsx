@@ -2010,10 +2010,10 @@ export default function AdminAnnouncements({
         </div>
       )}
 
-      <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-12">
+      <div className="grid grid-cols-1 items-stretch gap-5 lg:grid-cols-12">
         {/* Main column ------------------------------------------------------ */}
 
-        <section className="min-w-0 rounded-xl border border-[#E5E7EB] bg-white p-5 lg:col-span-8">
+        <section className="flex min-w-0 flex-col rounded-xl border border-[#E5E7EB] bg-white p-5 lg:col-span-8">
           {/* Tabs */}
 
           <div className="mb-4 overflow-x-auto">
@@ -2101,7 +2101,7 @@ export default function AdminAnnouncements({
 
           {/* Announcement cards */}
 
-          <div className="flex min-h-[420px] flex-col">
+          <div className="flex flex-1 flex-col">
             {isLoading && (
               Array.from({ length: rowsPerPage }).map((_, index) => (
                 <div key={index} className="flex gap-3 border-b border-[#E5E7EB] py-4">
@@ -2309,10 +2309,10 @@ export default function AdminAnnouncements({
 
         {/* Right sidebar --------------------------------------------------- */}
 
-        <aside className="flex flex-col gap-5 lg:col-span-4 lg:sticky lg:top-6">
+        <aside className="flex flex-col gap-5 lg:col-span-4">
           {/* Pinned */}
 
-          <div className="rounded-xl border border-[#E5E7EB] bg-white p-5">
+          <div className="flex flex-1 flex-col rounded-xl border border-[#E5E7EB] bg-white p-5">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="flex items-center gap-2 text-[14px] font-semibold text-[#111827]">
                 <Pin className="h-4 w-4 text-[#6B7280]" />
@@ -2368,7 +2368,7 @@ export default function AdminAnnouncements({
 
           {/* Recent */}
 
-          <div className="rounded-xl border border-[#E5E7EB] bg-white p-5">
+          <div className="flex flex-1 flex-col rounded-xl border border-[#E5E7EB] bg-white p-5">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="flex items-center gap-2 text-[14px] font-semibold text-[#111827]">
                 <Clock className="h-4 w-4 text-[#6B7280]" />

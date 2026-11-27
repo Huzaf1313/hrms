@@ -20,6 +20,7 @@ import {
   LockOpen,
   Plus,
   Power,
+  Search,
   ShieldCheck,
   Trash2,
   UserCog,
@@ -35,7 +36,8 @@ import {
   INPUT_CLASS,
   type InlineNotice,
 } from "../exit/exitUiUtils";
-import { TableSkeleton } from "../../components/ui";
+import { Button, Select, TableSkeleton } from "../../components/ui";
+import { PageHeading } from "../../components/ui/PageHeading";
 import { roleLabel } from "../../lib/access";
 import { ApiError } from "../../services/api";
 import {
@@ -124,25 +126,30 @@ function RoleBadge({ role }: { role: ManagedAdminRole }) {
 function StatCard({
   label,
   value,
+  helper,
   icon,
   iconBg,
 }: {
   label: string;
   value: number;
+  helper: string;
   icon: ReactNode;
   iconBg: string;
 }) {
   return (
-    <div className="flex items-center gap-4.5 rounded-3xl border border-slate-100 bg-white p-5.5 shadow-kpi transition-all duration-200 hover:-translate-y-0.5">
-      <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${iconBg}`}>
-        {icon}
-      </span>
-      <div className="min-w-0">
-        <p className="text-2xl font-bold font-manrope text-slate-900">{value}</p>
-        <p className="mt-0.5 text-xs font-semibold uppercase tracking-wider text-slate-400 font-manrope">
-          {label}
-        </p>
+    <div className="flex min-h-[128px] flex-col rounded-xl border border-[#E5E7EB] bg-white p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[12px] font-medium text-[#6B7280]">{label}</p>
+          <p className="mt-2 text-[28px] font-semibold leading-none text-[#111827]">
+            {value}
+          </p>
+        </div>
+        <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${iconBg}`}>
+          {icon}
+        </span>
       </div>
+      <p className="mt-auto pt-3 text-[12px] text-[#6B7280]">{helper}</p>
     </div>
   );
 }
@@ -694,29 +701,23 @@ export default function AdminAccounts() {
   }, [accounts, roleFilter, search]);
 
   return (
-    <div className="space-y-6 px-4 pb-12 pt-6 sm:px-6 lg:px-8">
+    <div className="flex w-full flex-col gap-5 pb-10">
       {/* Page header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="min-w-0">
-          <h1 className="truncate text-lg sm:text-xl font-semibold tracking-tight leading-[1.3] text-slate-900">
-            Admin Accounts
-          </h1>
-          <p className="mt-1 text-sm font-medium text-slate-500">
-            Create, manage and unlock HR admin and manager accounts (Super Admin only).
-          </p>
-        </div>
-
-        {!creating && (
-          <button
-            type="button"
-            onClick={() => setCreating(true)}
-            className="inline-flex h-11 shrink-0 items-center gap-2 rounded-2xl bg-[#0066ff] px-5 text-sm font-bold text-white shadow-md shadow-blue-500/20 transition hover:bg-[#0052cc]"
-          >
-            <Plus className="h-4 w-4" />
-            Create Account
-          </button>
-        )}
-      </div>
+      <PageHeading
+        title="Create, manage and unlock HR admin and manager accounts (Super Admin only)."
+        actions={
+          !creating ? (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setCreating(true)}
+              leftIcon={<Plus className="h-4 w-4" />}
+            >
+              Create Account
+            </Button>
+          ) : undefined
+        }
+      />
 
       <InlineNoticeBanner notice={notice} onDismiss={() => setNotice(null)} />
 
@@ -740,53 +741,68 @@ export default function AdminAccounts() {
       )}
 
       {/* KPI row */}
-      <div className="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard
-          label="HR"
+          label="HR Admins"
           value={counts.hr}
-          icon={<ShieldCheck className="h-5 w-5 text-blue-600" />}
+          helper="HR portal access"
+          icon={<ShieldCheck className="h-4 w-4 text-blue-600" />}
           iconBg="bg-blue-50"
         />
         <StatCard
           label="Managers"
           value={counts.managers}
-          icon={<UserCog className="h-5 w-5 text-violet-600" />}
+          helper="Team & department leads"
+          icon={<UserCog className="h-4 w-4 text-violet-600" />}
           iconBg="bg-violet-50"
         />
         <StatCard
           label="Inactive or Locked"
           value={counts.blocked}
-          icon={<Lock className="h-5 w-5 text-amber-600" />}
+          helper="Blocked from signing in"
+          icon={<Lock className="h-4 w-4 text-amber-600" />}
           iconBg="bg-amber-50"
         />
       </div>
 
-      <Panel
-        title="All admin accounts"
-        description="Deleting an account signs it out on every device straight away. Accounts lock themselves after 5 failed sign-ins."
-        bodyClassName="p-0"
-        action={
-          <div className="flex flex-wrap items-center gap-2">
-            <input
-              className={`${INPUT_CLASS} w-48`}
-              placeholder="Search name or email"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              aria-label="Search admin accounts"
-            />
-            <select
-              className={`${INPUT_CLASS} w-36`}
+      <section className="overflow-hidden rounded-xl border border-[#E5E7EB] bg-white">
+        <div className="flex flex-col gap-3 border-b border-[#E5E7EB] px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0">
+            <h2 className="text-[14px] font-semibold text-[#111827]">
+              All admin accounts
+            </h2>
+            <p className="mt-0.5 text-[12px] text-[#6B7280]">
+              Deleting an account signs it out on every device straight away. Accounts lock themselves after 5 failed sign-ins.
+            </p>
+          </div>
+
+          <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="relative w-full sm:w-56">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9CA3AF]" />
+              <input
+                type="text"
+                className="h-9 w-full rounded-lg border border-[#D1D5DB] bg-white pl-9 pr-3 text-[13px] text-[#111827] outline-none placeholder:text-[#9CA3AF] focus:border-[#2563EB] focus:ring-[3px] focus:ring-[#DBEAFE]"
+                placeholder="Search name or email..."
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                aria-label="Search admin accounts"
+              />
+            </div>
+            <Select
+              aria-label="Filter by role"
               value={roleFilter}
               onChange={(event) => setRoleFilter(event.target.value as RoleFilter)}
-              aria-label="Filter by role"
-            >
-              <option value="all">All roles</option>
-              <option value="hr_admin">HR</option>
-              <option value="manager">Managers</option>
-            </select>
+              wrapperClassName="w-full sm:w-[140px]"
+              className="h-9 text-[13px]"
+              options={[
+                { value: "all", label: "All roles" },
+                { value: "hr_admin", label: "HR" },
+                { value: "manager", label: "Managers" },
+              ]}
+            />
           </div>
-        }
-      >
+        </div>
+
         {loading ? (
           <div className="p-5">
             <TableSkeleton />
@@ -803,96 +819,101 @@ export default function AdminAccounts() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-left text-sm">
-              <thead className="border-b border-slate-100 bg-slate-50/60 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                <tr>
-                  <th className="px-5 py-3">Name</th>
-                  <th className="px-5 py-3">Role</th>
-                  <th className="px-5 py-3">Employee ID</th>
-                  <th className="px-5 py-3">Status</th>
-                  <th className="px-5 py-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {visible.map((account) => {
-                  const busy = busyId === account.id;
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[720px] text-left text-sm">
+                <thead className="border-b border-[#E5E7EB] bg-[#F9FAFB] text-[11px] font-semibold uppercase tracking-wider text-[#6B7280]">
+                  <tr>
+                    <th className="px-5 py-3">Name</th>
+                    <th className="px-5 py-3">Role</th>
+                    <th className="px-5 py-3">Employee ID</th>
+                    <th className="px-5 py-3">Status</th>
+                    <th className="px-5 py-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#E5E7EB]">
+                  {visible.map((account) => {
+                    const busy = busyId === account.id;
 
-                  return (
-                    <tr key={account.id} className="align-middle">
-                      <td className="px-5 py-3">
-                        <p className="font-semibold text-slate-900">{account.full_name}</p>
-                        <p className="text-xs text-slate-500">{account.email}</p>
-                      </td>
-                      <td className="px-5 py-3">
-                        <RoleBadge role={account.role} />
-                      </td>
-                      <td className="px-5 py-3 text-slate-600">
-                        {account.employee_id ?? "-"}
-                      </td>
-                      <td className="px-5 py-3">
-                        <StatusBadge account={account} />
-                      </td>
-                      <td className="px-5 py-3">
-                        {/* Unlock (accounts lock themselves after 5 failed
-                            sign-ins) and Activate (accounts deactivated before
-                            Delete existed) apply at once; Delete asks first. */}
-                        <div className="flex justify-end gap-2">
-                          {account.is_locked && (
+                    return (
+                      <tr key={account.id} className="align-middle transition hover:bg-[#F9FAFB]">
+                        <td className="px-5 py-3.5">
+                          <p className="text-[13px] font-semibold text-[#111827]">{account.full_name}</p>
+                          <p className="text-[12px] text-[#6B7280]">{account.email}</p>
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <RoleBadge role={account.role} />
+                        </td>
+                        <td className="px-5 py-3.5 text-[13px] text-[#4B5563]">
+                          {account.employee_id ?? "-"}
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <StatusBadge account={account} />
+                        </td>
+                        <td className="px-5 py-3.5">
+                          {/* Unlock (accounts lock themselves after 5 failed
+                              sign-ins) and Activate (accounts deactivated before
+                              Delete existed) apply at once; Delete asks first. */}
+                          <div className="flex justify-end gap-2">
+                            {account.is_locked && (
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() =>
+                                  changeStatus(
+                                    account,
+                                    { is_locked: false },
+                                    `${account.full_name} unlocked.`,
+                                  )
+                                }
+                                className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#E5E7EB] px-3 text-xs font-semibold text-[#374151] transition hover:bg-[#F3F4F6] disabled:opacity-50"
+                              >
+                                <LockOpen className="h-3.5 w-3.5" />
+                                Unlock
+                              </button>
+                            )}
+
+                            {!account.is_active && (
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() =>
+                                  changeStatus(
+                                    account,
+                                    { is_active: true },
+                                    `${account.full_name} reactivated.`,
+                                  )
+                                }
+                                className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-emerald-200 px-3 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50 disabled:opacity-50"
+                              >
+                                <Power className="h-3.5 w-3.5" />
+                                Activate
+                              </button>
+                            )}
+
                             <button
                               type="button"
                               disabled={busy}
-                              onClick={() =>
-                                changeStatus(
-                                  account,
-                                  { is_locked: false },
-                                  `${account.full_name} unlocked.`,
-                                )
-                              }
-                              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+                              onClick={() => setPendingDelete(account)}
+                              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-rose-200 px-3 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 disabled:opacity-50"
                             >
-                              <LockOpen className="h-3.5 w-3.5" />
-                              Unlock
+                              <Trash2 className="h-3.5 w-3.5" />
+                              Delete
                             </button>
-                          )}
-
-                          {!account.is_active && (
-                            <button
-                              type="button"
-                              disabled={busy}
-                              onClick={() =>
-                                changeStatus(
-                                  account,
-                                  { is_active: true },
-                                  `${account.full_name} reactivated.`,
-                                )
-                              }
-                              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-emerald-200 px-3 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50 disabled:opacity-50"
-                            >
-                              <Power className="h-3.5 w-3.5" />
-                              Activate
-                            </button>
-                          )}
-
-                          <button
-                            type="button"
-                            disabled={busy}
-                            onClick={() => setPendingDelete(account)}
-                            className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-rose-200 px-3 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 disabled:opacity-50"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div className="border-t border-[#E5E7EB] px-5 py-3 text-[12px] text-[#6B7280]">
+              Showing {visible.length} of {accounts.length} {accounts.length === 1 ? "account" : "accounts"}
+            </div>
+          </>
         )}
-      </Panel>
+      </section>
 
       {pendingDelete && (
         <ConfirmDeleteDialog

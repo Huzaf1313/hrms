@@ -1,5 +1,5 @@
-import type { ChangeEvent, ReactNode } from "react";
-import { Camera, X } from "lucide-react";
+import { useEffect, useState, type ChangeEvent, type ReactNode } from "react";
+import { Camera, Eye, X } from "lucide-react";
 
 import { PROFILE_TABS } from "./adminProfileTypes";
 import { PROFILE_PANEL_CLASS } from "./profileFields";
@@ -32,6 +32,17 @@ export function ProfileAvatar({
   onPickPhoto: (file: File) => void;
   onRemove: () => void;
 }) {
+  const [previewOpen, setPreviewOpen] = useState(false);
+
+  useEffect(() => {
+    if (!previewOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setPreviewOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [previewOpen]);
+
   function handleChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
 
@@ -40,13 +51,62 @@ export function ProfileAvatar({
 
   return (
     <div className="relative shrink-0">
-      <span className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-blue-500 to-blue-700 text-2xl font-bold text-white ring-4 ring-blue-50">
-        {avatarUrl ? (
-          <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
-        ) : (
-          initialsOf(name)
-        )}
-      </span>
+      {avatarUrl ? (
+        <button
+          type="button"
+          onClick={() => setPreviewOpen(true)}
+          title="View profile photo"
+          aria-label="View profile photo"
+          className="group relative flex h-24 w-24 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-blue-500 to-blue-700 text-2xl font-bold text-white ring-4 ring-blue-50"
+        >
+          <img
+            src={avatarUrl}
+            alt={name}
+            className="h-full w-full object-cover transition duration-200 group-hover:scale-105"
+          />
+          <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/0 text-white opacity-0 transition group-hover:bg-black/30 group-hover:opacity-100">
+            <Eye className="h-5 w-5" />
+          </span>
+        </button>
+      ) : (
+        <span className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-blue-500 to-blue-700 text-2xl font-bold text-white ring-4 ring-blue-50">
+          {initialsOf(name)}
+        </span>
+      )}
+
+      {previewOpen && avatarUrl && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${name} profile photo`}
+          onClick={() => setPreviewOpen(false)}
+        >
+          <div
+            className="relative w-full max-w-md overflow-hidden rounded-2xl bg-white p-4 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <p className="truncate text-sm font-semibold text-gray-900">{name}</p>
+              <button
+                type="button"
+                onClick={() => setPreviewOpen(false)}
+                aria-label="Close photo preview"
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-100 hover:text-gray-900"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="overflow-hidden rounded-xl bg-gray-100">
+              <img
+                src={avatarUrl}
+                alt={name}
+                className="max-h-[70vh] w-full object-contain"
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       <label
         htmlFor="profile-photo"

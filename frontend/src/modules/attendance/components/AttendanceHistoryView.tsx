@@ -5,6 +5,8 @@ import type { EmployeeAttendanceRecord } from "../types";
 
 export interface AttendanceHistoryViewProps {
   records: EmployeeAttendanceRecord[];
+  currentDate?: Date;
+  onMonthChange?: (nextDate: Date) => void;
   onSelectDay: (record: EmployeeAttendanceRecord) => void;
   onRequestRegularization?: (record: EmployeeAttendanceRecord) => void;
   className?: string;
@@ -12,12 +14,16 @@ export interface AttendanceHistoryViewProps {
 
 export const AttendanceHistoryView: React.FC<AttendanceHistoryViewProps> = ({
   records,
+  currentDate: controlledDate,
+  onMonthChange,
   onSelectDay,
   onRequestRegularization,
   className = "",
 }) => {
   const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [internalDate, setInternalDate] = useState(new Date());
+
+  const currentDate = controlledDate ?? internalDate;
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -27,8 +33,16 @@ export const AttendanceHistoryView: React.FC<AttendanceHistoryViewProps> = ({
     year: "numeric",
   });
 
-  const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
-  const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
+  const setMonthDate = (next: Date) => {
+    if (onMonthChange) {
+      onMonthChange(next);
+    } else {
+      setInternalDate(next);
+    }
+  };
+
+  const nextMonth = () => setMonthDate(new Date(year, month + 1, 1));
+  const prevMonth = () => setMonthDate(new Date(year, month - 1, 1));
 
   // Map of records by day string "YYYY-MM-DD"
   const recordMap = useMemo(() => {
@@ -65,8 +79,13 @@ export const AttendanceHistoryView: React.FC<AttendanceHistoryViewProps> = ({
     return days;
   }, [year, month]);
 
+  const todayKey = useMemo(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  }, []);
+
   return (
-    <div className={`rounded-[8px] border border-[#E4E6E1] bg-white overflow-hidden shadow-none ${className}`}>
+    <div className={`rounded-xl border border-[#E5E7EB] bg-white overflow-hidden shadow-none ${className}`}>
       {/* Header Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 border-b border-[#E4E6E1] bg-white">
         <div className="flex items-center gap-3">
@@ -141,12 +160,15 @@ export const AttendanceHistoryView: React.FC<AttendanceHistoryViewProps> = ({
               }
 
               const rec = recordMap.get(item.dateKey);
-              const isToday = new Date().toISOString().slice(0, 10) === item.dateKey;
+              const isToday = item.dateKey === todayKey;
+              const isFuture = item.dateKey > todayKey;
 
               const statusVariant =
                 !rec
-                  ? item.isWeekend
+                  ? item.isWeekend || isFuture
                     ? "off"
+                    : isToday
+                    ? "warn"
                     : "bad"
                   : rec.status === "present"
                   ? "ok"
@@ -162,30 +184,32 @@ export const AttendanceHistoryView: React.FC<AttendanceHistoryViewProps> = ({
                 <div
                   key={item.dateKey}
                   onClick={() => rec && onSelectDay(rec)}
-                  className={`min-h-[76px] p-2 rounded-[6px] border transition-all flex flex-col justify-between ${
-                    rec ? "cursor-pointer hover:border-[#2F5FD0]" : ""
+                  className={`min-h-[80px] p-2.5 rounded-lg border transition-all flex flex-col justify-between ${
+                    rec ? "cursor-pointer hover:border-[#2563EB]" : ""
                   } ${
                     isToday
-                      ? "border-[#2F5FD0] bg-[#E8EEFB]/30"
+                      ? "border-[#2563EB] bg-[#EFF6FF]/60"
                       : item.isWeekend
-                      ? "bg-[#F6F7F5] border-[#E4E6E1]"
-                      : "bg-white border-[#E4E6E1]"
+                      ? "bg-[#F9FAFB] border-[#E5E7EB]"
+                      : isFuture && !rec
+                      ? "bg-[#F9FAFB]/60 border-[#E5E7EB]"
+                      : "bg-white border-[#E5E7EB]"
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <span
                       className={`text-[12px] font-medium ${
                         isToday
-                          ? "bg-[#2F5FD0] text-white rounded-full w-5 h-5 flex items-center justify-center font-bold"
-                          : item.isWeekend
-                          ? "text-[#7B8794]"
-                          : "text-[#1F2933]"
+                          ? "bg-[#2563EB] text-white rounded-full w-5 h-5 flex items-center justify-center font-bold"
+                          : item.isWeekend || (isFuture && !rec)
+                          ? "text-[#9CA3AF]"
+                          : "text-[#111827]"
                       }`}
                     >
                       {item.dayNumber}
                     </span>
                     {rec && (
-                      <span className="text-xs text-[#7B8794] font-mono">
+                      <span className="text-xs text-[#6B7280] font-mono">
                         {rec.total_hours != null && rec.total_hours > 0 ? `${rec.total_hours.toFixed(1)}h` : ""}
                       </span>
                     )}
@@ -203,9 +227,13 @@ export const AttendanceHistoryView: React.FC<AttendanceHistoryViewProps> = ({
                           : rec.status.charAt(0).toUpperCase() + rec.status.slice(1)}
                       </StatusPill>
                     ) : item.isWeekend ? (
-                      <span className="text-xs text-[#7B8794] font-medium">Off</span>
+                      <span className="text-xs text-[#9CA3AF] font-medium">Off</span>
+                    ) : isFuture ? (
+                      <span className="text-xs text-[#9CA3AF] font-medium">Upcoming</span>
+                    ) : isToday ? (
+                      <span className="text-xs text-[#B45309] font-medium">Pending</span>
                     ) : (
-                      <span className="text-xs text-[#A12D22] font-medium">No Punch</span>
+                      <span className="text-xs text-[#DC2626] font-medium">No Punch</span>
                     )}
                   </div>
                 </div>

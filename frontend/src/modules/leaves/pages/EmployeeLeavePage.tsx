@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { Plus, CalendarDays, History, LayoutDashboard } from "lucide-react";
 import { Button } from "../../../components/ui/Button";
+import { PageHeading } from "../../../components/ui/PageHeading";
+import { Tabs } from "../../../components/ui/Tabs";
 import { currentSessionUser } from "../../../lib/session";
 import { useLeaveBalances } from "../hooks/useLeaveBalances";
 import { useLeaveRequests } from "../hooks/useLeaveRequests";
@@ -34,79 +36,47 @@ export const EmployeeLeavePage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-[16px]">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-[12px] bg-[#FFFFFF] p-[16px] rounded-[8px] border border-[#E4E6E1]">
-        <div>
-          <h1 className="text-[18px] font-semibold text-[#1F2933]">My Leaves</h1>
-          <p className="text-[12px] text-[#4B5563] mt-[2px]">
-            View remaining balances, submit time-off requests, and monitor upcoming team schedules.
-          </p>
-        </div>
-        <div className="flex items-center gap-[10px]">
+    <div className="flex w-full flex-col gap-5 pb-10">
+      {/* Slim Page Header */}
+      <PageHeading
+        title="View remaining balances, submit time-off requests, and monitor upcoming team schedules."
+        actions={
           <Button
             variant="primary"
             size="sm"
             onClick={() => handleOpenApply()}
-            className="flex items-center gap-[6px] shadow-none"
+            leftIcon={<Plus className="h-4 w-4" />}
           >
-            <Plus className="w-[14px] h-[14px]" />
-            <span>Apply Leave</span>
+            Apply Leave
           </Button>
-        </div>
-      </div>
+        }
+      />
 
-      {/* Navigation Tabs */}
-      <div className="flex items-center gap-[8px] border-b border-[#E4E6E1] pb-[8px] overflow-x-auto max-w-full">
-        <button
-          type="button"
-          onClick={() => setActiveTab("dashboard")}
-          className={`flex shrink-0 whitespace-nowrap items-center gap-[6px] px-[12px] py-[6px] rounded-[6px] text-[13px] font-medium transition-colors ${
-            activeTab === "dashboard"
-              ? "bg-[#2F5FD0] text-[#FFFFFF]"
-              : "text-[#4B5563] hover:text-[#1F2933] hover:bg-[#F6F7F5]"
-          }`}
-        >
-          <LayoutDashboard className="w-[14px] h-[14px] shrink-0" />
-          <span>Overview & Balances</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("history")}
-          className={`flex shrink-0 whitespace-nowrap items-center gap-[6px] px-[12px] py-[6px] rounded-[6px] text-[13px] font-medium transition-colors ${
-            activeTab === "history"
-              ? "bg-[#2F5FD0] text-[#FFFFFF]"
-              : "text-[#4B5563] hover:text-[#1F2933] hover:bg-[#F6F7F5]"
-          }`}
-        >
-          <History className="w-[14px] h-[14px] shrink-0" />
-          <span>My History & Entitlements</span>
-          {pendingCount > 0 && (
-            <span
-              className={`ml-[4px] px-[6px] py-[1px] text-xs font-semibold rounded-full ${
-                activeTab === "history"
-                  ? "bg-[#FFFFFF] text-[#2F5FD0]"
-                  : "bg-[#FFF4E5] text-[#8A5A00]"
-              }`}
-            >
-              {pendingCount}
-            </span>
-          )}
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("calendar")}
-          className={`flex shrink-0 whitespace-nowrap items-center gap-[6px] px-[12px] py-[6px] rounded-[6px] text-[13px] font-medium transition-colors ${
-            activeTab === "calendar"
-              ? "bg-[#2F5FD0] text-[#FFFFFF]"
-              : "text-[#4B5563] hover:text-[#1F2933] hover:bg-[#F6F7F5]"
-          }`}
-        >
-          <CalendarDays className="w-[14px] h-[14px] shrink-0" />
-          <span>Team Calendar</span>
-        </button>
+      {/* Underline Navigation Tabs */}
+      <div className="rounded-xl border border-[#E5E7EB] bg-white px-5 pt-2">
+        <Tabs
+          variant="underline"
+          activeTab={activeTab}
+          onChange={(tab) => setActiveTab(tab as "dashboard" | "history" | "calendar")}
+          tabs={[
+            {
+              id: "dashboard",
+              label: "Overview & Balances",
+              icon: <LayoutDashboard className="h-4 w-4" />,
+            },
+            {
+              id: "history",
+              label: "My History & Entitlements",
+              icon: <History className="h-4 w-4" />,
+              badge: pendingCount > 0 ? pendingCount : undefined,
+            },
+            {
+              id: "calendar",
+              label: "Team Calendar",
+              icon: <CalendarDays className="h-4 w-4" />,
+            },
+          ]}
+        />
       </div>
 
       {/* Tab Panels */}

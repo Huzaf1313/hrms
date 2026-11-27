@@ -158,35 +158,35 @@ export const TodayPunchCard: React.FC<TodayPunchCardProps> = ({
   }
 
   return (
-    <div className={`rounded-[8px] border border-[#E4E6E1] bg-white p-[20px] shadow-none ${className}`}>
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+    <div className={`rounded-xl border border-[#E5E7EB] bg-white p-5 shadow-none ${className}`}>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         {/* Left: Clock and Shift info */}
-        <div>
+        <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <span className="text-[12px] font-medium text-[#7B8794]">
+            <span className="text-[12px] font-medium text-[#6B7280]">
               Workstation Live Time
             </span>
             <span className="inline-block h-2 w-2 rounded-full bg-[#1E6B45] animate-pulse" />
           </div>
-          <div className="mt-1 flex items-baseline gap-3">
-            <h2 className="text-[24px] font-semibold font-mono tracking-tight text-[#1F2933]">
+          <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <h2 className="whitespace-nowrap text-[24px] font-semibold font-mono tracking-tight text-[#111827]">
               {formattedClock}
             </h2>
-            <span className="text-[12px] text-[#7B8794]">{formattedDate}</span>
+            <span className="whitespace-nowrap text-[12px] text-[#6B7280]">{formattedDate}</span>
           </div>
 
-          <div className="mt-2.5 flex flex-wrap items-center gap-3 text-[12px] text-[#52606D]">
-            <span className="flex items-center gap-1.5 font-medium text-[#1F2933]">
-              <Clock className="w-3.5 h-3.5 text-[#7B8794]" />
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-[#4B5563]">
+            <span className="flex items-center gap-1.5 font-medium text-[#111827]">
+              <Clock className="w-3.5 h-3.5 text-[#6B7280]" />
               {shiftName} ({shiftTiming})
             </span>
-            <span className="text-[#E4E6E1]">•</span>
-            <span className="text-[#7B8794]">Grace: {gracePeriod}m</span>
+            <span className="text-[#D1D5DB]">•</span>
+            <span className="text-[#6B7280]">Grace: {gracePeriod}m</span>
           </div>
         </div>
 
         {/* Right: Location & Action Button */}
-        <div className="flex flex-col sm:items-end gap-3 min-w-[200px]">
+        <div className="flex w-full shrink-0 flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
           {/* Office vs WFH selector */}
           <div className="inline-flex rounded-[6px] bg-[#F0F1EE] p-0.5 text-[12px]">
             <button

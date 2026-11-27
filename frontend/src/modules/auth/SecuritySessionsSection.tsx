@@ -58,6 +58,7 @@ function formatDate(isoString: string): string {
 export default function SecuritySessionsSection() {
   const [sessions, setSessions] = useState<UserSession[]>([]);
   const [loginHistory, setLoginHistory] = useState<LoginHistoryRecord[]>([]);
+  const [showAllHistory, setShowAllHistory] = useState(false);
   const [loading, setLoading] = useState(true);
   const [revokingId, setRevokingId] = useState<string | null>(null);
   const [revokingOthers, setRevokingOthers] = useState(false);
@@ -138,17 +139,18 @@ export default function SecuritySessionsSection() {
   };
 
   const otherSessions = sessions.filter((s) => !s.is_current);
+  const visibleHistory = showAllHistory ? loginHistory : loginHistory.slice(0, 6);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* ACTIVE SESSIONS CARD */}
-      <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+      <section className="rounded-xl border border-[#E5E7EB] bg-white p-5">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">
+            <h2 className="text-[14px] font-semibold text-[#111827]">
               Active Sessions &amp; Devices
             </h2>
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-0.5 text-[12px] text-[#6B7280]">
               Manage devices currently logged in to your account.
             </p>
           </div>
@@ -276,17 +278,28 @@ export default function SecuritySessionsSection() {
       </section>
 
       {/* LOGIN HISTORY CARD */}
-      <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900">
-            Recent Login History
-          </h2>
-          <p className="mt-1 text-sm text-gray-500">
-            Audit log of recent sign-in attempts for your account.
-          </p>
+      <section className="rounded-xl border border-[#E5E7EB] bg-white p-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="text-[14px] font-semibold text-[#111827]">
+              Recent Login History
+            </h2>
+            <p className="mt-0.5 text-[12px] text-[#6B7280]">
+              Audit log of recent sign-in attempts for your account.
+            </p>
+          </div>
+          {loginHistory.length > 6 && (
+            <button
+              type="button"
+              onClick={() => setShowAllHistory((prev) => !prev)}
+              className="text-[12px] font-medium text-[#2563EB] hover:text-[#1D4ED8]"
+            >
+              {showAllHistory ? "Show recent" : `Show all (${loginHistory.length})`}
+            </button>
+          )}
         </div>
 
-        <div className="mt-5 overflow-x-auto">
+        <div className="mt-4 overflow-x-auto">
           {loading && loginHistory.length === 0 ? (
             <div className="py-6 text-center text-xs text-gray-400">
               Loading login history...
@@ -298,15 +311,15 @@ export default function SecuritySessionsSection() {
           ) : (
             <table className="w-full min-w-[550px] text-left text-xs">
               <thead>
-                <tr className="border-b border-gray-100 uppercase tracking-wide text-gray-400">
+                <tr className="border-b border-[#E5E7EB] uppercase tracking-wide text-[#6B7280]">
                   <th className="pb-3 font-semibold">Date &amp; Time</th>
                   <th className="pb-3 font-semibold">Device &amp; Browser</th>
                   <th className="pb-3 font-semibold">IP Address</th>
                   <th className="pb-3 font-semibold">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
-                {loginHistory.map((record) => {
+              <tbody className="divide-y divide-[#E5E7EB]">
+                {visibleHistory.map((record) => {
                   const dev = parseDevice(record.user_agent);
                   return (
                     <tr key={record.id} className="hover:bg-gray-50/50">

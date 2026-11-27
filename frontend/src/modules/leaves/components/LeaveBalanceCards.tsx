@@ -20,11 +20,19 @@ export const LeaveBalanceCards: React.FC<LeaveBalanceCardsProps> = ({
     else if (onApplyType) onApplyType(type);
   };
 
+  const visibleBalances = balances.filter((b) => b.leave_type !== "Unpaid Leave");
+  const gridColsClass =
+    visibleBalances.length === 1
+      ? "grid-cols-1"
+      : visibleBalances.length === 2
+        ? "grid-cols-1 sm:grid-cols-2"
+        : visibleBalances.length === 3
+          ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+          : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4";
+
   return (
-    <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 ${className}`}>
-      {balances
-        .filter((b) => b.leave_type !== "Unpaid Leave")
-        .map((b) => {
+    <div className={`grid ${gridColsClass} gap-4 ${className}`}>
+      {visibleBalances.map((b) => {
           const meta = getLeaveTypeMeta(b.leave_type);
           const percent = b.allocated > 0 ? Math.min(100, Math.round((b.used / b.allocated) * 100)) : 0;
 
@@ -32,22 +40,22 @@ export const LeaveBalanceCards: React.FC<LeaveBalanceCardsProps> = ({
             <div
               key={b.leave_type}
               onClick={() => handleApply(b.leave_type)}
-              className={`rounded-[8px] bg-white border border-[#E4E6E1] p-[16px_20px] shadow-kpi transition-colors ${
-                onApply || onApplyType ? "cursor-pointer hover:border-[#2F5FD0] shadow-kpi-hover" : ""
+              className={`group rounded-xl bg-white border border-[#E5E7EB] p-5 transition-colors ${
+                onApply || onApplyType ? "cursor-pointer hover:border-[#2563EB]" : ""
               }`}
             >
               {/* Header with Type label and Top Accent Indicator */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
                   <span
                     className="w-2.5 h-2.5 rounded-full shrink-0"
                     style={{ backgroundColor: meta.accent }}
                   />
-                  <h4 className="text-[13.5px] font-semibold text-[#1F2933] truncate">
+                  <h4 className="text-[13.5px] font-semibold text-[#111827] truncate">
                     {b.leave_type}
                   </h4>
                 </div>
-                <span className="text-xs font-medium text-[#7B8794]">
+                <span className="text-xs font-medium text-[#6B7280] shrink-0">
                   {b.used}/{b.allocated} used
                 </span>
               </div>
@@ -55,17 +63,22 @@ export const LeaveBalanceCards: React.FC<LeaveBalanceCardsProps> = ({
               {/* Big KPI Number for Available Days */}
               <div className="mt-3 flex items-baseline justify-between">
                 <div>
-                  <span className="text-[24px] font-semibold text-[#1F2933] tracking-tight leading-none">
+                  <span className="text-[26px] font-semibold text-[#111827] tracking-tight leading-none">
                     {b.available}
                   </span>
-                  <span className="text-[12px] text-[#7B8794] ml-1.5 font-normal">
+                  <span className="text-[12px] text-[#6B7280] ml-1.5 font-normal">
                     days available
                   </span>
                 </div>
+                {(onApply || onApplyType) && (
+                  <span className="text-[11px] font-medium text-[#2563EB] opacity-0 transition-opacity group-hover:opacity-100">
+                    Apply →
+                  </span>
+                )}
               </div>
 
               {/* Custom Accent Progress Bar */}
-              <div className="mt-3.5 w-full bg-[#F0F1EE] h-1.5 rounded-full overflow-hidden">
+              <div className="mt-3.5 w-full bg-[#F3F4F6] h-1.5 rounded-full overflow-hidden">
                 <div
                   className="h-full rounded-full transition-all duration-300"
                   style={{
@@ -76,7 +89,7 @@ export const LeaveBalanceCards: React.FC<LeaveBalanceCardsProps> = ({
               </div>
 
               {/* Subtitle helper */}
-              <div className="mt-2 text-xs text-[#7B8794] truncate">
+              <div className="mt-2.5 text-xs text-[#6B7280] truncate">
                 {meta.description}
               </div>
             </div>

@@ -186,7 +186,11 @@ function buildUpcoming(
   };
 }
 
-export default function BirthdaysAndAnniversariesCard() {
+export default function BirthdaysAndAnniversariesCard({
+  className = "col-span-12 md:col-span-6 lg:col-span-3",
+}: {
+  className?: string;
+} = {}) {
   const [tab, setTab] = useState<CelebrationTab>("birthday");
   const [employees, setEmployees] = useState<Employee[] | null>(null);
   const [error, setError] = useState("");
@@ -235,7 +239,7 @@ export default function BirthdaysAndAnniversariesCard() {
   return (
     <DashboardCard
       title="Upcoming Birthdays & Work Anniversaries"
-      className="col-span-12 md:col-span-6 lg:col-span-3"
+      className={className}
       action={<DashboardViewAllLink />}
     >
       <div className="mb-3 flex gap-1 border-b border-gray-100">

@@ -39,6 +39,7 @@ function readUserFirstName(): string {
       : null;
     const rawName = (user?.full_name ?? user?.name ?? "").trim();
     if (!rawName) return "";
+    if (rawName.toLowerCase() === "super admin") return "Super Admin";
     const first = rawName.split(/\s+/)[0]?.trim() ?? "";
     if (!first || first.toLowerCase() === "undefined" || first.toLowerCase() === "null") {
       return "";
@@ -152,44 +153,58 @@ export default function AdminDashboard({
       </div>
 
       {/* 4. People and activity */}
-      <div className="grid grid-cols-12 items-stretch gap-4">
-        <DepartmentDonut
-          counts={metrics.departmentCounts}
-          className="col-span-12 lg:col-span-6"
-          onViewAll={() => onNavigate("Employees")}
-        />
+      {showHrWidgets ? (
+        <>
+          <div className="grid grid-cols-12 items-stretch gap-4">
+            <DepartmentDonut
+              counts={metrics.departmentCounts}
+              className="col-span-12 lg:col-span-6"
+              onViewAll={() => onNavigate("Employees")}
+            />
 
-        <RecentActivityCard
-          activities={recentActivities}
-          className="col-span-12 lg:col-span-6"
-        />
-      </div>
+            <RecentActivityCard
+              activities={recentActivities}
+              className="col-span-12 lg:col-span-6"
+            />
+          </div>
 
-      {/* 5. Operations */}
-      <div className="grid grid-cols-12 items-stretch gap-4">
-          <BirthdaysAndAnniversariesCard />
+          {/* 5. Operations */}
+          <div className="grid grid-cols-12 items-stretch gap-4">
+            <BirthdaysAndAnniversariesCard />
+            <RecruitmentFunnel
+              metrics={metrics}
+              onOpenRecruitment={() => onNavigate("Recruitment")}
+            />
+            <PayrollExpenseSummaryCard
+              onOpenPayroll={() => onNavigate("Payroll")}
+              payrollThisMonth={metrics.payrollThisMonth}
+              totalExpenses={metrics.totalExpensesThisMonth}
+              payrollChangePercent={metrics.payrollChangePercent}
+              expenseChangePercent={metrics.expenseChangePercent}
+              isLoading={metrics.isPayrollLoading}
+            />
+            <UpcomingInterviewsCard
+              metrics={metrics}
+              onOpenRecruitment={() => onNavigate("Recruitment")}
+            />
+          </div>
+        </>
+      ) : (
+        <div className="grid grid-cols-12 items-stretch gap-4">
+          <DepartmentDonut
+            counts={metrics.departmentCounts}
+            className="col-span-12 md:col-span-6 lg:col-span-4"
+            onViewAll={() => onNavigate("Employees")}
+          />
 
-          {showHrWidgets && (
-            <>
-              <RecruitmentFunnel
-                metrics={metrics}
-                onOpenRecruitment={() => onNavigate("Recruitment")}
-              />
-              <PayrollExpenseSummaryCard
-                onOpenPayroll={() => onNavigate("Payroll")}
-                payrollThisMonth={metrics.payrollThisMonth}
-                totalExpenses={metrics.totalExpensesThisMonth}
-                payrollChangePercent={metrics.payrollChangePercent}
-                expenseChangePercent={metrics.expenseChangePercent}
-                isLoading={metrics.isPayrollLoading}
-              />
-              <UpcomingInterviewsCard
-                metrics={metrics}
-                onOpenRecruitment={() => onNavigate("Recruitment")}
-              />
-            </>
-          )}
-      </div>
+          <RecentActivityCard
+            activities={recentActivities}
+            className="col-span-12 md:col-span-6 lg:col-span-4"
+          />
+
+          <BirthdaysAndAnniversariesCard className="col-span-12 md:col-span-12 lg:col-span-4" />
+        </div>
+      )}
 
       {/* 6. Footer */}
       <div className="mt-8 flex flex-col items-center justify-between gap-2 border-t border-slate-100 pt-4 text-xs font-medium text-slate-400 sm:flex-row">
