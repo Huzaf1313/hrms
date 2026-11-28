@@ -100,7 +100,7 @@ export default function NoticePopup({
         aria-modal="true"
         aria-label={title}
         onClick={(event) => event.stopPropagation()}
-        className="w-full max-w-sm rounded bg-white p-6 text-center shadow-xl"
+        className="w-full max-w-sm rounded-[2px] bg-white p-6 text-center shadow-xl"
       >
         <span
           className={`mx-auto flex h-12 w-12 items-center justify-center rounded-full ${tone.iconWrap}`}

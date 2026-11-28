@@ -55,8 +55,8 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 
     return (
       <div className="flex min-h-[60vh] items-center justify-center px-6 py-10">
-        <div className="w-full max-w-lg rounded-3xl border border-amber-200 bg-white p-8 text-center shadow-sm">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50">
+        <div className="w-full max-w-lg rounded-[2px] border border-amber-200 bg-white p-8 text-center shadow-none">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-[2px] bg-amber-50">
             <TriangleAlert className="h-6 w-6 text-amber-600" />
           </div>
 
@@ -69,7 +69,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
             working &mdash; you can retry or move to another page.
           </p>
 
-          <pre className="mt-4 max-h-40 overflow-auto rounded-2xl bg-gray-50 p-3 text-left text-xs text-gray-600">
+          <pre className="mt-4 max-h-40 overflow-auto rounded-[2px] bg-gray-50 p-3 text-left text-xs text-gray-600">
             {error.message}
           </pre>
 

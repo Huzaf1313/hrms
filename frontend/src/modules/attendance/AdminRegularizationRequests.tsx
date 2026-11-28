@@ -154,7 +154,7 @@ export const AdminRegularizationRequests: React.FC = () => {
       </div>
 
       {/* Toolbar in ONE row */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 rounded-lg border border-slate-200">
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 rounded-[2px] border border-slate-200">
         {/* Left: Search input */}
         <div className="relative min-w-[220px] max-w-xs flex-1">
           <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -190,7 +190,7 @@ export const AdminRegularizationRequests: React.FC = () => {
       </div>
 
       {/* Main Requests Table */}
-      <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
+      <div className="rounded-[2px] border border-slate-200 bg-white overflow-hidden">
         {isLoading ? (
           <div className="p-4">
             <TableSkeleton rows={8} columns={7} />
@@ -336,7 +336,7 @@ export const AdminRegularizationRequests: React.FC = () => {
         >
           <div className="space-y-4">
             {/* Header info */}
-            <div className="flex items-center justify-between p-3 rounded-lg border border-slate-100 bg-slate-50">
+            <div className="flex items-center justify-between p-3 rounded-[2px] border border-slate-100 bg-slate-50">
               <div className="flex items-center gap-2.5">
                 <Avatar name={selectedRequest.employeeName} size="sm" />
                 <div>
@@ -357,7 +357,7 @@ export const AdminRegularizationRequests: React.FC = () => {
             </div>
 
             {/* Side-by-side Punches */}
-            <div className="grid grid-cols-2 gap-3 p-3 rounded-lg border border-slate-200 bg-white text-xs">
+            <div className="grid grid-cols-2 gap-3 p-3 rounded-[2px] border border-slate-200 bg-white text-xs">
               <div>
                 <span className="text-xs text-slate-400 block font-medium">Original Logged Times</span>
                 <span className="font-mono text-slate-600 mt-1 block font-medium">
@@ -379,14 +379,14 @@ export const AdminRegularizationRequests: React.FC = () => {
               <span className="text-xs font-medium text-slate-700 block mb-1">
                 Employee Justification
               </span>
-              <p className="text-xs text-slate-600 p-2.5 rounded bg-slate-50 border border-slate-100 leading-relaxed">
+              <p className="text-xs text-slate-600 p-2.5 rounded-[2px] bg-slate-50 border border-slate-100 leading-relaxed">
                 {selectedRequest.reason}
               </p>
             </div>
 
             {/* Attachment preview if present */}
             {selectedRequest.attachmentName && (
-              <div className="flex items-center gap-2 p-2 rounded border border-slate-200 text-xs text-slate-700">
+              <div className="flex items-center gap-2 p-2 rounded-[2px] border border-slate-200 text-xs text-slate-700">
                 <Paperclip className="w-3.5 h-3.5 text-slate-400" />
                 <span className="truncate flex-1">{selectedRequest.attachmentName}</span>
                 <span className="text-xs text-blue-600 font-medium">Attached Proof</span>
@@ -407,7 +407,7 @@ export const AdminRegularizationRequests: React.FC = () => {
                   <span className="font-medium">Reviewed by:</span> {selectedRequest.reviewedBy}
                   {selectedRequest.reviewedAt && ` on ${selectedRequest.reviewedAt}`}
                   {selectedRequest.reviewerComment && (
-                    <p className="mt-1 p-2 rounded bg-slate-100 text-xs text-slate-700 italic border-l-2 border-slate-400">
+                    <p className="mt-1 p-2 rounded-[2px] bg-slate-100 text-xs text-slate-700 italic border-l-2 border-slate-400">
                       "{selectedRequest.reviewerComment}"
                     </p>
                   )}

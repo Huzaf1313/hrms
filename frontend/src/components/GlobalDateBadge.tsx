@@ -21,7 +21,7 @@ export function GlobalDateBadge({
   const label = formatDisplayDate(date);
 
   return (
-    <div className="flex h-8 items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 text-xs font-medium text-blue-700">
+    <div className="flex h-8 items-center gap-2 rounded-[2px] border border-blue-200 bg-blue-50 px-3 text-xs font-medium text-blue-700">
       <CalendarDays className="h-3.5 w-3.5 shrink-0 text-blue-500" />
 
       <span className="truncate">

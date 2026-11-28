@@ -28,6 +28,7 @@ body,
 
 /* Hard rule: NO box-shadows on panels, cards, tables */
 .rounded-\[8px\],
+.rounded-\[2px\]:not(.shadow-kpi):not(.shadow-md):not(.shadow-lg):not(.shadow-xl):not(.shadow-2xl),
 .rounded-lg,
 .rounded-xl,
 .rounded-2xl,

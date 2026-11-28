@@ -445,7 +445,7 @@ function AdminEmployeeDetailsPage({
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[290px_1fr] lg:items-stretch">
         {/* LEFT COLUMN (Profile Card - height driven by right column on desktop) */}
         <div className="relative">
-          <div className="flex flex-col gap-4 rounded-xl border border-[#E5E7EB] bg-white p-5 lg:absolute lg:inset-0 lg:overflow-y-auto">
+          <div className="flex flex-col gap-4 rounded-[2px] border border-[#E5E7EB] bg-white p-5 lg:absolute lg:inset-0 lg:overflow-y-auto">
             <div className="space-y-4">
               <div className="flex flex-col items-start">
                 <button
@@ -592,7 +592,7 @@ function AdminEmployeeDetailsPage({
           <div
             role="tablist"
             aria-label="Employee profile sections"
-            className="flex items-center gap-1 overflow-x-auto overflow-y-hidden scrollbar-hidden max-w-full rounded-xl border border-[#E5E7EB] bg-white p-1.5"
+            className="flex items-center gap-1 overflow-x-auto overflow-y-hidden scrollbar-hidden max-w-full rounded-[2px] border border-[#E5E7EB] bg-white p-1.5"
           >
             {profileTabs.map((tab) => {
               const Icon = tab.icon;
@@ -624,7 +624,7 @@ function AdminEmployeeDetailsPage({
               }`}
             >
               {/* EMPLOYMENT DETAILS */}
-              <div className="rounded-xl border border-[#E5E7EB] bg-white p-6">
+              <div className="rounded-[2px] border border-[#E5E7EB] bg-white p-6">
                 <h3 className="mb-5 flex items-center gap-2 text-lg font-semibold text-gray-800">
                   <BriefcaseBusiness
                     size={20}
@@ -716,7 +716,7 @@ function AdminEmployeeDetailsPage({
               {/* PERSONAL + EMERGENCY */}
               <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
                 {/* PERSONAL INFORMATION */}
-                <div className="rounded-xl border border-[#E5E7EB] bg-white p-6">
+                <div className="rounded-[2px] border border-[#E5E7EB] bg-white p-6">
                   <h3 className="mb-5 flex items-center gap-2 text-lg font-semibold text-gray-800">
                     <User
                       size={20}
@@ -757,7 +757,7 @@ function AdminEmployeeDetailsPage({
                 </div>
 
                 {/* EMERGENCY CONTACT */}
-                <div className="rounded-xl border border-[#E5E7EB] bg-white p-6">
+                <div className="rounded-[2px] border border-[#E5E7EB] bg-white p-6">
                   <div className="mb-5 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <ShieldAlert
@@ -782,7 +782,7 @@ function AdminEmployeeDetailsPage({
                   </div>
 
                   {employee.emergency_contact ? (
-                    <div className="rounded-2xl bg-gray-50 p-4">
+                    <div className="rounded-[2px] bg-gray-50 p-4">
                       {/* CONTACT NAME */}
                       <p className="font-semibold text-gray-800">
                         {employee.emergency_contact.name}
@@ -819,7 +819,7 @@ function AdminEmployeeDetailsPage({
                       )}
                     </div>
                   ) : (
-                    <div className="rounded-2xl bg-gray-50 px-4 py-5">
+                    <div className="rounded-[2px] bg-gray-50 px-4 py-5">
                       <p className="text-sm font-medium text-gray-700">
                         No emergency contact on file.
                       </p>
@@ -849,7 +849,7 @@ function AdminEmployeeDetailsPage({
               activeTab === "leave" ? "visible" : "invisible pointer-events-none"
             }`}
           >
-            <div className="h-full rounded-xl border border-[#E5E7EB] bg-white p-6">
+            <div className="h-full rounded-[2px] border border-[#E5E7EB] bg-white p-6">
               <h3 className="mb-5 font-semibold text-gray-900">
                 Leave Balance
               </h3>
@@ -871,7 +871,7 @@ function AdminEmployeeDetailsPage({
                   return (
                     <div
                       key={balance.leave_type}
-                      className="rounded-xl border border-[#E5E7EB] p-4 transition hover:border-[#D1D5DB]"
+                      className="rounded-[2px] border border-[#E5E7EB] p-4 transition hover:border-[#D1D5DB]"
                     >
                       <div
                         className={`mb-3 flex h-8 w-8 items-center justify-center rounded-lg ${style.iconBg}`}
@@ -926,7 +926,7 @@ function AdminEmployeeDetailsPage({
             }`}
           >
             {/* BANK INFORMATION */}
-            <div className="rounded-xl border border-[#E5E7EB] bg-white p-6">
+            <div className="rounded-[2px] border border-[#E5E7EB] bg-white p-6">
               <div className="mb-5 flex items-center justify-between">
                 <h3 className="flex items-center gap-2 text-lg font-semibold text-gray-800">
                   <Landmark
@@ -1007,7 +1007,7 @@ function AdminEmployeeDetailsPage({
               </div>
 
           {/* PROMOTION / TRANSFER / SALARY */}
-            <div className="flex-1 rounded-xl border border-[#E5E7EB] bg-white p-6">
+            <div className="flex-1 rounded-[2px] border border-[#E5E7EB] bg-white p-6">
               {/* HISTORY TABS */}
               <div className="mb-5 flex gap-6 overflow-x-auto overflow-y-hidden scrollbar-hidden max-w-full border-b border-gray-100">
                 {/* SALARY TAB - FIRST */}
@@ -1091,7 +1091,7 @@ function AdminEmployeeDetailsPage({
                     ? promotionHistory.map((entry, index) => (
                       <div
                         key={`${entry.promotion_date}-${index}`}
-                        className="flex gap-4 rounded-2xl bg-gray-50 p-4"
+                        className="flex gap-4 rounded-[2px] bg-gray-50 p-4"
                       >
                         <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-[#2563eb]" />
 
@@ -1117,7 +1117,7 @@ function AdminEmployeeDetailsPage({
                     : transferHistory.map((entry, index) => (
                       <div
                         key={`${entry.transfer_date}-${index}`}
-                        className="flex gap-4 rounded-2xl bg-gray-50 p-4"
+                        className="flex gap-4 rounded-[2px] bg-gray-50 p-4"
                       >
                         <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-[#2563eb]" />
 
@@ -1158,7 +1158,7 @@ function AdminEmployeeDetailsPage({
       {/* EDIT MODAL */}
       {editSection && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
-          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded bg-white p-6 shadow-xl">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[2px] bg-white p-6 shadow-xl">
             {/* MODAL HEADER */}
             <div className="flex items-center justify-between border-b border-gray-100 pb-4">
               <div>
@@ -1291,7 +1291,7 @@ function AdminEmployeeDetailsPage({
 
                 {/* ERROR */}
                 {saveError && (
-                  <div className="rounded bg-red-50 px-4 py-3 text-sm text-red-600">
+                  <div className="rounded-[2px] bg-red-50 px-4 py-3 text-sm text-red-600">
                     {saveError}
                   </div>
                 )}
@@ -1412,7 +1412,7 @@ function AdminEmployeeDetailsPage({
 
                 {/* ERROR */}
                 {saveError && (
-                  <div className="rounded bg-red-50 px-4 py-3 text-sm text-red-600">
+                  <div className="rounded-[2px] bg-red-50 px-4 py-3 text-sm text-red-600">
                     {saveError}
                   </div>
                 )}

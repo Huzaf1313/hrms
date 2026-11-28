@@ -91,7 +91,7 @@ export default function DepartmentDonut({
 
   return (
     <div
-      className={`flex h-full flex-col rounded-xl border border-[#E5E7EB] bg-white p-5 shadow-none ${className}`}
+      className={`flex h-full flex-col rounded-[2px] border border-[#E5E7EB] bg-white p-5 shadow-none ${className}`}
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-4">

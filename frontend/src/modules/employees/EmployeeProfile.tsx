@@ -68,7 +68,7 @@ function InfoItem({
   const isMissing = !value;
 
   return (
-    <div className="flex items-start gap-3 rounded-lg border border-[#E5E7EB] bg-[#F9FAFB]/60 px-3.5 py-2.5 transition-colors hover:bg-[#F9FAFB]">
+    <div className="flex items-start gap-3 rounded-[2px] border border-[#E5E7EB] bg-[#F9FAFB]/60 px-3.5 py-2.5 transition-colors hover:bg-[#F9FAFB]">
       <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-[#6B7280] ring-1 ring-[#E5E7EB]">
         <Icon size={15} strokeWidth={1.8} />
       </div>
@@ -100,7 +100,7 @@ function EmptyInformation({
   description: string;
 }) {
   return (
-    <div className="flex items-center gap-3.5 rounded-xl border border-dashed border-[#D1D5DB] bg-[#F9FAFB]/70 px-4 py-5">
+    <div className="flex items-center gap-3.5 rounded-[2px] border border-dashed border-[#D1D5DB] bg-[#F9FAFB]/70 px-4 py-5">
       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-[#6B7280] ring-1 ring-[#E5E7EB]">
         <Icon size={18} />
       </div>
@@ -670,18 +670,18 @@ const handleChangePassword = async (
   if (isLoading) {
     return (
       <div className="flex w-full flex-col gap-5 pb-10">
-        <div className="h-36 animate-pulse rounded-xl border border-[#E5E7EB] bg-white" />
+        <div className="h-36 animate-pulse rounded-[2px] border border-[#E5E7EB] bg-white" />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {Array.from({ length: 4 }).map((_, index) => (
             <div
               key={index}
-              className="h-24 animate-pulse rounded-xl border border-[#E5E7EB] bg-white"
+              className="h-24 animate-pulse rounded-[2px] border border-[#E5E7EB] bg-white"
             />
           ))}
         </div>
         <div className="grid grid-cols-12 gap-5">
-          <div className="col-span-12 h-80 animate-pulse rounded-xl border border-[#E5E7EB] bg-white lg:col-span-7" />
-          <div className="col-span-12 h-80 animate-pulse rounded-xl border border-[#E5E7EB] bg-white lg:col-span-5" />
+          <div className="col-span-12 h-80 animate-pulse rounded-[2px] border border-[#E5E7EB] bg-white lg:col-span-7" />
+          <div className="col-span-12 h-80 animate-pulse rounded-[2px] border border-[#E5E7EB] bg-white lg:col-span-5" />
         </div>
       </div>
     );
@@ -691,7 +691,7 @@ const handleChangePassword = async (
     <div className="flex w-full flex-col gap-5 pb-10">
       {/* Error */}
       {employeeLoadError && (
-        <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        <div className="flex items-start gap-3 rounded-[2px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
           <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-amber-500" />
           <div>
             <p className="font-semibold">Profile information unavailable</p>
@@ -701,7 +701,7 @@ const handleChangePassword = async (
       )}
 
       {/* Clean Profile Header Card */}
-      <section className="rounded-xl border border-[#E5E7EB] bg-white p-5 sm:p-6">
+      <section className="rounded-[2px] border border-[#E5E7EB] bg-white p-5 sm:p-6">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           {/* Left: Avatar & Identity */}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
@@ -717,7 +717,7 @@ const handleChangePassword = async (
                 }}
                 title={profilePhotoUrl ? "View profile photo" : "Upload profile photo"}
                 aria-label={profilePhotoUrl ? "View profile photo" : "Upload profile photo"}
-                className="group relative flex h-20 w-20 cursor-pointer items-center justify-center overflow-hidden rounded-2xl border border-[#E5E7EB] bg-[#F3F4F6] text-xl font-bold text-[#4B5563] transition hover:border-[#2563EB]"
+                className="group relative flex h-20 w-20 cursor-pointer items-center justify-center overflow-hidden rounded-[2px] border border-[#E5E7EB] bg-[#F3F4F6] text-xl font-bold text-[#4B5563] transition hover:border-[#2563EB]"
               >
                 {profilePhotoUrl ? (
                   <>
@@ -836,7 +836,7 @@ const handleChangePassword = async (
           </div>
 
           {/* Right: Profile Completion Widget */}
-          <div className="w-full rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] p-4 lg:w-72 lg:shrink-0">
+          <div className="w-full rounded-[2px] border border-[#E5E7EB] bg-[#F9FAFB] p-4 lg:w-72 lg:shrink-0">
             <div className="flex items-center justify-between">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-[#6B7280]">
                 Profile Completion
@@ -913,7 +913,7 @@ const handleChangePassword = async (
           return (
             <div
               key={card.label}
-              className="flex items-start justify-between gap-3 rounded-xl border border-[#E5E7EB] bg-white p-4"
+              className="flex items-start justify-between gap-3 rounded-[2px] border-2 border-[#E5E7EB] bg-white p-4 shadow-kpi"
             >
               <div className="min-w-0">
                 <p className="text-[12px] font-medium text-[#6B7280]">
@@ -934,7 +934,7 @@ const handleChangePassword = async (
       </section>
 
       {/* Section Navigation Tabs */}
-      <div className="rounded-xl border border-[#E5E7EB] bg-white px-5 pt-2">
+      <div className="rounded-[2px] border border-[#E5E7EB] bg-white px-5 pt-2">
         <Tabs
           variant="underline"
           activeTab={activeTab}
@@ -951,7 +951,7 @@ const handleChangePassword = async (
       {activeTab === "overview" && (
         <div className="grid grid-cols-12 items-stretch gap-5">
           {/* Personal Information */}
-          <section className="col-span-12 flex flex-col rounded-xl border border-[#E5E7EB] bg-white lg:col-span-7">
+          <section className="col-span-12 flex flex-col rounded-[2px] border border-[#E5E7EB] bg-white lg:col-span-7">
             <div className="flex items-center justify-between border-b border-[#E5E7EB] px-5 py-4">
               <div>
                 <h2 className="text-[14px] font-semibold text-[#111827]">
@@ -1009,7 +1009,7 @@ const handleChangePassword = async (
           </section>
 
           {/* Emergency Contact */}
-          <section className="col-span-12 flex flex-col rounded-xl border border-[#E5E7EB] bg-white lg:col-span-5">
+          <section className="col-span-12 flex flex-col rounded-[2px] border border-[#E5E7EB] bg-white lg:col-span-5">
             <div className="flex items-center justify-between border-b border-[#E5E7EB] px-5 py-4">
               <div>
                 <h2 className="text-[14px] font-semibold text-[#111827]">
@@ -1035,14 +1035,14 @@ const handleChangePassword = async (
 
             <div className="flex-1 p-5">
               {emergencyContactSuccess && (
-                <div className="mb-4 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-xs font-medium text-emerald-800">
+                <div className="mb-4 flex items-center gap-2 rounded-[2px] border border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-xs font-medium text-emerald-800">
                   <CheckCircle2 size={15} className="shrink-0 text-emerald-600" />
                   <span>{emergencyContactSuccess}</span>
                 </div>
               )}
 
               {emergencyContactError && (
-                <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-xs font-medium text-rose-800">
+                <div className="mb-4 rounded-[2px] border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-xs font-medium text-rose-800">
                   {emergencyContactError}
                 </div>
               )}
@@ -1234,7 +1234,7 @@ const handleChangePassword = async (
       {activeTab === "employment" && (
         <div className="space-y-5">
           {/* Employment Information */}
-          <section className="rounded-xl border border-[#E5E7EB] bg-white">
+          <section className="rounded-[2px] border border-[#E5E7EB] bg-white">
             <div className="flex items-center justify-between border-b border-[#E5E7EB] px-5 py-4">
               <div>
                 <h2 className="text-[14px] font-semibold text-[#111827]">
@@ -1296,7 +1296,7 @@ const handleChangePassword = async (
 
           {/* Account Overview + Bank Information */}
           <div className="grid grid-cols-12 items-stretch gap-5">
-            <section className="col-span-12 flex flex-col rounded-xl border border-[#E5E7EB] bg-white lg:col-span-5">
+            <section className="col-span-12 flex flex-col rounded-[2px] border border-[#E5E7EB] bg-white lg:col-span-5">
               <div className="border-b border-[#E5E7EB] px-5 py-4">
                 <h2 className="text-[14px] font-semibold text-[#111827]">
                   Account Overview
@@ -1334,7 +1334,7 @@ const handleChangePassword = async (
               </div>
             </section>
 
-            <section className="col-span-12 flex flex-col rounded-xl border border-[#E5E7EB] bg-white lg:col-span-7">
+            <section className="col-span-12 flex flex-col rounded-[2px] border border-[#E5E7EB] bg-white lg:col-span-7">
               <div className="flex items-center justify-between border-b border-[#E5E7EB] px-5 py-4">
                 <div>
                   <h2 className="text-[14px] font-semibold text-[#111827]">
@@ -1399,7 +1399,7 @@ const handleChangePassword = async (
       {activeTab === "security" && (
         <div className="grid grid-cols-12 items-start gap-5">
           {/* Change Password */}
-          <section className="col-span-12 rounded-xl border border-[#E5E7EB] bg-white p-5 lg:col-span-5">
+          <section className="col-span-12 rounded-[2px] border border-[#E5E7EB] bg-white p-5 lg:col-span-5">
             <div className="mb-5 flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-[#2563EB]">
                 <KeyRound size={18} />
@@ -1480,7 +1480,7 @@ const handleChangePassword = async (
               ))}
 
               {/* Live Password Requirements */}
-              <div className="rounded-lg border border-[#E5E7EB] bg-[#F9FAFB] p-3">
+              <div className="rounded-[2px] border border-[#E5E7EB] bg-[#F9FAFB] p-3">
                 <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[#6B7280]">
                   Password Requirements
                 </p>
@@ -1510,7 +1510,7 @@ const handleChangePassword = async (
               {passwordError && (
                 <div
                   role="alert"
-                  className="rounded-lg border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-xs font-medium text-rose-700"
+                  className="rounded-[2px] border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-xs font-medium text-rose-700"
                 >
                   {passwordError}
                 </div>
@@ -1519,7 +1519,7 @@ const handleChangePassword = async (
               {passwordSuccess && (
                 <div
                   role="status"
-                  className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-xs font-medium text-emerald-700"
+                  className="flex items-center gap-2 rounded-[2px] border border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-xs font-medium text-emerald-700"
                 >
                   <CheckCircle2 size={16} />
                   {passwordSuccess}
@@ -1552,7 +1552,7 @@ const handleChangePassword = async (
           role="presentation"
         >
           <div
-            className="w-full max-w-sm rounded-xl bg-white p-6 text-center shadow-2xl"
+            className="w-full max-w-sm rounded-[2px] bg-white p-6 text-center shadow-2xl"
             role="dialog"
             aria-modal="true"
             aria-labelledby="password-changed-title"
@@ -1591,7 +1591,7 @@ const handleChangePassword = async (
           onClick={() => setShowPhotoPreviewModal(false)}
         >
           <div
-            className="relative w-full max-w-md overflow-hidden rounded-2xl bg-white p-4 shadow-2xl"
+            className="relative w-full max-w-md overflow-hidden rounded-[2px] bg-white p-4 shadow-2xl"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="mb-3 flex items-center justify-between">
@@ -1613,7 +1613,7 @@ const handleChangePassword = async (
               </button>
             </div>
 
-            <div className="overflow-hidden rounded-xl bg-[#F3F4F6]">
+            <div className="overflow-hidden rounded-[2px] bg-[#F3F4F6]">
               <img
                 src={profilePhotoUrl}
                 alt={displayName}
@@ -1650,7 +1650,7 @@ const handleChangePassword = async (
       {/* Delete Profile Photo Confirmation Modal */}
       {showDeletePhotoModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">
+          <div className="w-full max-w-md rounded-[2px] bg-white p-6 shadow-2xl">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-rose-50">
               <Trash2 size={24} className="text-rose-600" />
             </div>

@@ -82,7 +82,7 @@ export const UpcomingLeavesCard: React.FC<UpcomingLeavesCardProps> = ({
   }, [leaves, requests]);
 
   return (
-    <div className={`rounded-xl bg-white border border-[#E5E7EB] p-5 shadow-none flex flex-col justify-between h-full ${className}`}>
+    <div className={`rounded-[2px] bg-white border border-[#E5E7EB] p-5 shadow-none flex flex-col justify-between h-full ${className}`}>
       <div>
         <div className="flex items-center justify-between pb-3 border-b border-[#E5E7EB]">
           <div className="flex items-center gap-2">

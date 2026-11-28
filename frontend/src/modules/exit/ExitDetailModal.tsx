@@ -210,7 +210,7 @@ export default function ExitDetailModal({
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5 space-y-6">
           {/* Compact merged status + settlement info alert */}
           <div
-            className={`flex items-start gap-2.5 rounded-xl border p-3.5 text-xs leading-5 ${
+            className={`flex items-start gap-2.5 rounded-[2px] border p-3.5 text-xs leading-5 ${
               actionable
                 ? "border-blue-200 bg-blue-50/80 text-blue-900"
                 : "border-slate-200 bg-slate-50 text-slate-700"
@@ -287,7 +287,7 @@ export default function ExitDetailModal({
               <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-[#6B7280]">
                 Remarks
               </p>
-              <p className="rounded bg-[#F9FAFB] border border-[#E5E7EB] px-4 py-3 text-[13px] leading-6 text-[#4B5563]">
+              <p className="rounded-[2px] bg-[#F9FAFB] border border-[#E5E7EB] px-4 py-3 text-[13px] leading-6 text-[#4B5563]">
                 {selected.remarks}
               </p>
             </div>
@@ -298,7 +298,7 @@ export default function ExitDetailModal({
               <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-[#6B7280]">
                 HR note
               </p>
-              <p className="rounded bg-[#E8EEFB] px-4 py-3 text-[13px] leading-6 text-[#2F5FD0]">
+              <p className="rounded-[2px] bg-[#E8EEFB] px-4 py-3 text-[13px] leading-6 text-[#2F5FD0]">
                 {selected.admin_note}
               </p>
             </div>
@@ -310,11 +310,11 @@ export default function ExitDetailModal({
             </h3>
 
             {selected.handover_tasks.length === 0 ? (
-              <p className="rounded bg-[#F9FAFB] border border-[#E5E7EB] px-4 py-3 text-xs text-[#6B7280]">
+              <p className="rounded-[2px] bg-[#F9FAFB] border border-[#E5E7EB] px-4 py-3 text-xs text-[#6B7280]">
                 No handover tasks were listed for this request.
               </p>
             ) : (
-              <ul className="divide-y divide-[#E5E7EB] rounded border border-[#E5E7EB]">
+              <ul className="divide-y divide-[#E5E7EB] rounded-[2px] border border-[#E5E7EB]">
                 {selected.handover_tasks.map((task, index) => {
                   const tone = HANDOVER_TONE[task.status] ?? {
                     pill: "bg-[#F3F4F6] text-[#4B5563] border border-[#E5E7EB]",
@@ -433,7 +433,7 @@ export default function ExitDetailModal({
           )}
 
           {isTermination && (
-            <div className="rounded-xl border border-[#E5E7EB] bg-slate-50/70 p-4">
+            <div className="rounded-[2px] border border-[#E5E7EB] bg-slate-50/70 p-4">
               <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
                 Termination Timeline
               </h3>
@@ -520,7 +520,7 @@ export default function ExitDetailModal({
           )}
 
           {!actionable && (
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-[#F9FAFB] border border-[#E5E7EB] px-4 py-3 text-xs text-[#6B7280]">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-[2px] bg-[#F9FAFB] border border-[#E5E7EB] px-4 py-3 text-xs text-[#6B7280]">
               <span className="flex items-center gap-2">
                 <ExternalLink className="h-4 w-4 shrink-0" />
                 This request is {selected.status.toLowerCase()} and can no longer be actioned.
@@ -538,7 +538,7 @@ export default function ExitDetailModal({
           )}
 
           {actionError && (
-            <p className="mt-4 rounded border border-[#F8B4B4] bg-[#FDE8E8] px-4 py-3 text-xs text-[#9B1C1C]">
+            <p className="mt-4 rounded-[2px] border border-[#F8B4B4] bg-[#FDE8E8] px-4 py-3 text-xs text-[#9B1C1C]">
               {actionError}
             </p>
           )}

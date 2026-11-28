@@ -306,7 +306,7 @@ function EmployeeExit() {
 
   const contactHrCard = (spanClass: string, horizontal = false) => (
     <section
-      className={`flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 ${spanClass}`}
+      className={`flex flex-col overflow-hidden rounded-[2px] border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 ${spanClass}`}
     >
       <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-4 dark:border-slate-800">
         <div className="flex items-center gap-3">
@@ -330,7 +330,7 @@ function EmployeeExit() {
             horizontal ? "grid-cols-1 md:grid-cols-3" : "grid-cols-1"
           }`}
         >
-          <div className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 dark:border-slate-800 dark:bg-slate-800/50">
+          <div className="flex items-center justify-between gap-2 rounded-[2px] border border-slate-200 bg-slate-50 px-3.5 py-2.5 dark:border-slate-800 dark:bg-slate-800/50">
             <a
               href={`mailto:${contact.email}`}
               className="flex min-w-0 items-center gap-3"
@@ -360,7 +360,7 @@ function EmployeeExit() {
             </button>
           </div>
 
-          <div className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 dark:border-slate-800 dark:bg-slate-800/50">
+          <div className="flex items-center justify-between gap-2 rounded-[2px] border border-slate-200 bg-slate-50 px-3.5 py-2.5 dark:border-slate-800 dark:bg-slate-800/50">
             <a href={telHref} className="flex min-w-0 items-center gap-3">
               <Phone className="h-4 w-4 shrink-0 text-slate-500 dark:text-slate-400" />
               <div className="min-w-0">
@@ -387,7 +387,7 @@ function EmployeeExit() {
             </button>
           </div>
 
-          <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 dark:border-slate-800 dark:bg-slate-800/50">
+          <div className="flex items-center gap-3 rounded-[2px] border border-slate-200 bg-slate-50 px-3.5 py-2.5 dark:border-slate-800 dark:bg-slate-800/50">
             <Clock3 className="h-4 w-4 shrink-0 text-slate-500 dark:text-slate-400" />
             <div>
               <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -438,7 +438,7 @@ function EmployeeExit() {
       />
 
       {/* Connected 4-Stage Offboarding Stepper */}
-      <section className="rounded-xl border border-slate-200 bg-white px-5 py-4 dark:border-slate-800 dark:bg-slate-900">
+      <section className="rounded-[2px] border border-slate-200 bg-white px-5 py-4 dark:border-slate-800 dark:bg-slate-900">
         <ol className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:flex lg:items-center lg:justify-between lg:gap-0">
           {STEPPER.map((stage, i) => {
             const done = i < step || request?.status === "Completed";
@@ -500,7 +500,7 @@ function EmployeeExit() {
       {successNotice && (
         <div
           role="status"
-          className="flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300"
+          className="flex items-center justify-between gap-3 rounded-[2px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300"
         >
           <div className="flex items-center gap-2.5">
             <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
@@ -520,7 +520,7 @@ function EmployeeExit() {
       {error && (
         <div
           role="alert"
-          className="flex items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-300"
+          className="flex items-center justify-between gap-3 rounded-[2px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-300"
         >
           <div className="flex items-center gap-2">
             <AlertCircle className="h-4 w-4 shrink-0" />
@@ -539,7 +539,7 @@ function EmployeeExit() {
 
       {/* Row 1: My Resignation Request (8 cols) + Offboarding Summary (4 cols) */}
       <div className="grid grid-cols-1 items-stretch gap-5 lg:grid-cols-12">
-        <section className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 lg:col-span-8">
+        <section className="flex min-w-0 flex-col overflow-hidden rounded-[2px] border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 lg:col-span-8">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4 dark:border-slate-800">
             <div className="flex items-center gap-3">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400">
@@ -561,11 +561,11 @@ function EmployeeExit() {
           <div className="flex flex-1 flex-col p-5">
             {loading ? (
               <div className="space-y-3">
-                <Skeleton className="h-20 w-full rounded-xl" />
-                <Skeleton className="h-14 w-full rounded-xl" />
+                <Skeleton className="h-20 w-full rounded-[2px]" />
+                <Skeleton className="h-14 w-full rounded-[2px]" />
               </div>
             ) : !request ? (
-              <div className="flex flex-1 flex-col items-start justify-between gap-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 dark:border-slate-700 dark:bg-slate-800/40 sm:flex-row sm:items-center">
+              <div className="flex flex-1 flex-col items-start justify-between gap-4 rounded-[2px] border border-dashed border-slate-300 bg-slate-50 p-6 dark:border-slate-700 dark:bg-slate-800/40 sm:flex-row sm:items-center">
                 <div>
                   <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                     No resignation request submitted
@@ -585,7 +585,7 @@ function EmployeeExit() {
               </div>
             ) : (
               <div className="flex flex-1 flex-col gap-4">
-                <div className="grid grid-cols-2 gap-4 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/40 sm:grid-cols-4">
+                <div className="grid grid-cols-2 gap-4 rounded-[2px] border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/40 sm:grid-cols-4">
                   <div>
                     <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
                       Request ID
@@ -623,7 +623,7 @@ function EmployeeExit() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-4 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 rounded-[2px] border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 sm:grid-cols-2">
                   <div>
                     <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
                       Reason
@@ -644,7 +644,7 @@ function EmployeeExit() {
                 </div>
 
                 {request.status === "Rejected" && request.admin_note && (
-                  <div className="rounded-xl border border-rose-200 bg-rose-50/70 p-4 dark:border-rose-900/50 dark:bg-rose-950/30">
+                  <div className="rounded-[2px] border border-rose-200 bg-rose-50/70 p-4 dark:border-rose-900/50 dark:bg-rose-950/30">
                     <p className="text-xs font-semibold text-rose-700 dark:text-rose-300">
                       HR Review Note
                     </p>
@@ -704,7 +704,7 @@ function EmployeeExit() {
         </section>
 
         {/* Offboarding Summary */}
-        <section className="flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 lg:col-span-4">
+        <section className="flex flex-col overflow-hidden rounded-[2px] border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 lg:col-span-4">
           <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-4 dark:border-slate-800">
             <div className="flex items-center gap-3">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400">
@@ -725,7 +725,7 @@ function EmployeeExit() {
             {request ? (
               <div className="flex flex-1 flex-col gap-3">
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-800/40">
+                  <div className="rounded-[2px] border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-800/40">
                     <p className="text-xs text-slate-500 dark:text-slate-400">
                       Relieving Countdown
                     </p>
@@ -740,7 +740,7 @@ function EmployeeExit() {
                     </p>
                   </div>
 
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-800/40">
+                  <div className="rounded-[2px] border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-800/40">
                     <p className="text-xs text-slate-500 dark:text-slate-400">
                       Documents
                     </p>
@@ -751,7 +751,7 @@ function EmployeeExit() {
                 </div>
 
                 {showProgress && overviewItems.length > 0 && (
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-800/40">
+                  <div className="rounded-[2px] border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-800/40">
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-medium text-slate-600 dark:text-slate-300">
                         Exit Milestones
@@ -783,7 +783,7 @@ function EmployeeExit() {
                           request.attachments[0].file_name,
                         )
                       }
-                      className="flex w-full cursor-pointer items-center justify-between rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-left text-[13px] font-medium text-blue-600 transition hover:border-blue-300 hover:bg-blue-50/40 dark:border-slate-700 dark:bg-slate-800 dark:text-blue-400 dark:hover:border-blue-700"
+                      className="flex w-full cursor-pointer items-center justify-between rounded-[2px] border border-slate-200 bg-white px-3.5 py-2.5 text-left text-[13px] font-medium text-blue-600 transition hover:border-blue-300 hover:bg-blue-50/40 dark:border-slate-700 dark:bg-slate-800 dark:text-blue-400 dark:hover:border-blue-700"
                     >
                       <span>Download Resignation Letter</span>
                       <Download className="h-4 w-4 shrink-0" />
@@ -792,7 +792,7 @@ function EmployeeExit() {
 
                   <Link
                     to="/employee/help"
-                    className="flex w-full items-center justify-between rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-[13px] font-medium text-slate-700 transition hover:border-blue-300 hover:bg-blue-50/40 hover:text-blue-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                    className="flex w-full items-center justify-between rounded-[2px] border border-slate-200 bg-white px-3.5 py-2.5 text-[13px] font-medium text-slate-700 transition hover:border-blue-300 hover:bg-blue-50/40 hover:text-blue-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                   >
                     <span>Need Settlement Help?</span>
                     <HelpCircle className="h-4 w-4 shrink-0" />
@@ -807,7 +807,7 @@ function EmployeeExit() {
                 </p>
                 <Link
                   to="/employee/help"
-                  className="flex w-full items-center justify-between rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-[13px] font-medium text-slate-700 transition hover:border-blue-300 hover:bg-blue-50/40 hover:text-blue-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                  className="flex w-full items-center justify-between rounded-[2px] border border-slate-200 bg-white px-3.5 py-2.5 text-[13px] font-medium text-slate-700 transition hover:border-blue-300 hover:bg-blue-50/40 hover:text-blue-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                 >
                   <span>Visit Help &amp; Support</span>
                   <HelpCircle className="h-4 w-4 shrink-0" />
@@ -820,7 +820,7 @@ function EmployeeExit() {
 
       {/* Inactive Notice */}
       {request && !showProgress && (
-        <div className="rounded-xl border border-slate-200 bg-white px-5 py-4 text-[13px] text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
+        <div className="rounded-[2px] border border-slate-200 bg-white px-5 py-4 text-[13px] text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
           This request is{" "}
           <span className="font-semibold text-slate-900 dark:text-slate-100">
             {request.status.toLowerCase()}
@@ -832,7 +832,7 @@ function EmployeeExit() {
       {/* Row 2: Exit Process Overview (8 cols) + Documents to Submit (4 cols) */}
       <div className="grid grid-cols-1 items-stretch gap-5 lg:grid-cols-12">
         {request && showProgress && (
-          <section className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 lg:col-span-8">
+          <section className="flex min-w-0 flex-col overflow-hidden rounded-[2px] border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 lg:col-span-8">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4 dark:border-slate-800">
               <div className="flex items-center gap-3">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400">
@@ -890,7 +890,7 @@ function EmployeeExit() {
 
         <section
           id="documents-section"
-          className={`flex min-w-0 scroll-mt-6 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 ${
+          className={`flex min-w-0 scroll-mt-6 flex-col overflow-hidden rounded-[2px] border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 ${
             request && showProgress ? "lg:col-span-4" : "lg:col-span-8"
           }`}
         >
@@ -1007,7 +1007,7 @@ function EmployeeExit() {
       {request && showProgress && (
         <div className="grid grid-cols-1 items-stretch gap-5 lg:grid-cols-12">
           {request.handover_tasks.length > 0 && (
-            <section className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 lg:col-span-8">
+            <section className="flex min-w-0 flex-col overflow-hidden rounded-[2px] border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 lg:col-span-8">
               <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-4 dark:border-slate-800">
                 <div className="flex items-center gap-3">
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400">
@@ -1081,7 +1081,7 @@ function EmployeeExit() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="cancel-exit-title"
-            className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
+            className="w-full max-w-md rounded-[2px] border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
           >
             <div className="flex items-start gap-3">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-rose-100 dark:bg-rose-950/50">

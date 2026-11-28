@@ -65,14 +65,14 @@ export const Dialog: React.FC<DialogProps> = ({
   return (
     <dialog
       ref={dialogRef}
-      className={`backdrop:bg-slate-900/40 backdrop:backdrop-blur-xs p-0 bg-transparent rounded border-0 shadow-lg text-slate-900 overflow-hidden w-full m-auto ${maxWidthMap[maxWidth]} ${className}`}
+      className={`backdrop:bg-slate-900/40 backdrop:backdrop-blur-xs p-0 bg-transparent rounded-[2px] border-0 shadow-lg text-slate-900 overflow-hidden w-full m-auto ${maxWidthMap[maxWidth]} ${className}`}
       onClick={(e) => {
         if (e.target === dialogRef.current) {
           onClose();
         }
       }}
     >
-      <div className="bg-white rounded border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="bg-white rounded-[2px] border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
         {(title || !hideCloseButton) && (
           <div className="flex items-start justify-between px-5 py-4 border-b border-slate-100">
             <div>

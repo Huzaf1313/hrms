@@ -238,7 +238,7 @@ function ComponentModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded bg-white shadow-2xl">
+      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-[2px] bg-white shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-200 px-6 py-5">
           <div>
@@ -457,7 +457,7 @@ function ComponentModal({
                   (slab, index) => (
                     <div
                       key={index}
-                      className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-3 rounded border border-gray-200 p-3"
+                      className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-3 rounded-[2px] border border-gray-200 p-3"
                     >
                       <div>
                         <label className="mb-1 block text-xs text-gray-500">
@@ -525,7 +525,7 @@ function ComponentModal({
                 )}
 
                 {(form.slabs ?? []).length === 0 && (
-                  <div className="rounded border border-dashed border-gray-300 px-4 py-6 text-center text-sm text-gray-500">
+                  <div className="rounded-[2px] border border-dashed border-gray-300 px-4 py-6 text-center text-sm text-gray-500">
                     No slabs added yet.
                   </div>
                 )}
@@ -799,14 +799,14 @@ export default function DeductionsTab() {
     <div>
       {/* Loading */}
       {isLoading && (
-        <div className="mb-4 rounded-lg bg-slate-50 px-4 py-3 text-sm text-slate-600">
+        <div className="mb-4 rounded-[2px] bg-slate-50 px-4 py-3 text-sm text-slate-600">
           Loading deductions and contributions...
         </div>
       )}
 
       {/* Error */}
       {error && (
-        <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">
+        <div className="mb-4 rounded-[2px] bg-red-50 px-4 py-3 text-sm text-red-600">
           {error}
         </div>
       )}
@@ -841,7 +841,7 @@ export default function DeductionsTab() {
       </div>
 
       {/* Components Table */}
-      <div className="overflow-hidden rounded-lg border border-[#E4E6E1] bg-white shadow-none">
+      <div className="overflow-hidden rounded-[2px] border border-[#E4E6E1] bg-white shadow-none">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[760px] text-left text-sm">
             <thead>
@@ -979,7 +979,7 @@ export default function DeductionsTab() {
       </div>
 
       {/* Preview Calculator */}
-      <div className="mt-6 rounded-lg border border-[#E4E6E1] bg-white p-5 shadow-none">
+      <div className="mt-6 rounded-[2px] border border-[#E4E6E1] bg-white p-5 shadow-none">
         <div className="mb-5 flex items-start gap-3">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E8EEFB] text-[#2F5FD0] shrink-0">
             <Calculator size={16} className="shrink-0" />
@@ -1071,7 +1071,7 @@ export default function DeductionsTab() {
         </div>
 
         {/* Preview Results */}
-        <div className="mt-5 overflow-hidden rounded-lg border border-[#E4E6E1] bg-white">
+        <div className="mt-5 overflow-hidden rounded-[2px] border border-[#E4E6E1] bg-white">
           <div className="grid grid-cols-3 border-b border-[#E4E6E1] bg-[#FAFAF8] px-5 py-3 text-xs font-medium uppercase tracking-wider text-[#7B8794]">
             <div>Component</div>
             <div>Type</div>
@@ -1109,7 +1109,7 @@ export default function DeductionsTab() {
 
         {/* Totals */}
         <div className="mt-5 grid gap-4 md:grid-cols-2">
-          <div className="flex flex-col justify-between rounded-lg border border-[#E4E6E1] bg-white p-4 shadow-none">
+          <div className="flex flex-col justify-between rounded-[2px] border border-[#E4E6E1] bg-white p-4 shadow-none">
             <div className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-[#A12D22]" />
               <p className="text-xs font-medium uppercase tracking-wider text-[#7B8794]">
@@ -1124,7 +1124,7 @@ export default function DeductionsTab() {
             </p>
           </div>
 
-          <div className="flex flex-col justify-between rounded-lg border border-[#E4E6E1] bg-white p-4 shadow-none">
+          <div className="flex flex-col justify-between rounded-[2px] border border-[#E4E6E1] bg-white p-4 shadow-none">
             <div className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-[#1E6B45]" />
               <p className="text-xs font-medium uppercase tracking-wider text-[#7B8794]">

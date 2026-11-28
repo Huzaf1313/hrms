@@ -15,7 +15,7 @@ export interface StatStripProps {
 export const StatStrip: React.FC<StatStripProps> = ({ items, className = "" }) => {
   return (
     <div
-      className={`rounded-[8px] bg-white border border-[#E4E6E1] grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 divide-y sm:divide-y-0 sm:divide-x divide-[#E4E6E1] shadow-kpi ${className}`}
+      className={`rounded-[2px] bg-white border-2 border-[#E4E6E1] grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 divide-y sm:divide-y-0 sm:divide-x divide-[#E4E6E1] shadow-kpi ${className}`}
     >
       {items.map((item, idx) => (
         <div key={idx} className="p-[16px_20px] flex flex-col justify-between min-w-0">

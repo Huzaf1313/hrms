@@ -333,7 +333,7 @@ function AdminSupportTickets() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-          <div className="rounded-xl border border-[#E5E7EB] bg-white p-4 h-[108px] shadow-kpi flex flex-col justify-between min-w-0 transition-all duration-150 hover:border-[#CBD5E1] hover:shadow-sm">
+          <div className="rounded-[2px] border-2 border-[#E5E7EB] bg-white p-4 h-[108px] shadow-kpi shadow-kpi-hover flex flex-col justify-between min-w-0 transition-all duration-150 hover:border-[#CBD5E1]">
             <div className="flex items-center justify-between gap-2 min-w-0">
               <span className="text-xs font-medium text-[#4B5563] truncate">
                 Total tickets
@@ -353,7 +353,7 @@ function AdminSupportTickets() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-[#E5E7EB] bg-white p-4 h-[108px] shadow-kpi flex flex-col justify-between min-w-0 transition-all duration-150 hover:border-[#CBD5E1] hover:shadow-sm">
+          <div className="rounded-[2px] border-2 border-[#E5E7EB] bg-white p-4 h-[108px] shadow-kpi shadow-kpi-hover flex flex-col justify-between min-w-0 transition-all duration-150 hover:border-[#CBD5E1]">
             <div className="flex items-center justify-between gap-2 min-w-0">
               <span className="text-xs font-medium text-[#4B5563] truncate">
                 Awaiting reply
@@ -375,7 +375,7 @@ function AdminSupportTickets() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-[#E5E7EB] bg-white p-4 h-[108px] shadow-kpi flex flex-col justify-between min-w-0 transition-all duration-150 hover:border-[#CBD5E1] hover:shadow-sm">
+          <div className="rounded-[2px] border-2 border-[#E5E7EB] bg-white p-4 h-[108px] shadow-kpi shadow-kpi-hover flex flex-col justify-between min-w-0 transition-all duration-150 hover:border-[#CBD5E1]">
             <div className="flex items-center justify-between gap-2 min-w-0">
               <span className="text-xs font-medium text-[#4B5563] truncate">
                 Avg resolution
@@ -394,7 +394,7 @@ function AdminSupportTickets() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-[#E5E7EB] bg-white p-4 h-[108px] shadow-kpi flex flex-col justify-between min-w-0 transition-all duration-150 hover:border-[#CBD5E1] hover:shadow-sm">
+          <div className="rounded-[2px] border-2 border-[#E5E7EB] bg-white p-4 h-[108px] shadow-kpi shadow-kpi-hover flex flex-col justify-between min-w-0 transition-all duration-150 hover:border-[#CBD5E1]">
             <div className="flex items-center justify-between gap-2 min-w-0">
               <span className="text-xs font-medium text-[#4B5563] truncate">
                 Resolution rate
@@ -418,7 +418,7 @@ function AdminSupportTickets() {
       {/* Breakdown + aging */}
       <section className="grid grid-cols-1 items-stretch gap-4 md:grid-cols-2 xl:grid-cols-3">
         {/* Status distribution + By priority */}
-        <div className="flex h-full flex-col rounded-xl border border-[#E5E7EB] bg-white overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+        <div className="flex h-full flex-col rounded-[2px] border border-[#E5E7EB] bg-white overflow-hidden shadow-none">
           <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-[#E5E7EB]">
             <div className="flex items-center gap-3">
               <Tile icon={TrendingUp} tone="bg-[#E8EEFB] text-[#2F5FD0]" />
@@ -527,7 +527,7 @@ function AdminSupportTickets() {
                             isSelected ? "" : priority,
                           )
                         }
-                        className={`w-full flex items-center justify-between rounded-lg border px-2.5 py-2 text-[12px] transition cursor-pointer ${
+                        className={`w-full flex items-center justify-between rounded-[2px] border px-2.5 py-2 text-[12px] transition cursor-pointer ${
                           isSelected
                             ? "border-[#2F5FD0] bg-[#EFF6FF] ring-1 ring-[#2F5FD0]/20"
                             : "border-[#E5E7EB] bg-white hover:border-[#CBD5E1] hover:bg-[#F8FAFC]"
@@ -554,7 +554,7 @@ function AdminSupportTickets() {
         </div>
 
         {/* Category */}
-        <div className="flex h-full flex-col rounded-xl border border-[#E5E7EB] bg-white overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+        <div className="flex h-full flex-col rounded-[2px] border border-[#E5E7EB] bg-white overflow-hidden shadow-none">
           <div className="flex items-center gap-3 px-5 py-3.5 border-b border-[#E5E7EB]">
             <Tile icon={Headphones} tone="bg-[#F3E8FF] text-[#7E22CE]" />
             <div>
@@ -617,7 +617,7 @@ function AdminSupportTickets() {
         </div>
 
         {/* Aging */}
-        <div className="flex h-full flex-col rounded-xl border border-[#E5E7EB] bg-white overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.03)] md:col-span-2 xl:col-span-1">
+        <div className="flex h-full flex-col rounded-[2px] border border-[#E5E7EB] bg-white overflow-hidden shadow-none md:col-span-2 xl:col-span-1">
           <div className="flex items-center gap-3 px-5 py-3.5 border-b border-[#E5E7EB]">
             <Tile icon={Clock3} tone="bg-[#FEF3C7] text-[#92400E]" />
             <div>
@@ -632,7 +632,7 @@ function AdminSupportTickets() {
 
           <div className="flex-1 p-5 flex flex-col justify-between gap-4">
             <dl className="space-y-3">
-              <div className="flex items-center justify-between rounded-lg border border-[#F1F5F9] bg-[#F8FAFC] px-3.5 py-2.5">
+              <div className="flex items-center justify-between rounded-[2px] border border-[#F1F5F9] bg-[#F8FAFC] px-3.5 py-2.5">
                 <dt className="text-[12px] font-medium text-[#4B5563]">
                   Oldest unanswered
                 </dt>
@@ -641,7 +641,7 @@ function AdminSupportTickets() {
                 </dd>
               </div>
 
-              <div className="flex items-center justify-between rounded-lg border border-[#F1F5F9] bg-[#F8FAFC] px-3.5 py-2.5">
+              <div className="flex items-center justify-between rounded-[2px] border border-[#F1F5F9] bg-[#F8FAFC] px-3.5 py-2.5">
                 <dt className="text-[12px] font-medium text-[#4B5563]">
                   Average age
                 </dt>
@@ -650,7 +650,7 @@ function AdminSupportTickets() {
                 </dd>
               </div>
 
-              <div className="flex items-center justify-between rounded-lg border border-[#F1F5F9] bg-[#F8FAFC] px-3.5 py-2.5">
+              <div className="flex items-center justify-between rounded-[2px] border border-[#F1F5F9] bg-[#F8FAFC] px-3.5 py-2.5">
                 <dt className="text-[12px] font-medium text-[#4B5563]">
                   Older than {analytics?.stale_after_days ?? 3} days
                 </dt>
@@ -661,7 +661,7 @@ function AdminSupportTickets() {
             </dl>
 
             {(analytics?.stale_open_count ?? 0) > 0 && (
-              <div className="flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50/90 p-3 text-[12px] text-[#92400E]">
+              <div className="flex items-start gap-2.5 rounded-[2px] border border-amber-200 bg-amber-50/90 p-3 text-[12px] text-[#92400E]">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                 <span className="leading-5">
                   {analytics?.stale_open_count} ticket
@@ -677,7 +677,7 @@ function AdminSupportTickets() {
       {/* Filter bar + Ticket queue */}
       <div className="flex flex-col gap-4">
         {/* Filters */}
-        <section className="rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+        <section className="rounded-[2px] border border-[#E5E7EB] bg-white p-4 shadow-none">
           <div className="flex flex-col gap-2.5 min-[900px]:flex-row min-[900px]:items-center">
             <div className="relative w-full min-[900px]:flex-1">
               <Search
@@ -770,7 +770,7 @@ function AdminSupportTickets() {
         </section>
 
         {/* Ticket queue */}
-        <section className="rounded-xl border border-[#E5E7EB] bg-white overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+        <section className="rounded-[2px] border border-[#E5E7EB] bg-white overflow-hidden shadow-none">
           <div className="flex items-center justify-between gap-3 px-6 py-3.5 border-b border-[#E5E7EB]">
             <div className="flex items-center gap-3">
               <Tile icon={Ticket} tone="bg-[#E8EEFB] text-[#2F5FD0]" />
@@ -838,7 +838,7 @@ function AdminSupportTickets() {
                     <td colSpan={7} className="px-6 py-8">
                       <div
                         role="alert"
-                        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg border border-[#F8B4B4] bg-[#FDE8E8] p-4 text-center sm:text-left"
+                        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-[2px] border border-[#F8B4B4] bg-[#FDE8E8] p-4 text-center sm:text-left"
                       >
                         <div className="flex items-center gap-2 text-[13px] text-[#9B1C1C]">
                           <AlertCircle className="h-4 w-4 shrink-0 text-[#9B1C1C]" />
@@ -1019,7 +1019,7 @@ function AdminSupportTickets() {
       {/* Reply drawer */}
       {selectedTicket && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
-          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded bg-white shadow-xl">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-[2px] bg-white shadow-xl">
             <div className="flex items-start justify-between gap-3 border-b border-[#E5E7EB] px-6 py-5">
               <div className="min-w-0">
                 <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -1068,7 +1068,7 @@ function AdminSupportTickets() {
                   Employee&apos;s message
                 </p>
 
-                <p className="mt-2 whitespace-pre-wrap rounded bg-[#F9FAFB] px-4 py-3 text-sm leading-6 text-[#4B5563]">
+                <p className="mt-2 whitespace-pre-wrap rounded-[2px] bg-[#F9FAFB] px-4 py-3 text-sm leading-6 text-[#4B5563]">
                   {selectedTicket.description}
                 </p>
               </div>
@@ -1082,7 +1082,7 @@ function AdminSupportTickets() {
                       : ""}
                   </p>
 
-                  <p className="mt-2 whitespace-pre-wrap rounded bg-[#DEF7EC] px-4 py-3 text-sm leading-6 text-[#4B5563]">
+                  <p className="mt-2 whitespace-pre-wrap rounded-[2px] bg-[#DEF7EC] px-4 py-3 text-sm leading-6 text-[#4B5563]">
                     {selectedTicket.resolution_note}
                   </p>
                 </div>
@@ -1142,7 +1142,7 @@ function AdminSupportTickets() {
                 {replyError && (
                   <div
                     role="alert"
-                    className="flex items-start gap-2 rounded border border-[#F8B4B4] bg-[#FDE8E8] p-3.5 text-sm text-[#9B1C1C]"
+                    className="flex items-start gap-2 rounded-[2px] border border-[#F8B4B4] bg-[#FDE8E8] p-3.5 text-sm text-[#9B1C1C]"
                   >
                     <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                     <span>{replyError}</span>

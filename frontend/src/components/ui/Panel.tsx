@@ -16,7 +16,7 @@ export const Panel: React.FC<PanelProps> = ({
 }) => {
   return (
     <div
-      className={`rounded-[8px] bg-white border border-[#E4E6E1] p-[16px_20px] shadow-none ${className}`}
+      className={`rounded-[2px] bg-white border border-[#E4E6E1] p-[16px_20px] shadow-none ${className}`}
       {...props}
     >
       {(title || actions) && (

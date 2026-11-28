@@ -86,7 +86,7 @@ function ActionsMenu({
       {menuOpen && (
         <div
           role="menu"
-          className="absolute right-0 top-9 z-30 w-48 rounded-xl border border-[#E5E7EB] bg-white py-1.5 shadow-lg text-left"
+          className="absolute right-0 top-9 z-30 w-48 rounded-[2px] border border-[#E5E7EB] bg-white py-1.5 shadow-lg text-left"
         >
           <button
             type="button"

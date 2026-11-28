@@ -105,7 +105,7 @@ function DeleteConfirmDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="delete-exit-dialog-title"
-        className="w-full max-w-md overflow-hidden rounded border border-[#E5E7EB] bg-white shadow-xl"
+        className="w-full max-w-md overflow-hidden rounded-[2px] border border-[#E5E7EB] bg-white shadow-xl"
       >
         <div className="flex items-center justify-between gap-3 border-b border-[#E5E7EB] px-6 py-4">
           <h2 id="delete-exit-dialog-title" className="text-[15px] font-semibold text-[#111827]">
@@ -626,7 +626,7 @@ export default function AdminExitRequests() {
         </div>
 
         {/* D. Unified Toolbar */}
-        <div className="rounded-xl border border-[#E5E7EB] bg-white p-3.5 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
+        <div className="rounded-[2px] border border-[#E5E7EB] bg-white p-3.5 shadow-none">
           <div className="flex flex-col gap-2.5 lg:flex-row lg:flex-wrap lg:items-center">
             <div className="flex items-center gap-2 flex-1 min-w-[180px]">
               <div className="relative flex-1 min-w-0">
@@ -891,7 +891,7 @@ export default function AdminExitRequests() {
                       disabled={!action.enabled}
                       title={!action.enabled ? action.disabledReason : undefined}
                       onClick={action.onClick}
-                      className={`flex h-10 w-full items-center gap-3 rounded-xl border px-3.5 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0] ${
+                      className={`flex h-10 w-full items-center gap-3 rounded-[2px] border px-3.5 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0] ${
                         isExport ? "sm:col-span-2 sm:w-[calc(50%-0.375rem)] sm:mx-auto" : ""
                       } ${
                         action.enabled

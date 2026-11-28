@@ -11,7 +11,7 @@ interface CelebrationsProps {
 
 function Celebrations({ celebrations }: CelebrationsProps) {
   return (
-    <div className="h-full rounded-3xl bg-white p-6 shadow-sm">
+    <div className="h-full rounded-[2px] bg-white p-6 shadow-none">
       <div className="mb-6">
         <h2 className="text-xl font-semibold text-gray-800">
           Celebrations
@@ -33,7 +33,7 @@ function Celebrations({ celebrations }: CelebrationsProps) {
           {celebrations.map((celebration) => (
             <div
               key={`${celebration.employee_id}-${celebration.type}`}
-              className="rounded-2xl bg-gray-50 p-4"
+              className="rounded-[2px] bg-gray-50 p-4"
             >
               <p className="font-semibold text-gray-800">
                 {celebration.name}

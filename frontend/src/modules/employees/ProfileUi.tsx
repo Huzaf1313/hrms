@@ -83,7 +83,7 @@ export function ProfileAvatar({
           onClick={() => setPreviewOpen(false)}
         >
           <div
-            className="relative w-full max-w-md overflow-hidden rounded-2xl bg-white p-4 shadow-2xl"
+            className="relative w-full max-w-md overflow-hidden rounded-[2px] bg-white p-4 shadow-2xl"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="mb-3 flex items-center justify-between">
@@ -97,7 +97,7 @@ export function ProfileAvatar({
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <div className="overflow-hidden rounded-xl bg-gray-100">
+            <div className="overflow-hidden rounded-[2px] bg-gray-100">
               <img
                 src={avatarUrl}
                 alt={name}
@@ -245,7 +245,7 @@ export function DetailCard({
   children: ReactNode;
 }) {
   return (
-    <div className="rounded-xl border border-blue-100 bg-blue-50/40 p-4">
+    <div className="rounded-[2px] border border-blue-100 bg-blue-50/40 p-4">
       <h4 className="mb-3 text-sm font-bold text-gray-900">{title}</h4>
 
       <div className="space-y-3">{children}</div>

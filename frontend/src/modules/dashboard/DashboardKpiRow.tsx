@@ -91,7 +91,7 @@ export default function DashboardKpiRow({
             key={card.id}
             type="button"
             onClick={card.onClick}
-            className="group relative flex w-full cursor-pointer flex-col justify-between rounded-xl border border-[#E5E7EB] bg-white p-5 text-left shadow-kpi shadow-kpi-hover transition-all duration-200 hover:border-[#D1D5DB]"
+            className="group relative flex w-full cursor-pointer flex-col justify-between rounded-[2px] border-2 border-[#E5E7EB] bg-white p-5 text-left shadow-kpi shadow-kpi-hover transition-all duration-200 hover:border-[#D1D5DB]"
           >
             <div className="flex w-full items-start justify-between gap-3">
               <div className="min-w-0">

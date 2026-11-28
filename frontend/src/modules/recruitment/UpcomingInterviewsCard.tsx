@@ -85,7 +85,7 @@ export default function UpcomingInterviewsCard({
             return (
               <div
                 key={interview.id}
-                className="dashboard-rise flex items-center gap-2.5 rounded-xl border border-gray-50 px-2 py-2 transition hover:border-[#dbeafe] hover:bg-[#eff6ff]"
+                className="dashboard-rise flex items-center gap-2.5 rounded-[2px] border border-gray-50 px-2 py-2 transition hover:border-[#dbeafe] hover:bg-[#eff6ff]"
                 style={
                   { "--dashboard-delay": `${index * 90}ms` } as CSSProperties
                 }

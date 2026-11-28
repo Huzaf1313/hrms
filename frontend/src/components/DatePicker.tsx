@@ -236,7 +236,7 @@ function DatePicker({ canManageHolidays = false }: DatePickerProps) {
         <div
           role="dialog"
           aria-label="Choose date"
-          className="absolute right-0 top-12 z-50 w-72 rounded-2xl border border-gray-100 bg-white p-4 shadow-xl"
+          className="absolute right-0 top-12 z-50 w-72 rounded-[2px] border border-gray-100 bg-white p-4 shadow-xl"
         >
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-1.5">

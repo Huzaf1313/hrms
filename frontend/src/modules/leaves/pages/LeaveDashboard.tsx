@@ -72,7 +72,7 @@ export const LeaveDashboard: React.FC<LeaveDashboardProps> = ({
           return (
             <div
               key={card.label}
-              className="flex min-h-[124px] flex-col rounded-xl border border-[#E5E7EB] bg-white p-5"
+              className="flex min-h-[124px] flex-col rounded-[2px] border-2 border-[#E5E7EB] bg-white p-5 shadow-kpi"
             >
               <div className="flex items-start justify-between gap-3">
                 <div>

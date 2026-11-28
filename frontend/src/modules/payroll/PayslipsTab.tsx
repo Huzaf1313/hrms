@@ -145,7 +145,7 @@ function PayslipDetailModal({ payslip, onClose, onStatusUpdated }: PayslipDetail
           }
         }
       `}</style>
-      <div className="max-h-[94vh] w-full max-w-3xl overflow-y-auto rounded bg-white shadow-2xl">
+      <div className="max-h-[94vh] w-full max-w-3xl overflow-y-auto rounded-[2px] bg-white shadow-2xl">
         <div className="no-print flex items-center justify-between border-b border-slate-100 px-6 py-4">
           <div className="flex items-center gap-3">
             <h3 className="text-base font-bold text-slate-900">Payslip Details</h3>
@@ -206,14 +206,14 @@ function PayslipDetailModal({ payslip, onClose, onStatusUpdated }: PayslipDetail
         </div>
 
         {updateError && (
-          <div className="no-print mx-6 mt-4 flex items-center gap-2 rounded-lg bg-rose-50 p-3 text-xs text-rose-700">
+          <div className="no-print mx-6 mt-4 flex items-center gap-2 rounded-[2px] bg-rose-50 p-3 text-xs text-rose-700">
             <AlertCircle className="h-4 w-4 shrink-0" />
             <span>{updateError}</span>
           </div>
         )}
 
         {emailStatus && (
-          <div className="no-print mx-6 mt-4 flex items-center gap-2 rounded-lg bg-emerald-50 p-3 text-xs text-emerald-700">
+          <div className="no-print mx-6 mt-4 flex items-center gap-2 rounded-[2px] bg-emerald-50 p-3 text-xs text-emerald-700">
             <CheckCircle2 className="h-4 w-4 shrink-0" />
             <span>{emailStatus}</span>
           </div>
@@ -245,7 +245,7 @@ function PayslipDetailModal({ payslip, onClose, onStatusUpdated }: PayslipDetail
             <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">
               Employee Information
             </h4>
-            <div className="grid grid-cols-2 gap-x-6 gap-y-2 rounded-lg bg-slate-50 p-4 text-xs sm:grid-cols-3">
+            <div className="grid grid-cols-2 gap-x-6 gap-y-2 rounded-[2px] bg-slate-50 p-4 text-xs sm:grid-cols-3">
               <div>
                 <span className="text-slate-400">Name:</span>{" "}
                 <span className="font-semibold text-slate-800">{payslip.employee_name || payslip.employee_id}</span>
@@ -293,7 +293,7 @@ function PayslipDetailModal({ payslip, onClose, onStatusUpdated }: PayslipDetail
                 <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">
                   Attendance & Leave Summary
                 </h4>
-                <div className="grid grid-cols-2 gap-x-6 gap-y-2 rounded-lg bg-slate-50 p-3 text-xs sm:grid-cols-4">
+                <div className="grid grid-cols-2 gap-x-6 gap-y-2 rounded-[2px] bg-slate-50 p-3 text-xs sm:grid-cols-4">
                   <div>
                     <span className="text-slate-400">Working Days:</span>{" "}
                     <span className="font-semibold text-slate-800">{attendanceSummary.total_days}</span>
@@ -324,7 +324,7 @@ function PayslipDetailModal({ payslip, onClose, onStatusUpdated }: PayslipDetail
             <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">
               Salary Breakdown
             </h4>
-            <div className="overflow-x-auto rounded-lg border border-slate-200 text-xs">
+            <div className="overflow-x-auto rounded-[2px] border border-slate-200 text-xs">
               <table className="w-full min-w-[480px]">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-100 font-bold text-slate-700">
@@ -366,7 +366,7 @@ function PayslipDetailModal({ payslip, onClose, onStatusUpdated }: PayslipDetail
             </div>
           </section>
 
-          <section className="mt-5 rounded-lg border border-blue-100 bg-blue-50/50 p-4">
+          <section className="mt-5 rounded-[2px] border border-blue-100 bg-blue-50/50 p-4">
             <div className="flex items-center justify-between text-sm">
               <span className="font-semibold text-slate-700">Net Salary Payable</span>
               <span className="text-xl font-bold text-blue-700">{formatCurrency(net)}</span>
@@ -429,7 +429,7 @@ function GeneratePayslipModal({ onClose, onGenerated, employees }: GenerateModal
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded bg-white p-6 shadow-xl">
+      <div className="w-full max-w-md rounded-[2px] bg-white p-6 shadow-xl">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <h3 className="text-base font-bold text-slate-900">Generate Payslip</h3>
           <button
@@ -442,7 +442,7 @@ function GeneratePayslipModal({ onClose, onGenerated, employees }: GenerateModal
         </div>
 
         {error && (
-          <div className="mt-3 flex items-center gap-2 rounded bg-rose-50 p-3 text-xs text-rose-700">
+          <div className="mt-3 flex items-center gap-2 rounded-[2px] bg-rose-50 p-3 text-xs text-rose-700">
             <AlertCircle className="h-4 w-4 shrink-0" />
             <span>{error}</span>
           </div>
@@ -567,7 +567,7 @@ function BulkGeneratePayslipModal({ onClose, onCompleted, totalEmployees }: Bulk
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded bg-white p-6 shadow-xl">
+      <div className="w-full max-w-md rounded-[2px] bg-white p-6 shadow-xl">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded bg-blue-50 text-blue-600">
@@ -588,28 +588,28 @@ function BulkGeneratePayslipModal({ onClose, onCompleted, totalEmployees }: Bulk
         </div>
 
         {error && (
-          <div className="mt-3 flex items-center gap-2 rounded bg-rose-50 p-3 text-xs text-rose-700">
+          <div className="mt-3 flex items-center gap-2 rounded-[2px] bg-rose-50 p-3 text-xs text-rose-700">
             <AlertCircle className="h-4 w-4 shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
         {result && (
-          <div className="mt-3 rounded bg-emerald-50 p-3.5 text-xs text-emerald-800">
+          <div className="mt-3 rounded-[2px] bg-emerald-50 p-3.5 text-xs text-emerald-800">
             <div className="flex items-center gap-2 font-bold">
               <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
               <span>Bulk Payroll Processing Complete</span>
             </div>
             <div className="mt-2 grid grid-cols-3 gap-2 text-center">
-              <div className="rounded bg-white/70 p-2">
+              <div className="rounded-[2px] bg-white/70 p-2">
                 <div className="text-[10px] text-slate-500 uppercase">Eligible</div>
                 <div className="font-bold text-slate-800">{result.total_eligible}</div>
               </div>
-              <div className="rounded bg-white/70 p-2">
+              <div className="rounded-[2px] bg-white/70 p-2">
                 <div className="text-[10px] text-emerald-600 uppercase">Created</div>
                 <div className="font-bold text-emerald-700">{result.created}</div>
               </div>
-              <div className="rounded bg-white/70 p-2">
+              <div className="rounded-[2px] bg-white/70 p-2">
                 <div className="text-[10px] text-slate-500 uppercase">Skipped</div>
                 <div className="font-bold text-slate-600">{result.skipped}</div>
               </div>
@@ -623,7 +623,7 @@ function BulkGeneratePayslipModal({ onClose, onCompleted, totalEmployees }: Bulk
         )}
 
         <form onSubmit={handleRun} className="mt-4 space-y-4 text-xs">
-          <div className="rounded bg-blue-50/60 p-3 text-slate-700">
+          <div className="rounded-[2px] bg-blue-50/60 p-3 text-slate-700">
             <p className="font-medium">
               This will automatically calculate gross salary, apply tax/statutory deductions, deduct Loss of Pay (LOP) from attendance records, and generate payslips for all active employees.
             </p>
@@ -714,7 +714,7 @@ function BulkEmailPayslipModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded bg-white p-6 shadow-xl">
+      <div className="w-full max-w-md rounded-[2px] bg-white p-6 shadow-xl">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded bg-blue-50 text-blue-600">
@@ -735,14 +735,14 @@ function BulkEmailPayslipModal({
         </div>
 
         {error && (
-          <div className="mt-3 flex items-center gap-2 rounded bg-rose-50 p-3 text-xs text-rose-700">
+          <div className="mt-3 flex items-center gap-2 rounded-[2px] bg-rose-50 p-3 text-xs text-rose-700">
             <AlertCircle className="h-4 w-4 shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
         {statusMsg && (
-          <div className="mt-3 flex items-center gap-2 rounded bg-emerald-50 p-3 text-xs text-emerald-700">
+          <div className="mt-3 flex items-center gap-2 rounded-[2px] bg-emerald-50 p-3 text-xs text-emerald-700">
             <CheckCircle2 className="h-4 w-4 shrink-0" />
             <span>{statusMsg}</span>
           </div>
@@ -943,7 +943,7 @@ export default function PayslipsTab({ initialStatusFilter = "" }: PayslipsTabPro
         </div>
       </div>
 
-      <div className="flex flex-wrap items-end gap-3 rounded-lg border border-[#E4E6E1] bg-white p-[16px_20px] shadow-none">
+      <div className="flex flex-wrap items-end gap-3 rounded-[2px] border border-[#E4E6E1] bg-white p-[16px_20px] shadow-none">
         <div className="w-[180px]">
           <div className="mb-1.5 flex items-center justify-between">
             <label className="block text-xs font-medium text-[#7B8794]">Month Filter</label>
@@ -995,13 +995,13 @@ export default function PayslipsTab({ initialStatusFilter = "" }: PayslipsTabPro
       </div>
 
       {error && (
-        <div className="flex items-center gap-3 rounded-lg border border-rose-200 bg-rose-50 p-4 text-xs text-rose-700">
+        <div className="flex items-center gap-3 rounded-[2px] border border-rose-200 bg-rose-50 p-4 text-xs text-rose-700">
           <AlertCircle className="h-4 w-4 shrink-0" />
           <span>{error}</span>
         </div>
       )}
 
-      <div className="mt-4 overflow-hidden rounded-lg border border-[#E4E6E1] bg-white shadow-none">
+      <div className="mt-4 overflow-hidden rounded-[2px] border border-[#E4E6E1] bg-white shadow-none">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[700px] text-left text-sm">
             <thead>

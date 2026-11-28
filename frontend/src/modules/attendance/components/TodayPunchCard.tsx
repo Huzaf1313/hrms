@@ -133,17 +133,17 @@ export const TodayPunchCard: React.FC<TodayPunchCardProps> = ({
       setMyStatus(result);
 
       if (!result.out_time) {
-        // Checked In: derive start time directly from server timestamp
+        // Punch In: derive start time directly from server timestamp
         const inDate = result.in_time ? new Date(result.in_time) : null;
         const startMs = inDate && !isNaN(inDate.getTime()) ? inDate.getTime() : Date.now();
         localStorage.setItem("hrms_work_start_time", String(startMs));
         setElapsedSeconds(Math.max(0, Math.floor((Date.now() - startMs) / 1000)));
-        success(`Checked in successfully at ${formattedClock}`, "Attendance Marked");
+        success(`Punch in successfully at ${formattedClock}`, "Attendance Marked");
       } else {
-        // Checked Out
+        // Punch Out
         localStorage.removeItem("hrms_work_start_time");
         setElapsedSeconds(0);
-        success(`Checked out successfully at ${formattedClock}`, "Shift Completed");
+        success(`Punch out successfully at ${formattedClock}`, "Shift Completed");
       }
 
       if (onPunchSuccess) {
@@ -158,7 +158,7 @@ export const TodayPunchCard: React.FC<TodayPunchCardProps> = ({
   }
 
   return (
-    <div className={`rounded-xl border border-[#E5E7EB] bg-white p-5 shadow-none ${className}`}>
+    <div className={`rounded-[2px] border border-[#E5E7EB] bg-white p-5 shadow-none ${className}`}>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         {/* Left: Clock and Shift info */}
         <div className="min-w-0">
@@ -264,7 +264,7 @@ export const TodayPunchCard: React.FC<TodayPunchCardProps> = ({
           <div className="flex items-center gap-1.5">
             <span className="text-[#7B8794]">Status:</span>
             {punchState === "not_checked_in" ? (
-              <StatusPill variant="warn">Not Checked In</StatusPill>
+              <StatusPill variant="warn">Not Punch In</StatusPill>
             ) : punchState === "checked_in" ? (
               <StatusPill variant="ok">Working ({workLocation.toUpperCase()})</StatusPill>
             ) : (

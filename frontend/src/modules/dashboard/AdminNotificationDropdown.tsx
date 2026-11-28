@@ -200,7 +200,7 @@ function AdminNotificationDropdown({
   }
 
   return (
-    <div className="absolute right-0 top-12 z-50 w-[380px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
+    <div className="absolute right-0 top-12 z-50 w-[380px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-[2px] border border-gray-200 bg-white shadow-2xl">
       <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3.5">
         <div className="flex items-center gap-2.5">
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-50 text-blue-600">

@@ -354,7 +354,7 @@ function MultiSelect({
         </button>
 
         {isOpen && (
-          <div className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+          <div className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-[2px] border border-slate-200 bg-white py-1 shadow-lg">
             {isLoading ? (
               <p className="flex items-center gap-2 px-4 py-3 text-sm text-slate-400">
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -471,7 +471,7 @@ function ConfirmDialog({
       onClick={onCancel}
     >
       <div
-        className="w-full max-w-sm rounded bg-white p-6 shadow-xl"
+        className="w-full max-w-sm rounded-[2px] bg-white p-6 shadow-xl"
         onClick={(event) => event.stopPropagation()}
         role="alertdialog"
         aria-modal="true"
@@ -1324,7 +1324,7 @@ export default function AdminAnnouncements({
         </div>
 
         {error && (
-          <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <div className="mb-4 flex items-start gap-2 rounded-[2px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
             <span>{error}</span>
           </div>
@@ -1335,7 +1335,7 @@ export default function AdminAnnouncements({
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_510px]">
           {/* LEFT FORM ------------------------------------------------------ */}
 
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="rounded-[2px] border border-slate-200 bg-white p-5 shadow-none">
             {/* Title -------------------------------------------------------- */}
 
             <div className="mb-5">
@@ -1495,7 +1495,7 @@ export default function AdminAnnouncements({
             {audience === "Department-wise" && (
               <>
                 {isAddingDepartment ? (
-                  <div className="mb-5 rounded-lg border border-blue-100 bg-blue-50/50 p-4">
+                  <div className="mb-5 rounded-[2px] border border-blue-100 bg-blue-50/50 p-4">
                     <label className="mb-2 block text-sm font-semibold text-slate-800">
                       New department
                     </label>
@@ -1591,7 +1591,7 @@ export default function AdminAnnouncements({
                 />
 
                 {isAddEmployeeMode && (
-                  <div className="-mt-3 mb-5 flex flex-wrap items-center gap-3 rounded-lg border border-amber-100 bg-amber-50/60 px-4 py-3 text-sm text-amber-800">
+                  <div className="-mt-3 mb-5 flex flex-wrap items-center gap-3 rounded-[2px] border border-amber-100 bg-amber-50/60 px-4 py-3 text-sm text-amber-800">
                     <UserPlus className="h-4 w-4 shrink-0" />
 
                     <span className="flex-1">
@@ -1612,7 +1612,7 @@ export default function AdminAnnouncements({
                 <span className="text-red-500">*</span>
               </label>
 
-              <div className="overflow-hidden rounded-lg border border-blue-100 bg-white focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-500/10">
+              <div className="overflow-hidden rounded-[2px] border border-blue-100 bg-white focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-500/10">
                 {/* Toolbar */}
 
                 <div className="flex items-center gap-1 border-b border-slate-100 px-2 py-2">
@@ -1701,7 +1701,7 @@ export default function AdminAnnouncements({
                 </span>
               </label>
 
-              <label className="flex min-h-[86px] cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-blue-200 bg-slate-50/50 text-center transition hover:bg-blue-50/30">
+              <label className="flex min-h-[86px] cursor-pointer flex-col items-center justify-center rounded-[2px] border border-dashed border-blue-200 bg-slate-50/50 text-center transition hover:bg-blue-50/30">
                 <UploadCloud className="mb-1 h-6 w-6 text-blue-500" />
 
                 {attachment ? (
@@ -1793,17 +1793,17 @@ export default function AdminAnnouncements({
           <div className="flex flex-col gap-5">
             {/* Preview ------------------------------------------------------ */}
 
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="rounded-[2px] border border-slate-200 bg-white p-5 shadow-none">
               <h2 className="mb-4 flex items-center gap-2 text-base font-semibold text-slate-900">
                 <Eye className="h-5 w-5 text-blue-600" />
                 Preview
               </h2>
 
-              <div className="rounded-xl bg-slate-50 p-4">
+              <div className="rounded-[2px] bg-slate-50 p-4">
                 {/* Preview header */}
 
                 <div className="flex items-start gap-3">
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-blue-100">
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[2px] bg-blue-100">
                     <Megaphone className="h-7 w-7 text-blue-600" />
                   </div>
 
@@ -1878,7 +1878,7 @@ export default function AdminAnnouncements({
 
             {/* Tips --------------------------------------------------------- */}
 
-            <div className="rounded-xl border border-slate-200 bg-blue-50/60 p-5">
+            <div className="rounded-[2px] border border-slate-200 bg-blue-50/60 p-5">
               <h2 className="mb-3 flex items-center gap-2 text-base font-semibold text-slate-900">
                 <Lightbulb aria-hidden="true" className="h-5 w-5" />
                 Tips
@@ -1946,7 +1946,7 @@ export default function AdminAnnouncements({
             setError("");
             setRefreshKey((key) => key + 1);
           }}
-          className="max-w-none rounded-xl border border-[#FECACA] bg-white py-4"
+          className="max-w-none rounded-[2px] border border-[#FECACA] bg-white py-4"
         />
       )}
 
@@ -1959,7 +1959,7 @@ export default function AdminAnnouncements({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {isLoading
           ? Array.from({ length: 4 }).map((_, index) => (
-              <div key={index} className="min-h-[128px] rounded-xl border border-[#E5E7EB] bg-white p-5">
+              <div key={index} className="min-h-[128px] rounded-[2px] border-2 border-[#E5E7EB] bg-white p-5 shadow-kpi">
                 <div className="flex items-start justify-between">
                   <div className="space-y-3">
                     <Skeleton className="h-3 w-28 rounded" />
@@ -1971,7 +1971,7 @@ export default function AdminAnnouncements({
               </div>
             ))
           : announcementKpis.map((card) => (
-              <div key={card.label} className="flex min-h-[128px] flex-col rounded-xl border border-[#E5E7EB] bg-white p-5">
+              <div key={card.label} className="flex min-h-[128px] flex-col rounded-[2px] border-2 border-[#E5E7EB] bg-white p-5 shadow-kpi">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-[12px] font-medium text-[#6B7280]">{card.label}</p>
@@ -1985,7 +1985,7 @@ export default function AdminAnnouncements({
       </div>
 
       {restoredDraftAvailable && !showCreateForm && (
-        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-[2px] border border-amber-200 bg-amber-50 px-4 py-3">
           <FileText className="h-4 w-4 shrink-0 text-amber-600" />
 
           <p className="min-w-0 flex-1 text-sm font-medium text-amber-800">
@@ -2013,7 +2013,7 @@ export default function AdminAnnouncements({
       <div className="grid grid-cols-1 items-stretch gap-5 lg:grid-cols-12">
         {/* Main column ------------------------------------------------------ */}
 
-        <section className="flex min-w-0 flex-col rounded-xl border border-[#E5E7EB] bg-white p-5 lg:col-span-8">
+        <section className="flex min-w-0 flex-col rounded-[2px] border border-[#E5E7EB] bg-white p-5 lg:col-span-8">
           {/* Tabs */}
 
           <div className="mb-4 overflow-x-auto">
@@ -2312,7 +2312,7 @@ export default function AdminAnnouncements({
         <aside className="flex flex-col gap-5 lg:col-span-4">
           {/* Pinned */}
 
-          <div className="flex flex-1 flex-col rounded-xl border border-[#E5E7EB] bg-white p-5">
+          <div className="flex flex-1 flex-col rounded-[2px] border border-[#E5E7EB] bg-white p-5">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="flex items-center gap-2 text-[14px] font-semibold text-[#111827]">
                 <Pin className="h-4 w-4 text-[#6B7280]" />
@@ -2368,7 +2368,7 @@ export default function AdminAnnouncements({
 
           {/* Recent */}
 
-          <div className="flex flex-1 flex-col rounded-xl border border-[#E5E7EB] bg-white p-5">
+          <div className="flex flex-1 flex-col rounded-[2px] border border-[#E5E7EB] bg-white p-5">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="flex items-center gap-2 text-[14px] font-semibold text-[#111827]">
                 <Clock className="h-4 w-4 text-[#6B7280]" />
@@ -2427,7 +2427,7 @@ export default function AdminAnnouncements({
           onClick={() => setSidebarModal(null)}
         >
           <div
-            className="max-h-[80vh] w-full max-w-lg overflow-hidden rounded bg-white shadow-xl"
+            className="max-h-[80vh] w-full max-w-lg overflow-hidden rounded-[2px] bg-white shadow-xl"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
@@ -2461,7 +2461,7 @@ export default function AdminAnnouncements({
                         key={item.id}
                         type="button"
                         onClick={() => openAnnouncement(item)}
-                        className="flex items-center gap-3 rounded border border-slate-100 p-3 text-left transition hover:bg-slate-50"
+                        className="flex items-center gap-3 rounded-[2px] border border-slate-100 p-3 text-left transition hover:bg-slate-50"
                       >
                         <span
                           className={`flex h-9 w-9 shrink-0 items-center justify-center rounded ${style.iconBg}`}
@@ -2499,7 +2499,7 @@ export default function AdminAnnouncements({
           onClick={() => setSelectedAnnouncement(null)}
         >
           <div
-            className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded bg-white p-6 shadow-xl"
+            className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-[2px] bg-white p-6 shadow-xl"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-4">
@@ -2619,7 +2619,7 @@ export default function AdminAnnouncements({
                 href={`http://localhost:8000${selectedAnnouncement.attachment.url}`}
                 target="_blank"
                 rel="noreferrer"
-                className="mt-5 flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-3 text-sm font-semibold text-blue-700 hover:bg-blue-100"
+                className="mt-5 flex items-center gap-2 rounded-[2px] bg-blue-50 px-3 py-3 text-sm font-semibold text-blue-700 hover:bg-blue-100"
               >
                 <Paperclip className="h-4 w-4" />
                 {selectedAnnouncement.attachment.filename}

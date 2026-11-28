@@ -251,7 +251,7 @@ function PayrollChart({ timeline, hoveredIndex, onHover }: PayrollChartProps) {
       {/* Floating tooltip on hover */}
       {hoveredIndex !== null && timeline[hoveredIndex] && (
         <div
-          className="pointer-events-none absolute z-20 min-w-[200px] rounded-lg border border-[#E4E6E1] bg-[#1F2933]/95 p-3 text-xs text-white shadow-xl backdrop-blur-sm transition-all"
+          className="pointer-events-none absolute z-20 min-w-[200px] rounded-[2px] border border-[#E4E6E1] bg-[#1F2933]/95 p-3 text-xs text-white shadow-xl backdrop-blur-sm transition-all"
           style={{
             left: `${Math.min(
               85,
@@ -508,7 +508,7 @@ export default function AdminPayroll() {
           return (
             <div
               key={card.label}
-              className="rounded-lg border border-[#E4E6E1] bg-white p-[16px_20px] min-h-[96px] shadow-kpi flex flex-col justify-between min-w-0"
+              className="rounded-[2px] border-2 border-[#E4E6E1] bg-white p-[16px_20px] min-h-[96px] shadow-kpi flex flex-col justify-between min-w-0"
             >
               <div className="flex items-center justify-between gap-2 min-w-0">
                 <span className="text-[13px] font-medium text-[#7B8794] truncate">
@@ -557,7 +557,7 @@ export default function AdminPayroll() {
       {activeTab === "overview" && (
         <div className="flex flex-col gap-6">
           {/* Payroll Charts (Full Width) */}
-          <div className="min-w-0 rounded-xl border border-[#E5E7EB] bg-white p-6 shadow-none flex flex-col justify-between">
+          <div className="min-w-0 rounded-[2px] border border-[#E5E7EB] bg-white p-6 shadow-none flex flex-col justify-between">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h2 className="text-base font-semibold text-[#1F2933]">Payroll Charts</h2>
@@ -619,7 +619,7 @@ export default function AdminPayroll() {
                   <p className="text-xs text-[#7B8794]">Loading payroll analytics...</p>
                 </div>
               ) : error ? (
-                <div className="flex h-[280px] flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-[#FBE4E1] bg-[#FBE4E1]/30 p-6 text-center">
+                <div className="flex h-[280px] flex-col items-center justify-center gap-3 rounded-[2px] border border-dashed border-[#FBE4E1] bg-[#FBE4E1]/30 p-6 text-center">
                   <AlertCircle className="h-7 w-7 text-[#A12D22]" />
                   <p className="text-xs font-medium text-[#A12D22]">{error}</p>
                   <button
@@ -679,7 +679,7 @@ export default function AdminPayroll() {
 
             {/* Quick Actions (2x2 image style) + Recent Payroll Runs */}
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 items-stretch">
-              <div className="min-w-0 rounded-xl border border-[#E5E7EB] bg-white p-6 shadow-none flex flex-col justify-between">
+              <div className="min-w-0 rounded-[2px] border border-[#E5E7EB] bg-white p-6 shadow-none flex flex-col justify-between">
                 <div>
                   <h2 className="mb-4 text-base font-semibold text-[#1F2933]">Quick Actions</h2>
 
@@ -689,7 +689,7 @@ export default function AdminPayroll() {
                         key={label}
                         type="button"
                         onClick={onClick}
-                        className="flex min-w-0 items-center gap-3 rounded-xl border border-[#E5E7EB] bg-white px-4 py-3.5 text-left transition hover:border-[#CBD5E1] hover:bg-[#F8FAFC] cursor-pointer"
+                        className="flex min-w-0 items-center gap-3 rounded-[2px] border border-[#E5E7EB] bg-white px-4 py-3.5 text-left transition hover:border-[#CBD5E1] hover:bg-[#F8FAFC] cursor-pointer"
                       >
                         <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${iconBg} ${iconColor}`}>
                           <Icon className="h-4 w-4 shrink-0" />
@@ -703,7 +703,7 @@ export default function AdminPayroll() {
                 </div>
               </div>
 
-              <div className="min-w-0 rounded-xl border border-[#E5E7EB] bg-white p-6 shadow-none">
+              <div className="min-w-0 rounded-[2px] border border-[#E5E7EB] bg-white p-6 shadow-none">
                 <div className="mb-4 flex items-center justify-between">
                   <h2 className="text-base font-semibold text-[#1F2933]">Recent Payroll Runs</h2>
                   <button
@@ -734,7 +734,7 @@ export default function AdminPayroll() {
                       </div>
                     ))
                   ) : (
-                    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-[#E5E7EB] p-6 text-center text-xs text-[#7B8794]">
+                    <div className="flex flex-col items-center justify-center rounded-[2px] border border-dashed border-[#E5E7EB] p-6 text-center text-xs text-[#7B8794]">
                       No recent payroll runs recorded.
                     </div>
                   )}
@@ -744,7 +744,7 @@ export default function AdminPayroll() {
 
             {/* Department summary + Pending Items */}
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-12 items-stretch">
-              <div className="xl:col-span-7 h-full min-w-0 rounded-xl border border-[#E5E7EB] bg-white p-6 shadow-none flex flex-col justify-between">
+              <div className="xl:col-span-7 h-full min-w-0 rounded-[2px] border border-[#E5E7EB] bg-white p-6 shadow-none flex flex-col justify-between">
                 <div>
                   <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                     <h2 className="text-base font-semibold text-[#1F2933]">Payroll Summary by Department</h2>
@@ -779,7 +779,7 @@ export default function AdminPayroll() {
                       </table>
                     </div>
                   ) : (
-                    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-[#E5E7EB] p-8 text-center text-xs text-[#7B8794]">
+                    <div className="flex flex-col items-center justify-center rounded-[2px] border border-dashed border-[#E5E7EB] p-8 text-center text-xs text-[#7B8794]">
                       No department payroll records available for this period.
                     </div>
                   )}
@@ -794,7 +794,7 @@ export default function AdminPayroll() {
                 )}
               </div>
 
-              <div className="xl:col-span-5 h-full min-w-0 rounded-xl border border-[#E5E7EB] bg-white p-6 shadow-none flex flex-col">
+              <div className="xl:col-span-5 h-full min-w-0 rounded-[2px] border border-[#E5E7EB] bg-white p-6 shadow-none flex flex-col">
                 <div className="mb-4 flex items-center justify-between">
                   <h2 className="text-base font-semibold text-[#1F2933]">Pending Items</h2>
                   <button

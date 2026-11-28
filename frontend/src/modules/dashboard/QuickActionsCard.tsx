@@ -42,7 +42,7 @@ export default function QuickActionsCard({
 
   return (
     <div
-      className={`rounded-3xl border border-slate-100 bg-white p-6 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between ${className}`}
+      className={`rounded-[2px] border border-slate-100 bg-white p-6 shadow-none transition-all duration-200 flex flex-col justify-between ${className}`}
     >
       {/* Header */}
       <div className="flex items-center gap-2 mb-6">
@@ -62,10 +62,10 @@ export default function QuickActionsCard({
               key={action.id}
               type="button"
               onClick={() => action.page && onNavigate?.(action.page)}
-              className="group flex flex-col items-center justify-center gap-2.5 rounded-2xl p-2.5 transition-all duration-150 hover:scale-[1.03]"
+              className="group flex flex-col items-center justify-center gap-2.5 rounded-[2px] p-2.5 transition-all duration-150 hover:scale-[1.03]"
             >
               <div
-                className={`flex h-12 w-12 items-center justify-center rounded-2xl shadow-sm transition-transform duration-200 group-hover:shadow ${action.boxClass}`}
+                className={`flex h-12 w-12 items-center justify-center rounded-[2px] shadow-none transition-transform duration-200 ${action.boxClass}`}
               >
                 <Icon className="h-5 w-5" />
               </div>

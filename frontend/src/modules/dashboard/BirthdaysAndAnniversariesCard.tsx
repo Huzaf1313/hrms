@@ -280,7 +280,7 @@ export default function BirthdaysAndAnniversariesCard({
         {rows.slice(0, 5).map((row, index) => (
           <div
             key={row.id}
-            className="dashboard-fade-in flex items-center gap-2.5 rounded-xl px-2 py-1.5 transition hover:bg-gray-50"
+            className="dashboard-fade-in flex items-center gap-2.5 rounded-[2px] px-2 py-1.5 transition hover:bg-gray-50"
             style={{ animationDelay: `${index * 90}ms` }}
           >
             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#ffe4e6] text-[10px] font-bold text-[#be123c]">

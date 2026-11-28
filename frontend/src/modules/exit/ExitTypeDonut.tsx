@@ -34,7 +34,7 @@ export default function ExitTypeDonut({ byType, total }: ExitTypeDonutProps) {
   });
 
   return (
-    <div className={`${PANEL_CLASS} h-full flex flex-col rounded-xl shadow-[0_1px_2px_rgba(15,23,42,0.03)]`}>
+    <div className={`${PANEL_CLASS} h-full flex flex-col rounded-[2px] shadow-none`}>
       <div className="border-b border-[#E5E7EB] bg-white px-6 py-4">
         <h3 className="text-[15px] font-semibold text-[#111827]">Exit Requests by Type</h3>
       </div>

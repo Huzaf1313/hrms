@@ -137,7 +137,7 @@ function StatCard({
   iconBg: string;
 }) {
   return (
-    <div className="flex min-h-[128px] flex-col rounded-xl border border-[#E5E7EB] bg-white p-5">
+    <div className="flex min-h-[128px] flex-col rounded-[2px] border-2 border-[#E5E7EB] bg-white p-5 shadow-kpi">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-[12px] font-medium text-[#6B7280]">{label}</p>
@@ -186,7 +186,7 @@ function ConfirmDeleteDialog({
       onClick={working ? undefined : onCancel}
     >
       <div
-        className="w-full max-w-sm rounded bg-white p-6 shadow-xl"
+        className="w-full max-w-sm rounded-[2px] bg-white p-6 shadow-xl"
         onClick={(event) => event.stopPropagation()}
         role="alertdialog"
         aria-modal="true"
@@ -483,7 +483,7 @@ function CreateAccountForm({
 
         {/* OTP entry: shown once a code has been sent, gone once verified. */}
         {otpSent && !emailVerified && (
-          <div className="rounded-xl border border-blue-100 bg-blue-50/40 p-3 sm:col-span-2">
+          <div className="rounded-[2px] border border-blue-100 bg-blue-50/40 p-3 sm:col-span-2">
             <label
               htmlFor="admin-account-otp"
               className="mb-1 block text-xs font-semibold text-slate-600"
@@ -765,7 +765,7 @@ export default function AdminAccounts() {
         />
       </div>
 
-      <section className="overflow-hidden rounded-xl border border-[#E5E7EB] bg-white">
+      <section className="overflow-hidden rounded-[2px] border border-[#E5E7EB] bg-white">
         <div className="flex flex-col gap-3 border-b border-[#E5E7EB] px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
             <h2 className="text-[14px] font-semibold text-[#111827]">

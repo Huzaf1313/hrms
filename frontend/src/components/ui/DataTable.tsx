@@ -79,7 +79,7 @@ export function DataTable<T>({
 
   return (
     <div
-      className={`flex flex-col w-full rounded-[8px] border border-[#E4E6E1] bg-white overflow-hidden shadow-none ${className}`}
+      className={`flex flex-col w-full rounded-[2px] border border-[#E4E6E1] bg-white overflow-hidden shadow-none ${className}`}
     >
       {/* Panel Title Header */}
       {title && (

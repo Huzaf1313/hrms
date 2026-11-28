@@ -37,7 +37,7 @@ function isNumericCol(name: string): boolean {
 
 function ReportTable({ title, columns, rows, emptyMessage = "No records found" }: ReportTableProps) {
   return (
-    <section className="overflow-hidden rounded-lg border border-[#E4E6E1] bg-white shadow-none">
+    <section className="overflow-hidden rounded-[2px] border border-[#E4E6E1] bg-white shadow-none">
       <h2 className="border-b border-[#E4E6E1] px-5 py-4 text-base font-semibold text-[#1F2933]">
         {title}
       </h2>
@@ -215,7 +215,7 @@ export default function Reports() {
       </div>
 
       {error && (
-        <div className="flex items-center gap-3 rounded-lg border border-rose-200 bg-rose-50 p-4 text-xs text-rose-700">
+        <div className="flex items-center gap-3 rounded-[2px] border border-rose-200 bg-rose-50 p-4 text-xs text-rose-700">
           <AlertCircle className="h-4 w-4 shrink-0" />
           <span>{error}</span>
         </div>

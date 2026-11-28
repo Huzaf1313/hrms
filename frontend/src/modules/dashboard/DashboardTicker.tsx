@@ -384,7 +384,7 @@ function DashboardTicker({
 
   return (
     <section
-      className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-r from-[#0d1b3d] via-[#1e3a8a] to-[#4331a5] shadow-xl shadow-blue-900/25"
+      className="relative overflow-hidden rounded-[2px] border border-white/10 bg-gradient-to-r from-[#0d1b3d] via-[#1e3a8a] to-[#4331a5] shadow-xl shadow-blue-900/25"
       aria-label="Celebrations and announcements"
     >
       {/* Drifting aurora glows */}

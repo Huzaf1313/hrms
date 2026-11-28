@@ -63,7 +63,7 @@ export const EmployeeRegularizationHistory: React.FC<EmployeeRegularizationHisto
   return (
     <div className={`space-y-4 ${className}`}>
       {/* Toolbar row */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 rounded-lg border border-slate-200">
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 rounded-[2px] border border-slate-200">
         {/* Left: Status Filter Pills */}
         <div className="flex items-center gap-1.5 flex-wrap">
           {(["All", "Pending", "Approved", "Rejected"] as const).map((filter) => (
@@ -106,7 +106,7 @@ export const EmployeeRegularizationHistory: React.FC<EmployeeRegularizationHisto
       </div>
 
       {/* Main List Table */}
-      <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
+      <div className="rounded-[2px] border border-slate-200 bg-white overflow-hidden">
         {isLoading ? (
           <div className="p-4">
             <TableSkeleton rows={5} columns={6} />
@@ -191,7 +191,7 @@ export const EmployeeRegularizationHistory: React.FC<EmployeeRegularizationHisto
       {/* Detail & Status Timeline Drawer / Modal */}
       {selectedRequest && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
-          <div className="bg-white rounded border border-slate-200 max-w-lg w-full p-5 space-y-4">
+          <div className="bg-white rounded-[2px] border border-slate-200 max-w-lg w-full p-5 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
                 <h3 className="text-sm font-semibold text-slate-900">
@@ -210,7 +210,7 @@ export const EmployeeRegularizationHistory: React.FC<EmployeeRegularizationHisto
             </div>
 
             {/* Side-by-side Punches */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded border border-slate-100 bg-slate-50 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-[2px] border border-slate-100 bg-slate-50 text-xs">
               <div>
                 <span className="text-xs text-slate-400 block font-medium">Original Logged Times</span>
                 <span className="font-mono text-slate-600 mt-1 block">
@@ -230,14 +230,14 @@ export const EmployeeRegularizationHistory: React.FC<EmployeeRegularizationHisto
               <span className="text-xs font-medium text-slate-700 block mb-1">
                 Employee Justification
               </span>
-              <p className="text-xs text-slate-600 p-2.5 rounded bg-slate-50 border border-slate-100 leading-relaxed">
+              <p className="text-xs text-slate-600 p-2.5 rounded-[2px] bg-slate-50 border border-slate-100 leading-relaxed">
                 {selectedRequest.reason}
               </p>
             </div>
 
             {/* Attachment preview if present */}
             {selectedRequest.attachmentName && (
-              <div className="flex items-center gap-2 p-2 rounded border border-slate-200 text-xs text-slate-700">
+              <div className="flex items-center gap-2 p-2 rounded-[2px] border border-slate-200 text-xs text-slate-700">
                 <Paperclip className="w-3.5 h-3.5 text-slate-400" />
                 <span className="truncate flex-1">{selectedRequest.attachmentName}</span>
                 <span className="text-xs text-blue-600 font-medium">Attached Proof</span>
@@ -294,7 +294,7 @@ export const EmployeeRegularizationHistory: React.FC<EmployeeRegularizationHisto
                     </span>
                   )}
                   {selectedRequest.reviewerComment && (
-                    <p className="mt-1.5 p-2 rounded bg-slate-100 text-xs text-slate-700 italic border-l-2 border-slate-400">
+                    <p className="mt-1.5 p-2 rounded-[2px] bg-slate-100 text-xs text-slate-700 italic border-l-2 border-slate-400">
                       "{selectedRequest.reviewerComment}"
                     </p>
                   )}

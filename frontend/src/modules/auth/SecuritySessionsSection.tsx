@@ -144,7 +144,7 @@ export default function SecuritySessionsSection() {
   return (
     <div className="space-y-5">
       {/* ACTIVE SESSIONS CARD */}
-      <section className="rounded-xl border border-[#E5E7EB] bg-white p-5">
+      <section className="rounded-[2px] border border-[#E5E7EB] bg-white p-5">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-[14px] font-semibold text-[#111827]">
@@ -184,7 +184,7 @@ export default function SecuritySessionsSection() {
 
         {message && (
           <div
-            className={`mt-4 rounded-xl p-3 text-xs font-medium ${
+            className={`mt-4 rounded-[2px] p-3 text-xs font-medium ${
               message.type === "success"
                 ? "border border-green-200 bg-green-50 text-green-700"
                 : "border border-red-200 bg-red-50 text-red-700"
@@ -209,7 +209,7 @@ export default function SecuritySessionsSection() {
               return (
                 <div
                   key={session.id}
-                  className={`flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between ${
+                  className={`flex flex-col gap-3 rounded-[2px] border p-4 sm:flex-row sm:items-center sm:justify-between ${
                     session.is_current
                       ? "border-blue-200 bg-blue-50/40"
                       : "border-gray-100 bg-gray-50/50"
@@ -278,7 +278,7 @@ export default function SecuritySessionsSection() {
       </section>
 
       {/* LOGIN HISTORY CARD */}
-      <section className="rounded-xl border border-[#E5E7EB] bg-white p-5">
+      <section className="rounded-[2px] border border-[#E5E7EB] bg-white p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 className="text-[14px] font-semibold text-[#111827]">

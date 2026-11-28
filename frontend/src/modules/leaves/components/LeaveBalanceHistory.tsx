@@ -204,7 +204,7 @@ export const LeaveBalanceHistory: React.FC<LeaveBalanceHistoryProps> = ({
   return (
     <div className={`space-y-4 ${className}`}>
       {/* 1. Leave Balance Summary Table */}
-      <div className="rounded-lg bg-white border border-[#E5E7EB] overflow-hidden shadow-none">
+      <div className="rounded-[2px] bg-white border border-[#E5E7EB] overflow-hidden shadow-none">
         <div className="px-5 py-3.5 border-b border-[#E5E7EB] bg-white flex items-center justify-between">
           <h3 className="text-[13px] font-semibold text-[#111827]">
             Annual Leave Entitlement & Balances (2026)
@@ -337,7 +337,7 @@ export const LeaveBalanceHistory: React.FC<LeaveBalanceHistoryProps> = ({
       {/* Confirmation Dialog for Cancel */}
       {requestToCancel && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 backdrop-blur-xs">
-          <div className="w-full max-w-md rounded border border-[#E5E7EB] bg-white p-6 shadow-xl">
+          <div className="w-full max-w-md rounded-[2px] border border-[#E5E7EB] bg-white p-6 shadow-xl">
             <h3 className="text-[16px] font-semibold text-[#111827]">Cancel Leave Request</h3>
             <p className="mt-2 text-[13px] text-[#4B5563] leading-relaxed">
               Are you sure you want to cancel your leave request for{" "}

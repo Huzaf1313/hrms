@@ -53,7 +53,7 @@ export const EmployeeLeavePage: React.FC = () => {
       />
 
       {/* Underline Navigation Tabs */}
-      <div className="rounded-xl border border-[#E5E7EB] bg-white px-5 pt-2">
+      <div className="rounded-[2px] border border-[#E5E7EB] bg-white px-5 pt-2">
         <Tabs
           variant="underline"
           activeTab={activeTab}

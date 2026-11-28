@@ -597,7 +597,7 @@ export default function EmployeeDocuments() {
       {pageSuccessNotice && (
         <div
           role="status"
-          className="flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
+          className="flex items-center justify-between gap-3 rounded-[2px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
         >
           <div className="flex items-center gap-2.5">
             <CheckCircle2 size={17} className="shrink-0 text-emerald-600" />
@@ -618,7 +618,7 @@ export default function EmployeeDocuments() {
       {error && (
         <div
           role="alert"
-          className="flex flex-col gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 sm:flex-row sm:items-center sm:justify-between"
+          className="flex flex-col gap-3 rounded-[2px] border border-rose-200 bg-rose-50 p-4 sm:flex-row sm:items-center sm:justify-between"
         >
           <div className="flex items-start gap-3">
             <AlertCircle size={18} className="mt-0.5 shrink-0 text-rose-600" />
@@ -672,7 +672,7 @@ export default function EmployeeDocuments() {
           return (
             <div
               key={card.label}
-              className="flex min-h-[124px] flex-col rounded-xl border border-[#E5E7EB] bg-white p-5"
+              className="flex min-h-[124px] flex-col rounded-[2px] border-2 border-[#E5E7EB] bg-white p-5 shadow-kpi shadow-kpi-hover transition-all"
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -692,7 +692,7 @@ export default function EmployeeDocuments() {
       </div>
 
       {/* Document list */}
-      <div className="overflow-hidden rounded-xl border border-[#E5E7EB] bg-white">
+      <div className="overflow-hidden rounded-[2px] border border-[#E5E7EB] bg-white">
         <div className="border-b border-[#E5E7EB] px-5 pt-4 pb-0">
           <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
@@ -748,7 +748,7 @@ export default function EmployeeDocuments() {
         {loading ? (
           <div className="space-y-3 p-5">
             {Array.from({ length: 4 }).map((_, index) => (
-              <Skeleton key={index} className="h-14 w-full rounded-lg" />
+              <Skeleton key={index} className="h-14 w-full rounded-[2px]" />
             ))}
           </div>
         ) : paginatedDocuments.length === 0 ? (
@@ -984,7 +984,7 @@ export default function EmployeeDocuments() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="document-details-title"
-            className="my-auto w-full max-w-lg overflow-hidden rounded bg-white shadow-2xl"
+            className="my-auto w-full max-w-lg overflow-hidden rounded-[2px] bg-white shadow-2xl"
           >
             <div className="flex items-start justify-between border-b border-gray-200 px-6 py-5">
               <div>
@@ -1020,8 +1020,8 @@ export default function EmployeeDocuments() {
             ) : selectedDocument ? (
               <>
                 <div className="space-y-5 p-6">
-                  <div className="flex items-center gap-4 rounded-xl bg-gray-50 p-4">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
+                  <div className="flex items-center gap-4 rounded-[2px] bg-gray-50 p-4">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[2px] bg-blue-100 text-blue-600">
                       <FileText size={24} />
                     </div>
 
@@ -1137,7 +1137,7 @@ export default function EmployeeDocuments() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="upload-document-title"
-            className="my-auto w-full max-w-lg overflow-hidden rounded-xl border border-[#E5E7EB] bg-white shadow-2xl"
+            className="my-auto w-full max-w-lg overflow-hidden rounded-[2px] border border-[#E5E7EB] bg-white shadow-2xl"
           >
             {/* Modal header */}
             <div className="flex items-start justify-between border-b border-[#E5E7EB] px-5 py-4">
@@ -1195,7 +1195,7 @@ export default function EmployeeDocuments() {
                   />
 
                   {selectedFile ? (
-                    <div className="flex items-center justify-between gap-3 rounded-xl border border-[#2563EB]/30 bg-[#EFF6FF]/40 p-3.5">
+                    <div className="flex items-center justify-between gap-3 rounded-[2px] border border-[#2563EB]/30 bg-[#EFF6FF]/40 p-3.5">
                       <div className="flex min-w-0 items-center gap-3">
                         {selectedFilePreviewUrl ? (
                           <img
@@ -1204,7 +1204,7 @@ export default function EmployeeDocuments() {
                             className="h-12 w-12 shrink-0 rounded-lg border border-[#E5E7EB] object-cover"
                           />
                         ) : (
-                          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-[11px] font-bold uppercase text-[#2563EB]">
+                          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[2px] bg-blue-100 text-[11px] font-bold uppercase text-[#2563EB]">
                             {selectedFile.name.split(".").pop()?.slice(0, 4) || "FILE"}
                           </div>
                         )}
@@ -1265,7 +1265,7 @@ export default function EmployeeDocuments() {
                           handleFileSelection(event.dataTransfer.files?.[0] ?? null);
                         }
                       }}
-                      className={`flex w-full cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-5 py-6 text-center transition ${isDraggingFile
+                      className={`flex w-full cursor-pointer flex-col items-center justify-center rounded-[2px] border-2 border-dashed px-5 py-6 text-center transition ${isDraggingFile
                         ? "border-[#2563EB] bg-blue-50/70"
                         : "border-[#D1D5DB] bg-[#F9FAFB]/70 hover:border-[#2563EB]/60 hover:bg-blue-50/30"
                         }`}
@@ -1364,7 +1364,7 @@ export default function EmployeeDocuments() {
                 {uploadValidationError && (
                   <div
                     role="alert"
-                    className="flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 p-2.5 text-xs text-rose-700"
+                    className="flex items-start gap-2 rounded-[2px] border border-rose-200 bg-rose-50 p-2.5 text-xs text-rose-700"
                   >
                     <AlertCircle size={16} className="mt-0.5 shrink-0" />
                     <p>{uploadValidationError}</p>
@@ -1375,7 +1375,7 @@ export default function EmployeeDocuments() {
                 {uploadNotice && (
                   <div
                     role="status"
-                    className="flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-2.5 text-xs text-emerald-700"
+                    className="flex items-start gap-2 rounded-[2px] border border-emerald-200 bg-emerald-50 p-2.5 text-xs text-emerald-700"
                   >
                     <CheckCircle2 size={16} className="mt-0.5 shrink-0" />
                     <p>{uploadNotice}</p>
@@ -1420,7 +1420,7 @@ export default function EmployeeDocuments() {
       {/* Document preview modal */}
       {previewDocument && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-3 sm:p-6">
-          <div className="flex max-h-[95vh] w-full max-w-5xl flex-col overflow-hidden rounded bg-white shadow-2xl">
+          <div className="flex max-h-[95vh] w-full max-w-5xl flex-col overflow-hidden rounded-[2px] bg-white shadow-2xl">
             {/* Header */}
             <div className="flex items-center justify-between gap-4 border-b border-gray-200 px-5 py-4">
               <div className="min-w-0">
@@ -1521,7 +1521,7 @@ export default function EmployeeDocuments() {
             }
           }}
         >
-          <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-2xl">
+          <div className="w-full max-w-sm rounded-[2px] bg-white p-6 shadow-2xl">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-rose-50 text-rose-600">
               <Trash2 size={22} />
             </div>

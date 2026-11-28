@@ -388,7 +388,7 @@ function EmployeeAnnouncements() {
         <button
           type="button"
           onClick={resetFilters}
-          className="flex min-h-[116px] cursor-pointer flex-col rounded-xl border border-[#E5E7EB] bg-white p-5 text-left transition hover:border-[#CBD5E1] dark:border-[#243247] dark:bg-[#111827]"
+          className="flex min-h-[116px] cursor-pointer flex-col rounded-[2px] border-2 border-[#E5E7EB] bg-white p-5 text-left shadow-kpi shadow-kpi-hover transition hover:border-[#CBD5E1] dark:border-[#243247] dark:bg-[#111827]"
         >
           <div className="flex items-start justify-between gap-3">
             <div>
@@ -418,7 +418,7 @@ function EmployeeAnnouncements() {
             setUnreadOnly((prev) => !prev);
             setCurrentPage(1);
           }}
-          className={`flex min-h-[116px] cursor-pointer flex-col rounded-xl border bg-white p-5 text-left transition dark:bg-[#111827] ${
+          className={`flex min-h-[116px] cursor-pointer flex-col rounded-[2px] border-2 bg-white p-5 text-left shadow-kpi shadow-kpi-hover transition dark:bg-[#111827] ${
             unreadOnly
               ? "border-[#2563EB] ring-1 ring-[#2563EB]/20"
               : "border-[#E5E7EB] hover:border-[#CBD5E1] dark:border-[#243247]"
@@ -458,7 +458,7 @@ function EmployeeAnnouncements() {
             setPinnedOnly((prev) => !prev);
             setCurrentPage(1);
           }}
-          className={`flex min-h-[116px] cursor-pointer flex-col rounded-xl border bg-white p-5 text-left transition dark:bg-[#111827] ${
+          className={`flex min-h-[116px] cursor-pointer flex-col rounded-[2px] border-2 bg-white p-5 text-left shadow-kpi shadow-kpi-hover transition dark:bg-[#111827] ${
             pinnedOnly
               ? "border-amber-500 ring-1 ring-amber-500/20"
               : "border-[#E5E7EB] hover:border-[#CBD5E1] dark:border-[#243247]"
@@ -488,7 +488,7 @@ function EmployeeAnnouncements() {
             setPriorityFilter((prev) => (prev === "Urgent" ? "all" : "Urgent"));
             setCurrentPage(1);
           }}
-          className={`flex min-h-[116px] cursor-pointer flex-col rounded-xl border bg-white p-5 text-left transition dark:bg-[#111827] ${
+          className={`flex min-h-[116px] cursor-pointer flex-col rounded-[2px] border-2 bg-white p-5 text-left shadow-kpi shadow-kpi-hover transition dark:bg-[#111827] ${
             priorityFilter === "Urgent"
               ? "border-rose-500 ring-1 ring-rose-500/20"
               : "border-[#E5E7EB] hover:border-[#CBD5E1] dark:border-[#243247]"
@@ -518,7 +518,7 @@ function EmployeeAnnouncements() {
       {/* Main Content */}
       <div className="grid grid-cols-1 items-stretch gap-5 lg:grid-cols-12">
         {/* Announcements Feed */}
-        <section className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-[#E5E7EB] bg-white dark:border-[#243247] dark:bg-[#111827] lg:col-span-8">
+        <section className="flex min-w-0 flex-col overflow-hidden rounded-[2px] border border-[#E5E7EB] bg-white dark:border-[#243247] dark:bg-[#111827] lg:col-span-8">
           {/* Feed Header & Category Tabs */}
           <div className="border-b border-[#E5E7EB] px-5 pt-4 dark:border-[#243247]">
             <div className="mb-2 flex items-center justify-between gap-3">
@@ -657,7 +657,7 @@ function EmployeeAnnouncements() {
             {isLoading ? (
               <div className="space-y-3 p-5">
                 {Array.from({ length: 3 }).map((_, idx) => (
-                  <Skeleton key={idx} className="h-28 w-full rounded-xl" />
+                  <Skeleton key={idx} className="h-28 w-full rounded-[2px]" />
                 ))}
               </div>
             ) : visibleAnnouncements.length === 0 ? (
@@ -702,7 +702,7 @@ function EmployeeAnnouncements() {
                             openAnnouncement(announcement);
                           }
                         }}
-                        className={`group relative cursor-pointer rounded-xl border p-4 transition hover:border-[#2563EB]/40 hover:bg-[#F8FAFC] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/30 dark:hover:bg-[#1E293B]/60 ${
+                        className={`group relative cursor-pointer rounded-[2px] border p-4 transition hover:border-[#2563EB]/40 hover:bg-[#F8FAFC] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/30 dark:hover:bg-[#1E293B]/60 ${
                           isUnread
                             ? "border-[#2563EB]/30 border-l-[3px] border-l-[#2563EB] bg-blue-50/20 dark:border-blue-500/30 dark:bg-blue-950/15"
                             : "border-[#E5E7EB] bg-white dark:border-[#243247] dark:bg-[#111827]"
@@ -860,7 +860,7 @@ function EmployeeAnnouncements() {
 
         {/* Right Sidebar: Pinned & Important Notices */}
         <aside className="flex flex-col lg:col-span-4">
-          <section className="flex flex-1 flex-col overflow-hidden rounded-xl border border-[#E5E7EB] bg-white dark:border-[#243247] dark:bg-[#111827]">
+          <section className="flex flex-1 flex-col overflow-hidden rounded-[2px] border border-[#E5E7EB] bg-white dark:border-[#243247] dark:bg-[#111827]">
             <div className="flex items-center justify-between border-b border-[#E5E7EB] px-5 py-4 dark:border-[#243247]">
               <div>
                 <h2 className="flex items-center gap-1.5 text-[14px] font-semibold text-[#111827] dark:text-[#F8FAFC]">
@@ -898,7 +898,7 @@ function EmployeeAnnouncements() {
                         <button
                           type="button"
                           onClick={() => openAnnouncement(announcement)}
-                          className="group w-full cursor-pointer rounded-xl border border-[#E5E7EB] bg-[#F9FAFB]/80 p-3.5 text-left transition hover:border-[#2563EB]/40 hover:bg-blue-50/30 dark:border-[#243247] dark:bg-[#0F172A]/60 dark:hover:border-blue-500/40 dark:hover:bg-[#1E293B]"
+                          className="group w-full cursor-pointer rounded-[2px] border border-[#E5E7EB] bg-[#F9FAFB]/80 p-3.5 text-left transition hover:border-[#2563EB]/40 hover:bg-blue-50/30 dark:border-[#243247] dark:bg-[#0F172A]/60 dark:hover:border-blue-500/40 dark:hover:bg-[#1E293B]"
                         >
                           <div className="flex items-center justify-between gap-2">
                             <div className="flex flex-wrap items-center gap-1.5">
@@ -982,7 +982,7 @@ function EmployeeAnnouncements() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="announcement-modal-title"
-            className="my-auto w-full max-w-xl overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-2xl dark:border-[#243247] dark:bg-[#111827]"
+            className="my-auto w-full max-w-xl overflow-hidden rounded-[2px] border border-[#E5E7EB] bg-white shadow-2xl dark:border-[#243247] dark:bg-[#111827]"
           >
             {/* Modal Header */}
             <div className="flex items-start justify-between gap-4 border-b border-[#E5E7EB] bg-gradient-to-r from-blue-50/80 via-indigo-50/40 to-white px-6 py-5 dark:border-[#243247] dark:from-[#0F172A] dark:via-blue-950/20 dark:to-[#111827]">
@@ -1033,7 +1033,7 @@ function EmployeeAnnouncements() {
             {/* Modal Body */}
             <div className="space-y-4 px-6 py-5">
               <div
-                className={`grid grid-cols-2 gap-4 rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] p-4 text-xs dark:border-[#243247] dark:bg-[#0F172A]/60 ${
+                className={`grid grid-cols-2 gap-4 rounded-[2px] border border-[#E5E7EB] bg-[#F9FAFB] p-4 text-xs dark:border-[#243247] dark:bg-[#0F172A]/60 ${
                   activeAnnouncement.expiry_date
                     ? "sm:grid-cols-4"
                     : "sm:grid-cols-3"
@@ -1091,7 +1091,7 @@ function EmployeeAnnouncements() {
               </div>
 
               {/* Message Content Frame */}
-              <div className="rounded-xl border border-[#E5E7EB] bg-white p-4 dark:border-[#243247] dark:bg-[#0F172A]/40">
+              <div className="rounded-[2px] border border-[#E5E7EB] bg-white p-4 dark:border-[#243247] dark:bg-[#0F172A]/40">
                 <div className="mb-2 flex items-center justify-between gap-2">
                   <span className="text-xs font-semibold uppercase tracking-wide text-[#6B7280] dark:text-[#94A3B8]">
                     Notice Details
@@ -1120,7 +1120,7 @@ function EmployeeAnnouncements() {
               </div>
 
               {activeAnnouncement.attachment && (
-                <div className="flex items-center justify-between gap-3 rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] p-3.5 dark:border-[#243247] dark:bg-[#0F172A]/60">
+                <div className="flex items-center justify-between gap-3 rounded-[2px] border border-[#E5E7EB] bg-[#F9FAFB] p-3.5 dark:border-[#243247] dark:bg-[#0F172A]/60">
                   <div className="flex min-w-0 items-center gap-3">
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-[#2563EB] dark:bg-blue-950/50 dark:text-blue-300">
                       <Paperclip className="h-4 w-4" />

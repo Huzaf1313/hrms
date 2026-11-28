@@ -115,7 +115,7 @@ export default function AssetReturnModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="asset-return-title"
-        className="w-full max-w-lg overflow-hidden rounded border border-[#E5E7EB] bg-white shadow-xl"
+        className="w-full max-w-lg overflow-hidden rounded-[2px] border border-[#E5E7EB] bg-white shadow-xl"
       >
         <div className="flex items-center justify-between border-b border-[#E5E7EB] px-6 py-4">
           <div className="flex items-center gap-3">
@@ -172,7 +172,7 @@ export default function AssetReturnModal({
                 </select>
               </div>
             ) : selectedAsset ? (
-              <div className="mb-4 rounded border border-[#E5E7EB] bg-[#F9FAFB] px-4 py-3">
+              <div className="mb-4 rounded-[2px] border border-[#E5E7EB] bg-[#F9FAFB] px-4 py-3">
                 <p className="text-[13px] font-medium text-[#111827]">
                   {selectedAsset.asset_tag} - {selectedAsset.name}
                 </p>
@@ -204,7 +204,7 @@ export default function AssetReturnModal({
               />
             </div>
 
-            <div className="rounded border border-[#FCD34D] bg-[#FEF3C7] px-4 py-3">
+            <div className="rounded-[2px] border border-[#FCD34D] bg-[#FEF3C7] px-4 py-3">
               <p className="text-xs leading-5 text-[#92400E]">
                 This marks the asset as <strong>Pending Return</strong>. The employee keeps
                 holding it until an admin confirms the item has physically been received,
@@ -213,7 +213,7 @@ export default function AssetReturnModal({
             </div>
 
             {error && (
-              <div className="mt-4 rounded border border-[#F8B4B4] bg-[#FDE8E8] px-4 py-3 text-xs text-[#9B1C1C]">
+              <div className="mt-4 rounded-[2px] border border-[#F8B4B4] bg-[#FDE8E8] px-4 py-3 text-xs text-[#9B1C1C]">
                 {error}
               </div>
             )}

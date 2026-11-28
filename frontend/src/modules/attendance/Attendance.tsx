@@ -354,7 +354,7 @@ function Attendance() {
         {summaryCards.map((card) => {
           const Icon = card.icon;
           return (
-            <div key={card.label} className="rounded-3xl bg-white p-5 shadow-kpi">
+            <div key={card.label} className="rounded-[2px] border-2 border-[#E5E7EB] bg-white p-5 shadow-kpi">
               <div className={`mb-4 flex h-10 w-10 items-center justify-center rounded-xl ${card.iconBg}`}>
                 <Icon className={`h-5 w-5 ${card.iconColor}`} />
               </div>
@@ -371,7 +371,7 @@ function Attendance() {
       </div>
 
       {/* Filters */}
-      <div className="mb-6 grid grid-cols-1 gap-3 rounded-3xl bg-white p-5 shadow-sm sm:grid-cols-2 lg:grid-cols-6">
+      <div className="mb-6 grid grid-cols-1 gap-3 rounded-[2px] bg-white p-5 shadow-none sm:grid-cols-2 lg:grid-cols-6">
         <div>
           <label className="mb-1 block text-xs font-medium text-gray-500">Date</label>
           <input
@@ -459,7 +459,7 @@ function Attendance() {
       {/* Content: table + sidebar */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
         {/* Table */}
-        <div className="self-start rounded-3xl bg-white p-6 shadow-sm lg:col-span-4">
+        <div className="self-start rounded-[2px] bg-white p-6 shadow-none lg:col-span-4">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div className="relative">
               <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -583,7 +583,7 @@ function Attendance() {
         {/* Sidebar */}
         <div className="flex flex-col gap-6">
           {/* Attendance Summary */}
-          <div className="rounded-3xl bg-white p-6 shadow-sm">
+          <div className="rounded-[2px] bg-white p-6 shadow-none">
             <h3 className="mb-4 font-bold text-gray-900">Attendance Summary</h3>
             <div className="flex justify-center">
               <AttendanceDonut summary={summary} />
@@ -604,7 +604,7 @@ function Attendance() {
           </div>
 
           {/* Department Wise Present % */}
-          <div className="rounded-3xl bg-white p-6 shadow-sm">
+          <div className="rounded-[2px] bg-white p-6 shadow-none">
             <h3 className="mb-4 font-bold text-gray-900">Department Wise Present %</h3>
             <div className="flex flex-col gap-4">
               {(summary?.department_presence ?? []).map((dept) => (
@@ -625,7 +625,7 @@ function Attendance() {
           </div>
 
           {/* Quick Actions */}
-          <div className="rounded-3xl bg-white p-6 shadow-sm">
+          <div className="rounded-[2px] bg-white p-6 shadow-none">
             <h3 className="mb-4 font-bold text-gray-900">Quick Actions</h3>
             <div className="grid grid-cols-2 gap-3">
               {quickActions.map((action) => {
@@ -634,7 +634,7 @@ function Attendance() {
                   <button
                     key={action.label}
                     type="button"
-                    className="flex min-w-0 flex-col items-start gap-2 rounded-2xl border border-gray-100 p-3 text-left hover:bg-gray-50"
+                    className="flex min-w-0 flex-col items-start gap-2 rounded-[2px] border border-gray-100 p-3 text-left hover:bg-gray-50"
                   >
                     <span
                       className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${action.iconBg}`}

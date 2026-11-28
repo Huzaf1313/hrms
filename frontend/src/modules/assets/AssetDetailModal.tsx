@@ -181,7 +181,7 @@ export default function AssetDetailModal({ asset, onClose }: AssetDetailModalPro
         role="dialog"
         aria-modal="true"
         aria-labelledby="asset-detail-title"
-        className="flex max-h-[calc(100vh-48px)] w-full max-w-[720px] mx-4 flex-col overflow-hidden rounded border border-[#E5E7EB] bg-white shadow-[0_12px_32px_rgba(16,24,40,0.18)] md:flex-row"
+        className="flex max-h-[calc(100vh-48px)] w-full max-w-[720px] mx-4 flex-col overflow-hidden rounded-[2px] border border-[#E5E7EB] bg-white shadow-[0_12px_32px_rgba(16,24,40,0.18)] md:flex-row"
       >
         {/* Left summary panel */}
         <aside className="flex shrink-0 flex-col bg-[#F9FAFB] border-b md:border-b-0 md:border-r border-[#E5E7EB] p-5 md:p-6 md:w-[240px]">
@@ -300,7 +300,7 @@ export default function AssetDetailModal({ asset, onClose }: AssetDetailModalPro
                 <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[#6B7280]">
                   Notes
                 </p>
-                <div className="rounded bg-[#F9FAFB] border border-[#E5E7EB] p-3 text-[13px] leading-relaxed text-[#4B5563]">
+                <div className="rounded-[2px] bg-[#F9FAFB] border border-[#E5E7EB] p-3 text-[13px] leading-relaxed text-[#4B5563]">
                   {asset.notes}
                 </div>
               </div>

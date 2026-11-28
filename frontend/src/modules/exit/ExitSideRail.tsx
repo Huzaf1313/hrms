@@ -81,7 +81,7 @@ function StepTooltip({
         top: coords ? `${coords.top}px` : "-9999px",
         left: coords ? `${coords.left}px` : "-9999px",
       }}
-      className="z-50 max-w-[240px] rounded-md bg-slate-900 px-3 py-2 text-[13px] leading-snug text-white shadow-lg pointer-events-none"
+      className="z-50 max-w-[240px] rounded-[2px] bg-slate-900 px-3 py-2 text-[13px] leading-snug text-white shadow-lg pointer-events-none"
     >
       {text}
     </div>,
@@ -104,7 +104,7 @@ export function ExitProcessFlow({
 
   return (
     <div className="flex justify-center w-full">
-      <div className="w-fit max-w-full rounded-xl border border-[#E5E7EB] bg-white px-6 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.03)] overflow-x-auto scrollbar-hidden">
+      <div className="w-fit max-w-full rounded-[2px] border border-[#E5E7EB] bg-white px-6 py-3 shadow-none overflow-x-auto scrollbar-hidden">
         <ol className="flex items-center gap-3 whitespace-nowrap">
           {FLOW_STAGES.map((stage, index) => {
             const isCompleted =

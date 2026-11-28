@@ -38,7 +38,7 @@ function HiringPipeline({ pipeline = {} }: HiringPipelineProps) {
   const maxValue = Math.max(...stages.map((stage) => stage.value), 1);
 
   return (
-    <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+    <div className="rounded-[2px] border border-gray-100 bg-white p-6 shadow-none">
       <div className="mb-6">
         <h2 className="text-lg font-semibold text-gray-800">
           Recruitment Pipeline

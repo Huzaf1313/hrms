@@ -79,7 +79,7 @@ export const AttendanceDayDrawer: React.FC<AttendanceDayDrawerProps> = ({
     >
       <div className="flex flex-col gap-5 text-xs text-slate-700">
         {/* Punch Summary Grid */}
-        <div className="grid grid-cols-2 gap-3 p-4 rounded-[8px] bg-[#F6F7F5] border border-[#E4E6E1]">
+        <div className="grid grid-cols-2 gap-3 p-4 rounded-[2px] bg-[#F6F7F5] border border-[#E4E6E1]">
           <div>
             <span className="text-[#7B8794] block text-xs uppercase font-medium">Punch In</span>
             <span className="text-sm font-semibold text-[#1F2933] mt-0.5 block">
@@ -116,7 +116,7 @@ export const AttendanceDayDrawer: React.FC<AttendanceDayDrawerProps> = ({
 
         {/* Regularization status notice */}
         {record.is_regularized && (
-          <div className="p-3 rounded-md bg-blue-50 border border-blue-200 text-blue-800 flex items-start gap-2.5">
+          <div className="p-3 rounded-[2px] bg-blue-50 border border-blue-200 text-blue-800 flex items-start gap-2.5">
             <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
             <div>
               <span className="font-semibold block">Regularization Approved</span>
@@ -130,7 +130,7 @@ export const AttendanceDayDrawer: React.FC<AttendanceDayDrawerProps> = ({
         {/* Remarks and Notes */}
         <div className="space-y-1.5">
           <label className="text-xs font-semibold text-slate-800">Punch Remarks & Log</label>
-          <div className="p-3 rounded-md border border-slate-200 bg-white text-slate-600 leading-relaxed">
+          <div className="p-3 rounded-[2px] border border-slate-200 bg-white text-slate-600 leading-relaxed">
             {record.remarks || "No remarks logged for this working date."}
           </div>
         </div>
@@ -139,11 +139,11 @@ export const AttendanceDayDrawer: React.FC<AttendanceDayDrawerProps> = ({
         <div className="space-y-2 border-t border-slate-100 pt-4">
           <label className="text-xs font-semibold text-slate-800">Shift Specification</label>
           <div className="grid grid-cols-2 gap-2 text-xs">
-            <div className="p-2.5 rounded border border-slate-100 bg-slate-50/50">
+            <div className="p-2.5 rounded-[2px] border border-slate-100 bg-slate-50/50">
               <span className="text-slate-400 text-xs block">Start Time</span>
               <span className="font-medium text-slate-800">{record.shift_start || "09:30 AM"}</span>
             </div>
-            <div className="p-2.5 rounded border border-slate-100 bg-slate-50/50">
+            <div className="p-2.5 rounded-[2px] border border-slate-100 bg-slate-50/50">
               <span className="text-slate-400 text-xs block">End Time</span>
               <span className="font-medium text-slate-800">{record.shift_end || "06:30 PM"}</span>
             </div>

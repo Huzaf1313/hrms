@@ -373,7 +373,7 @@ export default function EmployeeAssets() {
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="rounded-xl border border-[#E5E7EB] bg-white p-5 min-h-[112px] flex flex-col justify-between min-w-0">
+        <div className="rounded-[2px] border-2 border-[#E5E7EB] bg-white p-5 min-h-[112px] shadow-kpi flex flex-col justify-between min-w-0">
           <div className="flex items-center justify-between gap-2 min-w-0">
             <span className="text-[12px] font-medium text-[#6B7280] truncate">
               Assigned Assets
@@ -387,7 +387,7 @@ export default function EmployeeAssets() {
           </span>
         </div>
 
-        <div className="rounded-xl border border-[#E5E7EB] bg-white p-5 min-h-[112px] flex flex-col justify-between min-w-0">
+        <div className="rounded-[2px] border-2 border-[#E5E7EB] bg-white p-5 min-h-[112px] shadow-kpi flex flex-col justify-between min-w-0">
           <div className="flex items-center justify-between gap-2 min-w-0">
             <span className="text-[12px] font-medium text-[#6B7280] truncate">
               Pending Requests
@@ -401,7 +401,7 @@ export default function EmployeeAssets() {
           </span>
         </div>
 
-        <div className="rounded-xl border border-[#E5E7EB] bg-white p-5 min-h-[112px] flex flex-col justify-between min-w-0">
+        <div className="rounded-[2px] border-2 border-[#E5E7EB] bg-white p-5 min-h-[112px] shadow-kpi flex flex-col justify-between min-w-0">
           <div className="flex items-center justify-between gap-2 min-w-0">
             <span className="text-[12px] font-medium text-[#6B7280] truncate">
               Approved Requests
@@ -416,7 +416,7 @@ export default function EmployeeAssets() {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-[#E5E7EB] bg-white shadow-none">
+      <div className="overflow-hidden rounded-[2px] border border-[#E5E7EB] bg-white shadow-none">
         <div className="border-b border-[#E5E7EB] px-6 pt-1 pb-3">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-center gap-2 border-b border-[#E5E7EB] lg:border-b-0">
@@ -456,7 +456,7 @@ export default function EmployeeAssets() {
           </div>
 
           {error && (
-            <div className="mt-3 flex items-start gap-2.5 rounded-lg border border-[#F8B4B4] bg-[#FDE8E8] p-3 text-xs text-[#9B1C1C]">
+            <div className="mt-3 flex items-start gap-2.5 rounded-[2px] border border-[#F8B4B4] bg-[#FDE8E8] p-3 text-xs text-[#9B1C1C]">
               <AlertCircle size={16} className="mt-0.5 shrink-0" />
               <p className="flex-1">{error}</p>
               <button
@@ -471,7 +471,7 @@ export default function EmployeeAssets() {
           )}
 
           {success && (
-            <div className="mt-3 flex items-start gap-2.5 rounded-lg border border-[#BCF0DA] bg-[#DEF7EC] p-3 text-xs text-[#03543F]">
+            <div className="mt-3 flex items-start gap-2.5 rounded-[2px] border border-[#BCF0DA] bg-[#DEF7EC] p-3 text-xs text-[#03543F]">
               <CheckCircle2 size={16} className="mt-0.5 shrink-0" />
               <p className="flex-1">{success}</p>
               <button
@@ -524,7 +524,7 @@ export default function EmployeeAssets() {
                       return (
                         <div
                           key={asset.id}
-                          className="rounded-lg border border-[#E5E7EB] p-4 transition hover:border-[#D1D5DB]"
+                          className="rounded-[2px] border border-[#E5E7EB] p-4 transition hover:border-[#D1D5DB]"
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex min-w-0 items-start gap-3">
@@ -580,7 +580,7 @@ export default function EmployeeAssets() {
                             </div>
                           </div>
 
-                          <div className="mt-4 rounded-md border border-[#E5E7EB] bg-[#F9FAFB] px-3 py-2 text-[11px] text-[#4B5563]">
+                          <div className="mt-4 rounded-[2px] border border-[#E5E7EB] bg-[#F9FAFB] px-3 py-2 text-[11px] text-[#4B5563]">
                             For returns, please follow the return request issued
                             by HR/Admin/Manager and hand over the asset as
                             instructed.
@@ -624,7 +624,7 @@ export default function EmployeeAssets() {
                         type="button"
                         key={asset.id}
                         onClick={() => setSelectedAsset(asset.id)}
-                        className={`rounded-lg border p-4 text-left transition cursor-pointer ${selectedAsset === asset.id
+                        className={`rounded-[2px] border p-4 text-left transition cursor-pointer ${selectedAsset === asset.id
                           ? "border-[#2F5FD0] bg-[#E8EEFB] ring-1 ring-[#2F5FD0]"
                           : "border-[#E5E7EB] hover:border-[#D1D5DB] hover:bg-[#F9FAFB]"
                           }`}

@@ -192,7 +192,7 @@ export default function AttendanceTrendChart({
 
   return (
     <div
-      className={`flex h-full flex-col rounded-xl border border-[#E5E7EB] bg-white p-5 shadow-none ${className}`}
+      className={`flex h-full flex-col rounded-[2px] border border-[#E5E7EB] bg-white p-5 shadow-none ${className}`}
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
@@ -241,7 +241,7 @@ export default function AttendanceTrendChart({
       {(isPending || isFetching) && liveSeries.length === 0 ? (
         <div className="flex h-[150px] flex-col justify-center gap-3 animate-pulse" aria-label="Loading attendance">
           <div className="h-px w-full bg-[#E5E7EB]" />
-          <div className="h-20 w-full rounded-lg bg-[#F3F4F6]" />
+          <div className="h-20 w-full rounded-[2px] bg-[#F3F4F6]" />
           <div className="h-px w-4/5 bg-[#E5E7EB]" />
         </div>
       ) : isError && liveSeries.length === 0 ? (

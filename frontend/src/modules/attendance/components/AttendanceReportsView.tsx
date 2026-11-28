@@ -286,7 +286,7 @@ export const AttendanceReportsView: React.FC<AttendanceReportsViewProps> = ({ cl
   return (
     <div className={`@container flex flex-col gap-5 w-full ${className}`}>
       {/* Filter Bar */}
-      <div className="flex flex-wrap @[1160px]:flex-nowrap items-center justify-between gap-4 bg-white px-4 py-3.5 sm:px-5 sm:py-4 rounded-lg border border-[#E5E7EB] shadow-none">
+      <div className="flex flex-wrap @[1160px]:flex-nowrap items-center justify-between gap-4 bg-white px-4 py-3.5 sm:px-5 sm:py-4 rounded-[2px] border border-[#E5E7EB] shadow-none">
         {/* Left: Segmented Control Sub-Tabs */}
         <div
           role="tablist"
@@ -392,7 +392,7 @@ export const AttendanceReportsView: React.FC<AttendanceReportsViewProps> = ({ cl
           {kpiItems.map((item, idx) => (
             <div
               key={idx}
-              className="h-[100px] p-4 rounded-lg border border-[#E5E7EB] bg-white shadow-kpi flex flex-col justify-between min-w-0"
+              className="h-[100px] p-4 rounded-[2px] border-2 border-[#E5E7EB] bg-white shadow-kpi flex flex-col justify-between min-w-0"
             >
               <div className="flex items-center gap-1.5 min-w-0">
                 <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${item.dotColor}`} />
@@ -414,7 +414,7 @@ export const AttendanceReportsView: React.FC<AttendanceReportsViewProps> = ({ cl
       </div>
 
       {/* Main Report Table Container */}
-      <div className="rounded-lg border border-[#E5E7EB] bg-white overflow-hidden shadow-none">
+      <div className="rounded-[2px] border border-[#E5E7EB] bg-white overflow-hidden shadow-none">
         {/* Table Toolbar: Title & Result Count */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-[#E5E7EB] bg-white">
           <div className="flex items-center gap-2">

@@ -204,7 +204,7 @@ export default function AttendanceTodayTable({
 
                     {openMenuId === record.id && (
                       <div
-                        className="absolute right-0 top-8 z-30 w-36 rounded-2xl border border-slate-100 bg-white py-1.5 shadow-xl transition-all"
+                        className="absolute right-0 top-8 z-30 w-36 rounded-[2px] border border-slate-100 bg-white py-1.5 shadow-xl transition-all"
                         onMouseLeave={() => setOpenMenuId(null)}
                       >
                         <button

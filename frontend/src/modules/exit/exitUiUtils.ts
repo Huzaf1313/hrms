@@ -11,7 +11,7 @@ import type { ExitRequest } from "./types";
  * is what React Fast Refresh needs to swap a module without a full reload.
  */
 
-export const PANEL_CLASS = "rounded-lg border border-[#E5E7EB] bg-white overflow-hidden shadow-none";
+export const PANEL_CLASS = "rounded-[2px] border border-[#E5E7EB] bg-white overflow-hidden shadow-none";
 
 export const INPUT_CLASS =
   "h-8 w-full rounded-md border border-[#E5E7EB] bg-white px-2.5 text-[12px] text-[#111827] " +

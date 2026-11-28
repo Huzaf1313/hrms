@@ -623,10 +623,10 @@ export default function AdminMyProfile() {
   if (isLoading) {
     return (
       <div className="px-4 pb-10 pt-6 sm:px-6 lg:px-8 xl:px-10">
-        <div className="h-56 animate-pulse rounded-2xl bg-white" />
+        <div className="h-56 animate-pulse rounded-[2px] bg-white" />
         <div className="mt-6 grid gap-6 xl:grid-cols-3">
-          <div className="h-96 animate-pulse rounded-2xl bg-white xl:col-span-2" />
-          <div className="h-96 animate-pulse rounded-2xl bg-white" />
+          <div className="h-96 animate-pulse rounded-[2px] bg-white xl:col-span-2" />
+          <div className="h-96 animate-pulse rounded-[2px] bg-white" />
         </div>
       </div>
     );
@@ -635,7 +635,7 @@ export default function AdminMyProfile() {
   if (!profile) {
     return (
       <div className="px-4 pb-10 pt-6 sm:px-6 lg:px-8 xl:px-10">
-        <div className="rounded-2xl border border-rose-100 bg-rose-50 px-6 py-4 text-sm text-rose-600">
+        <div className="rounded-[2px] border border-rose-100 bg-rose-50 px-6 py-4 text-sm text-rose-600">
           {error || "Your profile could not be loaded."}
         </div>
       </div>
@@ -647,7 +647,7 @@ export default function AdminMyProfile() {
       {error && (
         <div
           role="alert"
-          className="mb-4 rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-600"
+          className="mb-4 rounded-[2px] border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-600"
         >
           {error}
         </div>
@@ -656,7 +656,7 @@ export default function AdminMyProfile() {
       {notice && (
         <div
           role="status"
-          className="mb-4 flex items-center gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
+          className="mb-4 flex items-center gap-2.5 rounded-[2px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
         >
           <CheckCircle2 className="h-4 w-4 shrink-0" />
           <span className="min-w-0 flex-1">{notice}</span>
@@ -677,7 +677,7 @@ export default function AdminMyProfile() {
           onMouseDown={() => setUpdateConfirmation(false)}
         >
           <div
-            className="w-full max-w-sm rounded bg-white p-6 text-center shadow-2xl"
+            className="w-full max-w-sm rounded-[2px] bg-white p-6 text-center shadow-2xl"
             role="dialog"
             aria-modal="true"
             aria-labelledby="profile-update-title"
@@ -710,7 +710,7 @@ export default function AdminMyProfile() {
           role="presentation"
         >
           <div
-            className="w-full max-w-sm rounded bg-white p-6 text-center shadow-2xl"
+            className="w-full max-w-sm rounded-[2px] bg-white p-6 text-center shadow-2xl"
             role="dialog"
             aria-modal="true"
             aria-labelledby="password-changed-title"
@@ -739,7 +739,7 @@ export default function AdminMyProfile() {
       )}
 
       {/* Hero */}
-      <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+      <div className="rounded-[2px] border border-gray-100 bg-white p-6 shadow-none">
         <div className="flex flex-wrap items-center gap-6">
           <ProfileAvatar
             name={profile.full_name}
@@ -793,7 +793,7 @@ export default function AdminMyProfile() {
       {/* Body: profile tabs + action rail */}
       <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-3">
         <div className="min-w-0 xl:col-span-2">
-          <div className="rounded-2xl border border-gray-100 bg-white px-5 pt-4 shadow-sm">
+          <div className="rounded-[2px] border border-gray-100 bg-white px-5 pt-4 shadow-none">
             <ProfileTabBar active={activeTab} onChange={setActiveTab} />
           </div>
 
@@ -1031,7 +1031,7 @@ function ChangePasswordForm({
       </div>
 
       {error && (
-        <p role="alert" className="rounded-lg border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-600">
+        <p role="alert" className="rounded-[2px] border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-600">
           {error}
         </p>
       )}

@@ -464,7 +464,7 @@ function EmployeePayroll() {
             title="Could not load payroll information"
             message={error}
             onRetry={() => setRefreshTick((tick) => tick + 1)}
-            className="max-w-none rounded-xl border border-[#FECACA] bg-white py-5"
+            className="max-w-none rounded-[2px] border border-[#FECACA] bg-white py-5"
           />
         )}
 
@@ -474,7 +474,7 @@ function EmployeePayroll() {
             Array.from({ length: 4 }).map((_, idx) => (
               <div
                 key={idx}
-                className="min-h-[132px] rounded-xl border border-[#E5E7EB] bg-white p-5"
+                className="min-h-[132px] rounded-[2px] border-2 border-[#E5E7EB] bg-white p-5 shadow-kpi"
               >
                 <div className="space-y-3">
                   <Skeleton className="h-3 w-28 rounded" />
@@ -486,7 +486,7 @@ function EmployeePayroll() {
           ) : (
             <>
               {/* Net Take-Home */}
-              <div className="flex flex-col justify-between rounded-xl border border-[#E5E7EB] bg-white p-5">
+              <div className="flex flex-col justify-between rounded-[2px] border-2 border-[#E5E7EB] bg-white p-5 shadow-kpi">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-[12px] font-medium text-[#6B7280]">
@@ -526,7 +526,7 @@ function EmployeePayroll() {
               </div>
 
               {/* Gross Salary & Deductions */}
-              <div className="flex flex-col justify-between rounded-xl border border-[#E5E7EB] bg-white p-5">
+              <div className="flex flex-col justify-between rounded-[2px] border-2 border-[#E5E7EB] bg-white p-5 shadow-kpi">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-[12px] font-medium text-[#6B7280]">
@@ -550,7 +550,7 @@ function EmployeePayroll() {
               </div>
 
               {/* Pay Period */}
-              <div className="flex flex-col justify-between rounded-xl border border-[#E5E7EB] bg-white p-5">
+              <div className="flex flex-col justify-between rounded-[2px] border-2 border-[#E5E7EB] bg-white p-5 shadow-kpi">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-[12px] font-medium text-[#6B7280]">
@@ -588,7 +588,7 @@ function EmployeePayroll() {
               </div>
 
               {/* Bank Account */}
-              <div className="flex flex-col justify-between rounded-xl border border-[#E5E7EB] bg-white p-5">
+              <div className="flex flex-col justify-between rounded-[2px] border-2 border-[#E5E7EB] bg-white p-5 shadow-kpi">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-[12px] font-medium text-[#6B7280]">
@@ -622,7 +622,7 @@ function EmployeePayroll() {
         {/* Main Payroll Area */}
         <div className="grid grid-cols-12 items-stretch gap-5">
           {/* Main Content */}
-          <section className="col-span-12 flex min-w-0 flex-col rounded-xl border border-[#E5E7EB] bg-white xl:col-span-8">
+          <section className="col-span-12 flex min-w-0 flex-col rounded-[2px] border border-[#E5E7EB] bg-white xl:col-span-8">
             {/* Underline Tabs */}
             <div className="border-b border-[#E5E7EB] px-5 pt-2">
               <Tabs
@@ -659,7 +659,7 @@ function EmployeePayroll() {
                   {loading ? (
                     <div className="space-y-3 py-4">
                       {Array.from({ length: 3 }).map((_, idx) => (
-                        <Skeleton key={idx} className="h-12 w-full rounded-lg" />
+                        <Skeleton key={idx} className="h-12 w-full rounded-[2px]" />
                       ))}
                     </div>
                   ) : currentPayslips.length === 0 ? (
@@ -674,7 +674,7 @@ function EmployeePayroll() {
                   ) : (
                     <>
                       {/* Desktop Table */}
-                      <div className="hidden overflow-hidden rounded-xl border border-[#E5E7EB] md:block">
+                      <div className="hidden overflow-hidden rounded-[2px] border border-[#E5E7EB] md:block">
                         <div className="overflow-x-auto">
                           <table className="w-full min-w-[650px]">
                             <thead>
@@ -764,7 +764,7 @@ function EmployeePayroll() {
                         {currentPayslips.map((payslip) => (
                           <div
                             key={`${payslip.id}-${payslip.month}`}
-                            className="rounded-xl border border-[#E5E7EB] p-4"
+                            className="rounded-[2px] border border-[#E5E7EB] p-4"
                           >
                             <div className="flex items-start justify-between gap-3">
                               <div className="flex items-center gap-3">
@@ -896,7 +896,7 @@ function EmployeePayroll() {
             {activePayroll ? (
               <>
                 {/* Salary Breakdown */}
-                <section className="rounded-xl border border-[#E5E7EB] bg-white p-5">
+                <section className="rounded-[2px] border border-[#E5E7EB] bg-white p-5">
                   <div className="mb-4">
                     <h2 className="text-[14px] font-semibold text-[#111827]">
                       Salary Breakdown
@@ -972,7 +972,7 @@ function EmployeePayroll() {
                 </section>
 
                 {/* Recent Deductions */}
-                <section className="flex flex-1 flex-col justify-between rounded-xl border border-[#E5E7EB] bg-white p-5">
+                <section className="flex flex-1 flex-col justify-between rounded-[2px] border border-[#E5E7EB] bg-white p-5">
                   <div>
                     <div className="flex items-start justify-between">
                       <div>
@@ -1028,7 +1028,7 @@ function EmployeePayroll() {
               </>
             ) : (
               /* Helpful Payroll Readiness Card when no payroll exists yet */
-              <section className="flex flex-1 flex-col justify-between rounded-xl border border-[#E5E7EB] bg-white p-5">
+              <section className="flex flex-1 flex-col justify-between rounded-[2px] border border-[#E5E7EB] bg-white p-5">
                 <div>
                   <h2 className="text-[14px] font-semibold text-[#111827]">
                     Payroll Checklist
@@ -1038,7 +1038,7 @@ function EmployeePayroll() {
                   </p>
 
                   <div className="mt-4 space-y-3">
-                    <div className="flex items-start justify-between gap-3 rounded-lg border border-[#E5E7EB] bg-[#F9FAFB]/70 p-3">
+                    <div className="flex items-start justify-between gap-3 rounded-[2px] border border-[#E5E7EB] bg-[#F9FAFB]/70 p-3">
                       <div className="flex items-start gap-2.5">
                         <CreditCard className="mt-0.5 h-4 w-4 shrink-0 text-[#6B7280]" />
                         <div>
@@ -1063,7 +1063,7 @@ function EmployeePayroll() {
                       </span>
                     </div>
 
-                    <div className="flex items-start justify-between gap-3 rounded-lg border border-[#E5E7EB] bg-[#F9FAFB]/70 p-3">
+                    <div className="flex items-start justify-between gap-3 rounded-[2px] border border-[#E5E7EB] bg-[#F9FAFB]/70 p-3">
                       <div className="flex items-start gap-2.5">
                         <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-[#6B7280]" />
                         <div>
@@ -1165,7 +1165,7 @@ function EmployeePayroll() {
                 }
               }
             `}</style>
-            <div className="max-h-[94vh] w-full max-w-3xl overflow-y-auto rounded-lg bg-white shadow-2xl">
+            <div className="max-h-[94vh] w-full max-w-3xl overflow-y-auto rounded-[2px] bg-white shadow-2xl">
               <div className="no-print flex items-center justify-between border-b border-slate-100 px-6 py-4">
                 <div className="flex items-center gap-3">
                   <h3 className="text-base font-bold text-slate-900">Official Payslip</h3>
@@ -1222,7 +1222,7 @@ function EmployeePayroll() {
                   <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">
                     Employee Information
                   </h4>
-                  <div className="grid grid-cols-2 gap-x-6 gap-y-2 rounded-lg bg-slate-50 p-4 text-xs sm:grid-cols-3">
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-2 rounded-[2px] bg-slate-50 p-4 text-xs sm:grid-cols-3">
                     <div>
                       <span className="text-slate-400">Name:</span>{" "}
                       <span className="font-semibold text-slate-800">{empName}</span>
@@ -1261,7 +1261,7 @@ function EmployeePayroll() {
                     <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">
                       Attendance & Leave Summary
                     </h4>
-                    <div className="grid grid-cols-2 gap-x-6 gap-y-2 rounded-lg bg-slate-50 p-3 text-xs sm:grid-cols-4">
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-2 rounded-[2px] bg-slate-50 p-3 text-xs sm:grid-cols-4">
                       <div>
                         <span className="text-slate-400">Working Days:</span>{" "}
                         <span className="font-semibold text-slate-800">{att.total_days}</span>
@@ -1291,7 +1291,7 @@ function EmployeePayroll() {
                   <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">
                     Salary Breakdown
                   </h4>
-                  <div className="overflow-x-auto rounded-lg border border-slate-200 text-xs">
+                  <div className="overflow-x-auto rounded-[2px] border border-slate-200 text-xs">
                     <table className="w-full min-w-[480px]">
                       <thead>
                         <tr className="border-b border-slate-200 bg-slate-100 font-bold text-slate-700">
@@ -1333,7 +1333,7 @@ function EmployeePayroll() {
                   </div>
                 </section>
 
-                <section className="mt-5 rounded-lg border border-blue-100 bg-blue-50/50 p-4">
+                <section className="mt-5 rounded-[2px] border border-blue-100 bg-blue-50/50 p-4">
                   <div className="flex items-center justify-between text-sm">
                     <span className="font-semibold text-slate-700">Net Salary Payable</span>
                     <span className="text-xl font-bold text-blue-700">{formatCurrency(net)}</span>
@@ -1386,7 +1386,7 @@ function SalaryDetails({
           className="max-w-none py-8"
         />
       ) : (
-        <div className="overflow-hidden rounded-xl border border-[#E5E7EB]">
+        <div className="overflow-hidden rounded-[2px] border border-[#E5E7EB]">
           <div className="divide-y divide-[#E5E7EB]">
             {salaryComponents.map((component) => (
               <div
@@ -1471,7 +1471,7 @@ function DeductionsDetails({
             {deductions.map((deduction) => (
               <div
                 key={deduction.shortLabel}
-                className="flex items-center justify-between rounded-xl border border-[#E5E7EB] p-4"
+                className="flex items-center justify-between rounded-[2px] border border-[#E5E7EB] p-4"
               >
                 <div className="flex items-center gap-3">
                   <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#F3F4F6]">
@@ -1497,7 +1497,7 @@ function DeductionsDetails({
             ))}
           </div>
 
-          <div className="mt-4 flex items-center justify-between rounded-xl border border-rose-200 bg-rose-50 px-4 py-3.5">
+          <div className="mt-4 flex items-center justify-between rounded-[2px] border border-rose-200 bg-rose-50 px-4 py-3.5">
             <span className="text-[13px] font-semibold text-rose-700">
               Total Deductions
             </span>
@@ -1537,7 +1537,7 @@ function TaxDetails({
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="rounded-xl border border-slate-200 p-5">
+        <div className="rounded-[2px] border border-slate-200 p-5">
           <p className="text-sm text-slate-500">
             Income Tax (TDS)
           </p>
@@ -1555,7 +1555,7 @@ function TaxDetails({
           </p>
         </div>
 
-        <div className="rounded-xl border border-slate-200 p-5">
+        <div className="rounded-[2px] border border-slate-200 p-5">
           <p className="text-sm text-slate-500">
             Professional Tax
           </p>
@@ -1573,7 +1573,7 @@ function TaxDetails({
           </p>
         </div>
 
-        <div className="rounded-xl border border-slate-200 p-5">
+        <div className="rounded-[2px] border border-slate-200 p-5">
           <p className="text-sm text-slate-500">
             Taxable Income
           </p>
@@ -1589,7 +1589,7 @@ function TaxDetails({
           </p>
         </div>
 
-        <div className="rounded-xl border border-slate-200 p-5">
+        <div className="rounded-[2px] border border-slate-200 p-5">
           <p className="text-sm text-slate-500">
             Total Tax Deducted
           </p>
@@ -1605,7 +1605,7 @@ function TaxDetails({
           </p>
         </div>
 
-        <div className="rounded-xl border border-slate-200 p-5 sm:col-span-2">
+        <div className="rounded-[2px] border border-slate-200 p-5 sm:col-span-2">
           <div className="flex items-start gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50">
               <ShieldCheck className="h-5 w-5 text-blue-600" />

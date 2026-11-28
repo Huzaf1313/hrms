@@ -119,7 +119,7 @@ function EmployeeAnnouncementTicker({
 
   return (
     <section
-      className={`relative overflow-hidden rounded-2xl border ${dashboardTone ? "border-[#E4E6E1] bg-white" : "border-white/10 bg-gradient-to-r from-[#0d1b3d] via-[#1e3a8a] to-[#4331a5] shadow-xl shadow-blue-900/25"}`}
+      className={`relative overflow-hidden rounded-[2px] border ${dashboardTone ? "border-[#E4E6E1] bg-white" : "border-white/10 bg-gradient-to-r from-[#0d1b3d] via-[#1e3a8a] to-[#4331a5] shadow-xl shadow-blue-900/25"}`}
       aria-label="Employee announcements"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -215,7 +215,7 @@ function EmployeeAnnouncementTicker({
             role="dialog"
             aria-modal="true"
             aria-labelledby="dashboard-announcement-title"
-            className="max-h-[calc(100vh-32px)] w-full max-w-xl overflow-y-auto rounded-2xl border border-[#E5E7EB] bg-white p-6 shadow-2xl"
+            className="max-h-[calc(100vh-32px)] w-full max-w-xl overflow-y-auto rounded-[2px] border border-[#E5E7EB] bg-white p-6 shadow-2xl"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-4">

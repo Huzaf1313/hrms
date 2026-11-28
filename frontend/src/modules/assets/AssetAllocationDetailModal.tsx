@@ -160,7 +160,7 @@ export default function AssetAllocationDetailModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="allocation-modal-title"
-        className="flex max-h-[calc(100vh-48px)] w-full max-w-[calc(100vw-32px)] sm:max-w-[560px] flex-col overflow-hidden rounded border border-[#E5E7EB] bg-white shadow-[0_12px_32px_rgba(16,24,40,0.18)]"
+        className="flex max-h-[calc(100vh-48px)] w-full max-w-[calc(100vw-32px)] sm:max-w-[560px] flex-col overflow-hidden rounded-[2px] border border-[#E5E7EB] bg-white shadow-[0_12px_32px_rgba(16,24,40,0.18)]"
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[#E5E7EB] px-4 sm:px-5 py-4 sm:py-5">

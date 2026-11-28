@@ -61,7 +61,7 @@ export default function AssetDeleteModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="asset-delete-title"
-        className="w-full max-w-md overflow-hidden rounded border border-[#E5E7EB] bg-white shadow-xl"
+        className="w-full max-w-md overflow-hidden rounded-[2px] border border-[#E5E7EB] bg-white shadow-xl"
       >
         <div className="flex items-center justify-between border-b border-[#E5E7EB] px-6 py-4">
           <div className="flex items-center gap-3">
@@ -90,7 +90,7 @@ export default function AssetDeleteModal({
         </div>
 
         <div className="px-6 py-5">
-          <dl className="rounded border border-[#E5E7EB] bg-[#F9FAFB] px-4 py-3">
+          <dl className="rounded-[2px] border border-[#E5E7EB] bg-[#F9FAFB] px-4 py-3">
             <div className="flex items-start gap-3 py-1">
               <dt className="w-[100px] shrink-0 text-xs font-medium text-[#6B7280]">Asset</dt>
               <dd className="min-w-0 flex-1 break-words text-left text-[13px] font-medium text-[#111827] tabular-nums">
@@ -111,7 +111,7 @@ export default function AssetDeleteModal({
             </div>
           </dl>
 
-          <div className="mt-4 rounded border border-[#F8B4B4] bg-[#FDE8E8] px-4 py-3">
+          <div className="mt-4 rounded-[2px] border border-[#F8B4B4] bg-[#FDE8E8] px-4 py-3">
             <p className="text-xs leading-5 text-[#9B1C1C]">
               The asset record and its purchase details will be deleted
               permanently. This cannot be undone.
@@ -119,7 +119,7 @@ export default function AssetDeleteModal({
           </div>
 
           {error && (
-            <div className="mt-4 rounded border border-[#F8B4B4] bg-[#FDE8E8] px-4 py-3 text-xs text-[#9B1C1C]">
+            <div className="mt-4 rounded-[2px] border border-[#F8B4B4] bg-[#FDE8E8] px-4 py-3 text-xs text-[#9B1C1C]">
               {error}
             </div>
           )}

@@ -130,7 +130,7 @@ export const LeaveApprovals: React.FC<LeaveApprovalsProps> = ({
   };
 
   return (
-    <div className={`rounded-lg border border-[#E5E7EB] bg-white overflow-hidden shadow-none ${className}`}>
+    <div className={`rounded-[2px] border border-[#E5E7EB] bg-white overflow-hidden shadow-none ${className}`}>
       {/* Header Toolbar inside the card */}
       <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6 py-3.5 border-b border-[#E5E7EB]">
         <div className="flex items-center gap-2">

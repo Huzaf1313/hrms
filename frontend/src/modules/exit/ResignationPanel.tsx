@@ -159,7 +159,7 @@ export default function ResignationPanel({
                   type="button"
                   disabled={!action.enabled}
                   onClick={action.onClick}
-                  className={`flex min-w-0 items-center gap-3 rounded-xl border px-3.5 py-3 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0] ${
+                  className={`flex min-w-0 items-center gap-3 rounded-[2px] border px-3.5 py-3 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0] ${
                     action.enabled
                       ? "border-[#E5E7EB] bg-white text-[#1F2937] hover:border-[#CBD5E1] hover:bg-[#F8FAFC] cursor-pointer"
                       : "cursor-not-allowed border-[#E5E7EB] bg-[#F8FAFC] text-[#94A3B8] opacity-75"
@@ -185,7 +185,7 @@ export default function ResignationPanel({
           )}
         </Panel>
 
-        <div className="rounded-xl border border-[#DBEAFE] bg-[#EFF6FF] p-4">
+        <div className="rounded-[2px] border border-[#DBEAFE] bg-[#EFF6FF] p-4">
           <div className="flex items-start gap-2.5">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#2563EB]" />
             <div className="min-w-0">
@@ -199,7 +199,7 @@ export default function ResignationPanel({
         </div>
 
         {actionable && (
-          <div className="flex items-start gap-2.5 rounded-xl border border-[#A7F3D0] bg-[#ECFDF5] p-4">
+          <div className="flex items-start gap-2.5 rounded-[2px] border border-[#A7F3D0] bg-[#ECFDF5] p-4">
             <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#059669]" />
             <p className="min-w-0 text-xs leading-5 text-[#065F46]">
               {actionable.employee_name} is currently{" "}

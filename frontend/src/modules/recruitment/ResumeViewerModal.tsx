@@ -67,7 +67,7 @@ export default function ResumeViewerModal({
       onClick={onClose}
     >
       <div
-        className="flex h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded bg-white shadow-xl"
+        className="flex h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-[2px] bg-white shadow-xl"
         role="dialog"
         aria-modal="true"
         aria-label={`Resume of ${candidate.full_name}`}

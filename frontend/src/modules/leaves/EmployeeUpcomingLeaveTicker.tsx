@@ -172,7 +172,7 @@ export default function EmployeeUpcomingLeaveTicker({
 
   return (
     <section
-      className="relative mb-5 overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-r from-[#0d1b3d] via-[#1e3a8a] to-[#4331a5] shadow-xl shadow-blue-900/25"
+      className="relative mb-5 overflow-hidden rounded-[2px] border border-white/10 bg-gradient-to-r from-[#0d1b3d] via-[#1e3a8a] to-[#4331a5] shadow-xl shadow-blue-900/25"
       aria-label="Upcoming employee leaves"
     >
       {/* Animated background glow */}

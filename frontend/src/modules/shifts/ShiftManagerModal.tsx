@@ -195,7 +195,7 @@ export default function ShiftManagerModal({ onClose, onChanged }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded bg-white shadow-lg">
+      <div className="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-[2px] bg-white shadow-lg">
         <div className="flex items-start justify-between border-b border-gray-100 p-6">
           <div>
             <h2 className="text-xl font-bold text-gray-900">Manage Shifts</h2>
@@ -216,7 +216,7 @@ export default function ShiftManagerModal({ onClose, onChanged }: Props) {
 
         <div className="flex-1 overflow-y-auto p-6">
           {error && (
-            <div className="mb-4 rounded bg-rose-50 p-3 text-sm text-rose-600">
+            <div className="mb-4 rounded-[2px] bg-rose-50 p-3 text-sm text-rose-600">
               {error}
             </div>
           )}
@@ -234,7 +234,7 @@ export default function ShiftManagerModal({ onClose, onChanged }: Props) {
               {shifts.map((shift) => (
                 <li
                   key={shift.id}
-                  className={`rounded border p-4 ${shift.is_active
+                  className={`rounded-[2px] border p-4 ${shift.is_active
                     ? "border-gray-100"
                     : "border-gray-100 bg-gray-50 opacity-70"
                     }`}
@@ -311,7 +311,7 @@ export default function ShiftManagerModal({ onClose, onChanged }: Props) {
           {isFormOpen ? (
             <div className="space-y-4">
               {formError && (
-                <div className="rounded bg-rose-50 p-3 text-sm text-rose-600">
+                <div className="rounded-[2px] bg-rose-50 p-3 text-sm text-rose-600">
                   {formError}
                 </div>
               )}

@@ -72,7 +72,7 @@ function CredentialsModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-      <div className="w-full max-w-md rounded bg-white p-6 shadow-xl sm:p-8">
+      <div className="w-full max-w-md rounded-[2px] bg-white p-6 shadow-xl sm:p-8">
         <div className="mb-1 flex items-center gap-2">
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
             <Check aria-hidden="true" className="h-4 w-4" />
@@ -88,7 +88,7 @@ function CredentialsModal({
           The password won't be shown again.
         </p>
 
-        <div className="mt-5 space-y-3 rounded bg-[#f5f7fb] p-4">
+        <div className="mt-5 space-y-3 rounded-[2px] bg-[#f5f7fb] p-4">
           <div>
             <p className="text-[12px] font-medium text-[#6B7280]">
               Email
@@ -647,7 +647,7 @@ function AdminEmployees({
       {/* 2. Top 4 Metric KPI Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {/* Total Employees */}
-        <div className="relative flex flex-col justify-between overflow-hidden rounded-3xl border border-slate-100 bg-white p-5 shadow-kpi">
+        <div className="relative flex flex-col justify-between overflow-hidden rounded-[2px] border-2 border-slate-200 bg-white p-5 shadow-kpi shadow-kpi-hover">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="truncate text-[12px] font-medium text-[#6B7280]">Total Employees</p>
@@ -661,7 +661,7 @@ function AdminEmployees({
         </div>
 
         {/* Present Today */}
-        <div className="relative flex flex-col justify-between overflow-hidden rounded-3xl border border-slate-100 bg-white p-5 shadow-kpi">
+        <div className="relative flex flex-col justify-between overflow-hidden rounded-[2px] border-2 border-slate-200 bg-white p-5 shadow-kpi shadow-kpi-hover">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="truncate text-[12px] font-medium text-[#6B7280]">Present Today</p>
@@ -681,7 +681,7 @@ function AdminEmployees({
         </div>
 
         {/* On Leave */}
-        <div className="relative flex flex-col justify-between overflow-hidden rounded-3xl border border-slate-100 bg-white p-5 shadow-kpi">
+        <div className="relative flex flex-col justify-between overflow-hidden rounded-[2px] border-2 border-slate-200 bg-white p-5 shadow-kpi shadow-kpi-hover">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="truncate text-[12px] font-medium text-[#6B7280]">On Leave</p>
@@ -701,7 +701,7 @@ function AdminEmployees({
         </div>
 
         {/* Pending Leave Requests */}
-        <div className="relative flex flex-col justify-between overflow-hidden rounded-3xl border border-slate-100 bg-white p-5 shadow-kpi">
+        <div className="relative flex flex-col justify-between overflow-hidden rounded-[2px] border-2 border-slate-200 bg-white p-5 shadow-kpi shadow-kpi-hover">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="truncate text-[12px] font-medium text-[#6B7280]">Pending Leave Requests</p>
@@ -721,7 +721,7 @@ function AdminEmployees({
       </div>
 
       {specialFilter && (
-        <div className="flex items-center justify-between rounded-xl bg-blue-50 px-4 py-2.5 text-xs font-semibold text-blue-700">
+        <div className="flex items-center justify-between rounded-[2px] bg-blue-50 px-4 py-2.5 text-xs font-semibold text-blue-700">
           <span className="flex items-center gap-1.5">
             <span>Filtered by:</span>
             <span className="font-bold underline">
@@ -743,7 +743,7 @@ function AdminEmployees({
       )}
 
       {/* 3. Table Card */}
-      <div className="overflow-hidden rounded-xl border border-[#E5E7EB] bg-white">
+      <div className="overflow-hidden rounded-[2px] border border-[#E5E7EB] bg-white">
         <div className="flex flex-col gap-3 border-b border-[#E5E7EB] p-4 lg:flex-row lg:items-center">
           <div className="relative min-w-0 flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9CA3AF]" />
@@ -798,7 +798,7 @@ function AdminEmployees({
         </div>
 
         {specialFilter && (
-          <div className="flex items-center justify-between rounded-xl bg-blue-50 px-4 py-2.5 text-xs font-semibold text-blue-700">
+          <div className="flex items-center justify-between rounded-[2px] bg-blue-50 px-4 py-2.5 text-xs font-semibold text-blue-700">
             <span className="flex items-center gap-1.5">
               <span>Filtered by:</span>
               <span className="font-bold underline">
@@ -927,7 +927,7 @@ function AdminEmployees({
       {toastMessage && (
         <div
           role="status"
-          className="fixed bottom-5 right-5 z-[60] flex items-center gap-2 rounded-lg bg-[#111827] px-4 py-3 text-[13px] text-white shadow-lg"
+          className="fixed bottom-5 right-5 z-[60] flex items-center gap-2 rounded-[2px] bg-[#111827] px-4 py-3 text-[13px] text-white shadow-lg"
         >
           <Check className="h-4 w-4 text-[#86EFAC]" />
           {toastMessage}
@@ -945,7 +945,7 @@ function AdminEmployees({
       {/* Delete Confirmation Modal */}
       {pendingDeleteId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-sm rounded bg-white p-6 shadow-xl sm:p-7">
+          <div className="w-full max-w-sm rounded-[2px] bg-white p-6 shadow-xl sm:p-7">
             <h3 className="text-lg font-bold text-slate-900">
               Delete employee?
             </h3>

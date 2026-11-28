@@ -370,7 +370,7 @@ export function AnnouncementMarquee({
   }
 
   // Clean, generous margin-bottom so there is a distinct gap between the marquee and the KPI cards below
-  const cardClass = `${DASHBOARD_CARD_CLASS} !mt-4 !mb-6 !h-[60px] !w-full !rounded-xl !p-0 shadow-xs border border-[#E5E7EB] bg-white`;
+  const cardClass = `${DASHBOARD_CARD_CLASS} !mt-4 !mb-6 !h-[60px] !w-full !rounded-[2px] !p-0 shadow-xs border border-[#E5E7EB] bg-white`;
 
   if (loading) {
     return (

@@ -225,7 +225,7 @@ function EmployeeLeaveModal({
         }
       }}
     >
-      <div className="w-full max-w-2xl overflow-hidden rounded bg-white shadow-2xl">
+      <div className="w-full max-w-2xl overflow-hidden rounded-[2px] bg-white shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
           <div>
@@ -349,7 +349,7 @@ function EmployeeLeaveModal({
             </div>
 
             {/* Total Days */}
-            <div className="mt-5 rounded border border-blue-100 bg-blue-50 px-4 py-3">
+            <div className="mt-5 rounded-[2px] border border-blue-100 bg-blue-50 px-4 py-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-slate-600">
                   Total Days
@@ -421,7 +421,7 @@ function EmployeeLeaveModal({
 
               <label
                 htmlFor="leave-attachment"
-                className={`flex flex-col items-center justify-center rounded border border-dashed border-slate-300 bg-slate-50/50 px-4 py-6 transition ${isSubmitting
+                className={`flex flex-col items-center justify-center rounded-[2px] border border-dashed border-slate-300 bg-slate-50/50 px-4 py-6 transition ${isSubmitting
                   ? "cursor-not-allowed opacity-60"
                   : "cursor-pointer hover:border-blue-400 hover:bg-blue-50/30"
                   }`}
@@ -484,7 +484,7 @@ function EmployeeLeaveModal({
 
             {/* Error */}
             {error && (
-              <div className="mt-5 rounded border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+              <div className="mt-5 rounded-[2px] border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
                 {error}
               </div>
             )}

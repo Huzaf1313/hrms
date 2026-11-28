@@ -278,13 +278,13 @@ function EmployeeDashboard() {
         {/* Today's Attendance */}
         <div
           onClick={() => navigate("/employee/attendance")}
-          className="flex min-h-[128px] cursor-pointer flex-col rounded-xl border border-[#E5E7EB] bg-white p-5 transition hover:border-[#D1D5DB]"
+          className="flex min-h-[128px] cursor-pointer flex-col rounded-[2px] border-2 border-[#E5E7EB] bg-white p-5 shadow-kpi shadow-kpi-hover transition hover:border-[#D1D5DB]"
         >
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-[12px] font-medium text-[#6B7280]">Today&apos;s Attendance</p>
               <p className="mt-2 text-[24px] font-semibold leading-none text-[#111827]">
-                {todayAttendance?.check_in ? "Checked In" : "Not Marked"}
+                {todayAttendance?.check_in ? "Punch In" : "Not Marked"}
               </p>
             </div>
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
@@ -301,7 +301,7 @@ function EmployeeDashboard() {
         {/* Leave Balance */}
         <div
           onClick={() => navigate("/employee/leave")}
-          className="flex min-h-[128px] cursor-pointer flex-col rounded-xl border border-[#E5E7EB] bg-white p-5 transition hover:border-[#D1D5DB]"
+          className="flex min-h-[128px] cursor-pointer flex-col rounded-[2px] border-2 border-[#E5E7EB] bg-white p-5 shadow-kpi shadow-kpi-hover transition hover:border-[#D1D5DB]"
         >
           <div className="flex items-start justify-between gap-3">
             <div>
@@ -323,7 +323,7 @@ function EmployeeDashboard() {
         {/* Pending Requests */}
         <div
           onClick={() => navigate("/employee/leave")}
-          className="flex min-h-[128px] cursor-pointer flex-col rounded-xl border border-[#E5E7EB] bg-white p-5 transition hover:border-[#D1D5DB]"
+          className="flex min-h-[128px] cursor-pointer flex-col rounded-[2px] border-2 border-[#E5E7EB] bg-white p-5 shadow-kpi shadow-kpi-hover transition hover:border-[#D1D5DB]"
         >
           <div className="flex items-start justify-between gap-3">
             <div>
@@ -345,7 +345,7 @@ function EmployeeDashboard() {
         {/* My Payslip */}
         <div
           onClick={() => navigate("/employee/payroll")}
-          className="flex min-h-[128px] cursor-pointer flex-col rounded-xl border border-[#E5E7EB] bg-white p-5 transition hover:border-[#D1D5DB]"
+          className="flex min-h-[128px] cursor-pointer flex-col rounded-[2px] border-2 border-[#E5E7EB] bg-white p-5 shadow-kpi shadow-kpi-hover transition hover:border-[#D1D5DB]"
         >
           <div className="flex items-start justify-between gap-3">
             <div>
@@ -381,7 +381,7 @@ function EmployeeDashboard() {
         />
 
         {/* Quick Actions */}
-        <div className="col-span-12 flex flex-col justify-between rounded-xl border border-[#E5E7EB] bg-white p-5 lg:col-span-4">
+        <div className="col-span-12 flex flex-col justify-between rounded-[2px] border border-[#E5E7EB] bg-white p-5 lg:col-span-4">
           <div>
             <div className="flex items-center gap-2">
               <span className="text-blue-600 font-bold">⚡</span>
@@ -398,7 +398,7 @@ function EmployeeDashboard() {
             <button
               type="button"
               onClick={() => navigate("/employee/attendance")}
-              className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-emerald-100/70 bg-emerald-50/50 p-4 text-center transition hover:bg-emerald-100/60"
+              className="flex flex-col items-center justify-center gap-2 rounded-[2px] border border-emerald-100/70 bg-emerald-50/50 p-4 text-center transition hover:bg-emerald-100/60"
             >
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
                 <CalendarCheck className="h-5 w-5" />
@@ -411,7 +411,7 @@ function EmployeeDashboard() {
             <button
               type="button"
               onClick={() => navigate("/employee/leave")}
-              className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-amber-100/70 bg-amber-50/50 p-4 text-center transition hover:bg-amber-100/60"
+              className="flex flex-col items-center justify-center gap-2 rounded-[2px] border border-amber-100/70 bg-amber-50/50 p-4 text-center transition hover:bg-amber-100/60"
             >
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
                 <CalendarDays className="h-5 w-5" />
@@ -424,7 +424,7 @@ function EmployeeDashboard() {
             <button
               type="button"
               onClick={() => navigate("/employee/payroll")}
-              className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-blue-100/70 bg-blue-50/50 p-4 text-center transition hover:bg-blue-100/60"
+              className="flex flex-col items-center justify-center gap-2 rounded-[2px] border border-blue-100/70 bg-blue-50/50 p-4 text-center transition hover:bg-blue-100/60"
             >
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 text-[#0066ff]">
                 <Wallet className="h-5 w-5" />
@@ -437,7 +437,7 @@ function EmployeeDashboard() {
             <button
               type="button"
               onClick={() => navigate("/employee/help")}
-              className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-purple-100/70 bg-purple-50/50 p-4 text-center transition hover:bg-purple-100/60"
+              className="flex flex-col items-center justify-center gap-2 rounded-[2px] border border-purple-100/70 bg-purple-50/50 p-4 text-center transition hover:bg-purple-100/60"
             >
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-100 text-purple-700">
                 <LifeBuoy className="h-5 w-5" />
@@ -448,7 +448,7 @@ function EmployeeDashboard() {
             </button>
           </div>
 
-          <div className="rounded-2xl bg-slate-50 p-3 text-center text-xs text-slate-500">
+          <div className="rounded-[2px] bg-slate-50 p-3 text-center text-xs text-slate-500">
             Have an attendance discrepancy?{" "}
             <button
               type="button"
@@ -464,7 +464,7 @@ function EmployeeDashboard() {
       {/* =====================================================
           4. MY RECENT LEAVE REQUESTS TABLE
       ===================================================== */}
-      <section className="overflow-hidden rounded-xl border border-[#E5E7EB] bg-white">
+      <section className="overflow-hidden rounded-[2px] border border-[#E5E7EB] bg-white">
         <div className="flex items-center justify-between border-b border-[#E5E7EB] px-5 py-4">
           <div>
             <h2 className="text-[14px] font-semibold text-[#111827]">

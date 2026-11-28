@@ -186,7 +186,7 @@ function EmployeeResignation() {
   return (
     <div className="grid gap-6 w-full xl:grid-cols-[1fr_340px]">
       <div className="flex flex-col gap-6">
-        <div className="flex flex-col gap-1 bg-white p-5 rounded-lg border border-[#E5E7EB] shadow-none">
+        <div className="flex flex-col gap-1 bg-white p-5 rounded-[2px] border border-[#E5E7EB] shadow-none">
           <Link
             to="/employee/exit"
             className="inline-flex items-center gap-1 text-xs font-medium text-[#4B5563] hover:text-[#111827] w-fit"
@@ -200,12 +200,12 @@ function EmployeeResignation() {
         </div>
 
         {hasActiveRequest && (
-          <div className="rounded-lg border border-[#FCD34D] bg-[#FEF3C7] p-4 text-xs text-[#92400E]">
+          <div className="rounded-[2px] border border-[#FCD34D] bg-[#FEF3C7] p-4 text-xs text-[#92400E]">
             You already have an active resignation request, so a new one can&apos;t be submitted.
           </div>
         )}
 
-        <section className="space-y-6 rounded-lg border border-[#E5E7EB] bg-white p-6 shadow-none">
+        <section className="space-y-6 rounded-[2px] border border-[#E5E7EB] bg-white p-6 shadow-none">
           <h2 className="text-[13px] font-semibold text-[#111827]">Resignation Details</h2>
 
           <div className="grid gap-4 md:grid-cols-2">
@@ -266,7 +266,7 @@ function EmployeeResignation() {
               Help us plan the transition by sharing your handover details and important tasks.
             </p>
 
-            <div className="mt-3 overflow-x-auto rounded-lg border border-[#E5E7EB]">
+            <div className="mt-3 overflow-x-auto rounded-[2px] border border-[#E5E7EB]">
               <table className="w-full min-w-[620px] border-collapse text-[12px]">
                 <thead className="bg-[#F9FAFB] border-b border-[#E5E7EB] text-left text-[11px] font-semibold uppercase tracking-wider text-[#4B5563]">
                   <tr className="h-10">
@@ -324,7 +324,7 @@ function EmployeeResignation() {
             <div
               onDragOver={(e) => e.preventDefault()}
               onDrop={handleDrop}
-              className="mt-3 flex flex-col items-center gap-1 rounded-lg border-2 border-dashed border-[#E5E7EB] bg-[#F9FAFB] px-4 py-6 text-center"
+              className="mt-3 flex flex-col items-center gap-1 rounded-[2px] border-2 border-dashed border-[#E5E7EB] bg-[#F9FAFB] px-4 py-6 text-center"
             >
               <UploadCloud className="h-6 w-6 text-[#2F5FD0]" />
               <p className="text-xs text-[#4B5563]">
@@ -355,7 +355,7 @@ function EmployeeResignation() {
                 {files.map((file, index) => (
                   <li
                     key={`${file.name}-${index}`}
-                    className="flex items-center gap-2 rounded-md border border-[#E5E7EB] bg-white px-3 py-1.5 text-xs text-[#4B5563]"
+                    className="flex items-center gap-2 rounded-[2px] border border-[#E5E7EB] bg-white px-3 py-1.5 text-xs text-[#4B5563]"
                   >
                     <FileText className="h-4 w-4 text-[#2F5FD0]" />
                     {file.name}
@@ -374,7 +374,7 @@ function EmployeeResignation() {
           </div>
 
           {error && (
-            <p className="rounded-lg border border-[#F8B4B4] bg-[#FDE8E8] px-4 py-2.5 text-xs text-[#9B1C1C]">{error}</p>
+            <p className="rounded-[2px] border border-[#F8B4B4] bg-[#FDE8E8] px-4 py-2.5 text-xs text-[#9B1C1C]">{error}</p>
           )}
 
           <div className="flex flex-wrap items-center justify-between gap-4 border-t border-[#E5E7EB] pt-5">
@@ -411,7 +411,7 @@ function EmployeeResignation() {
       </div>
 
       <aside className="space-y-4">
-        <section className="rounded-lg border border-[#E5E7EB] bg-white overflow-hidden shadow-none">
+        <section className="rounded-[2px] border border-[#E5E7EB] bg-white overflow-hidden shadow-none">
           <div className="border-b border-[#E5E7EB] bg-white px-5 py-3.5">
             <h2 className="text-[13px] font-semibold text-[#111827]">Resignation Process</h2>
           </div>
@@ -435,7 +435,7 @@ function EmployeeResignation() {
           </ol>
         </section>
 
-        <section className="rounded-lg border border-[#E5E7EB] bg-white overflow-hidden shadow-none text-[12px]">
+        <section className="rounded-[2px] border border-[#E5E7EB] bg-white overflow-hidden shadow-none text-[12px]">
           <div className="border-b border-[#E5E7EB] bg-white px-5 py-3.5">
             <h2 className="text-[13px] font-semibold text-[#111827]">Key Information</h2>
           </div>

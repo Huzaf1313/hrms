@@ -138,7 +138,7 @@ export const AdminLeavePage: React.FC = () => {
             return (
               <div
                 key={idx}
-                className="rounded-lg border border-[#E5E7EB] bg-white p-4 h-[104px] shadow-kpi flex flex-col justify-between min-w-0"
+                className="rounded-[2px] border-2 border-[#E5E7EB] bg-white p-4 h-[104px] shadow-kpi flex flex-col justify-between min-w-0"
               >
                 <div className="flex items-center justify-between gap-2 min-w-0">
                   <span className="text-xs font-medium text-[#4B5563] truncate">
@@ -227,7 +227,7 @@ export const AdminLeavePage: React.FC = () => {
 
         {activeTab === "records" && (
           <div className="flex flex-col gap-3">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-white px-4 sm:px-5 py-3 rounded-lg border border-[#E5E7EB]">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-white px-4 sm:px-5 py-3 rounded-[2px] border border-[#E5E7EB]">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-[13px] font-semibold text-[#111827]">Your Leave Records & Balances</span>
                 <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#E8EEFB] text-[#2F5FD0] font-medium border border-[#2F5FD0]/20">

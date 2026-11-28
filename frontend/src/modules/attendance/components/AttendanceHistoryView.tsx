@@ -85,7 +85,7 @@ export const AttendanceHistoryView: React.FC<AttendanceHistoryViewProps> = ({
   }, []);
 
   return (
-    <div className={`rounded-xl border border-[#E5E7EB] bg-white overflow-hidden shadow-none ${className}`}>
+    <div className={`rounded-[2px] border border-[#E5E7EB] bg-white overflow-hidden shadow-none ${className}`}>
       {/* Header Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 border-b border-[#E4E6E1] bg-white">
         <div className="flex items-center gap-3">
@@ -184,7 +184,7 @@ export const AttendanceHistoryView: React.FC<AttendanceHistoryViewProps> = ({
                 <div
                   key={item.dateKey}
                   onClick={() => rec && onSelectDay(rec)}
-                  className={`min-h-[80px] p-2.5 rounded-lg border transition-all flex flex-col justify-between ${
+                  className={`min-h-[80px] p-2.5 rounded-[2px] border transition-all flex flex-col justify-between ${
                     rec ? "cursor-pointer hover:border-[#2563EB]" : ""
                   } ${
                     isToday

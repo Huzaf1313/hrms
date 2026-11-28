@@ -78,7 +78,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           <div
             key={toast.id}
             role="status"
-            className={`pointer-events-auto flex items-start gap-3 p-3 rounded-lg border shadow-md animate-in slide-in-from-top-2 duration-150 ${borderMap[toast.type]}`}
+            className={`pointer-events-auto flex items-start gap-3 p-3 rounded-[2px] border shadow-md animate-in slide-in-from-top-2 duration-150 ${borderMap[toast.type]}`}
           >
             {iconMap[toast.type]}
             <div className="flex-1 min-w-0">

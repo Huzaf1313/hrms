@@ -226,7 +226,7 @@ export default function CreateExitRequestModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="create-exit-dialog-title"
-        className="flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded border border-[#E5E7EB] bg-white shadow-xl"
+        className="flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded-[2px] border border-[#E5E7EB] bg-white shadow-xl"
       >
         <header className="flex items-center justify-between border-b border-[#E5E7EB] px-6 py-4">
           <div className="flex items-center gap-3">
@@ -492,7 +492,7 @@ export default function CreateExitRequestModal({
             </div>
 
             {error && (
-              <p className="rounded border border-[#F8B4B4] bg-[#FDE8E8] px-4 py-3 text-xs text-[#9B1C1C]">
+              <p className="rounded-[2px] border border-[#F8B4B4] bg-[#FDE8E8] px-4 py-3 text-xs text-[#9B1C1C]">
                 {error}
               </p>
             )}
@@ -538,7 +538,7 @@ export default function CreateExitRequestModal({
             role="dialog"
             aria-modal="true"
             aria-labelledby="confirm-exit-dialog-title"
-            className="w-full max-w-md overflow-hidden rounded border border-[#E5E7EB] bg-white shadow-xl"
+            className="w-full max-w-md overflow-hidden rounded-[2px] border border-[#E5E7EB] bg-white shadow-xl"
           >
             <header className="flex items-center justify-between gap-3 border-b border-[#E5E7EB] px-6 py-4">
               <div className="flex items-center gap-3">

@@ -101,7 +101,7 @@ export function Panel({
   bodyClassName?: string;
 }) {
   return (
-    <section className={`${PANEL_CLASS} rounded-xl shadow-[0_1px_2px_rgba(15,23,42,0.03)] flex min-w-0 flex-col ${className}`}>
+    <section className={`${PANEL_CLASS} rounded-[2px] shadow-none flex min-w-0 flex-col ${className}`}>
       {title && (
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E5E7EB] bg-white px-6 py-4">
           <div className="min-w-0">
@@ -143,10 +143,10 @@ export function StatCards({
   return (
     <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 ${className}`}>
       {cards.map((card) => {
-        const baseClass = `rounded-xl border bg-white p-4 min-h-[108px] shadow-kpi flex flex-col justify-between min-w-0 text-left transition-all duration-150 ${
+        const baseClass = `rounded-[2px] border-2 bg-white p-4 min-h-[108px] shadow-kpi shadow-kpi-hover flex flex-col justify-between min-w-0 text-left transition-all duration-150 ${
           card.active
             ? "border-[#2F5FD0] ring-2 ring-[#2F5FD0]/15"
-            : "border-[#E5E7EB] hover:border-[#CBD5E1] hover:shadow-sm"
+            : "border-[#E5E7EB] hover:border-[#CBD5E1]"
         } ${card.onClick ? "cursor-pointer" : ""}`;
 
         const inner = (
@@ -208,7 +208,7 @@ export function InlineNoticeBanner({
     <div
       role="status"
       aria-live="polite"
-      className={`flex items-center gap-2.5 rounded-lg border px-4 py-3 text-[13px] ${tone}`}
+      className={`flex items-center gap-2.5 rounded-[2px] border px-4 py-3 text-[13px] ${tone}`}
     >
       <Icon className="h-4 w-4 shrink-0" />
       <span className="min-w-0 flex-1 break-words">{notice.text}</span>

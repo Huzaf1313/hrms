@@ -154,7 +154,7 @@ export default function AdminEmployeeDocuments({
     }
 
     return (
-        <div className="h-full rounded-3xl bg-white p-6 shadow-sm">
+        <div className="h-full rounded-[2px] bg-white p-6 shadow-none">
             <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-gray-800">
                 <FileText size={20} className="text-gray-700" />
                 Employee Documents
@@ -219,7 +219,7 @@ export default function AdminEmployeeDocuments({
                             <section key={source}>
                                 <h4 className="mb-2 text-sm font-semibold text-gray-700">{heading}</h4>
                                 {sourceDocuments.length === 0 ? (
-                                    <p className="rounded-xl bg-gray-50 px-4 py-3 text-sm text-gray-400">
+                                    <p className="rounded-[2px] bg-gray-50 px-4 py-3 text-sm text-gray-400">
                                         No documents in this section.
                                     </p>
                                 ) : (
@@ -306,7 +306,7 @@ export default function AdminEmployeeDocuments({
                         }
                     }}
                 >
-                    <div className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded bg-white shadow-2xl">
+                    <div className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-[2px] bg-white shadow-2xl">
                         <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
                             <div className="min-w-0">
                                 <h3 className="truncate font-semibold text-gray-900">

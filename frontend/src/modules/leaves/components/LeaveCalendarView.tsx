@@ -227,7 +227,7 @@ export const LeaveCalendarView: React.FC<LeaveCalendarViewProps> = ({
 
   return (
     <div
-      className={`rounded-lg bg-white border border-[#E5E7EB] shadow-none overflow-hidden ${className}`}
+      className={`rounded-[2px] bg-white border border-[#E5E7EB] shadow-none overflow-hidden ${className}`}
     >
       {/* Month Header and Navigation */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-3.5 border-b border-[#E5E7EB] bg-white">
@@ -296,7 +296,7 @@ export const LeaveCalendarView: React.FC<LeaveCalendarViewProps> = ({
       <div className="p-4">
         {/* Error State */}
         {error ? (
-          <div className="mb-4 flex items-center justify-between rounded-lg border border-[#F8B4B4] bg-[#FDF2F2] p-4 text-[#9B1C1C]">
+          <div className="mb-4 flex items-center justify-between rounded-[2px] border border-[#F8B4B4] bg-[#FDF2F2] p-4 text-[#9B1C1C]">
             <div className="flex items-center gap-2 text-sm font-medium">
               <AlertCircle className="h-5 w-5 shrink-0" />
               <span>Failed to load team leave calendar: {error}</span>
@@ -315,7 +315,7 @@ export const LeaveCalendarView: React.FC<LeaveCalendarViewProps> = ({
 
         {/* Empty-Month State Notice */}
         {!isLoading && !monthHasLeaves && (
-          <div className="mb-3 flex items-center justify-between px-4 py-2.5 rounded-md border border-[#E5E7EB] bg-[#F9FAFB] text-[12px] text-[#4B5563]">
+          <div className="mb-3 flex items-center justify-between px-4 py-2.5 rounded-[2px] border border-[#E5E7EB] bg-[#F9FAFB] text-[12px] text-[#4B5563]">
             <span className="flex items-center gap-1.5 font-medium">
               <CalendarDays className="w-4 h-4 text-[#6B7280]" />
               No leaves scheduled this month matching the selected filters.
@@ -559,7 +559,7 @@ export const LeaveCalendarView: React.FC<LeaveCalendarViewProps> = ({
       {activeLeaveDetails && (
         <div
           ref={popoverRef}
-          className="fixed z-50 w-72 rounded-lg border border-[#E5E7EB] bg-white p-3.5 shadow-xl transition-all"
+          className="fixed z-50 w-72 rounded-[2px] border border-[#E5E7EB] bg-white p-3.5 shadow-xl transition-all"
           style={{
             left: `${activeLeaveDetails.x}px`,
             top: `${activeLeaveDetails.y}px`,
@@ -639,7 +639,7 @@ export const LeaveCalendarView: React.FC<LeaveCalendarViewProps> = ({
       {/* Popover / Modal: Full Day Leaves ("+N more") */}
       {selectedDayModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 backdrop-blur-xs">
-          <div className="w-full max-w-md rounded border border-[#E5E7EB] bg-white p-5 shadow-2xl">
+          <div className="w-full max-w-md rounded-[2px] border border-[#E5E7EB] bg-white p-5 shadow-2xl">
             <div className="flex items-center justify-between border-b border-[#E5E7EB] pb-3 mb-3">
               <div>
                 <h3 className="text-[15px] font-semibold text-[#111827]">
@@ -669,7 +669,7 @@ export const LeaveCalendarView: React.FC<LeaveCalendarViewProps> = ({
                 return (
                   <div
                     key={l.id}
-                    className="p-3 rounded border border-[#E5E7EB] bg-[#F9FAFB] flex flex-col gap-1.5"
+                    className="p-3 rounded-[2px] border border-[#E5E7EB] bg-[#F9FAFB] flex flex-col gap-1.5"
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-[13px] font-semibold text-[#111827]">

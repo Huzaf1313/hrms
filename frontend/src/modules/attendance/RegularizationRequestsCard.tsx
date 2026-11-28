@@ -138,7 +138,7 @@ export const RegularizationRequestsCard: React.FC<{
   // When there are 0 pending requests in full-width view, collapse to a single slim row (about 48px)
   if (pendingRequests.length === 0 && !isLoading && !compact) {
     return (
-      <div className="rounded-lg border border-[#E4E6E1] bg-white h-[48px] px-6 py-4 flex items-center justify-between shadow-none">
+      <div className="rounded-[2px] border border-[#E4E6E1] bg-white h-[48px] px-6 py-4 flex items-center justify-between shadow-none">
         <div className="flex items-center gap-2">
           <Clock className="w-4 h-4 shrink-0 text-[#8A5A00]" />
           <h3 className="text-[14px] font-semibold text-[#1F2933]">
@@ -166,8 +166,8 @@ export const RegularizationRequestsCard: React.FC<{
     <div
       className={
         compact
-          ? "rounded-xl border border-[#E5E7EB] bg-white overflow-hidden shadow-none"
-          : "rounded-lg border border-[#E4E6E1] bg-white overflow-hidden shadow-none"
+          ? "rounded-[2px] border border-[#E5E7EB] bg-white overflow-hidden shadow-none"
+          : "rounded-[2px] border border-[#E4E6E1] bg-white overflow-hidden shadow-none"
       }
     >
       {/* Header */}
@@ -355,7 +355,7 @@ export const RegularizationRequestsCard: React.FC<{
           maxWidth="sm"
         >
           <div className="flex flex-col gap-3 text-xs">
-            <div className="p-3 rounded-md bg-slate-50 border border-slate-200">
+            <div className="p-3 rounded-[2px] bg-slate-50 border border-slate-200">
               <span className="text-slate-400 block text-xs uppercase font-semibold">Stated Reason</span>
               <p className="text-slate-800 mt-0.5">{activeRequest.reason}</p>
               {activeRequest.note && (

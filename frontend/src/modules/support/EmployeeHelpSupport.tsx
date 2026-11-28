@@ -552,7 +552,7 @@ function EmployeeHelpSupport({ contactConfig }: EmployeeHelpSupportProps = {}) {
       {pageSuccessNotice && (
         <div
           role="status"
-          className="flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300"
+          className="flex items-center justify-between gap-3 rounded-[2px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300"
         >
           <div className="flex items-center gap-2.5">
             <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
@@ -570,7 +570,7 @@ function EmployeeHelpSupport({ contactConfig }: EmployeeHelpSupportProps = {}) {
       )}
 
       {/* Compact Light-Tinted Search Hero (140-180px) */}
-      <section className="flex min-h-[152px] flex-col justify-center rounded-2xl border border-blue-200/70 bg-gradient-to-br from-blue-50 via-indigo-50/50 to-white px-5 py-5 dark:border-blue-900/50 dark:from-slate-900 dark:via-blue-950/30 dark:to-slate-900 sm:px-7">
+      <section className="flex min-h-[152px] flex-col justify-center rounded-[2px] border border-blue-200/70 bg-gradient-to-br from-blue-50 via-indigo-50/50 to-white px-5 py-5 dark:border-blue-900/50 dark:from-slate-900 dark:via-blue-950/30 dark:to-slate-900 sm:px-7">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 flex-1 flex-col gap-3">
             <div className="flex items-center gap-2">
@@ -645,7 +645,7 @@ function EmployeeHelpSupport({ contactConfig }: EmployeeHelpSupportProps = {}) {
             </div>
           </div>
 
-          <div className="hidden shrink-0 flex-col items-end gap-1 rounded-xl border border-blue-200/60 bg-white/80 px-4 py-3 text-right dark:border-blue-900/50 dark:bg-slate-800/70 lg:flex">
+          <div className="hidden shrink-0 flex-col items-end gap-1 rounded-[2px] border border-blue-200/60 bg-white/80 px-4 py-3 text-right dark:border-blue-900/50 dark:bg-slate-800/70 lg:flex">
             <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
               Support Hours
             </span>
@@ -665,7 +665,7 @@ function EmployeeHelpSupport({ contactConfig }: EmployeeHelpSupportProps = {}) {
               .getElementById("faq-section")
               ?.scrollIntoView({ behavior: "smooth", block: "start" })
           }
-          className="group flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-4 text-left transition hover:border-blue-300 hover:bg-blue-50/30 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-700 dark:hover:bg-slate-800/70"
+          className="group flex cursor-pointer items-center justify-between gap-4 rounded-[2px] border border-slate-200 bg-white p-4 text-left transition hover:border-blue-300 hover:bg-blue-50/30 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-700 dark:hover:bg-slate-800/70"
         >
           <div className="flex min-w-0 items-center gap-3.5">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400">
@@ -686,7 +686,7 @@ function EmployeeHelpSupport({ contactConfig }: EmployeeHelpSupportProps = {}) {
         <button
           type="button"
           onClick={() => openTicketModal()}
-          className="group flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-4 text-left transition hover:border-blue-300 hover:bg-blue-50/30 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-700 dark:hover:bg-slate-800/70"
+          className="group flex cursor-pointer items-center justify-between gap-4 rounded-[2px] border border-slate-200 bg-white p-4 text-left transition hover:border-blue-300 hover:bg-blue-50/30 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-700 dark:hover:bg-slate-800/70"
         >
           <div className="flex min-w-0 items-center gap-3.5">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400">
@@ -711,7 +711,7 @@ function EmployeeHelpSupport({ contactConfig }: EmployeeHelpSupportProps = {}) {
               .getElementById("contact-hr-section")
               ?.scrollIntoView({ behavior: "smooth", block: "start" })
           }
-          className="group flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-4 text-left transition hover:border-blue-300 hover:bg-blue-50/30 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-700 dark:hover:bg-slate-800/70"
+          className="group flex cursor-pointer items-center justify-between gap-4 rounded-[2px] border border-slate-200 bg-white p-4 text-left transition hover:border-blue-300 hover:bg-blue-50/30 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-700 dark:hover:bg-slate-800/70"
         >
           <div className="flex min-w-0 items-center gap-3.5">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400">
@@ -733,7 +733,7 @@ function EmployeeHelpSupport({ contactConfig }: EmployeeHelpSupportProps = {}) {
       {/* Main 2-Column Workspace: Tickets (8 cols) + Snapshot & Contact (4 cols) */}
       <div className="grid grid-cols-1 items-stretch gap-5 lg:grid-cols-12">
         {/* Left Column: My Support Tickets */}
-        <section className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 lg:col-span-8">
+        <section className="flex min-w-0 flex-col overflow-hidden rounded-[2px] border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 lg:col-span-8">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4 dark:border-slate-800">
               <div className="flex items-center gap-3">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400">
@@ -802,11 +802,11 @@ function EmployeeHelpSupport({ contactConfig }: EmployeeHelpSupportProps = {}) {
             {ticketsLoading ? (
               <div className="space-y-3 p-5">
                 {Array.from({ length: 3 }).map((_, idx) => (
-                  <Skeleton key={idx} className="h-20 w-full rounded-xl" />
+                  <Skeleton key={idx} className="h-20 w-full rounded-[2px]" />
                 ))}
               </div>
             ) : ticketsError ? (
-              <div className="m-5 rounded-xl border border-rose-200 bg-rose-50 p-5 text-center dark:border-rose-900/50 dark:bg-rose-950/30">
+              <div className="m-5 rounded-[2px] border border-rose-200 bg-rose-50 p-5 text-center dark:border-rose-900/50 dark:bg-rose-950/30">
                 <p className="text-sm text-rose-700 dark:text-rose-300">
                   {ticketsError}
                 </p>
@@ -942,7 +942,7 @@ function EmployeeHelpSupport({ contactConfig }: EmployeeHelpSupportProps = {}) {
         {/* Right Column: Compact Ticket Strip + Unified Light Contact HR & IT Card */}
         <aside className="flex flex-col gap-4 lg:col-span-4">
           {/* Compact Ticket Snapshot Strip */}
-          <section className="rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900">
+          <section className="rounded-[2px] border border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900">
             {ticketsLoading ? (
               <p className="text-[13px] font-medium text-slate-500 dark:text-slate-400">
                 Loading ticket summary...
@@ -1020,7 +1020,7 @@ function EmployeeHelpSupport({ contactConfig }: EmployeeHelpSupportProps = {}) {
           {/* Merged Contact HR & IT Card (Light theme, config-driven) */}
           <section
             id="contact-hr-section"
-            className="flex flex-1 scroll-mt-6 flex-col rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"
+            className="flex flex-1 scroll-mt-6 flex-col rounded-[2px] border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900"
           >
             <div className="flex items-center gap-3 border-b border-slate-200 pb-3.5 dark:border-slate-800">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400">
@@ -1038,7 +1038,7 @@ function EmployeeHelpSupport({ contactConfig }: EmployeeHelpSupportProps = {}) {
 
             <div className="mt-4 space-y-2.5">
               {/* Email */}
-              <div className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 dark:border-slate-800 dark:bg-slate-800/50">
+              <div className="flex items-center justify-between gap-2 rounded-[2px] border border-slate-200 bg-slate-50 px-3.5 py-2.5 dark:border-slate-800 dark:bg-slate-800/50">
                 <a
                   href={`mailto:${contact.email}`}
                   className="flex min-w-0 items-center gap-3"
@@ -1069,7 +1069,7 @@ function EmployeeHelpSupport({ contactConfig }: EmployeeHelpSupportProps = {}) {
               </div>
 
               {/* Helpline */}
-              <div className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 dark:border-slate-800 dark:bg-slate-800/50">
+              <div className="flex items-center justify-between gap-2 rounded-[2px] border border-slate-200 bg-slate-50 px-3.5 py-2.5 dark:border-slate-800 dark:bg-slate-800/50">
                 <a
                   href={telHref}
                   className="flex min-w-0 items-center gap-3"
@@ -1100,7 +1100,7 @@ function EmployeeHelpSupport({ contactConfig }: EmployeeHelpSupportProps = {}) {
               </div>
 
               {/* Working Hours */}
-              <div className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 dark:border-slate-800 dark:bg-slate-800/50">
+              <div className="flex items-center justify-between gap-2 rounded-[2px] border border-slate-200 bg-slate-50 px-3.5 py-2.5 dark:border-slate-800 dark:bg-slate-800/50">
                 <div className="flex min-w-0 items-center gap-3">
                   <CalendarCheck2 className="h-4 w-4 shrink-0 text-slate-500 dark:text-slate-400" />
                   <div className="min-w-0">
@@ -1146,7 +1146,7 @@ function EmployeeHelpSupport({ contactConfig }: EmployeeHelpSupportProps = {}) {
       {/* Full-Width Responsive Frequently Asked Questions */}
       <section
         id="faq-section"
-        className="scroll-mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
+        className="scroll-mt-6 overflow-hidden rounded-[2px] border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
       >
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4 dark:border-slate-800">
           <div>
@@ -1219,7 +1219,7 @@ function EmployeeHelpSupport({ contactConfig }: EmployeeHelpSupportProps = {}) {
                 return (
                   <div
                     key={faq.question}
-                    className={`rounded-xl border transition ${
+                    className={`rounded-[2px] border transition ${
                       isOpen
                         ? "border-blue-200 bg-blue-50/30 dark:border-blue-900/60 dark:bg-blue-950/20"
                         : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700"
@@ -1300,7 +1300,7 @@ function EmployeeHelpSupport({ contactConfig }: EmployeeHelpSupportProps = {}) {
             role="dialog"
             aria-modal="true"
             aria-labelledby="raise-ticket-modal-title"
-            className="my-auto w-full max-w-xl overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
+            className="my-auto w-full max-w-xl overflow-hidden rounded-[2px] border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
           >
             {/* Header */}
             <div className="flex items-start justify-between gap-4 border-b border-slate-200 bg-gradient-to-r from-blue-50/80 via-indigo-50/40 to-white px-6 py-4 dark:border-slate-800 dark:from-slate-900 dark:via-blue-950/30 dark:to-slate-900">
@@ -1409,7 +1409,7 @@ function EmployeeHelpSupport({ contactConfig }: EmployeeHelpSupportProps = {}) {
                         type="button"
                         aria-pressed={isSelected}
                         onClick={() => setCategory(item.value)}
-                        className={`cursor-pointer rounded-lg border px-2.5 py-2 text-center text-xs font-medium transition ${
+                        className={`cursor-pointer rounded-[2px] border px-2.5 py-2 text-center text-xs font-medium transition ${
                           isSelected
                             ? "border-blue-600 bg-blue-50 text-blue-700 dark:border-blue-500 dark:bg-blue-950/50 dark:text-blue-300"
                             : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
@@ -1436,7 +1436,7 @@ function EmployeeHelpSupport({ contactConfig }: EmployeeHelpSupportProps = {}) {
                         type="button"
                         aria-pressed={isSelected}
                         onClick={() => setPriority(item.value)}
-                        className={`flex cursor-pointer items-center justify-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium transition ${
+                        className={`flex cursor-pointer items-center justify-center gap-2 rounded-[2px] border px-3 py-2 text-xs font-medium transition ${
                           isSelected
                             ? "border-blue-600 bg-blue-50 text-blue-700 dark:border-blue-500 dark:bg-blue-950/50 dark:text-blue-300"
                             : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
@@ -1501,7 +1501,7 @@ function EmployeeHelpSupport({ contactConfig }: EmployeeHelpSupportProps = {}) {
               {submitError && (
                 <div
                   role="alert"
-                  className="flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-300"
+                  className="flex items-start gap-2 rounded-[2px] border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-300"
                 >
                   <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                   <span>{submitError}</span>
@@ -1556,7 +1556,7 @@ function EmployeeHelpSupport({ contactConfig }: EmployeeHelpSupportProps = {}) {
             role="dialog"
             aria-modal="true"
             aria-labelledby="ticket-details-modal-title"
-            className="my-auto w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
+            className="my-auto w-full max-w-lg overflow-hidden rounded-[2px] border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
           >
             <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-4 dark:border-slate-800">
               <div>
@@ -1609,7 +1609,7 @@ function EmployeeHelpSupport({ contactConfig }: EmployeeHelpSupportProps = {}) {
             </div>
 
             <div className="space-y-4 px-6 py-5">
-              <div className="grid grid-cols-2 gap-4 rounded-xl border border-slate-200 bg-slate-50 p-3.5 text-xs dark:border-slate-800 dark:bg-slate-800/50">
+              <div className="grid grid-cols-2 gap-4 rounded-[2px] border border-slate-200 bg-slate-50 p-3.5 text-xs dark:border-slate-800 dark:bg-slate-800/50">
                 <div>
                   <p className="font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
                     Created
@@ -1634,13 +1634,13 @@ function EmployeeHelpSupport({ contactConfig }: EmployeeHelpSupportProps = {}) {
                 <p className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
                   Description
                 </p>
-                <div className="mt-1.5 max-h-[36vh] overflow-y-auto whitespace-pre-wrap break-words rounded-xl border border-slate-200 bg-white p-3.5 text-sm leading-relaxed text-slate-700 dark:border-slate-800 dark:bg-slate-800/40 dark:text-slate-200">
+                <div className="mt-1.5 max-h-[36vh] overflow-y-auto whitespace-pre-wrap break-words rounded-[2px] border border-slate-200 bg-white p-3.5 text-sm leading-relaxed text-slate-700 dark:border-slate-800 dark:bg-slate-800/40 dark:text-slate-200">
                   {selectedTicket.description}
                 </div>
               </div>
 
               {selectedTicket.resolution_note && (
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3.5 dark:border-emerald-900/50 dark:bg-emerald-950/30">
+                <div className="rounded-[2px] border border-emerald-200 bg-emerald-50/70 p-3.5 dark:border-emerald-900/50 dark:bg-emerald-950/30">
                   <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
                     Support Resolution Note
                   </p>

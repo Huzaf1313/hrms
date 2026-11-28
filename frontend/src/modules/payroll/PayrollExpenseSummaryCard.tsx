@@ -51,7 +51,7 @@ export default function PayrollExpenseSummaryCard({
         <button
           type="button"
           onClick={onOpenPayroll}
-          className="dashboard-rise flex w-full items-center gap-3 rounded-xl border border-gray-100 bg-gray-50/60 p-3 text-left transition hover:border-[#bfdbfe] hover:bg-[#eff6ff]"
+          className="dashboard-rise flex w-full items-center gap-3 rounded-[2px] border border-gray-100 bg-gray-50/60 p-3 text-left transition hover:border-[#bfdbfe] hover:bg-[#eff6ff]"
           style={{ "--dashboard-delay": "120ms" } as CSSProperties}
         >
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#dbeafe] text-[#2563eb]">
@@ -70,7 +70,7 @@ export default function PayrollExpenseSummaryCard({
         </button>
 
         <div
-          className="dashboard-rise flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50/60 p-3"
+          className="dashboard-rise flex items-center gap-3 rounded-[2px] border border-gray-100 bg-gray-50/60 p-3"
           style={{ "--dashboard-delay": "240ms" } as CSSProperties}
         >
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#e0e7ff] text-[#4f46e5]">

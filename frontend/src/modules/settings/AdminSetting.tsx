@@ -181,7 +181,7 @@ interface SettingsCardProps {
 
 function SettingsCard({ icon, iconBg, title, children, action, headerAction }: SettingsCardProps) {
   return (
-    <div className="h-full rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.03)] flex flex-col transition-colors">
+    <div className="h-full rounded-[2px] border border-[#E5E7EB] bg-white p-5 shadow-none flex flex-col transition-colors">
       <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-3.5 mb-4">
         <div className="flex items-center gap-2.5 min-w-0">
           <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${iconBg}`}>
@@ -253,7 +253,7 @@ function EditActions({
 
 function Field({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC]/70 px-3.5 py-2.5 min-w-0">
+    <div className="rounded-[2px] border border-[#E5E7EB] bg-[#F8FAFC]/70 px-3.5 py-2.5 min-w-0">
       <p className="text-xs font-medium text-slate-500">{label}</p>
       <p className="mt-0.5 text-sm font-semibold text-slate-900 break-words">{value || "—"}</p>
     </div>
@@ -329,7 +329,7 @@ interface ViewAllModalProps {
 function ViewAllModal({ icon, title, countLabel, subtitle, summary, onClose, children }: ViewAllModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-      <div className="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded bg-white shadow-lg">
+      <div className="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-[2px] bg-white shadow-lg">
         <div className="flex items-start justify-between border-b border-gray-100 p-6">
           <div className="flex items-start gap-2.5">
             <span className="flex h-8 w-8 items-center justify-center rounded">{icon}</span>
@@ -390,7 +390,7 @@ interface ShiftDetailItemProps {
 function ShiftDetailItem({ shift, index, onEdit, onDelete, isDeleting }: ShiftDetailItemProps) {
   return (
     <div
-      className={`rounded-2xl border border-l-4 border-gray-100 border-l-violet-300 p-4 shadow-sm transition hover:shadow-md ${shift.is_active ? "" : "bg-gray-50 opacity-70"
+      className={`rounded-[2px] border border-l-4 border-gray-100 border-l-violet-300 p-4 shadow-sm transition hover:shadow-md ${shift.is_active ? "" : "bg-gray-50 opacity-70"
         }`}
     >
       <div className="flex items-center gap-2.5">
@@ -440,7 +440,7 @@ function ShiftDetailItem({ shift, index, onEdit, onDelete, isDeleting }: ShiftDe
         </div>
       </div>
 
-      <dl className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3 rounded-xl border border-gray-100 bg-gray-50 p-4">
+      <dl className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3 rounded-[2px] border border-gray-100 bg-gray-50 p-4">
         <DetailRow label="Start Time" value={formatShiftTime(shift.start_time)} />
         <DetailRow label="End Time" value={formatShiftTime(shift.end_time)} />
         <DetailRow
@@ -476,7 +476,7 @@ function DepartmentDetailItem({
   isDeleting,
 }: DepartmentDetailItemProps) {
   return (
-    <div className="rounded-2xl border border-l-4 border-gray-100 border-l-blue-300 p-4 shadow-sm transition hover:shadow-md">
+    <div className="rounded-[2px] border border-l-4 border-gray-100 border-l-blue-300 p-4 shadow-sm transition hover:shadow-md">
       <div className="flex items-center gap-2.5">
         <span className="text-[11px] font-semibold text-gray-400">
           {String(index).padStart(2, "0")}
@@ -508,7 +508,7 @@ function DepartmentDetailItem({
         </div>
       </div>
 
-      <dl className="mt-3 rounded-xl border border-gray-100 bg-gray-50 p-4">
+      <dl className="mt-3 rounded-[2px] border border-gray-100 bg-gray-50 p-4">
         <DetailRow
           label="Description"
           value={department.description ?? "-"}
@@ -954,7 +954,7 @@ export default function AdminSettings() {
   const shiftFormView = (
     <div className="space-y-3">
       {shiftFormError && (
-        <div className="rounded-lg bg-rose-50 p-3 text-sm text-rose-600">
+        <div className="rounded-[2px] bg-rose-50 p-3 text-sm text-rose-600">
           {shiftFormError}
         </div>
       )}
@@ -1069,7 +1069,7 @@ export default function AdminSettings() {
   const departmentFormView = (
     <div className="space-y-3">
       {departmentFormError && (
-        <div className="rounded-lg bg-rose-50 p-3 text-sm text-rose-600">
+        <div className="rounded-[2px] bg-rose-50 p-3 text-sm text-rose-600">
           {departmentFormError}
         </div>
       )}
@@ -1236,12 +1236,12 @@ export default function AdminSettings() {
             <div className="min-h-[120px] max-h-[220px] overflow-y-auto pr-1">
               {shiftsLoading ? (
                 <div className="space-y-2.5 py-2">
-                  <div className="h-14 animate-pulse rounded-xl bg-slate-100" />
-                  <div className="h-14 animate-pulse rounded-xl bg-slate-100" />
+                  <div className="h-14 animate-pulse rounded-[2px] bg-slate-100" />
+                  <div className="h-14 animate-pulse rounded-[2px] bg-slate-100" />
                 </div>
               ) : shiftError ? (
                 <div className="flex h-full items-center justify-center px-4">
-                  <div className="rounded-lg bg-rose-50 p-3 text-sm text-rose-600">
+                  <div className="rounded-[2px] bg-rose-50 p-3 text-sm text-rose-600">
                     {shiftError}
                   </div>
                 </div>
@@ -1257,7 +1257,7 @@ export default function AdminSettings() {
                   {shifts.slice(0, 2).map((shift) => (
                     <li
                       key={shift.id}
-                      className={`rounded-xl border border-slate-200/80 p-3 ${shift.is_active ? "bg-slate-50/50" : "bg-slate-50 opacity-70"
+                      className={`rounded-[2px] border border-slate-200/80 p-3 ${shift.is_active ? "bg-slate-50/50" : "bg-slate-50 opacity-70"
                         }`}
                     >
                       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -1347,7 +1347,7 @@ export default function AdminSettings() {
             />
           }
         >
-          <div className="rounded-xl border border-[#E5E7EB] bg-[#F8FAFC]/70 p-3.5 mb-4">
+          <div className="rounded-[2px] border border-[#E5E7EB] bg-[#F8FAFC]/70 p-3.5 mb-4">
             <p className="text-xs font-medium text-slate-500 mb-2.5">Work Week</p>
             <div className="flex flex-wrap gap-2">
               {weekDays.map((day) => {
@@ -1408,7 +1408,7 @@ export default function AdminSettings() {
             {holidaysLoading ? (
               <p className="py-3 text-center text-xs text-slate-400">Loading holidays...</p>
             ) : holidays.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-slate-200 py-6 text-center">
+              <div className="rounded-[2px] border border-dashed border-slate-200 py-6 text-center">
                 <CalendarDays className="mx-auto h-6 w-6 text-slate-300" />
                 <p className="mt-1 text-xs text-slate-500">No holidays scheduled yet.</p>
                 <button
@@ -1423,7 +1423,7 @@ export default function AdminSettings() {
                 </button>
               </div>
             ) : (
-              <div className="max-h-60 divide-y divide-slate-100 overflow-y-auto rounded-xl border border-slate-100 bg-slate-50/50">
+              <div className="max-h-60 divide-y divide-slate-100 overflow-y-auto rounded-[2px] border border-slate-100 bg-slate-50/50">
                 {holidays.map((h) => {
                   const badgeStyles: Record<string, string> = {
                     public: "bg-emerald-50 text-emerald-700 border-emerald-100",
@@ -1535,12 +1535,12 @@ export default function AdminSettings() {
             <div className="min-h-[120px] max-h-[220px] overflow-y-auto pr-1">
               {departmentsLoading ? (
                 <div className="space-y-2.5 py-2">
-                  <div className="h-14 animate-pulse rounded-xl bg-slate-100" />
-                  <div className="h-14 animate-pulse rounded-xl bg-slate-100" />
+                  <div className="h-14 animate-pulse rounded-[2px] bg-slate-100" />
+                  <div className="h-14 animate-pulse rounded-[2px] bg-slate-100" />
                 </div>
               ) : departmentError ? (
                 <div className="flex h-full items-center justify-center px-4">
-                  <div className="rounded-lg bg-rose-50 p-3 text-sm text-rose-600">
+                  <div className="rounded-[2px] bg-rose-50 p-3 text-sm text-rose-600">
                     {departmentError}
                   </div>
                 </div>
@@ -1556,7 +1556,7 @@ export default function AdminSettings() {
                   {departments.slice(0, 2).map((department) => (
                     <li
                       key={department.id}
-                      className="rounded-xl border border-slate-200/80 bg-slate-50/50 p-3"
+                      className="rounded-[2px] border border-slate-200/80 bg-slate-50/50 p-3"
                     >
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <div className="min-w-0">
@@ -1722,7 +1722,7 @@ export default function AdminSettings() {
                     type="button"
                     onClick={() => startEdit("leave")}
                     title="Click to configure leave settings"
-                    className="flex min-w-0 items-center gap-3 rounded-xl border border-[#E5E7EB] bg-white px-3.5 py-3 text-left transition hover:border-[#CBD5E1] hover:bg-[#F8FAFC] cursor-pointer"
+                    className="flex min-w-0 items-center gap-3 rounded-[2px] border border-[#E5E7EB] bg-white px-3.5 py-3 text-left transition hover:border-[#CBD5E1] hover:bg-[#F8FAFC] cursor-pointer"
                   >
                     <span
                       className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${item.iconBg} ${item.iconColor}`}

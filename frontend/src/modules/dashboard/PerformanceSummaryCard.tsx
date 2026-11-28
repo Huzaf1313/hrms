@@ -17,7 +17,7 @@ export default function PerformanceSummaryCard({
 
   return (
     <div
-      className={`flex h-full flex-col rounded-xl border border-[#E5E7EB] bg-white p-5 shadow-none ${className}`}
+      className={`flex h-full flex-col rounded-[2px] border border-[#E5E7EB] bg-white p-5 shadow-none ${className}`}
     >
       {/* Header */}
       <div className="flex items-start justify-between">
@@ -88,7 +88,7 @@ export default function PerformanceSummaryCard({
         {/* Side Details List */}
         <div className="sm:col-span-7 space-y-3">
           {/* Appraisal Cycle */}
-          <div className="flex items-center justify-between rounded-xl bg-slate-50/70 p-2.5">
+          <div className="flex items-center justify-between rounded-[2px] bg-slate-50/70 p-2.5">
             <div className="flex items-center gap-2">
               <User className="h-4 w-4 text-slate-600" />
               <span className="text-xs font-semibold text-slate-700">
@@ -101,7 +101,7 @@ export default function PerformanceSummaryCard({
           </div>
 
           {/* No Active Cycle */}
-          <div className="flex items-center justify-between rounded-xl bg-slate-50/70 p-2.5">
+          <div className="flex items-center justify-between rounded-[2px] bg-slate-50/70 p-2.5">
             <div className="flex items-center gap-2">
               <Settings className="h-4 w-4 text-slate-600" />
               <span className="text-xs font-semibold text-slate-700">
@@ -112,7 +112,7 @@ export default function PerformanceSummaryCard({
           </div>
 
           {/* Next Review */}
-          <div className="flex items-center justify-between rounded-xl bg-slate-50/70 p-2.5">
+          <div className="flex items-center justify-between rounded-[2px] bg-slate-50/70 p-2.5">
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4 text-slate-600" />
               <span className="text-xs font-semibold text-slate-700">

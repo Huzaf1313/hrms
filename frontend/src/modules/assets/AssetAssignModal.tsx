@@ -136,7 +136,7 @@ export default function AssetAssignModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="asset-assign-title"
-        className="w-full max-w-lg overflow-hidden rounded border border-[#E5E7EB] bg-white shadow-xl"
+        className="w-full max-w-lg overflow-hidden rounded-[2px] border border-[#E5E7EB] bg-white shadow-xl"
       >
         <div className="flex items-center justify-between border-b border-[#E5E7EB] px-6 py-4">
           <div className="flex items-center gap-3">
@@ -207,7 +207,7 @@ export default function AssetAssignModal({
                 className={DIALOG_FIELD_CLASS}
               />
 
-              <div className="mt-2 max-h-56 overflow-y-auto rounded border border-[#E5E7EB]">
+              <div className="mt-2 max-h-56 overflow-y-auto rounded-[2px] border border-[#E5E7EB]">
                 {loading ? (
                   <p className="px-4 py-6 text-center text-xs text-[#6B7280]">Loading employees...</p>
                 ) : filteredEmployees.length === 0 ? (
@@ -273,7 +273,7 @@ export default function AssetAssignModal({
             </div>
 
             {error && (
-              <div className="mt-4 rounded border border-[#F8B4B4] bg-[#FDE8E8] px-4 py-3 text-xs text-[#9B1C1C]">
+              <div className="mt-4 rounded-[2px] border border-[#F8B4B4] bg-[#FDE8E8] px-4 py-3 text-xs text-[#9B1C1C]">
                 {error}
               </div>
             )}

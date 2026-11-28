@@ -103,7 +103,7 @@ function Section({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-xl border border-[#E5E7EB] bg-white p-5">
+    <section className="rounded-[2px] border border-[#E5E7EB] bg-white p-5">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h2 className="flex items-center gap-2 text-[14px] font-semibold text-[#111827]">
           <span className="text-[#2563EB]">{icon}</span>
@@ -278,7 +278,7 @@ function InterviewScheduler({
   }
 
   return (
-    <div className="flex w-full max-w-[320px] flex-col items-end gap-2 rounded-xl border border-[#BFDBFE] bg-[#EFF6FF] p-3">
+    <div className="flex w-full max-w-[320px] flex-col items-end gap-2 rounded-[2px] border border-[#BFDBFE] bg-[#EFF6FF] p-3">
       <div className="w-full space-y-1.5">
         <label className="block text-[12px] font-medium text-[#374151]">
           Date & Time
@@ -639,28 +639,28 @@ function AdminRecruitment() {
       value: stats?.total_job_positions ?? 0,
       sub: `${stats?.active_job_positions ?? 0} active`,
       icon: <Briefcase className="h-5 w-5" />,
-      tone: "bg-[#EFF6FF] text-[#2563EB]",
+      tone: "bg-blue-50 text-[#0066ff]",
     },
     {
       label: "Total Applications",
       value: stats?.total_applications ?? 0,
       sub: "All candidates",
       icon: <Users className="h-5 w-5" />,
-      tone: "bg-[#ECFDF5] text-[#047857]",
+      tone: "bg-emerald-50 text-[#16a34a]",
     },
     {
       label: "Interviews Scheduled",
       value: stats?.interviews_scheduled ?? 0,
       sub: "In interview stage",
       icon: <CalendarClock className="h-5 w-5" />,
-      tone: "bg-[#F5F3FF] text-[#7C3AED]",
+      tone: "bg-purple-50 text-[#7c3aed]",
     },
     {
       label: "Hired Candidates",
       value: stats?.hired_candidates ?? 0,
       sub: "Total hired",
       icon: <UserCheck className="h-5 w-5" />,
-      tone: "bg-[#FFF7ED] text-[#C2410C]",
+      tone: "bg-orange-50 text-[#ea580c]",
     },
   ];
 
@@ -698,39 +698,40 @@ function AdminRecruitment() {
           title="Some recruitment data could not be refreshed"
           message={loadError}
           onRetry={refresh}
-          className="max-w-none rounded-xl border border-[#FECACA] bg-white py-5"
+          className="max-w-none rounded-[2px] border border-[#FECACA] bg-white py-5"
         />
       )}
 
       {/* Top cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {isLoading && !stats
           ? Array.from({ length: 4 }).map((_, index) => (
-            <div key={index} className="min-h-[128px] rounded-xl border border-[#E5E7EB] bg-white p-5">
-              <div className="flex items-start justify-between">
-                <div className="space-y-3">
+            <div key={index} className="rounded-[2px] border-2 border-slate-200 bg-white p-5 shadow-kpi">
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-2.5">
                   <Skeleton className="h-3 w-28 rounded" />
-                  <Skeleton className="h-8 w-16 rounded" />
-                  <Skeleton className="h-3 w-32 rounded" />
+                  <Skeleton className="h-7 w-16 rounded" />
                 </div>
-                <Skeleton className="h-9 w-9 rounded-lg" />
+                <Skeleton className="h-10 w-10 rounded-xl" />
               </div>
+              <Skeleton className="mt-3 h-3 w-32 rounded" />
             </div>
           ))
           : kpiCards.map((card) => (
             <div
               key={card.label}
-              className={`flex items-center gap-4 rounded-2xl border border-gray-100 p-5 shadow-kpi ${card.tone}`}
+              className="relative flex flex-col justify-between overflow-hidden rounded-[2px] border-2 border-slate-200 bg-white p-5 shadow-kpi shadow-kpi-hover"
             >
-              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white">
-                {card.icon}
-              </span>
-              <div>
-                <p className="text-sm text-slate-700">{card.label}</p>
-                <p className="text-3xl font-bold text-slate-800">{card.value}</p>
-                <p className="text-xs text-slate-500">{card.sub}</p>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-[12px] font-medium text-[#6B7280]">{card.label}</p>
+                  <p className="mt-2 text-[28px] font-semibold leading-none text-[#111827] tabular-nums">{card.value}</p>
+                </div>
+                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${card.tone}`}>
+                  {card.icon}
+                </div>
               </div>
-              <p className="mt-auto pt-3 text-[12px] text-[#6B7280]">{card.sub}</p>
+              <p className="mt-3 text-[12px] text-[#6B7280]">{card.sub}</p>
             </div>
           ))}
       </div>
@@ -792,7 +793,7 @@ function AdminRecruitment() {
                     }
                     setDraggedCandidate(null);
                   }}
-                  className={`relative overflow-hidden rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] transition-all ${isOver
+                  className={`relative overflow-hidden rounded-[2px] border border-[#E5E7EB] bg-[#F9FAFB] transition-all ${isOver
                     ? "ring-2 ring-[#2563EB]"
                     : ""
                     }`}
@@ -805,7 +806,7 @@ function AdminRecruitment() {
 
                   <div className="max-h-[330px] space-y-2 overflow-y-auto overscroll-contain px-2 pb-2">
                     {column.candidates.length === 0 && (
-                      <div className={`flex min-h-[118px] flex-col items-center justify-center rounded-lg border border-dashed ${isOver ? "border-[#2563EB] bg-[#EFF6FF]" : "border-[#D1D5DB]"}`}>
+                      <div className={`flex min-h-[118px] flex-col items-center justify-center rounded-[2px] border border-dashed ${isOver ? "border-[#2563EB] bg-[#EFF6FF]" : "border-[#D1D5DB]"}`}>
                         <Users className="mb-2 h-5 w-5 text-[#9CA3AF]" />
                         <span className="text-[12px] text-[#9CA3AF]">{isOver ? "Drop candidate here" : "No candidates"}</span>
                       </div>
@@ -830,7 +831,7 @@ function AdminRecruitment() {
                             });
                           }}
                           onDragEnd={() => setDraggedCandidate(null)}
-                          className="cursor-grab rounded-lg border border-[#E5E7EB] bg-white p-3 transition hover:border-[#BFDBFE] active:cursor-grabbing"
+                          className="cursor-grab rounded-[2px] border border-[#E5E7EB] bg-white p-3 transition hover:border-[#BFDBFE] active:cursor-grabbing"
                         >
                           <div className="flex items-center gap-2">
                             <Avatar name={card.full_name} size="sm" />
@@ -1299,7 +1300,7 @@ function AdminRecruitment() {
                 return (
                   <li
                     key={entry.stage}
-                    className="flex items-center justify-between gap-3 rounded-lg px-2 py-1.5 text-[12px] transition hover:bg-[#F9FAFB]"
+                    className="flex items-center justify-between gap-3 rounded-[2px] px-2 py-1.5 text-[12px] transition hover:bg-[#F9FAFB]"
                   >
                     <div className="flex min-w-0 items-center gap-2">
                       <span
@@ -1341,7 +1342,7 @@ function AdminRecruitment() {
             </div>
 
             {departmentCounts.length === 0 ? (
-              <div className="flex min-h-[140px] flex-col items-center justify-center rounded-lg border border-dashed border-[#D1D5DB]">
+              <div className="flex min-h-[140px] flex-col items-center justify-center rounded-[2px] border border-dashed border-[#D1D5DB]">
                 <Briefcase className="mb-2 h-5 w-5 text-[#9CA3AF]" />
                 <p className="text-[12px] text-[#6B7280]">
                   No applications yet.
@@ -1401,7 +1402,7 @@ function AdminRecruitment() {
             <div
               role="alertdialog"
               aria-modal="true"
-              className="w-full max-w-sm rounded bg-white p-6 shadow-xl"
+              className="w-full max-w-sm rounded-[2px] bg-white p-6 shadow-xl"
               onClick={(event) => event.stopPropagation()}
             >
               <h3 className="text-[18px] font-semibold text-[#111827]">

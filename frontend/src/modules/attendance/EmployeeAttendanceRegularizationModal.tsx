@@ -343,7 +343,7 @@ export const EmployeeAttendanceRegularizationModal: React.FC<EmployeeAttendanceR
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {formError && (
-          <div className="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 p-2.5 text-xs text-rose-700">
+          <div className="flex items-center gap-2 rounded-[2px] border border-rose-200 bg-rose-50 p-2.5 text-xs text-rose-700">
             <AlertCircle className="h-4 w-4 shrink-0" />
             <span>{formError}</span>
           </div>
@@ -430,7 +430,7 @@ export const EmployeeAttendanceRegularizationModal: React.FC<EmployeeAttendanceR
 
         {/* System Attendance Snapshot */}
         {selectedDate && (
-          <div className="rounded-lg border border-[#E5E7EB] bg-[#F9FAFB] p-3 text-xs">
+          <div className="rounded-[2px] border border-[#E5E7EB] bg-[#F9FAFB] p-3 text-xs">
             <span className="mb-2 block font-semibold text-[#111827]">
               System Logged Record ({formatDisplayDate(selectedDate)})
             </span>
@@ -570,7 +570,7 @@ export const EmployeeAttendanceRegularizationModal: React.FC<EmployeeAttendanceR
             Supporting Document{" "}
             <span className="font-normal text-[#6B7280]">(Optional, JPG/PNG/PDF, max 5MB)</span>
           </label>
-          <div className="relative flex items-center justify-between gap-2 rounded-lg border border-dashed border-[#D1D5DB] bg-[#F9FAFB]/50 p-3 transition-colors hover:border-[#2563EB]/60 hover:bg-white">
+          <div className="relative flex items-center justify-between gap-2 rounded-[2px] border border-dashed border-[#D1D5DB] bg-[#F9FAFB]/50 p-3 transition-colors hover:border-[#2563EB]/60 hover:bg-white">
             <div className="flex min-w-0 items-center gap-2 text-xs text-[#4B5563]">
               {attachment ? (
                 <FileText className="h-4 w-4 shrink-0 text-[#2563EB]" />

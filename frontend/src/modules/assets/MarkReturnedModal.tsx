@@ -65,7 +65,7 @@ export default function MarkReturnedModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="asset-mark-returned-title"
-        className="w-full max-w-md overflow-hidden rounded border border-[#E5E7EB] bg-white shadow-xl"
+        className="w-full max-w-md overflow-hidden rounded-[2px] border border-[#E5E7EB] bg-white shadow-xl"
       >
         <div className="flex items-center justify-between border-b border-[#E5E7EB] px-6 py-4">
           <div className="flex items-center gap-3">
@@ -94,7 +94,7 @@ export default function MarkReturnedModal({
         </div>
 
         <div className="px-6 py-5">
-          <dl className="rounded border border-[#E5E7EB] bg-[#F9FAFB] px-4 py-3">
+          <dl className="rounded-[2px] border border-[#E5E7EB] bg-[#F9FAFB] px-4 py-3">
             <div className="flex items-start gap-3 py-1">
               <dt className="w-[100px] shrink-0 text-xs font-medium text-[#6B7280]">Asset</dt>
               <dd className="min-w-0 flex-1 break-words text-left text-[13px] font-medium text-[#111827]">
@@ -116,13 +116,13 @@ export default function MarkReturnedModal({
           </dl>
 
           {request.reason && (
-            <p className="mt-4 rounded border border-[#E5E7EB] bg-white px-4 py-3 text-xs leading-5 text-[#4B5563]">
+            <p className="mt-4 rounded-[2px] border border-[#E5E7EB] bg-white px-4 py-3 text-xs leading-5 text-[#4B5563]">
               <span className="font-semibold text-[#111827]">Reason: </span>
               {request.reason}
             </p>
           )}
 
-          <div className="mt-4 rounded border border-[#FCD34D] bg-[#FEF3C7] px-4 py-3">
+          <div className="mt-4 rounded-[2px] border border-[#FCD34D] bg-[#FEF3C7] px-4 py-3">
             <p className="text-xs leading-5 text-[#92400E]">
               This releases the asset from{" "}
               <strong>{request.employee_name}</strong> and sets it back to{" "}
@@ -132,7 +132,7 @@ export default function MarkReturnedModal({
           </div>
 
           {error && (
-            <div className="mt-4 rounded border border-[#F8B4B4] bg-[#FDE8E8] px-4 py-3 text-xs text-[#9B1C1C]">
+            <div className="mt-4 rounded-[2px] border border-[#F8B4B4] bg-[#FDE8E8] px-4 py-3 text-xs text-[#9B1C1C]">
               {error}
             </div>
           )}

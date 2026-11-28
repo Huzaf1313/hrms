@@ -3,7 +3,7 @@ import { ArrowRight } from "lucide-react";
 
 /** Shared panel styling for every admin dashboard card. */
 export const DASHBOARD_CARD_CLASS =
-  "flex h-full flex-col rounded-xl border border-[#E5E7EB] bg-white p-5 shadow-none";
+  "flex h-full flex-col rounded-[2px] border border-[#E5E7EB] bg-white p-5 shadow-none";
 
 interface DashboardCardProps {
   title: string;

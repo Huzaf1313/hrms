@@ -16,7 +16,7 @@ export const UpcomingHolidaysCard: React.FC<UpcomingHolidaysCardProps> = ({
   const futureHolidays = holidays.filter((h) => h.date.slice(0, 10) >= todayStr).slice(0, 4);
 
   return (
-    <div className={`rounded-xl bg-white border border-[#E5E7EB] p-5 shadow-none flex flex-col justify-between h-full ${className}`}>
+    <div className={`rounded-[2px] bg-white border border-[#E5E7EB] p-5 shadow-none flex flex-col justify-between h-full ${className}`}>
       <div>
         <div className="flex items-center justify-between pb-3 border-b border-[#E5E7EB]">
           <div className="flex items-center gap-2">

@@ -27,7 +27,7 @@ export interface ProfileFieldSpec {
   hint?: string;
 }
 
-export const PROFILE_PANEL_CLASS = "rounded-2xl border border-gray-100 bg-white shadow-sm";
+export const PROFILE_PANEL_CLASS = "rounded-[2px] border border-gray-100 bg-white shadow-none";
 
 export const PROFILE_INPUT_CLASS =
   "h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 " +

@@ -24,7 +24,7 @@ function ModalShell({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded bg-white p-6 shadow-xl">
+      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[2px] bg-white p-6 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-slate-800">{title}</h3>
           <button
@@ -454,7 +454,7 @@ export function OfferModal({ candidate, onClose, onSaved }: OfferModalProps) {
   return (
     <ModalShell title={`Issue Job Offer — ${candidate.full_name}`} onClose={onClose}>
       <div className="space-y-4">
-        <div className="rounded border border-blue-100 bg-blue-50/70 p-3 text-xs text-blue-900">
+        <div className="rounded-[2px] border border-blue-100 bg-blue-50/70 p-3 text-xs text-blue-900">
           <p className="font-semibold text-blue-800">{candidate.full_name}</p>
           <p className="text-blue-600">
             {candidate.job_title} · {candidate.department} · {candidate.email}
@@ -611,7 +611,7 @@ export function OnboardCandidateModal({
   return (
     <ModalShell title={`Onboard as Employee — ${candidate.full_name}`} onClose={onClose}>
       <div className="space-y-4">
-        <div className="rounded border border-emerald-100 bg-emerald-50/70 p-3 text-xs text-emerald-900">
+        <div className="rounded-[2px] border border-emerald-100 bg-emerald-50/70 p-3 text-xs text-emerald-900">
           <p className="font-semibold text-emerald-800 flex items-center gap-1.5">
             <UserCheck className="h-4 w-4 text-emerald-600" />
             {candidate.full_name}

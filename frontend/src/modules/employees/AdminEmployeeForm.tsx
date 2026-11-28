@@ -648,7 +648,7 @@ function AdminEmployeeForm({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4 py-6">
-      <div className="relative max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded bg-white shadow-2xl">
+      <div className="relative max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-[2px] bg-white shadow-2xl">
 
         {/* HEADER */}
         <div className="sticky top-0 z-10 flex shrink-0 items-center justify-between border-b border-[#E5E7EB] bg-white px-6 py-5">
@@ -979,7 +979,7 @@ function AdminEmployeeForm({
 
                 {/* OTP Verification Box */}
                 {otpSent && !isEmailVerified && (
-                  <div className="rounded border border-blue-100 bg-[#f8faff] p-3.5 transition-all">
+                  <div className="rounded-[2px] border border-blue-100 bg-[#f8faff] p-3.5 transition-all">
                     <div className="mb-2 flex items-center justify-between">
                       <span className="flex items-center gap-1.5 text-xs font-semibold text-gray-700">
                         <Mail className="h-3.5 w-3.5 text-[#2563eb]" />
@@ -1217,7 +1217,7 @@ function AdminEmployeeForm({
                   you can share it with the employee.
                 </p>
               )}
-              <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 rounded-lg bg-[#F9FAFB] p-3 sm:grid-cols-5">
+              <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 rounded-[2px] bg-[#F9FAFB] p-3 sm:grid-cols-5">
                 {[
                   ["8+ characters", passwordValue.length >= 8],
                   ["Uppercase", /[A-Z]/.test(passwordValue)],
@@ -1455,7 +1455,7 @@ function AdminEmployeeForm({
 
           {/* ERROR */}
           {errorMessage && (
-            <div className="col-span-1 rounded bg-red-50 px-4 py-3 text-sm text-red-600 md:col-span-2">
+            <div className="col-span-1 rounded-[2px] bg-red-50 px-4 py-3 text-sm text-red-600 md:col-span-2">
               {errorMessage}
             </div>
           )}

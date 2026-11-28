@@ -52,11 +52,11 @@ import {
   type Paginated,
 } from "./types";
 
-const PANEL_CLASS = "rounded-lg border border-[#E5E7EB] bg-white overflow-hidden shadow-none";
+const PANEL_CLASS = "rounded-[2px] border border-[#E5E7EB] bg-white overflow-hidden shadow-none";
 
 // KPI cards share one row and clip rather than letting large numbers overflow.
 const KPI_CARD_CLASS =
-  "min-w-0 h-[104px] rounded-lg border border-[#E5E7EB] bg-white p-4 shadow-kpi flex flex-col justify-between";
+  "min-w-0 h-[104px] rounded-[2px] border-2 border-[#E5E7EB] bg-white p-4 shadow-kpi flex flex-col justify-between";
 
 const FILTER_CONTROL_CLASS =
   "h-8 w-full appearance-none rounded-[6px] border border-[#E5E7EB] bg-white px-2.5 pr-7 text-[12px] font-medium " +
@@ -680,7 +680,7 @@ function AssetOverview({
 
           <div
             style={{ top: menu.top, left: menu.left }}
-            className="fixed z-50 w-40 rounded-lg border border-[#E5E7EB] bg-white p-1 shadow-lg"
+            className="fixed z-50 w-40 rounded-[2px] border border-[#E5E7EB] bg-white p-1 shadow-lg"
           >
             {menuAsset && (
               <>
@@ -998,7 +998,7 @@ function RecentAllocationPanel({
             {allocations.map((asset) => (
               <li
                 key={asset.id}
-                className="flex items-center gap-3 rounded-lg border border-[#E5E7EB] p-3 hover:bg-[#F9FAFB] transition-colors"
+                className="flex items-center gap-3 rounded-[2px] border border-[#E5E7EB] p-3 hover:bg-[#F9FAFB] transition-colors"
               >
                 <PersonAvatar name={asset.assigned_to_name ?? "?"} />
 
@@ -1110,7 +1110,7 @@ function QuickActionsPanel({
   ];
 
   return (
-    <div className={`${PANEL_CLASS} flex min-w-0 flex-col w-full rounded-xl`}>
+    <div className={`${PANEL_CLASS} flex min-w-0 flex-col w-full rounded-[2px]`}>
       <SectionTitle title="Quick Actions" />
 
       <div className="p-4">
@@ -1130,7 +1130,7 @@ function QuickActionsPanel({
                     ? "Generating the report"
                     : undefined
                 }
-                className={`flex min-w-0 items-center gap-3 rounded-xl border border-[#E5E7EB] px-4 py-3.5 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0] ${disabled
+                className={`flex min-w-0 items-center gap-3 rounded-[2px] border border-[#E5E7EB] px-4 py-3.5 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2F5FD0] ${disabled
                   ? `bg-[#F8FAFC] text-[#64748B] cursor-not-allowed ${action.busy ? "animate-pulse" : ""}`
                   : "bg-white text-[#1F2937] hover:border-[#CBD5E1] hover:bg-[#F8FAFC] cursor-pointer group"
                   }`}
@@ -1528,7 +1528,7 @@ function AssetIssueRequestsPanel({
       {actionError && (
         <p
           role="alert"
-          className="mx-6 mt-4 rounded-lg bg-[#FDE8E8] border border-[#F8B4B4] px-3.5 py-2.5 text-xs text-[#9B1C1C]"
+          className="mx-6 mt-4 rounded-[2px] bg-[#FDE8E8] border border-[#F8B4B4] px-3.5 py-2.5 text-xs text-[#9B1C1C]"
         >
           {actionError}
         </p>
@@ -1790,7 +1790,7 @@ export default function AdminAssets() {
       <PageHeading title="Track, assign and manage company assets assigned to employees." />
 
       {statsError && (
-        <p className="rounded-lg bg-[#FDE8E8] border border-[#F8B4B4] px-4 py-3 text-xs text-[#9B1C1C]">
+        <p className="rounded-[2px] bg-[#FDE8E8] border border-[#F8B4B4] px-4 py-3 text-xs text-[#9B1C1C]">
           Could not load asset summary: {statsError}
         </p>
       )}

@@ -353,7 +353,7 @@ export function Login() {
             aria-modal="true"
             aria-labelledby="deactivated-title"
             aria-describedby="deactivated-description"
-            className="w-full max-w-md rounded bg-white p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200"
+            className="w-full max-w-md rounded-[2px] bg-white p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200"
           >
             <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
               <svg
@@ -430,7 +430,7 @@ export function Login() {
           {successMessage && (
             <div
               role="status"
-              className="mb-4 flex items-start gap-2.5 rounded border border-[#A7F3D0] bg-[#ECFDF5] p-3 text-[13px] font-medium text-[#065F46]"
+              className="mb-4 flex items-start gap-2.5 rounded-[2px] border border-[#A7F3D0] bg-[#ECFDF5] p-3 text-[13px] font-medium text-[#065F46]"
             >
               <CheckCircle2 className="h-4 w-4 shrink-0 text-[#059669] mt-0.5" />
               <span>{successMessage}</span>
@@ -442,7 +442,7 @@ export function Login() {
             <div
               role="alert"
               aria-live="polite"
-              className="mb-4 flex items-start gap-2.5 rounded border border-[#FECACA] bg-[#FEF2F2] p-3 text-[13px] font-medium text-[#B91C1C]"
+              className="mb-4 flex items-start gap-2.5 rounded-[2px] border border-[#FECACA] bg-[#FEF2F2] p-3 text-[13px] font-medium text-[#B91C1C]"
             >
               <AlertCircle className="h-4 w-4 shrink-0 text-[#B91C1C] mt-0.5" />
               <span>{error}</span>
@@ -574,7 +574,7 @@ export function Login() {
             <div
               role="alert"
               aria-live="polite"
-              className="flex items-start gap-2.5 rounded border border-[#FECACA] bg-[#FEF2F2] p-3 text-[13px] font-medium text-[#B91C1C]"
+              className="flex items-start gap-2.5 rounded-[2px] border border-[#FECACA] bg-[#FEF2F2] p-3 text-[13px] font-medium text-[#B91C1C]"
             >
               <AlertCircle className="h-4 w-4 shrink-0 text-[#B91C1C] mt-0.5" />
               <span>{error}</span>
@@ -655,7 +655,7 @@ export function Login() {
               {successMessage && (
                 <div
                   role="status"
-                  className="rounded border border-[#A7F3D0] bg-[#ECFDF5] p-3 text-[13px] font-medium text-[#065F46]"
+                  className="rounded-[2px] border border-[#A7F3D0] bg-[#ECFDF5] p-3 text-[13px] font-medium text-[#065F46]"
                 >
                   {successMessage}
                 </div>
@@ -803,7 +803,7 @@ export function Login() {
           {/* Step 4: Success Message */}
           {forgotStep === "success" && (
             <div className="text-center py-3 space-y-4">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded bg-[#ECFDF5] text-[#059669] border border-[#A7F3D0]">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-[2px] bg-[#ECFDF5] text-[#059669] border border-[#A7F3D0]">
                 <CheckCircle2 size={24} />
               </div>
 
@@ -819,7 +819,7 @@ export function Login() {
               {successMessage && (
                 <div
                   role="status"
-                  className="rounded border border-[#A7F3D0] bg-[#ECFDF5] p-3 text-[13px] font-medium text-[#065F46]"
+                  className="rounded-[2px] border border-[#A7F3D0] bg-[#ECFDF5] p-3 text-[13px] font-medium text-[#065F46]"
                 >
                   {successMessage}
                 </div>

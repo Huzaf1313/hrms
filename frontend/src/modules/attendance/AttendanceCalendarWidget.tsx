@@ -74,7 +74,7 @@ export default function AttendanceCalendarWidget({
 
   return (
     <div
-      className={`rounded-3xl border border-slate-100 bg-white p-5 shadow-sm transition-all duration-200 ${className}`}
+      className={`rounded-[2px] border border-slate-100 bg-white p-5 shadow-none transition-all duration-200 ${className}`}
     >
       {/* Header */}
       <div className="flex items-center gap-2 mb-5">

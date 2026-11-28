@@ -227,7 +227,7 @@ export default function ProfileEditForm({
         {error && (
           <div
             role="alert"
-            className="rounded-lg border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-600"
+            className="rounded-[2px] border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-600"
           >
             {error}
           </div>

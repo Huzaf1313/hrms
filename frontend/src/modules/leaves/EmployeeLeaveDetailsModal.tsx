@@ -97,7 +97,7 @@ function EmployeeLeaveDetailsModal({
           }
         }}
       >
-        <div className="w-full max-w-lg overflow-hidden rounded bg-white shadow-2xl">
+        <div className="w-full max-w-lg overflow-hidden rounded-[2px] bg-white shadow-2xl">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
             <div>
@@ -124,7 +124,7 @@ function EmployeeLeaveDetailsModal({
           {/* Content */}
           <div className="px-6 py-6">
             {/* Leave type + status */}
-            <div className="flex items-center justify-between rounded border border-slate-200 bg-slate-50/70 p-4">
+            <div className="flex items-center justify-between rounded-[2px] border border-slate-200 bg-slate-50/70 p-4">
               <div className="flex items-center gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded bg-blue-50">
                   <CalendarDays className="h-5 w-5 text-[#2563eb]" />
@@ -152,7 +152,7 @@ function EmployeeLeaveDetailsModal({
 
             {/* Details grid */}
             <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="rounded border border-slate-200 p-4">
+              <div className="rounded-[2px] border border-slate-200 p-4">
                 <p className="text-xs font-medium text-slate-400">
                   Date Applied
                 </p>
@@ -162,7 +162,7 @@ function EmployeeLeaveDetailsModal({
                 </p>
               </div>
 
-              <div className="rounded border border-slate-200 p-4">
+              <div className="rounded-[2px] border border-slate-200 p-4">
                 <p className="text-xs font-medium text-slate-400">
                   Duration
                 </p>
@@ -179,7 +179,7 @@ function EmployeeLeaveDetailsModal({
                 </div>
               </div>
 
-              <div className="rounded border border-slate-200 p-4">
+              <div className="rounded-[2px] border border-slate-200 p-4">
                 <p className="text-xs font-medium text-slate-400">
                   From Date
                 </p>
@@ -189,7 +189,7 @@ function EmployeeLeaveDetailsModal({
                 </p>
               </div>
 
-              <div className="rounded border border-slate-200 p-4">
+              <div className="rounded-[2px] border border-slate-200 p-4">
                 <p className="text-xs font-medium text-slate-400">
                   To Date
                 </p>
@@ -201,7 +201,7 @@ function EmployeeLeaveDetailsModal({
             </div>
 
             {/* Reason */}
-            <div className="mt-5 rounded border border-slate-200 p-4">
+            <div className="mt-5 rounded-[2px] border border-slate-200 p-4">
               <div className="flex items-center gap-2">
                 <FileText className="h-4 w-4 text-slate-400" />
 
@@ -217,7 +217,7 @@ function EmployeeLeaveDetailsModal({
 
             {/* Admin Note */}
             {request.adminNote && (
-              <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+              <div className="mt-5 rounded-[2px] border border-slate-200 bg-slate-50 px-4 py-3">
                 <p className="text-xs font-semibold text-slate-500">
                   Admin Note
                 </p>
@@ -230,7 +230,7 @@ function EmployeeLeaveDetailsModal({
 
             {/* Attachment */}
             {request.attachmentUrl && (
-              <div className="mt-5 rounded-xl border border-slate-200 px-4 py-3">
+              <div className="mt-5 rounded-[2px] border border-slate-200 px-4 py-3">
                 <p className="text-xs font-semibold text-slate-500">
                   Attachment
                 </p>
@@ -277,7 +277,7 @@ function EmployeeLeaveDetailsModal({
       {/* Cancel Confirmation Modal */}
       {showCancelConfirmation && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/40 px-4 py-6 backdrop-blur-[2px]">
-          <div className="w-full max-w-md overflow-hidden rounded bg-white shadow-2xl">
+          <div className="w-full max-w-md overflow-hidden rounded-[2px] bg-white shadow-2xl">
             {/* Confirmation Content */}
             <div className="px-6 py-6">
               <div className="flex items-start gap-4">
@@ -303,7 +303,7 @@ function EmployeeLeaveDetailsModal({
               </div>
 
               {/* Request Summary */}
-              <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3">
+              <div className="mt-5 rounded-[2px] border border-slate-200 bg-slate-50/70 px-4 py-3">
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <p className="text-xs font-medium text-slate-400">

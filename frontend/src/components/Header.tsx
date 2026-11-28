@@ -274,7 +274,7 @@ export function Header({
         />
 
         {showEmployeeSuggestions && normalizedQuery && (
-          <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-md border border-slate-200 bg-white shadow-md">
+          <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-[2px] border border-slate-200 bg-white shadow-md">
             {employeeSuggestions.length > 0 ? (
               <ul className="max-h-60 overflow-y-auto py-1 text-xs">
                 {employeeSuggestions.map((employee) => (
@@ -361,7 +361,7 @@ export function Header({
           </button>
 
           {showProfileMenu && (
-            <div className="absolute right-0 top-11 z-50 w-44 rounded-md border border-slate-200 bg-white py-1 shadow-md text-xs">
+            <div className="absolute right-0 top-11 z-50 w-44 rounded-[2px] border border-slate-200 bg-white py-1 shadow-md text-xs">
               <button
                 type="button"
                 onClick={() => {

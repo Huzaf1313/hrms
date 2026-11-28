@@ -41,7 +41,7 @@ function StructureCard({
   const band = salaryBandFor(structure);
 
   return (
-    <div className="flex flex-col justify-between rounded-lg border border-[#E4E6E1] bg-white p-5 shadow-none transition">
+    <div className="flex flex-col justify-between rounded-[2px] border border-[#E4E6E1] bg-white p-5 shadow-none transition">
       <div>
         <div className="flex items-start justify-between gap-2">
           <h3 className="text-base font-semibold text-[#1F2933]">{structure.name}</h3>
@@ -52,7 +52,7 @@ function StructureCard({
           <p className="mt-0.5 text-sm font-medium text-[#1F2933]">{structure.range || "Flexible"}</p>
         </div>
 
-        <div className="mt-3 rounded-md border border-[#E4E6E1]/50 bg-[#FAFAF8] px-3 py-2">
+        <div className="mt-3 rounded-[2px] border border-[#E4E6E1]/50 bg-[#FAFAF8] px-3 py-2">
           <p className="text-xs font-medium text-[#7B8794]">Allowed Salary Band</p>
           <p className="mt-0.5 text-sm font-medium tabular-nums text-[#1F2933]">
             {band.min !== null ? formatCurrency(band.min) : "No min"}
@@ -320,7 +320,7 @@ function EditStructureModal({
         if (event.target === event.currentTarget && !saving) onClose();
       }}
     >
-      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded bg-white shadow-2xl">
+      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-[2px] bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
           <h2 className="text-lg font-bold text-slate-900">
             {isCreating ? "Add Salary Structure" : "Edit Salary Structure"}
@@ -337,7 +337,7 @@ function EditStructureModal({
 
         <div className="space-y-4 px-6 py-5">
           {displayError && (
-            <div className="flex items-start gap-2.5 rounded border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">
+            <div className="flex items-start gap-2.5 rounded-[2px] border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-500" />
               <span>{displayError}</span>
             </div>
@@ -465,7 +465,7 @@ function EditStructureModal({
           </div>
 
           <div className="space-y-1.5">
-            <div className="flex items-center justify-between rounded bg-slate-50 px-4 py-3">
+            <div className="flex items-center justify-between rounded-[2px] bg-slate-50 px-4 py-3">
               <span className="text-sm font-bold text-slate-900">Total Gross Salary</span>
               <span
                 className={`text-sm font-bold ${limitError ? "text-rose-600" : "text-blue-600"
@@ -658,7 +658,7 @@ function SalaryStructureTab() {
       />
 
       {error && (
-        <div className="mb-4 flex items-center justify-between rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-xs">
+        <div className="mb-4 flex items-center justify-between rounded-[2px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-xs">
           <div className="flex items-center gap-2">
             <AlertCircle className="h-4 w-4 text-rose-500 shrink-0" />
             <span>{error}</span>
@@ -674,12 +674,12 @@ function SalaryStructureTab() {
       )}
 
       {loading ? (
-        <div className="flex h-56 flex-col items-center justify-center gap-2 rounded-lg border border-[#E4E6E1] bg-white p-8">
+        <div className="flex h-56 flex-col items-center justify-center gap-2 rounded-[2px] border border-[#E4E6E1] bg-white p-8">
           <Loader2 className="h-6 w-6 animate-spin text-[#2F5FD0]" />
           <p className="text-xs text-[#7B8794]">Loading salary structures...</p>
         </div>
       ) : structures.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-[#E4E6E1] bg-white p-12 text-center">
+        <div className="rounded-[2px] border border-dashed border-[#E4E6E1] bg-white p-12 text-center">
           <h3 className="text-sm font-semibold text-[#1F2933]">No Salary Structures Defined</h3>
           <p className="mt-1 text-xs text-[#7B8794]">
             Create salary structures to assign earning components and salary bands to employees.
@@ -728,7 +728,7 @@ function SalaryStructureTab() {
             }
           }}
         >
-          <div className="relative w-full max-w-sm rounded bg-white p-6 text-center shadow-2xl">
+          <div className="relative w-full max-w-sm rounded-[2px] bg-white p-6 text-center shadow-2xl">
             <button
               type="button"
               onClick={() => {
@@ -781,7 +781,7 @@ function SalaryStructureTab() {
             }
           }}
         >
-          <div className="w-full max-w-sm rounded bg-white p-6 shadow-2xl">
+          <div className="w-full max-w-sm rounded-[2px] bg-white p-6 shadow-2xl">
             <div className="flex items-start gap-3.5">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-amber-50 text-amber-600 ring-4 ring-amber-50/50">
                 <AlertTriangle className="h-5 w-5 text-amber-600" />
@@ -800,7 +800,7 @@ function SalaryStructureTab() {
             </div>
 
             {deleteModalError && (
-              <div className="mt-4 flex items-start gap-2 rounded border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">
+              <div className="mt-4 flex items-start gap-2 rounded-[2px] border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-500" />
                 <span>{deleteModalError}</span>
               </div>

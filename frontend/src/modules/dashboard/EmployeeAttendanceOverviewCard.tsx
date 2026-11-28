@@ -260,7 +260,7 @@ export default function EmployeeAttendanceOverviewCard({
   ];
 
   return (
-    <div className="col-span-12 flex flex-col justify-between rounded-xl border border-[#E5E7EB] bg-white p-5 lg:col-span-8 dark:border-slate-800 dark:bg-slate-900">
+    <div className="col-span-12 flex flex-col justify-between rounded-[2px] border border-[#E5E7EB] bg-white p-5 lg:col-span-8 dark:border-slate-800 dark:bg-slate-900">
       {/* Header + Month Selector */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
@@ -372,7 +372,7 @@ export default function EmployeeAttendanceOverviewCard({
                       {/* Hover / Focus Tooltip */}
                       <div
                         role="tooltip"
-                        className={`pointer-events-none absolute bottom-full z-30 mb-1.5 hidden w-max max-w-[210px] rounded-lg border border-slate-200 bg-slate-900 px-2.5 py-1.5 text-left text-[11px] text-white shadow-lg group-hover:block group-focus-within:block dark:border-slate-700 dark:bg-slate-800 ${
+                        className={`pointer-events-none absolute bottom-full z-30 mb-1.5 hidden w-max max-w-[210px] rounded-[2px] border border-slate-200 bg-slate-900 px-2.5 py-1.5 text-left text-[11px] text-white shadow-lg group-hover:block group-focus-within:block dark:border-slate-700 dark:bg-slate-800 ${
                           day.dayOfWeek === 1
                             ? "left-0"
                             : day.dayOfWeek === 0
@@ -415,7 +415,7 @@ export default function EmployeeAttendanceOverviewCard({
                 {summaryItems.map((item) => (
                   <div
                     key={item.label}
-                    className={`rounded-lg border px-3 py-2 ${item.cardClass}`}
+                    className={`rounded-[2px] border px-3 py-2 ${item.cardClass}`}
                   >
                     <div className="flex items-center gap-1.5">
                       <span

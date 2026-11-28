@@ -64,7 +64,7 @@ export const StatCardSkeleton: React.FC<StatCardSkeletonProps> = ({
       {Array.from({ length: count }).map((_, index) => (
         <div
           key={index}
-          className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm space-y-3"
+          className="rounded-[2px] border-2 border-slate-200 bg-white p-5 shadow-kpi space-y-3"
         >
           <div className="flex items-center justify-between">
             <Skeleton variant="text" className="h-4 w-24" />
@@ -101,7 +101,7 @@ export const TableSkeleton: React.FC<TableSkeletonProps> = ({
   const widths = ["w-3/4", "w-2/3", "w-1/2", "w-4/5", "w-3/5"];
 
   return (
-    <div className={`w-full overflow-hidden rounded-2xl border border-slate-100 bg-white ${className}`}>
+    <div className={`w-full overflow-hidden rounded-[2px] border border-slate-100 bg-white ${className}`}>
       {showHeader && (
         <div className="flex items-center gap-4 border-b border-slate-100 bg-slate-50/70 px-6 py-4">
           {Array.from({ length: columns }).map((_, colIndex) => (
@@ -184,7 +184,7 @@ export const CardSkeleton: React.FC<CardSkeletonProps> = ({
       {Array.from({ length: count }).map((_, index) => (
         <div
           key={index}
-          className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm space-y-4"
+          className="rounded-[2px] border border-slate-100 bg-white p-6 shadow-none space-y-4"
         >
           <div className="flex items-center gap-3">
             <Skeleton variant="circular" className="h-10 w-10" />
@@ -231,7 +231,7 @@ export const FormSkeleton: React.FC<FormSkeletonProps> = ({
       {Array.from({ length: fields }).map((_, index) => (
         <div key={index} className="space-y-2">
           <Skeleton variant="text" className="h-3.5 w-28" />
-          <Skeleton variant="rounded" className="h-12 w-full rounded-xl" />
+          <Skeleton variant="rounded" className="h-12 w-full rounded-[2px]" />
         </div>
       ))}
       <div className="flex justify-end gap-3 pt-4">

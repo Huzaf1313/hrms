@@ -128,7 +128,7 @@ function AddHolidayModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
-      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded bg-white shadow-xl">
+      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-[2px] bg-white shadow-xl">
         <div className="flex items-start justify-between border-b border-gray-100 px-6 py-5">
           <div>
             <h2 className="text-lg font-bold text-[#17213a]">
@@ -268,7 +268,7 @@ function AddHolidayModal({
             {error && (
               <p
                 role="alert"
-                className="rounded bg-red-50 px-3 py-2.5 text-sm text-red-600"
+                className="rounded-[2px] bg-red-50 px-3 py-2.5 text-sm text-red-600"
               >
                 {error}
               </p>
