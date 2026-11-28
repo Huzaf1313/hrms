@@ -129,6 +129,7 @@ export function EmployeeLayout({ onLogout }: { onLogout: () => void }) {
       </a>
 
       <EmployeeSidebar
+        onLogout={onLogout}
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />

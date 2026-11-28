@@ -6,6 +6,7 @@ import {
   DoorOpen,
   LayoutGrid,
   LifeBuoy,
+  LogOut,
   Megaphone,
   Package,
   Settings,
@@ -100,6 +101,7 @@ const sections: NavSection[] = [
 export function Sidebar({
   activePage,
   onNavigate,
+  onLogout,
   collapsed,
   open = false,
   onClose,
@@ -219,6 +221,27 @@ export function Sidebar({
             );
           })}
         </nav>
+
+        {/* Bottom Sign Out */}
+        {onLogout && (
+          <div className="shrink-0 border-t border-[#E4E6E1] p-3">
+            <button
+              type="button"
+              onClick={() => {
+                onClose?.();
+                onLogout();
+              }}
+              title={collapsed ? "Sign Out" : undefined}
+              aria-label="Sign Out"
+              className={`group flex h-9 w-full items-center rounded-[6px] text-[13px] font-medium text-[var(--color-rose-600)] transition-colors hover:bg-rose-50 focus:outline-none focus-visible:ring-1 focus-visible:ring-rose-500 cursor-pointer ${
+                collapsed ? "justify-center px-0" : "gap-3 px-3"
+              }`}
+            >
+              <LogOut className="h-4 w-4 shrink-0 stroke-[1.75] text-[var(--color-rose-600)]" />
+              {!collapsed && <span className="truncate">Sign Out</span>}
+            </button>
+          </div>
+        )}
       </aside>
     </>
   );

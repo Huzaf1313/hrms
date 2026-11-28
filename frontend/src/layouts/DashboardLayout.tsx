@@ -154,6 +154,7 @@ function DashboardLayout({
       <Sidebar
         activePage={activePage}
         onNavigate={handleNavigate}
+        onLogout={onLogout}
         collapsed={sidebarCollapsed}
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
